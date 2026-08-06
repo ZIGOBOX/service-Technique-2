@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#075ca8">
-  <title>Pilotage Service Technique V38</title>
-  <link rel="icon" href="./assets/logo-service-technique.png?v=42.0">
-  <link rel="stylesheet" href="./styles.css?v=42.0">
+  <title>Pilotage Service Technique V45</title>
+  <link rel="icon" href="./assets/logo-service-technique.png?v=45.0">
+  <link rel="stylesheet" href="./styles.css?v=45.0">
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
     <div class="auth-card">
-      <img src="./assets/logo-service-technique.png?v=42.0" alt="Service technique" class="auth-logo">
+      <img src="./assets/logo-service-technique.png?v=45.0" alt="Service technique" class="auth-logo">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 42.0 — mise à jour le 06/08/2026 à 00:01</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 45.0 — mise à jour le 07/08/2026 à 00:13</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="button">Se connecter</button>
@@ -22,7 +22,7 @@
   </section>
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <img src="./assets/logo-service-technique.png?v=42.0" alt="Logo Service technique et accueil" class="brand-logo">
+      <img src="./assets/logo-service-technique.png?v=45.0" alt="Logo Service technique et accueil" class="brand-logo">
       <div><h1 id="brandAppName">Pilotage Service Technique</h1><p id="brandSchoolName">Lycée Jean Puy</p></div>
       <button class="icon-btn mobile-only" id="closeMenu" aria-label="Fermer le menu">×</button>
     </div>
@@ -32,6 +32,7 @@
       <button class="nav-btn" data-view="agents"><span>👥</span>Agents & recrutements</button>
       <button class="nav-btn" data-view="rotations"><span>↻</span>Roulements annuels</button>
       <button class="nav-btn" data-view="planning"><span>◷</span>Pilotage des horaires</button>
+      <button class="nav-btn" data-view="schedule-import"><span>⇄</span>Import / export horaires</button>
       <button class="nav-btn" data-view="absences"><span>☀</span>Congés, RTT & absences</button>
       <button class="nav-btn" data-view="vacations"><span>🏫</span>Vacances & fermetures</button>
       <button class="nav-btn" data-view="issues"><span>⚠</span>Sécurité & qualité</button>
@@ -48,7 +49,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 41.0 — 05/08/2026 23:35</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 45.0 — 07/08/2026 00:13</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -67,7 +68,7 @@
     <section class="view active" id="dashboard">
       <div class="welcome-banner">
         <div><span class="eyebrow">PILOTAGE EN TEMPS RÉEL</span><h3 id="welcomeTitle">Pilotage Service Technique</h3><p>Tout ce qui est urgent, prévu ou en attente dès l’ouverture.</p></div>
-        <img src="./assets/logo-service-technique.png?v=42.0" alt="" class="welcome-logo">
+        <img src="./assets/logo-service-technique.png?v=45.0" alt="" class="welcome-logo">
       </div>
 
       <div class="quick-actions" id="dashboardQuickActions">
@@ -150,6 +151,17 @@
       <div class="filters"><input type="month" id="planningMonth"><select id="planningAgent"><option value="">Tous les agents</option></select><select id="planningSignal"><option value="">Tous les écarts</option></select><button class="ghost" data-print="planning">Imprimer</button></div>
       <div id="planningSummary" class="summary-grid"></div>
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Agent</th><th>Prévu</th><th>Réalisé</th><th>Écart</th><th>Signal</th><th></th></tr></thead><tbody id="planningTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="schedule-import">
+      <div class="section-actions"><div><h3>Import / export des horaires</h3><p>Téléchargez les agents, horaires théoriques et roulements actuels, modifiez le tableur, puis réimportez-le.</p></div></div>
+      <div class="import-kpi-grid">
+        <article class="panel"><h3>1. Télécharger</h3><p>Le fichier contient automatiquement les agents déjà présents, leurs profils horaires et leurs roulements.</p><div class="button-stack"><button class="primary" id="downloadScheduleMatrix">📥 Télécharger la matrice préremplie</button><a class="ghost button-link" href="./Matrice_Horaires_Roulements_Agents.xlsx?v=45.0" download>📄 Télécharger un exemplaire vierge</a></div></article>
+        <article class="panel"><h3>2. Modifier dans Excel</h3><p>Modifiez uniquement les horaires, périodes, missions ou roulements. Ne changez pas l’identifiant de l’agent.</p><ul class="compact-list"><li>Vert : ligne correcte</li><li>Jaune : ligne à vérifier</li><li>Rouge : erreur bloquante</li></ul></article>
+        <article class="panel"><h3>3. Réimporter</h3><p>Le logiciel compare les données et vous montre les changements avant validation.</p><label class="primary file-label schedule-file-label">📤 Choisir le fichier Excel<input type="file" id="scheduleImportFile" accept=".xlsx,.xls"></label></article>
+      </div>
+      <article class="panel"><div class="panel-head"><div><h3>Contrôle avant import</h3><p class="muted">Aucune donnée n’est enregistrée avant votre validation.</p></div><button class="primary hidden" id="confirmScheduleImport">Valider les lignes correctes</button></div><div id="scheduleImportSummary" class="import-summary empty">Choisissez un fichier Excel rempli.</div><div id="scheduleImportPreview" class="table-wrap"></div></article>
+      <article class="panel"><h3>Règles appliquées</h3><div class="rule-grid"><span>✓ Agent reconnu par identifiant ou nom</span><span>✓ Période valide</span><span>✓ Début et fin renseignés ensemble</span><span>✓ Fin après le début</span><span>✓ Pause inférieure à la présence</span><span>✓ Absence de doublon</span><span>✓ Profils Matin/Soir présents pour un roulement</span><span>✓ Aperçu des créations et modifications</span></div><p class="hint">L’import met à jour uniquement les horaires annuels et les roulements. Les congés, RTT, absences et modifications ponctuelles sont conservés.</p></article>
     </section>
 
     <section class="view" id="absences">
@@ -287,7 +299,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Archivage automatique</h3><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 42.0 — mise à jour le 06/08/2026 à 00:01</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 45.0 — mise à jour le 07/08/2026 à 00:13</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -295,7 +307,7 @@
 
   <dialog id="modal" class="modal"><form id="modalForm" method="dialog"><div class="modal-head"><h3 id="modalTitle"></h3><button type="button" class="icon-btn" id="modalClose">×</button></div><div id="modalBody"></div><div class="modal-actions"><button type="button" class="danger hidden" id="modalDelete">Supprimer</button><button type="button" class="ghost" id="modalCancel">Annuler</button><button type="submit" class="primary" id="modalSave">Enregistrer</button></div></form></dialog>
   <dialog id="detailModal" class="modal"><div class="modal-head"><h3 id="detailTitle"></h3><button class="icon-btn" id="detailClose">×</button></div><div id="detailBody"></div></dialog>
-  <dialog id="emailModal" class="modal"><div class="modal-head"><h3>Préparer le message</h3><button class="icon-btn" id="emailClose">×</button></div><div class="form-grid"><label class="span2">À<textarea id="mailTo" rows="2"></textarea></label><label>CC<textarea id="mailCc" rows="2"></textarea></label><label>CCI<textarea id="mailBcc" rows="2"></textarea></label><label class="span2">Objet<input id="mailSubject"></label><label class="span2">Message<textarea id="mailMessage" rows="12"></textarea></label></div><div class="modal-actions"><button class="ghost" id="copyMail">Copier</button><button class="primary" id="openMailClient">Ouvrir la messagerie</button></div></dialog>
+  <dialog id="emailModal" class="modal email-modal"><div class="modal-head"><div><h3>Préparer le message</h3><p class="muted">Le contenu est mis en forme en texte lisible pour Outlook, téléphone et ordinateur.</p></div><button class="icon-btn" id="emailClose">×</button></div><div class="form-grid"><label class="span2">À<textarea id="mailTo" rows="2"></textarea></label><label>CC<textarea id="mailCc" rows="2"></textarea></label><label>CCI<textarea id="mailBcc" rows="2"></textarea></label><label class="span2">Objet<input id="mailSubject"></label><label class="span2">Message<textarea id="mailMessage" rows="18" spellcheck="true"></textarea></label></div><div class="mail-help">Astuce : le bouton Copier permet aussi de coller le rapport dans Outlook Web si le message est trop long pour un lien automatique.</div><div class="modal-actions"><button class="ghost" id="copyMail">Copier le message</button><button class="primary" id="openMailClient">Ouvrir la messagerie</button></div></dialog>
   <div id="notificationModal" class="notification-drawer hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="notificationTitle">
   <a href="#" class="notification-backdrop" id="notificationBackdrop" aria-label="Fermer les notifications"></a>
   <section class="notification-panel">
@@ -306,11 +318,13 @@
 
   <dialog id="autoReportWizard" class="modal wizard-modal"><div class="modal-head"><div><h3>Assistant d’envoi automatique</h3><p class="muted">Configuration Microsoft 365 + Supabase</p></div><button type="button" class="icon-btn" id="autoReportWizardClose">×</button></div><div class="wizard-progress"><span class="active">1</span><span>2</span><span>3</span><span>4</span></div><div id="autoReportWizardBody"></div><div class="modal-actions"><button type="button" class="ghost" id="autoReportWizardBack">Précédent</button><button type="button" class="primary" id="autoReportWizardNext">Suivant</button></div></dialog>
   <div id="toast" class="toast"></div>
-  <script src="./navigation.js?v=42.0"></script>
+  <script src="./navigation.js?v=45.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./supabase-config.js?v=42.0"></script>
-  <script src="./app.js?v=42.0"></script>
-  <script src="./notification-center.js?v=42.0"></script>
+  <script src="./supabase-config.js?v=45.0"></script>
+  <script src="./app.js?v=45.0"></script>
+  <script src="./notification-center.js?v=45.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="./schedule-import.js?v=45.0"></script>
 
 
 </body>
