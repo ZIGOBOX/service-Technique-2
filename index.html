@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#075ca8">
+  <title>Pilotage Service Technique V38</title>
+  <link rel="icon" href="./assets/logo-service-technique.png?v=42.0">
+  <link rel="stylesheet" href="./styles.css?v=42.0">
+</head>
+<body data-layout="auto">
+  <section class="auth-screen" id="authScreen" aria-label="Connexion">
+    <div class="auth-card">
+      <img src="./assets/logo-service-technique.png?v=42.0" alt="Service technique" class="auth-logo">
+      <h1>Pilotage Service Technique</h1>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 42.0 — mise à jour le 06/08/2026 à 00:01</p>
+      <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
+      <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
+      <button class="primary" id="authLogin" type="button">Se connecter</button>
+      <p class="auth-error" id="authError"></p>
+    </div>
+  </section>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="./assets/logo-service-technique.png?v=42.0" alt="Logo Service technique et accueil" class="brand-logo">
+      <div><h1 id="brandAppName">Pilotage Service Technique</h1><p id="brandSchoolName">Lycée Jean Puy</p></div>
+      <button class="icon-btn mobile-only" id="closeMenu" aria-label="Fermer le menu">×</button>
+    </div>
+    <nav id="nav">
+      <button class="nav-btn active" data-view="dashboard"><span>⌂</span>Tableau de bord</button>
+      <button class="nav-btn" data-view="personal"><span>📅</span>Agenda personnel</button>
+      <button class="nav-btn" data-view="agents"><span>👥</span>Agents & recrutements</button>
+      <button class="nav-btn" data-view="rotations"><span>↻</span>Roulements annuels</button>
+      <button class="nav-btn" data-view="planning"><span>◷</span>Pilotage des horaires</button>
+      <button class="nav-btn" data-view="absences"><span>☀</span>Congés, RTT & absences</button>
+      <button class="nav-btn" data-view="vacations"><span>🏫</span>Vacances & fermetures</button>
+      <button class="nav-btn" data-view="issues"><span>⚠</span>Sécurité & qualité</button>
+      <button class="nav-btn" data-view="periodic"><span>🛡</span>Contrôles périodiques</button>
+      <button class="nav-btn" data-view="cleaning"><span>✓</span>Contrôle ménage</button>
+      <button class="nav-btn" data-view="maintenance"><span>⚙</span>Maintenance</button>
+      <button class="nav-btn" data-view="requests"><span>↗</span>Demandes direction</button>
+      <button class="nav-btn" data-view="works"><span>▦</span>Chantiers & GPA</button>
+      <button class="nav-btn" data-view="meetings"><span>◫</span>Réunions & rendez-vous</button>
+      <button class="nav-btn" data-view="notes"><span>✎</span>Bloc-notes</button>
+      <button class="nav-btn" data-view="documents"><span>📚</span>Documentation</button>
+      <button class="nav-btn" data-view="outlook"><span>✉</span>Outlook professionnel</button>
+      <button class="nav-btn" data-view="archives"><span>🗃</span>Archives hebdomadaires</button>
+      <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
+      <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
+    </nav>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 41.0 — 05/08/2026 23:35</small></div>
+  </aside>
+  <div class="menu-backdrop" id="menuBackdrop"></div>
+
+  <main>
+    <header class="topbar">
+      <button class="icon-btn mobile-only" id="openMenu" aria-label="Ouvrir le menu">☰</button>
+      <div class="top-title"><h2 id="pageTitle">Tableau de bord</h2><p id="today"></p></div>
+      <div class="top-actions">
+        <select id="layoutMode" aria-label="Orientation de l'affichage"><option value="auto">Auto</option><option value="portrait">Portrait</option><option value="landscape">Paysage</option></select>
+        <a class="notification-bell" id="notificationBell" href="#notificationModal" data-action="open-notifications" role="button" aria-label="Ouvrir les notifications" title="Notifications">🔔<span id="notificationCount" class="notification-count hidden">0</span></a>
+        <button class="ghost compact" id="printCurrent">Imprimer</button>
+        <button class="primary compact" id="quickAdd">＋</button>
+      </div>
+    </header>
+
+    <section class="view active" id="dashboard">
+      <div class="welcome-banner">
+        <div><span class="eyebrow">PILOTAGE EN TEMPS RÉEL</span><h3 id="welcomeTitle">Pilotage Service Technique</h3><p>Tout ce qui est urgent, prévu ou en attente dès l’ouverture.</p></div>
+        <img src="./assets/logo-service-technique.png?v=42.0" alt="" class="welcome-logo">
+      </div>
+
+      <div class="quick-actions" id="dashboardQuickActions">
+        <button data-quick="agent-day">👤 Jour agent</button>
+        <button data-quick="note">✎ Note</button>
+        <button data-quick="maintenance">⚙ Intervention</button>
+        <button data-quick="cleaning">✓ Contrôle ménage</button>
+        <button data-quick="meeting">◫ Rendez-vous</button>
+        <button data-quick="request">↗ Demande</button>
+      </div>
+
+      <div class="kpi-grid">
+        <article class="kpi clickable accent-blue" data-go="agents"><span>Agents actifs</span><strong id="kpiAgents">0</strong><small id="kpiPresent">0 présents aujourd’hui</small></article>
+        <article class="kpi clickable accent-red" data-go="issues"><span>Actions urgentes</span><strong id="kpiUrgentActions">0</strong><small id="kpiLate">0 en retard</small></article>
+        <article class="kpi clickable accent-orange" data-go="maintenance"><span>Interventions ouvertes</span><strong id="kpiMaintenance">0</strong><small id="kpiMaintenanceTodo">0 à faire</small></article>
+        <article class="kpi clickable accent-green" data-go="cleaning"><span>Conformité ménage</span><strong id="kpiCompliance">—</strong><small id="kpiCleaningWeak">0 point faible</small></article>
+        <article class="kpi clickable accent-purple" data-go="periodic"><span>Contrôles périodiques</span><strong id="kpiPeriodicLate">0</strong><small id="kpiPeriodicSoon">0 bientôt</small></article>
+        <article class="kpi clickable accent-cyan" data-go="notes"><span>Notes actives</span><strong id="kpiNotes">0</strong><small id="kpiNotesDue">0 échéance proche</small></article>
+      </div>
+
+      <article class="panel calendar-panel">
+        <div class="panel-head calendar-head">
+          <div><span class="calendar-kicker">ÉQUIPE</span><h3>Calendrier des agents</h3><p id="teamWeekLabel" class="muted"></p></div>
+          <div class="calendar-nav">
+            <button class="icon-btn" id="prevTeamMonth" title="Mois précédent">«</button>
+            <button class="icon-btn" id="prevTeamWeek" title="Semaine précédente">‹</button>
+            <button class="ghost small" id="todayTeamWeek">Aujourd’hui</button>
+            <button class="icon-btn" id="nextTeamWeek" title="Semaine suivante">›</button>
+            <button class="icon-btn" id="nextTeamMonth" title="Mois suivant">»</button>
+            <input type="date" id="teamDateJump" title="Aller à une date">
+          </div>
+        </div>
+        <p class="hint">Touchez un agent un jour donné pour poser un congé, un RTT, modifier son arrivée ou son départ, ou ajouter des heures supplémentaires.</p>
+        <div id="teamWeekCalendar" class="team-calendar"></div>
+      </article>
+
+      <article class="panel calendar-panel">
+        <div class="panel-head calendar-head">
+          <div><span class="calendar-kicker personal">PERSONNEL</span><h3>Mon calendrier</h3><p id="personalWeekLabel" class="muted"></p></div>
+          <div class="calendar-nav">
+            <button class="icon-btn" id="prevPersonalWeek">‹</button><button class="ghost small" id="todayPersonalWeek">Cette semaine</button><button class="icon-btn" id="nextPersonalWeek">›</button><button class="primary small" id="newPersonalEventDash">＋ Événement</button>
+          </div>
+        </div>
+        <div id="personalWeekCalendar" class="personal-calendar"></div>
+      </article>
+
+      <div class="dashboard-grid">
+        <article class="panel shortcut-panel" data-go="issues"><div class="panel-head"><h3>🔥 Actions urgentes</h3><span class="go-arrow">›</span></div><div id="priorityList" class="card-list"></div></article>
+        <article class="panel shortcut-panel" data-go="notes"><div class="panel-head"><h3>✎ Blocs-notes</h3><span class="go-arrow">›</span></div><div id="dashboardNotes" class="card-list"></div></article>
+        <article class="panel shortcut-panel" data-go="maintenance"><div class="panel-head"><h3>⚙ Interventions en cours</h3><span class="go-arrow">›</span></div><div id="maintenancePreview" class="card-list"></div></article>
+        <article class="panel shortcut-panel" data-go="maintenance"><div class="panel-head"><h3>🧰 Interventions à faire</h3><span class="go-arrow">›</span></div><div id="maintenanceTodoPreview" class="card-list"></div></article>
+        <article class="panel shortcut-panel" data-go="cleaning"><div class="panel-head"><h3>🧹 Points faibles ménage</h3><span class="go-arrow">›</span></div><div id="cleaningWeakPreview" class="card-list"></div></article>
+        <article class="panel shortcut-panel" data-go="meetings"><div class="panel-head"><h3>📅 Prochains rendez-vous</h3><span class="go-arrow">›</span></div><div id="meetingPreview" class="card-list"></div></article>
+      </div>
+    </section>
+
+    <section class="view" id="personal">
+      <div class="section-actions"><div><h3>Agenda personnel</h3><p>Rendez-vous, tâches, rappels et déplacements.</p></div><button class="primary" id="newPersonalEvent">＋ Ajouter</button></div>
+      <div class="filters"><input type="month" id="personalMonth"><select id="personalType"><option value="">Tous les types</option></select><select id="personalStatus"><option value="">Tous les statuts</option></select><button class="ghost" data-print="personal">Imprimer</button></div>
+      <div id="personalCards" class="mobile-cards"></div>
+      <div class="table-wrap desktop-table"><table><thead><tr><th>Date</th><th>Horaire</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="personalTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="agents">
+      <div class="section-actions"><div><h3>Agents & recrutements</h3><p>Ajoutez autant d’agents que nécessaire. Les nouveaux agents apparaissent immédiatement dans les calendriers.</p></div><button class="primary" id="newAgent">＋ Agent</button></div>
+      <div class="filters"><input id="agentSearch" placeholder="Rechercher"><select id="agentStatus"><option value="">Tous</option><option>Actif</option><option>Inactif</option></select><button class="ghost" data-print="agents">Imprimer</button></div>
+      <div id="agentCards" class="agent-grid"></div>
+    </section>
+
+    <section class="view" id="rotations">
+      <div class="section-actions"><div><h3>Roulements annuels</h3><p>Cycles matin/soir par agent, versions avec date d’effet et exceptions temporaires.</p></div><div><button class="ghost" id="newRotationException">＋ Exception</button><button class="primary" id="newRotation">＋ Créer un roulement</button></div></div>
+      <div class="filters"><select id="rotationAgent"><option value="">Tous les agents</option></select><input type="number" id="rotationYear" min="2020" max="2100"><select id="rotationMonth"><option value="">Année entière</option></select><button class="ghost" id="exportRotationCsv">Excel esthétique</button><button class="ghost" data-print="rotations">Imprimer</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Date d’effet</th><th>Cycle</th><th>Matin</th><th>Soir</th><th>Jours</th><th>Fin</th><th></th></tr></thead><tbody id="rotationsTable"></tbody></table></div>
+      <article class="panel"><div class="panel-head"><h3>Aperçu annuel</h3></div><div id="rotationPreview" class="rotation-preview"></div></article>
+    </section>
+
+    <section class="view" id="planning">
+      <div class="section-actions"><div><h3>Pilotage des horaires</h3><p>Heures prévues, arrivées, départs, heures supplémentaires et écarts.</p></div><button class="primary" id="newShift">＋ Saisie horaire</button></div>
+      <article class="panel"><div class="panel-head"><div><h3>Base annuelle — horaires théoriques de référence</h3><p class="muted">Un profil Matin et/ou Soir par agent, avec des horaires différents chaque jour. Ces horaires alimentent automatiquement les roulements et le tableau de bord.</p></div><div class="panel-actions"><button class="ghost" id="addWeeklyAgent">＋ Agent</button><button class="ghost" id="exportWeeklyPlans">Excel</button><button class="primary" id="newWeeklyPlan">＋ Planning</button></div></div><div id="weeklyPlansBoard" class="weekly-plans-board"></div></article>
+      <div class="filters"><input type="month" id="planningMonth"><select id="planningAgent"><option value="">Tous les agents</option></select><select id="planningSignal"><option value="">Tous les écarts</option></select><button class="ghost" data-print="planning">Imprimer</button></div>
+      <div id="planningSummary" class="summary-grid"></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Agent</th><th>Prévu</th><th>Réalisé</th><th>Écart</th><th>Signal</th><th></th></tr></thead><tbody id="planningTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="absences">
+      <div class="section-actions"><div><h3>Congés, RTT & absences</h3><p>Saisie rapide depuis le calendrier et récapitulatif mensuel.</p></div><button class="primary" id="newAbsence">＋ Saisir maintenant</button></div>
+      <div class="filters"><input type="month" id="absenceMonth"><select id="absenceAgent"><option value="">Tous les agents</option></select><select id="absenceType"><option value="">Tous les motifs</option></select><select id="absenceStatus"><option value="">Tous les statuts</option></select><button class="ghost" data-print="absences">Imprimer</button></div>
+      <article class="panel"><div class="panel-head"><h3>Calendrier mensuel des agents</h3><p class="muted">Touchez une case pour saisir une période du… au… ou modifier une absence existante.</p></div><div id="absenceMonthBoard" class="month-board"></div></article>
+      <article class="panel"><div class="panel-head"><h3>Compteurs mensuels par agent</h3><p class="muted">Nombre de jours enregistrés par motif sur le mois sélectionné.</p></div><div id="absenceCounters" class="table-wrap"></div></article>
+      <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Du</th><th>Au</th><th>Motif</th><th>Durée</th><th>Statut</th><th>Remplacement</th><th></th></tr></thead><tbody id="absencesTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="vacations">
+      <div class="section-actions"><div><h3>Vacances scolaires & fermetures</h3><p>Préparation des alarmes, du chauffage, des réseaux, des accès et de la remise en service.</p></div><div><button class="ghost" id="loadSchoolHolidays">Charger le calendrier officiel</button><button class="primary" id="newVacation">＋ Période</button></div></div>
+      <div class="filters"><select id="vacationZone"><option value="A">Zone A</option><option value="B">Zone B</option><option value="C">Zone C</option></select><select id="vacationYear"><option>2026-2027</option></select><select id="vacationStatus"><option value="">Tous les états</option><option>À préparer</option><option>En cours</option><option>Prête</option><option>Clôturée</option></select><button class="ghost" data-print="vacations">Imprimer</button></div>
+      <div id="vacationCards" class="vacation-grid"></div>
+    </section>
+
+    <section class="view" id="issues">
+      <div class="section-actions"><div><h3>Sécurité, qualité & problématiques</h3><p>Actions correctives, responsabilités, échéances et coûts facultatifs.</p></div><button class="primary" id="newIssue">＋ Problématique</button></div>
+      <div class="filters"><input type="month" id="issueMonth"><select id="issueAgent"><option value="">Tous les agents</option></select><select id="issueCategory"><option value="">Toutes les catégories</option></select><select id="issueStatus"><option value="">Tous les statuts</option></select><button class="ghost" data-print="issues">Imprimer</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Catégorie</th><th>Agent/lieu</th><th>Priorité</th><th>Problème</th><th>Action</th><th>Échéance</th><th>Statut</th><th></th></tr></thead><tbody id="issuesTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="periodic">
+      <div class="section-actions"><div><h3>Contrôles périodiques du lycée</h3><p>Catalogue préchargé et modifiable : incendie, électricité, chauffage, cuisine, ascenseurs, eau, équipements sportifs, portes et levage.</p></div><div><button class="ghost" id="resetPeriodicCatalog">Restaurer le catalogue</button><button class="primary" id="newPeriodic">＋ Contrôle</button></div></div>
+      <div class="notice"><strong>Important :</strong> les périodicités proposées servent de base de pilotage. Elles doivent être confirmées avec le registre de sécurité, la catégorie ERP, les contrats et les équipements réellement présents.</div>
+      <div class="filters"><select id="periodicFamily"><option value="">Toutes les familles</option></select><select id="periodicStatus"><option value="">Tous les états</option></select><select id="periodicBuilding"><option value="">Tous les bâtiments</option></select><button class="ghost" data-print="periodic">Imprimer le registre</button></div>
+      <div id="periodicCards" class="periodic-grid"></div>
+    </section>
+
+    <section class="view" id="cleaning">
+      <div class="section-actions"><div><h3>Contrôle ménage</h3><p>Saisie mobile guidée avec bâtiments, étages et types de zones en listes déroulantes.</p></div><button class="primary" id="newCleaning">＋ Contrôle</button></div>
+      <div class="filters"><input type="month" id="cleanMonth"><select id="cleanBuilding"><option value="">Tous les bâtiments</option></select><select id="cleanRoomType"><option value="">Tous les types de zone</option></select><select id="cleanStatus"><option value="">Tous les résultats</option></select><button class="ghost" data-print="cleaning">Imprimer</button></div>
+      <div id="cleaningSummary" class="summary-grid"></div>
+      <article class="panel guide-panel"><div class="panel-head"><div><h3>Référentiel des fréquences d’entretien</h3><p>Issu du Guide de l’entretien dans les lycées de la Région Auvergne-Rhône-Alpes.</p></div><div class="panel-actions"><select id="cleaningGuideType"></select><button class="ghost" data-guide-path="guides/Guide_Entretien_Lycees_2023.pdf">Ouvrir le guide PDF</button></div></div><div id="cleaningGuideTable" class="table-wrap compact"></div></article>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Lieu</th><th>Type</th><th>Agent</th><th>Score</th><th>Résultat</th><th>Points faibles</th><th></th></tr></thead><tbody id="cleaningTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="maintenance">
+      <div class="section-actions"><div><h3>Interventions de maintenance</h3><p>Demandes, diagnostic, affectation, suivi et clôture.</p></div><button class="primary" id="newMaintenance">＋ Intervention</button></div>
+      <div class="filters"><select id="maintenanceStatus"><option value="">Tous les statuts</option></select><select id="maintenancePriority"><option value="">Toutes les priorités</option></select><select id="maintenanceFamily"><option value="">Tous les domaines</option></select><button class="ghost" data-print="maintenance">Imprimer</button></div>
+      <div class="table-wrap"><table><thead><tr><th>N°</th><th>Date</th><th>Lieu</th><th>Domaine</th><th>Problème</th><th>Priorité</th><th>Affecté à</th><th>Échéance</th><th>Statut</th><th></th></tr></thead><tbody id="maintenanceTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="requests">
+      <div class="section-actions"><div><h3>Demandes de la direction</h3><p>Aménagements, événements, déménagements, ouvertures et accès.</p></div><button class="primary" id="newRequest">＋ Demande</button></div>
+      <div class="filters"><select id="requestStatus"><option value="">Tous les statuts</option></select><select id="requestType"><option value="">Tous les types</option></select><button class="ghost" data-print="requests">Imprimer</button></div>
+      <div class="table-wrap"><table><thead><tr><th>N°</th><th>Demandée le</th><th>Demandeur</th><th>Type</th><th>Lieu</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="requestsTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="works">
+      <div class="section-actions"><div><h3>Chantiers, réserves & GPA</h3><p>Réunions de chantier, réserves, entreprises, architecte et garantie de parfait achèvement.</p></div><button class="primary" id="newWork">＋ Suivi</button></div>
+      <div class="filters"><select id="workStatus"><option value="">Tous les statuts</option></select><select id="workType"><option value="">Tous les types</option></select><button class="ghost" data-print="works">Imprimer</button></div>
+      <div class="table-wrap"><table><thead><tr><th>N°</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Entreprise</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="worksTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="meetings">
+      <div class="section-actions"><div><h3>Réunions & rendez-vous</h3><p>Direction, architecte, entreprises, agents et prestataires.</p></div><button class="primary" id="newMeeting">＋ Rendez-vous</button></div>
+      <div class="filters"><input type="month" id="meetingMonth"><select id="meetingType"><option value="">Tous les types</option></select><button class="ghost" data-print="meetings">Imprimer</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Heure</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Participants</th><th>Statut</th><th></th></tr></thead><tbody id="meetingsTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="notes">
+      <div class="section-actions"><div><h3>Bloc-notes & listes d’actions</h3><p>Chaque note est classée automatiquement dans le bon module et visible sur le tableau de bord.</p></div><button class="primary" id="newNote">＋ Note</button></div>
+      <div class="filters"><select id="noteCategory"><option value="">Toutes les catégories</option></select><select id="notePriority"><option value="">Toutes les priorités</option></select><select id="noteStatus"><option value="">Tous les statuts</option></select><input id="noteSearch" placeholder="Rechercher"><button class="ghost" data-print="notes">Imprimer</button></div>
+      <div id="notesBoard" class="notes-board"></div>
+    </section>
+
+    <section class="view" id="documents">
+      <div class="section-actions"><div><h3>Documentation</h3><p>Guides essentiels disponibles immédiatement, puis ajout rapide de PDF, Word, Excel, images, courriels, ZIP et autres fichiers.</p></div><button class="primary" id="newDocument">＋ Ajouter un document</button></div>
+      <div class="filters"><select id="documentCategory"><option value="">Toutes les catégories</option></select><input id="documentSearch" placeholder="Rechercher un document"><button class="ghost" data-print="documents">Imprimer la liste</button></div>
+      <div id="documentCards" class="document-grid"></div>
+    </section>
+
+    <section class="view" id="outlook">
+      <div class="section-actions"><div><h3>Outlook professionnel</h3><p>Accès direct à la messagerie, au calendrier et aux contacts Microsoft 365. L’adresse enregistrée sert de repère ; aucun mot de passe n’est stocké.</p></div></div>
+      <div class="outlook-grid">
+        <article class="panel outlook-card"><div class="doc-icon">✉️</div><h3>Messagerie Outlook</h3><p id="outlookMailLabel">Adresse professionnelle non renseignée</p><a class="primary button-link" id="openOutlookMail" href="https://outlook.office.com/mail/" target="_blank" rel="noopener">Ouvrir les mails</a></article>
+        <article class="panel outlook-card"><div class="doc-icon">📅</div><h3>Calendrier Outlook</h3><p>Consulter les rendez-vous et réunions professionnelles.</p><a class="primary button-link" href="https://outlook.office.com/calendar/" target="_blank" rel="noopener">Ouvrir le calendrier</a></article>
+        <article class="panel outlook-card"><div class="doc-icon">👤</div><h3>Contacts Outlook</h3><p>Accéder aux contacts et à l’annuaire professionnel.</p><a class="ghost button-link" href="https://outlook.office.com/people/" target="_blank" rel="noopener">Ouvrir les contacts</a></article>
+        <article class="panel outlook-card"><div class="doc-icon">＋</div><h3>Nouveau message</h3><p>Préparer rapidement un message depuis Outlook Web.</p><a class="ghost button-link" href="https://outlook.office.com/mail/deeplink/compose" target="_blank" rel="noopener">Écrire un mail</a></article>
+      </div>
+      <article class="panel"><h3>Configuration rapide</h3><p class="hint">Renseignez votre adresse dans Paramètres → Outlook professionnel. L’application ouvre ensuite Outlook en ligne ; Microsoft gère la connexion de manière sécurisée.</p><button class="primary" data-go="settings">Configurer l’adresse</button></article>
+    </section>
+
+    <section class="view" id="archives">
+      <div class="section-actions"><div><h3>Archives hebdomadaires</h3><p>Créées automatiquement chaque semaine. Les données courantes restent modifiables dans leurs modules d’origine.</p></div><div><button class="ghost" id="archiveNow">Archiver la semaine précédente</button><button class="primary" id="exportArchives">Exporter les archives</button></div></div>
+      <div class="filters"><select id="archiveYear"><option value="">Toutes les années</option></select><input id="archiveSearch" placeholder="Rechercher un agent, un local ou une intervention"><button class="ghost" data-print="archives">Imprimer</button></div>
+      <div id="archiveSummary" class="summary-grid"></div>
+      <div id="archiveCards" class="archive-grid"></div>
+    </section>
+
+    <section class="view" id="reports">
+      <div class="section-actions"><div><h3>Rapports & impressions</h3><p>Tous les rapports peuvent être imprimés ou enregistrés en PDF depuis le téléphone ou l’ordinateur.</p></div><button class="ghost" id="printFullRegister">Imprimer le registre complet</button></div>
+      <div class="report-grid">
+        <article class="panel report-card"><h3>Rapport quotidien</h3><input type="date" id="dailyDate"><div><button class="primary" data-report-print="daily">Imprimer / PDF</button><button class="ghost" data-report-email="daily">E-mail</button></div></article>
+        <article class="panel report-card"><h3>Rapport hebdomadaire</h3><input type="date" id="weeklyDate"><div><button class="primary" data-report-print="weekly">Imprimer / PDF</button><button class="ghost" data-report-email="weekly">E-mail</button></div></article>
+        <article class="panel report-card"><h3>Rapport mensuel général</h3><input type="month" id="monthlyDate"><div><button class="primary" data-report-print="monthly">Imprimer / PDF</button><button class="ghost" data-report-email="monthly">E-mail</button></div></article>
+        <article class="panel report-card"><h3>Bilan mensuel des agents</h3><input type="month" id="teamReportMonth"><div><button class="primary" data-report-print="team">Imprimer / PDF</button><button class="ghost" data-report-email="team">E-mail</button></div></article>
+        <article class="panel report-card"><h3>Congés & absences</h3><input type="month" id="absenceReportMonth"><div><button class="primary" data-report-print="absence">Imprimer / PDF</button><button class="ghost" data-report-email="absence">E-mail</button></div></article>
+        <article class="panel report-card"><h3>Contrôles ménage</h3><input type="month" id="cleaningReportMonth"><div><button class="primary" data-report-print="cleaning">Imprimer / PDF</button><button class="ghost" data-report-email="cleaning">E-mail</button></div></article>
+        <article class="panel report-card"><h3>Maintenance</h3><input type="month" id="maintenanceReportMonth"><div><button class="primary" data-report-print="maintenance">Imprimer / PDF</button><button class="ghost" data-report-email="maintenance">E-mail</button></div></article>
+        <article class="panel report-card"><h3>Contrôles périodiques</h3><input type="number" id="periodicReportYear" min="2020" max="2100"><div><button class="primary" data-report-print="periodic">Imprimer / PDF</button><button class="ghost" data-report-email="periodic">E-mail</button></div></article>
+        <article class="panel report-card"><h3>Vacances & fermeture</h3><select id="vacationReportPeriod"></select><div><button class="primary" data-report-print="vacation">Imprimer / PDF</button><button class="ghost" data-report-email="vacation">E-mail</button></div></article>
+        <article class="panel report-card"><h3>Export Excel esthétique</h3><select id="csvModule"></select><button class="primary" id="exportCsv">Exporter vers Excel</button></article>
+      </div>
+      <article class="panel"><div class="panel-head"><h3>Aperçu</h3></div><div id="reportPreview" class="report-preview"></div></article>
+    </section>
+
+    <section class="view" id="settings">
+      <div class="section-actions"><div><h3>Paramètres</h3><p>Application, listes déroulantes, bâtiments, étages et destinataires.</p></div><button class="primary" id="saveSettings">Enregistrer</button></div>
+      <div class="settings-grid">
+        <article class="panel"><h3>Application</h3>
+          <label>Nom de l’application<input id="appName"></label><label>Établissement<input id="schoolName"></label>
+          <div class="form-grid"><label>Zone scolaire<select id="schoolZone"><option>A</option><option>B</option><option>C</option></select></label><label>Année scolaire<input id="academicYear"></label><label>Orientation par défaut<select id="defaultLayout"><option value="auto">Auto</option><option value="portrait">Portrait</option><option value="landscape">Paysage</option></select></label><label>Impression<select id="printOrientation"><option value="portrait">Portrait</option><option value="landscape">Paysage</option></select></label></div>
+          <label>Contrôleur par défaut<input id="defaultInspector"></label>
+        </article>
+        <article class="panel"><h3>Courriels</h3><label>À<textarea id="emailsTo" rows="3"></textarea></label><label>CC<textarea id="emailsCc" rows="2"></textarea></label><label>CCI<textarea id="emailsBcc" rows="2"></textarea></label><label>Préfixe objet<input id="emailSubjectPrefix"></label><p class="hint">Plusieurs adresses : virgule, point-virgule ou retour à la ligne.</p></article>
+        <article class="panel auto-report-panel"><div class="panel-head"><div><h3>Rapports automatiques</h3><p class="muted">Envoi serveur même si l’application est fermée.</p></div><span class="status-pill">V32</span></div>
+          <div class="toggle-grid">
+            <label class="toggle-row"><input id="autoDailyEnabled" type="checkbox"><span><strong>Résumé quotidien de la veille</strong><small>Envoi à l’heure choisie.</small></span></label>
+            <label class="toggle-row"><input id="autoWeeklyEnabled" type="checkbox"><span><strong>Bilan hebdomadaire</strong><small>Chaque lundi, semaine précédente.</small></span></label>
+            <label class="toggle-row"><input id="autoReportOnlyIfEvents" type="checkbox"><span><strong>Envoyer seulement s’il y a des éléments</strong></span></label>
+          </div>
+          <div class="form-grid"><label>Heure d’envoi<input id="autoReportHour" type="time"></label><label>Fuseau horaire<select id="autoReportTimezone"><option value="Europe/Paris">Europe/Paris</option><option value="UTC">UTC</option></select></label><label class="span2">Jours du rapport quotidien<input id="autoReportWeekdays" placeholder="1,2,3,4,5"><small>1=lundi, 7=dimanche.</small></label></div>
+          <fieldset><legend>Contenu</legend><div class="toggle-grid compact"><label><input id="autoReportIncludeAgents" type="checkbox"> Personnel</label><label><input id="autoReportIncludeMaintenance" type="checkbox"> Interventions</label><label><input id="autoReportIncludeCleaning" type="checkbox"> Ménage</label><label><input id="autoReportIncludePeriodic" type="checkbox"> Contrôles périodiques</label><label><input id="autoReportIncludeMeetings" type="checkbox"> Rendez-vous</label></div></fieldset>
+          <label>Signature<textarea id="autoReportSignature" rows="2"></textarea></label>
+          <div class="auto-report-actions"><button class="primary" id="openAutoReportWizard" type="button">Configurer l’envoi automatique</button><button class="ghost" id="sendAutomaticReportTest" type="button">Envoyer un rapport test</button></div>
+          <p class="hint">L’assistant vérifie la configuration et vous guide. Les secrets Microsoft restent uniquement dans Supabase, jamais dans GitHub ni dans le navigateur.</p>
+        </article>
+        <article class="panel"><h3>Outlook professionnel</h3><label>Adresse professionnelle<input id="outlookEmail" type="email" placeholder="prenom.nom@...fr"></label><p class="hint">L’adresse sert uniquement de repère visuel. Aucun mot de passe n’est demandé ni enregistré.</p><a class="ghost button-link" href="https://outlook.office.com/" target="_blank" rel="noopener">Tester Outlook en ligne</a></article>
+      </div>
+      <article class="panel"><div class="panel-head"><h3>Bâtiments & étages</h3><button class="primary small" id="addBuilding">＋ Bâtiment</button></div><div id="buildingSettings" class="building-settings"></div></article>
+      <article class="panel"><div class="panel-head"><h3>Zones et locaux configurés</h3><button class="primary small" id="addSpace">＋ Local</button></div><p class="hint">Les locaux configurés apparaissent ensuite en listes déroulantes dans les contrôles et interventions.</p><div id="spaceSettings" class="space-settings"></div></article>
+      <article class="panel"><div class="panel-head"><h3>Motifs de congés et d’absence</h3><p class="muted">Ces choix apparaissent immédiatement dans le planning et les formulaires.</p></div><div id="absenceTypeSettings" class="list-settings"></div></article>
+      <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
+      <article class="panel"><h3>Archivage automatique</h3><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
+      <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 42.0 — mise à jour le 06/08/2026 à 00:01</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+    </section>
+  </main>
+
+  <button class="fab" id="quickNoteFab" aria-label="Ajouter rapidement">＋</button>
+
+  <dialog id="modal" class="modal"><form id="modalForm" method="dialog"><div class="modal-head"><h3 id="modalTitle"></h3><button type="button" class="icon-btn" id="modalClose">×</button></div><div id="modalBody"></div><div class="modal-actions"><button type="button" class="danger hidden" id="modalDelete">Supprimer</button><button type="button" class="ghost" id="modalCancel">Annuler</button><button type="submit" class="primary" id="modalSave">Enregistrer</button></div></form></dialog>
+  <dialog id="detailModal" class="modal"><div class="modal-head"><h3 id="detailTitle"></h3><button class="icon-btn" id="detailClose">×</button></div><div id="detailBody"></div></dialog>
+  <dialog id="emailModal" class="modal"><div class="modal-head"><h3>Préparer le message</h3><button class="icon-btn" id="emailClose">×</button></div><div class="form-grid"><label class="span2">À<textarea id="mailTo" rows="2"></textarea></label><label>CC<textarea id="mailCc" rows="2"></textarea></label><label>CCI<textarea id="mailBcc" rows="2"></textarea></label><label class="span2">Objet<input id="mailSubject"></label><label class="span2">Message<textarea id="mailMessage" rows="12"></textarea></label></div><div class="modal-actions"><button class="ghost" id="copyMail">Copier</button><button class="primary" id="openMailClient">Ouvrir la messagerie</button></div></dialog>
+  <div id="notificationModal" class="notification-drawer hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="notificationTitle">
+  <a href="#" class="notification-backdrop" id="notificationBackdrop" aria-label="Fermer les notifications"></a>
+  <section class="notification-panel">
+    <div class="modal-head"><div><h3 id="notificationTitle">Notifications</h3><p class="muted" id="notificationSubtitle"></p></div><a href="#" class="icon-btn" id="notificationClose" aria-label="Fermer">×</a></div>
+    <div id="notificationList" class="notification-list"></div>
+  </section>
+</div>
+
+  <dialog id="autoReportWizard" class="modal wizard-modal"><div class="modal-head"><div><h3>Assistant d’envoi automatique</h3><p class="muted">Configuration Microsoft 365 + Supabase</p></div><button type="button" class="icon-btn" id="autoReportWizardClose">×</button></div><div class="wizard-progress"><span class="active">1</span><span>2</span><span>3</span><span>4</span></div><div id="autoReportWizardBody"></div><div class="modal-actions"><button type="button" class="ghost" id="autoReportWizardBack">Précédent</button><button type="button" class="primary" id="autoReportWizardNext">Suivant</button></div></dialog>
+  <div id="toast" class="toast"></div>
+  <script src="./navigation.js?v=42.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js?v=42.0"></script>
+  <script src="./app.js?v=42.0"></script>
+  <script src="./notification-center.js?v=42.0"></script>
+
+
+</body>
+</html>
