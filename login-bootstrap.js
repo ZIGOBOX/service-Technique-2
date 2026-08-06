@@ -71,7 +71,7 @@
       if (!data?.session) throw new Error('Connexion non confirmée.');
       location.reload();
     } catch (error) {
-      console.error('Connexion V47', error);
+      console.error('Connexion V48', error);
       if (errorBox) {
         errorBox.textContent = error?.message === 'Invalid login credentials'
           ? 'Adresse ou mot de passe incorrect.'

@@ -75,7 +75,7 @@
     ];
     const wsM=XLSX.utils.aoa_to_sheet(instructions);setWidths(wsM,[105]);wsM['A1'].s={font:{bold:true,color:{rgb:'FFFFFF'},sz:16},fill:{fgColor:{rgb:'1F4E78'}},alignment:{horizontal:'center'}};XLSX.utils.book_append_sheet(wb,wsM,'Mode d’emploi');
     wb.Workbook={Views:[{RTL:false}]};
-    XLSX.writeFile(wb,`Horaires_Roulements_${new Date().toISOString().slice(0,10)}.xlsx`,{bookType:'xlsx',compression:true,bookSST:true});
+    const data=XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true,bookSST:true});const blob=new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});if(typeof triggerDownloadBlob==='function')triggerDownloadBlob(`Horaires_Roulements_${new Date().toISOString().slice(0,10)}.xlsx`,blob);else XLSX.writeFile(wb,`Horaires_Roulements_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
   const readRows=(wb,name)=>{const ws=wb.Sheets[name];return ws?XLSX.utils.sheet_to_json(ws,{defval:'',raw:true}):[]};

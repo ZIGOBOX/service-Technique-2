@@ -1,7 +1,7 @@
 'use strict';
 
-const APP_VERSION='47.0';
-const APP_BUILD='07/08/2026 00:36';
+const APP_VERSION='49.0';
+const APP_BUILD='07/08/2026 01:35';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -755,15 +755,19 @@ function computeNotifications(){
  }catch(error){console.error('Notifications contrôles périodiques',error)}
  try{
   const threshold=Math.max(1,Number(db.settings?.cleaningAlertDays||30));
+  const never=[],overdue=[],planned=[];
   for(const sp of db.spaces||[]){
    const arr=(db.cleaning||[]).filter(c=>c.building===sp.building&&c.floor===sp.floor&&(c.room===sp.name||c.room==='Zone entière')).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
-   if(!arr.length)push({level:'yellow',icon:'🧹',title:`${sp.name} jamais contrôlé`,text:[sp.building,sp.floor].filter(Boolean).join(' · '),view:'cleaning'});
+   if(!arr.length)never.push(sp);
    else{
     const last=normalizeDateValue(arr[0].date),diff=last?daysBetweenDates(last,today):null;
-    if(diff!==null&&diff>threshold)push({level:'yellow',icon:'🧹',title:`${sp.name} non contrôlé depuis ${diff} jours`,text:[sp.building,sp.floor].filter(Boolean).join(' · '),view:'cleaning',type:'cleaning',id:arr[0].id,date:last});
+    if(diff!==null&&diff>threshold)overdue.push({space:sp,last,diff,id:arr[0].id});
    }
   }
-  for(const x of (db.cleaning||[]).filter(c=>normalizeDateValue(c.date)<=today&&normalizeText(c.overallStatus)==='non controle'))push({level:'orange',icon:'🧹',title:'Contrôle ménage prévu non réalisé',text:`${x.room||x.roomType||'Local'} — ${fmtDate(normalizeDateValue(x.date))}`,view:'cleaning',type:'cleaning',id:x.id,date:normalizeDateValue(x.date)});
+  for(const x of (db.cleaning||[]).filter(c=>normalizeDateValue(c.date)<=today&&normalizeText(c.overallStatus)==='non controle'))planned.push(x);
+  if(never.length){const sample=never.slice(0,4).map(sp=>sp.name).join(', ');push({level:'yellow',icon:'🧹',title:`${never.length} local${never.length>1?'x':''} jamais contrôlé${never.length>1?'s':''}`,text:`${sample}${never.length>4?'…':''}`,view:'cleaning',type:'cleaning-summary',id:'never',date:today});}
+  if(overdue.length){const max=Math.max(...overdue.map(x=>x.diff));const sample=overdue.slice(0,4).map(x=>x.space.name).join(', ');push({level:'yellow',icon:'🧹',title:`${overdue.length} local${overdue.length>1?'x':''} à contrôler`,text:`Non contrôlé${overdue.length>1?'s':''} depuis plus de ${threshold} jours · ${sample}${overdue.length>4?'…':''}`,view:'cleaning',type:'cleaning-summary',id:'overdue',date:today});}
+  if(planned.length){const sample=planned.slice(0,4).map(x=>x.room||x.roomType||'Local').join(', ');push({level:'orange',icon:'🧹',title:`${planned.length} contrôle${planned.length>1?'s':''} ménage non réalisé${planned.length>1?'s':''}`,text:`${sample}${planned.length>4?'…':''}`,view:'cleaning',type:'cleaning-summary',id:'planned',date:today});}
  }catch(error){console.error('Notifications ménage',error)}
  try{
   const meetingDays=Math.max(1,Number(db.settings?.meetingAlertDays||3));
@@ -904,15 +908,51 @@ async function openMailClient(){
  location.href=`mailto:${encodeURIComponent(to)}?cc=${encodeURIComponent(cc)}&bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 function csvEscape(v){v=String(v??'');return /[;"\n]/.test(v)?`"${v.replace(/"/g,'""')}"`:v}
-function downloadText(name,text,type='text/plain;charset=utf-8'){const blob=new Blob(['\ufeff',text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+function triggerDownloadBlob(name,blob){
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download=name;a.rel='noopener';a.target='_blank';a.style.display='none';document.body.appendChild(a);
+ let automatic=false;try{a.click();automatic=true}catch(error){console.warn('Téléchargement automatique bloqué',error)}
+ let box=document.getElementById('downloadFallbackBox');
+ if(!box){box=document.createElement('div');box.id='downloadFallbackBox';box.className='download-ready-panel';document.body.appendChild(box)}
+ box.innerHTML='';
+ const text=document.createElement('div');text.className='download-ready-text';text.innerHTML=`<strong>Fichier prêt</strong><small>${esc(name)}</small>`;
+ const actions=document.createElement('div');actions.className='download-ready-actions';
+ const link=document.createElement('a');link.href=url;link.download=name;link.target='_blank';link.rel='noopener';link.className='download-ready-link';link.textContent='⬇️ Télécharger maintenant';
+ actions.appendChild(link);
+ if(navigator.share&&typeof File!=='undefined'){
+  const share=document.createElement('button');share.type='button';share.className='download-share';share.textContent='Partager / enregistrer';
+  share.onclick=async()=>{try{const file=new File([blob],name,{type:blob.type||'application/octet-stream'});if(!navigator.canShare||navigator.canShare({files:[file]}))await navigator.share({files:[file],title:name})}catch(error){if(error?.name!=='AbortError')console.warn('Partage impossible',error)}};
+  actions.appendChild(share);
+ }
+ const close=document.createElement('button');close.type='button';close.className='download-ready-close';close.textContent='×';close.onclick=()=>box.remove();
+ box.append(text,actions,close);
+ setTimeout(()=>a.remove(),1000);
+ // L'URL reste disponible 10 minutes afin que l'utilisateur puisse toucher le bouton sur mobile.
+ setTimeout(()=>{URL.revokeObjectURL(url);if(document.body.contains(box))box.remove()},600000);
+ return automatic;
+}
+function downloadText(name,text,type='text/plain;charset=utf-8'){
+ const blob=new Blob(['\ufeff',text],{type});return triggerDownloadBlob(name,blob);
+}
 function exportStyledExcel(module){
  const titles={agents:'Agents',agentDays:'Horaires, congés et absences',rotations:'Roulements',weeklyPlans:'Horaires hebdomadaires',cleaning:'Contrôles ménage',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers et GPA',meetings:'Réunions',issues:'Sécurité et qualité',periodic:'Contrôles périodiques',notes:'Bloc-notes',vacations:'Vacances',documents:'Documentation'};
  const map={agents:[['Prénom','firstName'],['Nom','lastName'],['Fonction','role'],['Heures / semaine','weeklyHours'],['Affectation','assignment'],['Statut','status']],agentDays:[['Date','date'],['Agent','agentId'],['Journée','dayType'],['Début prévu','plannedStart'],['Fin prévue','plannedEnd'],['Début réel','actualStart'],['Fin réelle','actualEnd'],['Pause','pause'],['Heures +/-','overtime'],['Statut','status'],['Note','note']],rotations:[['Agent','agentId'],['Date d’effet','effectiveFrom'],['Commence par','startShift'],['Semaines matin','morningWeeks'],['Semaines soir','eveningWeeks'],['Fin','effectiveTo'],['Notes','notes']],cleaning:[['N°','no'],['Date','date'],['Bâtiment','building'],['Étage','floor'],['Zone','roomType'],['Local','room'],['Agent','agentId'],['Score','score'],['Résultat','overallStatus'],['Commentaire','comment']],maintenance:[['N°','no'],['Date','date'],['Titre','title'],['Domaine','family'],['Priorité','priority'],['Statut','status'],['Lieu','room'],['Affecté à','assigned'],['Échéance','dueDate'],['Action','action']],requests:[['N°','no'],['Date','date'],['Type','type'],['Titre','title'],['Priorité','priority'],['Statut','status'],['Lieu','room'],['Demandeur','requester'],['Échéance','dueDate']],works:[['N°','no'],['Date','date'],['Type','type'],['Titre','title'],['Entreprise','company'],['Bâtiment','building'],['Statut','status'],['Échéance','dueDate'],['Fin GPA','gpaEnd']],meetings:[['N°','no'],['Date','date'],['Heure','time'],['Type','type'],['Titre','title'],['Lieu','location'],['Participants','participants'],['Statut','status']],issues:[['N°','no'],['Date','date'],['Catégorie','category'],['Agent','agentId'],['Titre','title'],['Priorité','priority'],['Statut','status'],['Échéance','dueDate'],['Action','action']],periodic:[['N°','no'],['Contrôle','name'],['Famille','family'],['Périodicité (mois)','intervalMonths'],['Bâtiment','building'],['Dernier contrôle','lastDate'],['Prochaine date','nextDate'],['Statut','status'],['Prestataire','provider']],notes:[['N°','no'],['Date','date'],['Catégorie','category'],['Titre','title'],['Priorité','priority'],['Statut','status'],['Échéance','dueDate'],['Texte','text']],vacations:[['Période','name'],['Zone','zone'],['Début','start'],['Fin','end'],['Statut','status'],['Notes','notes']],documents:[['N°','no'],['Date','date'],['Titre','title'],['Catégorie','category'],['Module','linkedModule'],['Description','description']]};
- let defs=map[module]||[];let rows=db[module]||[];
+ let defs=map[module]||[],rows=db[module]||[];
  if(module==='weeklyPlans'){defs=[['Agent','agent'],['Profil','shift'],['Lundi','d1'],['Mardi','d2'],['Mercredi','d3'],['Jeudi','d4'],['Vendredi','d5']];rows=(db.weeklyPlans||[]).map(p=>{const r={agent:agentName(agentById(p.agentId))||p.agent,shift:p.shift};for(let d=1;d<=5;d++){const x=p.dayProfiles?.[d]||{};r['d'+d]=x.start&&x.end?`${x.start}-${x.end} — ${x.missions||''}`:'Repos'}return r})}
  const value=(r,k)=>k==='agentId'?agentName(agentById(r[k])):(r[k]??'');
- const html=`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Calibri,Arial}h1{color:#173b63}.meta{color:#666;margin-bottom:16px}table{border-collapse:collapse;width:100%}th{background:#173b63;color:#fff;font-weight:bold;padding:9px;border:1px solid #b8c4d0}td{padding:7px;border:1px solid #d5dde5;vertical-align:top}tr:nth-child(even) td{background:#eef5fa}</style></head><body><h1>${esc(titles[module]||module)}</h1><div class="meta">Pilotage Service Technique — export du ${new Date().toLocaleString('fr-FR')}</div><table><thead><tr>${defs.map(d=>`<th>${esc(d[0])}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${defs.map(d=>`<td>${esc(value(r,d[1]))}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
- downloadText(`${(titles[module]||module).replace(/\s+/g,'_')}_${todayISO()}.xls`,html,'application/vnd.ms-excel;charset=utf-8');toast('Export Excel esthétique créé');
+ const aoa=[[titles[module]||module],[`Pilotage Service Technique — export du ${new Date().toLocaleString('fr-FR')}`],[],defs.map(d=>d[0]),...rows.map(r=>defs.map(d=>value(r,d[1])))];
+ const filename=`${(titles[module]||module).replace(/\s+/g,'_')}_${todayISO()}.xlsx`;
+ if(window.XLSX){
+  const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=defs.map((d,i)=>({wch:Math.min(45,Math.max(12,d[0].length+4,...rows.slice(0,100).map(r=>String(value(r,d[1])??'').length+2)))}));
+  ws['!autofilter']={ref:`A4:${XLSX.utils.encode_col(Math.max(0,defs.length-1))}${Math.max(4,rows.length+4)}`};
+  XLSX.utils.book_append_sheet(wb,ws,(titles[module]||'Rapport').slice(0,31));
+  const data=XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true});
+  triggerDownloadBlob(filename,new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+ }else{
+  const csv=aoa.map(row=>row.map(csvEscape).join(';')).join('\n');downloadText(filename.replace('.xlsx','.csv'),csv,'text/csv;charset=utf-8');
+ }
+ toast('Fichier prêt — touchez « Télécharger maintenant »');
 }
 function exportCSV(module){const map={agents:['firstName','lastName','role','weeklyHours','email','phone','assignment','status'],agentDays:['date','agentId','dayType','plannedStart','plannedEnd','actualStart','actualEnd','pause','overtime','status','note'],cleaning:['no','date','time','building','floor','roomType','room','agentId','score','overallStatus','comment'],maintenance:['no','date','title','family','priority','status','building','floor','room','requester','assigned','dueDate','cost','description','action'],requests:['no','date','type','title','priority','status','building','room','requester','dueDate','description','response'],works:['no','date','type','title','company','architect','building','priority','status','dueDate','gpaEnd','description','decision'],meetings:['no','date','time','end','type','title','location','participants','status','notes','actions'],issues:['no','date','category','agentId','title','priority','status','owner','dueDate','cost','description','action'],periodic:['no','name','family','intervalMonths','building','lastDate','nextDate','status','provider','register','requirement','notes'],notes:['no','date','category','agentId','title','priority','status','dueDate','text'],vacations:['name','zone','start','end','status','notes'],documents:['no','date','title','category','linkedModule','description']};const keys=map[module]||Object.keys(db[module]?.[0]||{}).filter(k=>!['id','attachments','tasks','items'].includes(k)),rows=db[module]||[];downloadText(`${module}-${todayISO()}.csv`,[keys.join(';'),...rows.map(r=>keys.map(k=>csvEscape(k==='agentId'?agentName(agentById(r[k])):r[k])).join(';'))].join('\n'),'text/csv;charset=utf-8')}
 /* ---------- Initialisation des listes et rendu global ---------- */
