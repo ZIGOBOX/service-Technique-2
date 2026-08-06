@@ -1,3 +1,70 @@
+
+/* ===== navigation.js intégré à la V43 GitHub Online ===== */
+(function(){
+  'use strict';
+  const q=(s,r=document)=>r.querySelector(s);
+  const qa=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  function closeMenu(){
+    document.body.classList.remove('menu-open');
+    const open=q('#openMenu'); if(open) open.setAttribute('aria-expanded','false');
+  }
+  function openMenu(){
+    document.body.classList.add('menu-open');
+    const open=q('#openMenu'); if(open) open.setAttribute('aria-expanded','true');
+  }
+  function switchView(id){
+    const target=document.getElementById(id);
+    if(!target) return false;
+    qa('.view').forEach(v=>v.classList.toggle('active',v===target));
+    qa('.nav-btn[data-view]').forEach(b=>{
+      const active=b.dataset.view===id;
+      b.classList.toggle('active',active);
+      b.setAttribute('aria-current',active?'page':'false');
+    });
+    const title=q('#pageTitle');
+    const activeBtn=q('.nav-btn[data-view="'+CSS.escape(id)+'"]');
+    if(title && activeBtn) title.textContent=activeBtn.textContent.trim();
+    closeMenu();
+    window.scrollTo(0,0);
+    try{ localStorage.setItem('pst-last-view',id); }catch(e){}
+    return true;
+  }
+  function initNavigation(){
+    const open=q('#openMenu'), close=q('#closeMenu'), backdrop=q('#menuBackdrop'), nav=q('#nav');
+    if(open){ open.type='button'; open.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openMenu();}); }
+    if(close){ close.type='button'; close.addEventListener('click',e=>{e.preventDefault();closeMenu();}); }
+    if(backdrop) backdrop.addEventListener('click',closeMenu);
+    if(nav){
+      nav.addEventListener('click',e=>{
+        const btn=e.target.closest('.nav-btn[data-view]');
+        if(!btn) return;
+        e.preventDefault(); e.stopPropagation();
+        switchView(btn.dataset.view);
+      });
+      qa('.nav-btn[data-view]',nav).forEach(btn=>{btn.type='button';btn.tabIndex=0;});
+    }
+    document.addEventListener('keydown',e=>{if(e.key==='Escape') closeMenu();});
+    window.addEventListener('resize',()=>{if(window.innerWidth>900) closeMenu();});
+    document.addEventListener('click',e=>{
+      const go=e.target.closest('[data-go]');
+      if(go && go.dataset.go){e.preventDefault();switchView(go.dataset.go);}
+    },true);
+    let last='dashboard'; try{last=localStorage.getItem('pst-last-view')||'dashboard';}catch(e){}
+    if(!switchView(last)) switchView('dashboard');
+    document.documentElement.classList.add('navigation-ready');
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initNavigation,{once:true});
+  else initNavigation();
+  window.PSTNavigation={openMenu,closeMenu,switchView};
+})();
+
+/* ===== supabase-config.js intégré à la V43 GitHub Online ===== */
+window.SUPABASE_CONFIG = {
+  url: 'https://sbkshssohbdqximhmpnj.supabase.co',
+  publishableKey: 'sb_publishable_LsUqc2wPzv9X-HCPoaceWw_MYCbpGNU'
+};
+
+/* ===== app.js intégré à la V43 GitHub Online ===== */
 'use strict';
 
 const APP_VERSION='42.0';
@@ -785,7 +852,7 @@ if(type==='periodic'){subtitle=`Année ${year}`;html=tableHTML(['N°','Contrôle
 if(type==='vacation'){const id=$('#vacationReportPeriod').value,x=byId('vacations',id)||db.vacations[0];subtitle=x?`${x.name} · ${fmtDate(x.start)} au ${fmtDate(x.end)}`:'Aucune période';html=x?tableHTML(['État','Action'],(x.tasks||[]).map(t=>[t.done?'✓ Fait':'○ À faire',esc(t.text)])):'<p>Aucune période.</p>'}
 if(type==='full'){subtitle=`Édité le ${fmtDate(todayISO())}`;html=['team','absence','cleaning','maintenance','periodic','vacation'].map(t=>`<section><h1>${reportTitle(t)}</h1>${reportData(t).html}</section>`).join('')}return {title,subtitle,html,text:stripHTML(html)}}
 function stripHTML(h){const d=document.createElement('div');d.innerHTML=h;return d.innerText}
-function printReport(type){const r=reportData(type),orientation=db.settings.printOrientation||'landscape',w=window.open('','_blank');w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(r.title)}</title><style>@page{size:A4 ${orientation};margin:12mm}body{font-family:Arial,sans-serif;color:#15253a;font-size:11px}header{display:flex;align-items:center;border-bottom:3px solid #0875c9;padding-bottom:10px;margin-bottom:18px}header img{width:72px;margin-right:16px}h1{color:#075ca8;margin:0}h2{margin-top:24px;color:#075ca8}table{border-collapse:collapse;width:100%;margin:10px 0 20px}th,td{border:1px solid #b8c5d1;padding:6px;vertical-align:top}th{background:#eaf5fc}.badge{padding:2px 6px;border-radius:8px;background:#eee}.good{background:#dff6e8}.bad{background:#ffe0e0}.warn{background:#fff0c9}.info{background:#dff0ff}small{display:block;color:#64748b}</style></head><body><header><img src="assets/logo-service-technique.png"><div><h1>${esc(db.settings.appName)}</h1><p>${esc(db.settings.schoolName)} — ${esc(r.title)}</p><strong>${esc(r.subtitle)}</strong></div></header>${r.html}</body></html>`);w.document.close();setTimeout(()=>w.print(),500)}
+function printReport(type){const r=reportData(type),orientation=db.settings.printOrientation||'landscape',w=window.open('','_blank');w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(r.title)}</title><style>@page{size:A4 ${orientation};margin:12mm}body{font-family:Arial,sans-serif;color:#15253a;font-size:11px}header{display:flex;align-items:center;border-bottom:3px solid #0875c9;padding-bottom:10px;margin-bottom:18px}header img{width:72px;margin-right:16px}h1{color:#075ca8;margin:0}h2{margin-top:24px;color:#075ca8}table{border-collapse:collapse;width:100%;margin:10px 0 20px}th,td{border:1px solid #b8c5d1;padding:6px;vertical-align:top}th{background:#eaf5fc}.badge{padding:2px 6px;border-radius:8px;background:#eee}.good{background:#dff6e8}.bad{background:#ffe0e0}.warn{background:#fff0c9}.info{background:#dff0ff}small{display:block;color:#64748b}</style></head><body><header><img src="${window.PST_LOGO_DATA_URI || ""}"><div><h1>${esc(db.settings.appName)}</h1><p>${esc(db.settings.schoolName)} — ${esc(r.title)}</p><strong>${esc(r.subtitle)}</strong></div></header>${r.html}</body></html>`);w.document.close();setTimeout(()=>w.print(),500)}
 function prepareEmail(type){const r=reportData(type);$('#mailTo').value=db.settings.emailsTo||'';$('#mailCc').value=db.settings.emailsCc||'';$('#mailBcc').value=db.settings.emailsBcc||'';$('#mailSubject').value=`${db.settings.emailSubjectPrefix||db.settings.appName} — ${r.title} — ${r.subtitle}`;$('#mailMessage').value=`Bonjour,\n\nVoici le compte rendu préparé depuis ${db.settings.appName}.\n\n${r.title}\n${r.subtitle}\n\n${r.text}\n\nCordialement.`;const d=$('#emailModal');if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','')}
 function openMailClient(){const to=normalizeEmails($('#mailTo').value),cc=normalizeEmails($('#mailCc').value),bcc=normalizeEmails($('#mailBcc').value),subject=$('#mailSubject').value,body=$('#mailMessage').value;location.href=`mailto:${encodeURIComponent(to)}?cc=${encodeURIComponent(cc)}&bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`}
 function csvEscape(v){v=String(v??'');return /[;"\n]/.test(v)?`"${v.replace(/"/g,'""')}"`:v}
@@ -893,3 +960,23 @@ function init(){const storedLayout=localStorage.getItem('pilotage-service-techni
 window.addEventListener('DOMContentLoaded',init);
 
 window.addEventListener('load',()=>initAuth());
+
+/* ===== notification-center.js intégré à la V43 GitHub Online ===== */
+/* Pilotage Service Technique V42 — moteur d'affichage unique et diagnostic */
+(() => {
+  'use strict';
+  const byId = id => document.getElementById(id);
+  let opened = false;
+  let lastNotifications = [];
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  function computeSafely(){try{const api=window.PSTNotifications;if(!api||typeof api.compute!=='function')return{list:[],error:'Le moteur de notifications n’est pas encore chargé.'};const value=api.compute();return{list:Array.isArray(value)?value:[],error:''}}catch(error){console.error('[Notifications V42] calcul impossible',error);return{list:[],error:error?.message||String(error)}}}
+  function diagnosticSummary(){try{return window.PSTDiagnostics?.notificationSummary?.()||null}catch(error){console.error('[Notifications V42] diagnostic impossible',error);return null}}
+  function diagnosticHtml(){const d=diagnosticSummary();if(!d)return '<div class="notification-diagnostic"><strong>Diagnostic</strong><span>Données non encore disponibles.</span></div>';const late=(d.maintenanceLateDetails||[]).slice(0,5).map(x=>`<li>${escapeHtml(x.title)} — ${escapeHtml(x.status)} — échéance ${escapeHtml(x.due||'absente')}</li>`).join('');return `<details class="notification-diagnostic"><summary>Diagnostic notifications</summary><div class="diagnostic-grid"><span>Interventions lues <b>${escapeHtml(d.maintenanceTotal)}</b></span><span>Interventions ouvertes <b>${escapeHtml(d.maintenanceOpen)}</b></span><span>Interventions en retard <b>${escapeHtml(d.maintenanceLate)}</b></span><span>Notifications créées <b>${escapeHtml(d.notifications)}</b></span><span>Agents lus <b>${escapeHtml(d.agents)}</b></span><span>Contrôles périodiques <b>${escapeHtml(d.periodicTotal)}</b></span></div>${late?`<ul>${late}</ul>`:'<p>Aucune intervention ouverte en retard détectée.</p>'}<small>Date de calcul : ${escapeHtml(d.today||'')}</small></details>`}
+  function render(){const listElement=byId('notificationList'),countElement=byId('notificationCount'),subtitle=byId('notificationSubtitle'),result=computeSafely(),notifications=result.list;lastNotifications=notifications;window.__notifications=notifications;if(countElement){countElement.textContent=String(notifications.length);countElement.classList.toggle('hidden',notifications.length===0)}if(subtitle)subtitle.textContent=result.error?'Erreur de calcul — consulter le diagnostic ci-dessous':notifications.length?`${notifications.length} notification${notifications.length>1?'s':''} à consulter`:'Aucune notification calculée';if(!listElement)return notifications;if(result.error){listElement.innerHTML=`<div class="notification-diagnostic error"><strong>Le calcul a échoué</strong><span>${escapeHtml(result.error)}</span></div>${diagnosticHtml()}`;return notifications}const items=notifications.map((n,index)=>`<button type="button" class="notification-item ${escapeHtml(n.level||'blue')}" data-stable-notification="${index}"><span class="notification-icon">${escapeHtml(n.icon||'🔔')}</span><span><strong>${escapeHtml(n.title||'Notification')}</strong><small>${escapeHtml(n.text||'')}</small></span><span class="go-arrow">›</span></button>`).join('');listElement.innerHTML=items||'<div class="empty-state">✓ Aucune notification à traiter.</div>';listElement.insertAdjacentHTML('beforeend',diagnosticHtml());return notifications}
+  function open(event){event?.preventDefault?.();event?.stopPropagation?.();const modal=byId('notificationModal');if(!modal)return;render();modal.classList.remove('hidden');modal.classList.add('is-open');modal.setAttribute('aria-hidden','false');document.body.classList.add('notifications-open');opened=true}
+  function close(event){event?.preventDefault?.();event?.stopPropagation?.();const modal=byId('notificationModal');if(!modal)return;modal.classList.remove('is-open');modal.classList.add('hidden');modal.setAttribute('aria-hidden','true');document.body.classList.remove('notifications-open');opened=false}
+  function activate(index){const notification=lastNotifications[index];close();if(!notification)return;try{window.PSTNotifications?.target?.(notification)}catch(error){console.error('[Notifications V42] navigation impossible',error)}}
+  function init(){const bell=byId('notificationBell'),closeButton=byId('notificationClose'),backdrop=byId('notificationBackdrop');if(bell){bell.removeAttribute('href');bell.setAttribute('role','button');bell.setAttribute('tabindex','0');bell.addEventListener('click',open,{passive:false});bell.addEventListener('touchend',open,{passive:false});bell.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' ')open(event)})}closeButton?.addEventListener('click',close);backdrop?.addEventListener('click',close);document.addEventListener('click',event=>{const button=event.target.closest('[data-stable-notification]');if(button)activate(Number(button.dataset.stableNotification))});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&opened)close(event)});['pst:data-loaded','pst:data-saved','online'].forEach(name=>window.addEventListener(name,render));render();setTimeout(render,1000);setTimeout(render,3500);setTimeout(render,10000);setInterval(render,60000)}
+  window.PSTNotificationCenter={open,close,render,diagnosticSummary};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
