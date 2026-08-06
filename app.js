@@ -1,6 +1,6 @@
 'use strict';
 
-const APP_VERSION='49.0';
+const APP_VERSION='50.0';
 const APP_BUILD='07/08/2026 01:35';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -765,9 +765,9 @@ function computeNotifications(){
    }
   }
   for(const x of (db.cleaning||[]).filter(c=>normalizeDateValue(c.date)<=today&&normalizeText(c.overallStatus)==='non controle'))planned.push(x);
-  if(never.length){const sample=never.slice(0,4).map(sp=>sp.name).join(', ');push({level:'yellow',icon:'🧹',title:`${never.length} local${never.length>1?'x':''} jamais contrôlé${never.length>1?'s':''}`,text:`${sample}${never.length>4?'…':''}`,view:'cleaning',type:'cleaning-summary',id:'never',date:today});}
-  if(overdue.length){const max=Math.max(...overdue.map(x=>x.diff));const sample=overdue.slice(0,4).map(x=>x.space.name).join(', ');push({level:'yellow',icon:'🧹',title:`${overdue.length} local${overdue.length>1?'x':''} à contrôler`,text:`Non contrôlé${overdue.length>1?'s':''} depuis plus de ${threshold} jours · ${sample}${overdue.length>4?'…':''}`,view:'cleaning',type:'cleaning-summary',id:'overdue',date:today});}
-  if(planned.length){const sample=planned.slice(0,4).map(x=>x.room||x.roomType||'Local').join(', ');push({level:'orange',icon:'🧹',title:`${planned.length} contrôle${planned.length>1?'s':''} ménage non réalisé${planned.length>1?'s':''}`,text:`${sample}${planned.length>4?'…':''}`,view:'cleaning',type:'cleaning-summary',id:'planned',date:today});}
+  if(never.length){const sample=never.slice(0,4).map(sp=>sp.name).join(', ');push({level:'yellow',icon:'🧹',title:`${never.length} local${never.length>1?'x':''} jamais contrôlé${never.length>1?'s':''}`,text:`${sample}${never.length>4?'…':''}`,details:never.map(sp=>`${sp.building||'Bâtiment'} · ${sp.floor||'Niveau'} · ${sp.name}`),view:'cleaning',type:'cleaning-summary',id:'never',date:today});}
+  if(overdue.length){const max=Math.max(...overdue.map(x=>x.diff));const sample=overdue.slice(0,4).map(x=>x.space.name).join(', ');push({level:'yellow',icon:'🧹',title:`${overdue.length} local${overdue.length>1?'x':''} à contrôler`,text:`Non contrôlé${overdue.length>1?'s':''} depuis plus de ${threshold} jours · ${sample}${overdue.length>4?'…':''}`,details:overdue.map(x=>`${x.space.building||'Bâtiment'} · ${x.space.floor||'Niveau'} · ${x.space.name} — dernier contrôle ${fmtDate(x.last)}`),view:'cleaning',type:'cleaning-summary',id:'overdue',date:today});}
+  if(planned.length){const sample=planned.slice(0,4).map(x=>x.room||x.roomType||'Local').join(', ');push({level:'orange',icon:'🧹',title:`${planned.length} contrôle${planned.length>1?'s':''} ménage non réalisé${planned.length>1?'s':''}`,text:`${sample}${planned.length>4?'…':''}`,details:planned.map(x=>`${x.building||'Bâtiment'} · ${x.floor||'Niveau'} · ${x.room||x.roomType||'Local'} — ${fmtDate(x.date)}`),view:'cleaning',type:'cleaning-summary',id:'planned',date:today});}
  }catch(error){console.error('Notifications ménage',error)}
  try{
   const meetingDays=Math.max(1,Number(db.settings?.meetingAlertDays||3));
