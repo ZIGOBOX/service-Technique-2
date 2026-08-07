@@ -866,40 +866,41 @@ function collectUrgentDashboardActions(){
  ];
  const rows=[];
  for(const [key,label,icon,editType] of sources){
-  for(const x of db[key]||[]){
+  for(const x of (db[key]||[])){
    if(isClosedStatus(x.status)||!isUrgentPriority(x.priority))continue;
-   rows.push({record:x,module:key,label,icon,editType,id:x.id,title:x.title||x.no||label,due:recordDueDate(x)});
+   rows.push({label,icon,editType,id:x.id,title:x.title||x.subject||x.no||label,due:recordDueDate(x)});
   }
  }
- // Une non-conformité urgente issue d'un rapport est comptée seulement si elle n'a pas déjà
- // généré une intervention maintenance active, afin d'éviter le double comptage.
  const linkedNc=new Set((db.maintenance||[]).filter(x=>!isClosedStatus(x.status)&&x.sourceNonconformityId).map(x=>String(x.sourceNonconformityId)));
- for(const x of db.reportNonconformities||[]){
+ for(const x of (db.reportNonconformities||[])){
   const closed=['levee','leve','conforme','cloturee','cloture','archivee','archive'].includes(normalizeText(x.status));
   if(closed||!isUrgentPriority(x.priority)||linkedNc.has(String(x.id)))continue;
-  rows.push({record:x,module:'reportNonconformities',label:'Non-conformité rapport',icon:'🛡️',editType:'reportNonconformity',id:x.id,title:x.text||x.no||'Non-conformité urgente',due:''});
+  rows.push({label:'Non-conformité rapport',icon:'🛡️',editType:'reportNonconformity',id:x.id,title:x.text||x.title||x.no||'Non-conformité urgente',due:recordDueDate(x)});
  }
  return rows;
 }
 function collectLateDashboardActions(today=todayISO()){
  const sources=['issues','maintenance','requests','works','notes'];
  const rows=[];
- for(const key of sources)for(const x of db[key]||[]){const due=recordDueDate(x);if(!isClosedStatus(x.status)&&due&&due<today)rows.push({module:key,record:x,due})}
+ for(const key of sources){
+  for(const x of (db[key]||[])){
+   const due=recordDueDate(x);
+   if(!isClosedStatus(x.status)&&due&&due<today)rows.push({module:key,record:x,due});
+  }
+ }
  return rows;
 }
 function renderDashboard(){
  const today=todayISO(),soon7=addDays(today,7);
  const activeAgents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif');
  const present=activeAgents.filter(a=>{const info=dayInfo(a.id,today);return !isAbsenceType(info.dayType)&&normalizeText(info.dayType)!=='repos'}).length;
- // Tableau de bord transversal : toutes les fiches OUVERTES marquées Urgent/Urgente,
- // quel que soit leur module d'origine.
  const urgentActions=collectUrgentDashboardActions();
  const lateActions=collectLateDashboardActions(today);
  const openMaint=(db.maintenance||[]).filter(x=>!isClosedStatus(x.status));
  const todoMaint=openMaint.filter(x=>['a qualifier','a faire','planifie','planifiee'].includes(normalizeText(x.status)));
  const recentClean=(db.cleaning||[]).filter(x=>normalizeDateValue(x.date)>=addDays(today,-30));
  const comp=recentClean.length?Math.round(recentClean.filter(x=>normalizeText(x.overallStatus)==='conforme').length/recentClean.length*100):null;
- const weak=recentClean.reduce((s,x)=>s+(x.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).length,0);
+ const weak=recentClean.reduce((sum,x)=>sum+(x.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).length,0);
  const pLate=(db.periodic||[]).filter(x=>normalizeText(periodicComputed(x))==='en retard'),pSoon=(db.periodic||[]).filter(x=>normalizeText(periodicComputed(x))==='bientot');
  const notes=(db.notes||[]).filter(x=>!isClosedStatus(x.status)),notesDue=notes.filter(x=>{const due=recordDueDate(x);return due&&due<=soon7}).length;
  $('#kpiAgents').textContent=activeAgents.length;$('#kpiPresent').textContent=`${present} présents aujourd’hui`;
@@ -911,13 +912,13 @@ function renderDashboard(){
  const pri=[...urgentActions].sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,8);
  $('#priorityList').innerHTML=cardList(pri.map(x=>itemCard(x.icon,x.title,`${badge('Urgente')} · ${esc(x.label)} · ${fmtDate(x.due)||'Sans échéance'}`,x.editType,x.id)),'Aucune urgence dans le logiciel.');
  $('#dashboardNotes').innerHTML=cardList(notes.slice().sort((a,b)=>(recordDueDate(a)||'9999').localeCompare(recordDueDate(b)||'9999')).slice(0,5).map(x=>itemCard('✎',x.title,`${esc(x.category)} · ${fmtDate(recordDueDate(x))||'Sans échéance'}`,'note',x.id)),'Aucune note active.');
- $('#maintenancePreview').innerHTML=cardList(openMaint.filter(x=>{const s=normalizeText(x.status);return s==='en cours'||s.startsWith('en attente')}).slice(0,5).map(x=>itemCard('⚙',x.title,`${esc(x.building)} · ${badge(x.status)}`,'maintenance',x.id)),'Aucune intervention en cours.');
+ $('#maintenancePreview').innerHTML=cardList(openMaint.filter(x=>{const st=normalizeText(x.status);return st==='en cours'||st.startsWith('en attente')}).slice(0,5).map(x=>itemCard('⚙',x.title,`${esc(x.building)} · ${badge(x.status)}`,'maintenance',x.id)),'Aucune intervention en cours.');
  $('#maintenanceTodoPreview').innerHTML=cardList(todoMaint.slice(0,5).map(x=>itemCard('🧰',x.title,`${badge(x.priority)} · ${fmtDate(recordDueDate(x))||'Sans échéance'}`,'maintenance',x.id)),'Aucune intervention à faire.');
  const weakRows=[];recentClean.forEach(c=>(c.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).forEach(t=>weakRows.push({c,t})));
  $('#cleaningWeakPreview').innerHTML=cardList(weakRows.slice(0,5).map(({c,t})=>itemCard('🧹',t.name,`${esc(c.building)} · ${esc(c.room)} · ${badge(t.status)}`,'cleaning',c.id)),'Aucun point faible récent.');
  const nextMeet=(db.meetings||[]).filter(x=>normalizeDateValue(x.date)>=today&&!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule').sort((a,b)=>`${normalizeDateValue(a.date)}${a.time||''}`.localeCompare(`${normalizeDateValue(b.date)}${b.time||''}`)).slice(0,5);
  $('#meetingPreview').innerHTML=cardList(nextMeet.map(x=>itemCard('📅',x.title,`${fmtDate(normalizeDateValue(x.date))} ${esc(x.time||'')} · ${esc(x.location||'')}`,'meeting',x.id)),'Aucun rendez-vous à venir.');
- renderTeamCalendar();renderPersonalCalendar();window.PDFImportModule?.renderDashboard?.()
+ renderTeamCalendar();renderPersonalCalendar();window.PDFImportModule?.renderDashboard?.();
 }
 
 /* ---------- Paramètres ---------- */
@@ -1144,8 +1145,8 @@ function runDiagnostic(){
  ];
  const failed=checks.filter(x=>!x[1]).map(x=>x[0]);let notifications=[];try{notifications=computeNotifications()}catch(error){failed.push('Calcul des notifications');console.error(error)}
  const lateTest={status:'À faire',dueDate:addDays(todayISO(),-1),priority:'Normale'};if(isClosedStatus(lateTest.status)||!(recordDueDate(lateTest)<todayISO()))failed.push('Règle intervention en retard');
- const urgentIssueTest={status:'À faire',priority:'Urgent',dueDate:''};if(isClosedStatus(urgentIssueTest.status)||!isUrgentPriority(urgentIssueTest.priority))failed.push('Règle priorité urgente');
- const urgentModulesTest=['issues','maintenance','requests','works','notes','personalEvents'];if(urgentModulesTest.some(k=>!Array.isArray(db[k])))failed.push('Sources actions urgentes transversales');
+ const urgentIssueTest={status:'À faire',priority:'Urgent',dueDate:''};if(isClosedStatus(urgentIssueTest.status)||!isUrgentPriority(urgentIssueTest.priority))failed.push('Règle action urgente Sécurité & qualité');
+ const dueSoonIssueTest={status:'En cours',priority:'Normale',dueDate:addDays(todayISO(),2)};if(isClosedStatus(dueSoonIssueTest.status)||!(recordDueDate(dueSoonIssueTest)<=addDays(todayISO(),3)))failed.push('Règle échéance proche Sécurité & qualité');
  if(missing.length||failed.length){console.error('Diagnostic',{missing,failed});toast(`Diagnostic : ${missing.length+failed.length} anomalie(s) détectée(s)`);return false}
  toast(`Diagnostic réussi — ${notifications.length} notification(s) calculée(s)`);return true;
 }
@@ -1179,7 +1180,7 @@ $('#archiveNow').onclick=()=>{const made=createWeeklyArchive(false);save();toast
  document.addEventListener('click',e=>{const b=e.target.closest('[data-edit-weekly-plan]');if(b)openWeeklyPlan(Number(b.dataset.editWeeklyPlan))});
  document.addEventListener('click',e=>{const b=e.target.closest('[data-new-weekly-agent]');if(b)openWeeklyPlan(null,b.dataset.newWeeklyAgent)});
  const filterIds=['personalMonth','personalType','personalStatus','agentSearch','agentStatus','rotationAgent','rotationYear','rotationMonth','planningMonth','planningAgent','planningSignal','absenceMonth','absenceAgent','absenceType','absenceStatus','vacationZone','vacationStatus','issueMonth','issueAgent','issueCategory','issueStatus','periodicFamily','periodicStatus','periodicBuilding','cleanMonth','cleanBuilding','cleanRoomType','cleanStatus','cleaningGuideType','maintenanceStatus','maintenancePriority','maintenanceFamily','requestStatus','requestType','workStatus','workType','meetingMonth','meetingType','noteCategory','notePriority','noteStatus','noteSearch','documentCategory','documentSearch','archiveYear','archiveSearch'];for(const id of filterIds){const e=document.getElementById(id);if(e)e.addEventListener(e.tagName==='INPUT'&&e.type==='text'?'input':'change',()=>{if(id==='cleaningGuideType')renderCleaningGuide();else if(id.startsWith('personal'))renderPersonal();else if(id.startsWith('agent'))renderAgents();else if(id.startsWith('rotation'))renderRotations();else if(id.startsWith('planning'))renderPlanning();else if(id.startsWith('absence'))renderAbsences();else if(id.startsWith('vacation'))renderVacations();else if(id.startsWith('issue'))renderIssues();else if(id.startsWith('periodic'))renderPeriodic();else if(id.startsWith('clean'))renderCleaning();else if(id.startsWith('maintenance'))renderMaintenance();else if(id.startsWith('request'))renderRequests();else if(id.startsWith('work'))renderWorks();else if(id.startsWith('meeting'))renderMeetings();else if(id.startsWith('note'))renderNotes();else if(id.startsWith('document'))renderDocuments();else if(id.startsWith('archive'))renderArchives()})}
- document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const scroll=e.target.closest('[data-scroll]');if(scroll){document.getElementById(scroll.dataset.scroll)?.scrollIntoView({behavior:'smooth',block:'center'});return}const go=e.target.closest('[data-go]');if(go){setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date);return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
+ document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const go=e.target.closest('[data-go]');if(go){setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date);return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
 }
 
 
