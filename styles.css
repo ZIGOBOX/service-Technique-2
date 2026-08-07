@@ -348,3 +348,10 @@ body.notifications-open{overflow:hidden}
 /* V78 - logo officiel fiabilisé dans tous les emplacements prévus */
 .auth-logo,.brand-logo,.welcome-logo,.print-header img{object-fit:contain!important;object-position:center!important}
 .print-header img{display:block!important;width:22mm!important;height:22mm!important;max-width:22mm!important;max-height:22mm!important}
+
+
+/* V79 — bouton Scanner réellement visible à côté du + flottant */
+.scan-fab{position:fixed;right:88px;bottom:22px;width:50px;height:50px;border-radius:50%;font-size:22px;color:#0b5f9f;background:#fff;border:2px solid #cfe1ef;box-shadow:0 10px 24px rgba(6,100,188,.22);z-index:151;display:flex;align-items:center;justify-content:center;padding:0}
+.scan-fab:hover{transform:translateY(-2px)}
+@media(max-width:900px){.scan-fab{right:79px;bottom:18px;width:48px;height:48px;font-size:21px}.fab{right:14px;bottom:14px}}
+@media print{.scan-fab{display:none!important}}

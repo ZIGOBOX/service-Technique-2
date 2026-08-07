@@ -1468,6 +1468,7 @@ async function saveScannedNote(){
 }
 function bindScanNoteV77(){
  const b=$('#scanNoteBtn');if(b)b.onclick=openScanNote;
+ const fb=$('#scanNoteFab');if(fb)fb.onclick=openScanNote;
  const c=$('#scanNoteClose');if(c)c.onclick=()=>$('#scanNoteModal').close();
  const r=$('#scanRetry');if(r)r.onclick=scanReset;
  const f=$('#scanNoteFile');if(f)f.onchange=()=>recognizeScannedNote(f.files?.[0]);
