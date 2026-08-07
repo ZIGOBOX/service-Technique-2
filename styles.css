@@ -280,3 +280,22 @@ body.notifications-open{overflow:hidden}
 
 /* V59 — réglages fins notifications ménage */
 .cleaning-notification-actions{display:flex;flex-wrap:wrap;gap:7px;padding:0 12px 12px}.cleaning-notification-actions button{border:1px solid #cbd9e5;background:#f7fafc;color:#264b67;border-radius:9px;padding:7px 9px;font-weight:700;font-size:12px;cursor:pointer}.cleaning-notification-actions .danger-mini{background:#fff0f0;border-color:#efc2c2;color:#a62828}@media(max-width:650px){.cleaning-notification-actions{display:grid;grid-template-columns:1fr 1fr}.cleaning-notification-actions button{min-height:42px}}
+
+/* V60 — calendrier mensuel coloré avec la même légende que les roulements */
+.month-cell.day-state{border:1px solid transparent;border-radius:12px;min-height:38px;font-weight:900;display:flex;align-items:center;justify-content:center;margin:1px;transition:transform .08s ease,box-shadow .08s ease}
+.month-cell.day-state:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(30,64,100,.12)}
+.month-cell.day-state span{font-size:.68rem;line-height:1}
+.month-cell.day-state.standard{background:#dbeafe;color:#275a9b;border-color:#b9cff2}
+.month-cell.day-state.morning{background:#dcfce7;color:#166534;border-color:#86efac}
+.month-cell.day-state.evening{background:#ffedd5;color:#9a3412;border-color:#fdba74}
+.month-cell.day-state.leave{background:#bbf7d0;color:#166534;border-color:#4ade80}
+.month-cell.day-state.rtt{background:#93c5fd;color:#1e3a8a;border-color:#60a5fa}
+.month-cell.day-state.sick{background:#fecaca;color:#991b1b;border-color:#f87171}
+.month-cell.day-state.holiday{background:#fef08a;color:#854d0e;border-color:#facc15}
+.month-cell.day-state.off{background:#eef1f4;color:#8794a0;border-color:#d7dde3}
+.month-cell.day-state.other{background:#ede9fe;color:#5b21b6;border-color:#c4b5fd}
+.schedule-source{display:inline-block;padding:6px 9px;border-radius:9px;border:1px solid;font-size:.9rem;white-space:nowrap}
+.schedule-source.morning{background:#dcfce7;color:#166534;border-color:#86efac}
+.schedule-source.evening{background:#ffedd5;color:#9a3412;border-color:#fdba74}
+.schedule-missing{display:inline-block;color:#b42318;background:#fff1f0;border:1px solid #fda29b;border-radius:8px;padding:5px 7px;font-size:.78rem;font-weight:700}
+.rotation-hours-detail{display:grid;gap:2px;min-width:150px}.rotation-hours-detail small{display:block;white-space:nowrap}.rotation-hours-detail b{display:inline-block;min-width:26px}
