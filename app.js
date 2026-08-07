@@ -1,6 +1,6 @@
 'use strict';
 
-const APP_VERSION='68.0';
+const APP_VERSION='71.0';
 const APP_BUILD='07/08/2026 15:00';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
