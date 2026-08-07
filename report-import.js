@@ -33,9 +33,25 @@
   const fmtDateTime=v=>v?new Date(v).toLocaleString('fr-FR'):'—';
   const academicFromPeriod=(start,end)=> start&&end?`${start.slice(0,4)}-${end.slice(0,4)}`:'';
   const durationToMinutes=s=>{
-    const m=String(s||'').match(/^([+-]?)(\d{1,5})[:h](\d{2})$/i);if(!m)return null;
+    const m=String(s||'').replace(/\s+/g,'').match(/^([+-]?)(\d{1,5})(?::|h)(\d{2})$/i);if(!m)return null;
     const sign=m[1]==='-'?-1:1;return sign*(Number(m[2])*60+Number(m[3]));
   };
+  const durationTokens=s=>[...String(s||'').matchAll(/[+-]?\d{1,5}\s*(?::|h)\s*\d{2}/gi)].map(m=>m[0]);
+  const dayTokens=s=>[...String(s||'').matchAll(/(\d+)\s*j\s*(\d{2})/gi)].map(m=>Number(m[1])+Number(m[2])/100);
+  function footerSlice(text,startRx,endRx){const m=text.match(startRx);if(!m)return '';const from=(m.index||0)+m[0].length;const rest=text.slice(from);if(!endRx)return rest.slice(0,1400);const e=rest.search(endRx);return (e>=0?rest.slice(0,e):rest.slice(0,1400));}
+  function parseAnnualFooter(text,allLines){
+    let presence=null,reference=null,delta=null,leaveTakenDays=null;
+    const candidates=allLines.filter(l=>/(tps\s*pr|temps\s*(de )?pr[ée]sence|pr[ée]sence.*r[ée]f[ée]rence|solde|[ée]cart)/i.test(l));
+    for(const l of candidates){const times=durationTokens(l);if(times.length>=3){presence=durationToMinutes(times.at(-3));reference=durationToMinutes(times.at(-2));delta=durationToMinutes(times.at(-1));if(presence!=null&&reference!=null&&delta!=null)break}}
+    if(presence==null||reference==null||delta==null){
+      const zone=footerSlice(text,/\b(?:tps\s*pr(?:[ée]s)?|temps\s*(?:de\s*)?pr[ée]sence)\b/i,/\bca\s+pris\b/i);
+      const times=durationTokens(zone);if(times.length>=3){presence??=durationToMinutes(times.at(-3));reference??=durationToMinutes(times.at(-2));delta??=durationToMinutes(times.at(-1));}
+    }
+    const caLine=allLines.find(l=>/\bca\s+pris\b/i.test(l));
+    if(caLine){const vals=dayTokens(caLine);if(vals.length>=3)leaveTakenDays=vals.at(-3)}
+    if(leaveTakenDays==null){const zone=footerSlice(text,/\bca\s+pris\b/i,null);const vals=dayTokens(zone);if(vals.length>=3)leaveTakenDays=vals.at(-3)}
+    return {presence,reference,delta,leaveTakenDays};
+  }
   const minutesToDuration=m=>{if(m==null||Number.isNaN(m))return '—';const sign=m<0?'-':m>0?'+':'';m=Math.abs(Math.round(m));return `${sign}${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`};
   async function fileFingerprint(file){try{const buf=await file.arrayBuffer();const hash=await crypto.subtle.digest('SHA-256',buf);return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('')}catch(e){return `${file.name}|${file.size}|${file.lastModified||0}`}}
 
@@ -88,9 +104,8 @@
     let start='',end='';for(const rx of periodPatterns){const m=text.match(rx);if(m){start=parseFrDate(m[1]);end=parseFrDate(m[2]);if(start&&end)break}}
     if(!start||!end){const ds=[...text.matchAll(/\b(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4})\b/g)].map(m=>parseFrDate(m[1])).filter(Boolean).sort();if(ds.length>=2){start=ds[0];end=ds.at(-1)}}
     const year=academicFromPeriod(start,end), months=start?monthSequence(start):[];
-    let totals={presence:null,reference:null,delta:null};
-    const totalCandidates=allLines.filter(l=>/(tps\s*pr|temps\s*(de )?pr[ée]sence|pr[ée]sence.*r[ée]f[ée]rence|solde|[ée]cart)/i.test(l));
-    for(const l of totalCandidates){const times=[...l.matchAll(/[+-]?\d{1,5}(?::|h)\d{2}/gi)].map(m=>m[0]);if(times.length>=3){totals.presence=durationToMinutes(times.at(-3));totals.reference=durationToMinutes(times.at(-2));totals.delta=durationToMinutes(times.at(-1));break}}
+    let totals=parseAnnualFooter(text,allLines);
+    const totalSources={presence:totals.presence!=null?'Pied de page PDF':'',reference:totals.reference!=null?'Pied de page PDF':'',delta:totals.delta!=null?'Pied de page PDF':'',leaveTakenDays:totals.leaveTakenDays!=null?'Pied de page PDF':''};
     const records=[],codes=new Set(),seenDates=new Set();
     for(const line of allLines){
       const normalized=line.replace(/(\d)\s*[Hh]\s*(\d{2})/g,'$1h$2');
@@ -99,21 +114,33 @@
       for(const p of pairs){const letter=p[1],day=Number(p[2]),value=p[3].replace(':','h').toUpperCase();let found=-1;for(let k=mi;k<months.length;k++){const x=months[k];if(validDate(x.year,x.month,day,letter)){found=k;break}}if(found<0)continue;mi=found+1;const x=months[found],date=`${x.year}-${String(x.month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;const duration=/h/i.test(value)?durationToMinutes(value.toLowerCase()):null;if(duration==null)codes.add(value);if(!seenDates.has(date)){seenDates.add(date);records.push({date,value,duration});}}
     }
     const ignored=new Set(['GFI','CHRONO','TIME','LYCEE','TOTAL','REFERENCE','ECART','TPS','NOM','AGENT','SOLDE','HEURE','HEURES','PRESENCE','MAT']);[...codes].forEach(c=>{if(ignored.has(c))codes.delete(c)});
-    // GFI Chrono Time : le bas du synoptique fournit aussi le nombre de CA pris.
-    let leaveTakenDays=null;
-    const caLine=allLines.find(l=>/\bca\s+pris\b/i.test(l));
-    if(caLine){const vals=[...caLine.matchAll(/(\d+)j(\d{2})/gi)].map(m=>Number(m[1])+Number(m[2])/100);if(vals.length>=3)leaveTakenDays=vals.at(-3)}
+
     let expectedDays=0;
     if(start&&end){const a=new Date(start+'T12:00:00'),b=new Date(end+'T12:00:00');expectedDays=Math.round((b-a)/86400000)+1}
     const coverage=expectedDays?Math.round(records.length/expectedDays*100):0;
     const codeCounts={};for(const r of records)if(r.duration==null)codeCounts[r.value]=(codeCounts[r.value]||0)+1;
     const durationDays=records.filter(r=>r.duration!=null).length;
+    const computedPresence=records.reduce((sum,r)=>sum+(r.duration!=null?r.duration:0),0);
+    if(totals.presence==null&&durationDays){totals.presence=computedPresence;totalSources.presence='Somme des durées journalières'}
+    if(totals.leaveTakenDays==null&&Number.isFinite(codeCounts.CA)){totals.leaveTakenDays=codeCounts.CA;totalSources.leaveTakenDays='Comptage des journées CA'}
+    if(totals.delta==null&&totals.presence!=null&&totals.reference!=null){totals.delta=totals.presence-totals.reference;totalSources.delta='Calcul Présence − Référence'}
+    if(totals.reference==null&&totals.presence!=null&&totals.delta!=null){totals.reference=totals.presence-totals.delta;totalSources.reference='Calcul Présence − Δ'}
+    const monthly={};for(const r of records){const key=r.date.slice(0,7);const m=monthly[key]||(monthly[key]={days:0,durationMinutes:0,codes:{}});m.days++;if(r.duration!=null)m.durationMinutes+=r.duration;else m.codes[r.value]=(m.codes[r.value]||0)+1}
+    const agent=findAgent(agentNameRaw,file?.name||'');
+    const requiredInfo=[['Agent',!!(agentNameRaw||agent)],['Période',!!(start&&end)],['Calendrier',!!expectedDays&&records.length===expectedDays],['Présence annuelle',totals.presence!=null],['Référence annuelle',totals.reference!=null],['Écart annuel',totals.delta!=null],['CA pris',totals.leaveTakenDays!=null]];
+    const missingInfo=requiredInfo.filter(([,ok])=>!ok).map(([label])=>label);
+    const infoCoverage=Math.round(requiredInfo.filter(([,ok])=>ok).length/requiredInfo.length*100);
     const headerMonthHits=GFI_MONTHS.filter(m=>nt.includes(norm(m))).length;
-    const agent=findAgent(agentNameRaw,file?.name||'');let score=0;
+    let score=0;
     if(isGfiAnnual)score+=30;else if(CHRONO_HINT_WORDS.some(w=>nt.includes(norm(w))||nf.includes(norm(w))))score+=20;
     if(agent)score+=20;if(start&&end)score+=15;if(expectedDays&&records.length===expectedDays)score+=20;else if(records.length>=5)score+=10;
     if(totals.delta!=null||totals.presence!=null)score+=10;if(headerMonthHits>=10)score+=5;score=Math.min(100,score);
-    return {kind:'chronotime',format:isGfiAnnual?'GFI Chrono Time — Synoptique annuel':'Chronotime générique',file,extracted,agentNameRaw,agent,start,end,academicYear:year,totals:{...totals,leaveTakenDays},records,codes:[...codes].sort(),unknownCodes:[...codes].filter(c=>!db.settings.chronoCodeMap[c]),confidence:score,expectedDays,coverage,codeCounts,durationDays,complete:!!expectedDays&&records.length===expectedDays};
+    const calendarComplete=!!expectedDays&&records.length===expectedDays;
+    const informationComplete=missingInfo.length===0;
+    const complete=calendarComplete&&informationComplete;
+    // Un 100 % n'est accordé que si le calendrier ET toutes les informations annuelles sont présents.
+    score=Math.min(score,informationComplete?100:94);
+    return {kind:'chronotime',format:isGfiAnnual?'GFI Chrono Time — Synoptique annuel':'Chronotime générique',file,extracted,agentNameRaw,agent,start,end,academicYear:year,totals, totalSources,records,codes:[...codes].sort(),unknownCodes:[...codes].filter(c=>!db.settings.chronoCodeMap[c]),confidence:score,expectedDays,coverage,codeCounts,durationDays,calendarComplete,informationComplete,missingInfo,infoCoverage,monthly,complete};
   }
   function controlOrganization(text){const u=norm(text);for(const x of CONTROL_ORGS){if(u.includes(norm(x)))return x.replace('BUREAU ALPES CONTROLES','ALPES CONTRÔLES').replace('BUREAU ALPES CONTRÔLES','ALPES CONTRÔLES')}const m=text.match(/(?:organisme|soci[ée]t[ée]|bureau de contr[oô]le)\s*[:=-]\s*([^\n]{3,70})/i);return m?clean(m[1]):'Organisme de contrôle'}
   const CONTROL_RULES=[
@@ -166,13 +193,18 @@
     const unknown=p.unknownCodes.length?`<div class="import-warning"><strong>Nouvelles abréviations détectées</strong>${p.unknownCodes.map(c=>`<label>${esc(c)}<select data-chrono-code="${esc(c)}"><option value="">Choisir…</option>${['Congé annuel','RTT','Repos','Jour férié','Maladie','Formation','Autorisation d’absence','Récupération','Autre'].map(v=>`<option>${esc(v)}</option>`).join('')}</select></label>`).join('')}</div>`:'';
     const counts=Object.entries(p.codeCounts||{}).sort().map(([k,v])=>`${esc(k)} : ${v}`).join(' · ')||'Aucun code';
     const integrity=p.expectedDays?`${p.records.length}/${p.expectedDays} jours (${p.coverage||0} %)`:`${p.records.length} jours`;
-    const integrityClass=p.complete?'ok':'warning';
-    box.innerHTML=`<div class="import-summary"><strong>${esc(p.file.name)}</strong><span>Format : <b>${esc(p.format||'Chronotime')}</b></span><span>Reconnaissance : <b>${p.confidence||0}% — ${confidenceLabel(p.confidence||0)}</b></span><span>Agent détecté : ${esc(p.agentNameRaw||agentName(p.agent)||'—')}</span><span>Période : ${esc(p.start||'—')} → ${esc(p.end||'—')}</span><span>Année scolaire : ${esc(p.academicYear||'—')}</span><span>Intégrité du synoptique : <b>${integrity}</b></span><span>Codes lus : ${counts}</span><span>Jours avec durée : ${p.durationDays||0}</span><span>Présence : ${minutesToDuration(p.totals.presence).replace(/^\+/,'')}</span><span>Référence : ${minutesToDuration(p.totals.reference).replace(/^\+/,'')}</span><span>Δ annuel : <b>${minutesToDuration(p.totals.delta)}</b></span>${p.totals.leaveTakenDays!=null?`<span>CA pris détecté : <b>${p.totals.leaveTakenDays} j</b></span>`:''}</div>${p.expectedDays&&!p.complete?`<div class="import-message ${integrityClass}">⚠ Le synoptique paraît incomplet : ${integrity}. Vérifiez le PDF avant validation.</div>`:''}<label>Agent à affecter<select id="chronoAgentSelect"><option value="">Choisir…</option>${agentOptionsHtml}</select></label>${unknown}<div class="modal-actions inline-actions"><button class="ghost" id="cancelChronoImport">Annuler</button><button class="primary" id="applyChronoImport">Valider l’injection</button></div>`;
+    const src=k=>p.totalSources?.[k]?` <small class="muted">(${esc(p.totalSources[k])})</small>`:'';
+    const infoState=p.informationComplete?'✅ Toutes les informations annuelles ont été récupérées':`⚠ Informations à compléter : ${esc((p.missingInfo||[]).join(', ')||'inconnues')}`;
+    const monthLabels=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+    const monthly=Object.entries(p.monthly||{}).sort().map(([ym,m])=>{const [y,mo]=ym.split('-').map(Number);const cs=Object.entries(m.codes||{}).map(([k,v])=>`${esc(k)} ${v}`).join(' · ');return `<tr><td>${monthLabels[mo-1]} ${y}</td><td>${m.days}</td><td>${minutesToDuration(m.durationMinutes).replace(/^\+/,'')}</td><td>${cs||'—'}</td></tr>`}).join('');
+    box.innerHTML=`<div class="import-summary"><strong>${esc(p.file.name)}</strong><span>Format : <b>${esc(p.format||'Chronotime')}</b></span><span>Reconnaissance globale : <b>${p.confidence||0}% — ${confidenceLabel(p.confidence||0)}</b></span><span>Complétude des informations : <b>${p.infoCoverage||0}%</b></span><span>Agent détecté : ${esc(p.agentNameRaw||agentName(p.agent)||'—')}</span><span>Période : ${esc(p.start||'—')} → ${esc(p.end||'—')}</span><span>Année scolaire : ${esc(p.academicYear||'—')}</span><span>Intégrité du calendrier : <b>${integrity}</b></span><span>Codes lus : ${counts}</span><span>Jours avec durée : ${p.durationDays||0}</span><span>Présence : <b>${minutesToDuration(p.totals.presence).replace(/^\+/,'')}</b>${src('presence')}</span><span>Référence : <b>${minutesToDuration(p.totals.reference).replace(/^\+/,'')}</b>${src('reference')}</span><span>Δ annuel : <b>${minutesToDuration(p.totals.delta)}</b>${src('delta')}</span><span>CA pris détecté : <b>${p.totals.leaveTakenDays!=null?`${p.totals.leaveTakenDays} j`:'—'}</b>${src('leaveTakenDays')}</span></div><div class="import-message ${p.informationComplete?'ok':'warning'}">${infoState}</div>${p.expectedDays&&!p.calendarComplete?`<div class="import-message warning">⚠ Calendrier incomplet : ${integrity}. Le logiciel n’annoncera jamais ce document comme complet tant que tous les jours attendus ne sont pas lus.</div>`:''}${monthly?`<details class="chrono-details"><summary>Voir le détail mensuel avant injection</summary><div class="table-wrap"><table><thead><tr><th>Mois</th><th>Jours lus</th><th>Durées cumulées</th><th>Codes</th></tr></thead><tbody>${monthly}</tbody></table></div></details>`:''}<label>Agent à affecter<select id="chronoAgentSelect"><option value="">Choisir…</option>${agentOptionsHtml}</select></label>${unknown}<div class="modal-actions inline-actions"><button class="ghost" id="cancelChronoImport">Annuler</button><button class="primary" id="applyChronoImport">Valider l’injection</button></div>`;
     document.getElementById('cancelChronoImport').onclick=()=>{chronoPending=null;box.innerHTML='';status('chronoImportStatus','Import annulé')};
     document.getElementById('applyChronoImport').onclick=applyChrono;
   }
   async function applyChrono(){
-    const p=chronoPending;if(!p)return;const aid=document.getElementById('chronoAgentSelect')?.value;if(!aid){toast('Choisissez l’agent concerné');return}if(p.expectedDays&&!p.complete&&!confirm(`Le synoptique n’est pas complet (${p.records.length}/${p.expectedDays} jours). Voulez-vous vraiment l’injecter ?`))return
+    const p=chronoPending;if(!p)return;const aid=document.getElementById('chronoAgentSelect')?.value;if(!aid){toast('Choisissez l’agent concerné');return}
+    if(p.expectedDays&&!p.calendarComplete&&!confirm(`Le calendrier n’est pas complet (${p.records.length}/${p.expectedDays} jours). Voulez-vous vraiment l’injecter ?`))return;
+    if(!p.informationComplete&&!confirm(`Certaines informations annuelles n’ont pas pu être récupérées : ${(p.missingInfo||[]).join(', ')}. Elles seront clairement signalées comme manquantes. Voulez-vous continuer ?`))return
     const chronoSig=filenameSignature(p.file?.name||'');if(chronoSig)db.settings.chronoAgentHints[chronoSig]=aid;
     for(const c of p.unknownCodes){const v=document.querySelector(`[data-chrono-code="${CSS.escape(c)}"]`)?.value;if(!v){toast(`Définissez l’abréviation ${c}`);return}db.settings.chronoCodeMap[c]=v;}
     const past=p.records.some(r=>r.date<todayISO());if(past&&!confirm('Attention : cet import contient des journées passées. Elles sont normalement verrouillées. Confirmer cette modification exceptionnelle ?'))return;
@@ -185,9 +217,9 @@
       if(r.duration!=null){durations++;continue}
       if(mapped){absences++;let day=db.agentDays.find(x=>String(x.agentId)===String(aid)&&x.date===r.date);if(!day){day={id:uid(),agentId:aid,date:r.date};db.agentDays.push(day)}day.dayType=mapped;day.status='Validée';day.note=`Import Chronotime ${p.file.name}`;day.source='chronotime';if(['Repos','Jour férié'].includes(mapped))day.noReplacementNeeded=true;}
     }
-    const annual={id:uid(),agentId:aid,academicYear:p.academicYear,periodStart:p.start,periodEnd:p.end,presenceMinutes:p.totals.presence,referenceMinutes:p.totals.reference,deltaMinutes:p.totals.delta,fileName:p.file.name,attachmentId:attachment?.id||'',injectedAt:new Date().toISOString()};
+    const annual={id:uid(),agentId:aid,academicYear:p.academicYear,periodStart:p.start,periodEnd:p.end,presenceMinutes:p.totals.presence,referenceMinutes:p.totals.reference,deltaMinutes:p.totals.delta,leaveTakenDays:p.totals.leaveTakenDays,calendarCoverage:p.coverage,informationCoverage:p.infoCoverage,missingInfo:[...(p.missingInfo||[])],codeCounts:{...(p.codeCounts||{})},monthly:p.monthly||{},totalSources:p.totalSources||{},fileName:p.file.name,attachmentId:attachment?.id||'',injectedAt:new Date().toISOString()};
     const oldAnnual=db.chronotimeAnnual.find(x=>String(x.agentId)===String(aid)&&x.academicYear===p.academicYear);if(oldAnnual)Object.assign(oldAnnual,annual,{id:oldAnnual.id});else db.chronotimeAnnual.push(annual);
-    db.pdfImports.push({id:uid(),kind:'chronotime',createdAt:new Date().toISOString(),fileName:p.file.name,attachmentId:attachment?.id||'',subject:agentName(agentById(aid)),academicYear:p.academicYear,summary:`${p.records.length}/${p.expectedDays||p.records.length} jours · ${absences} absences · ${Object.entries(p.codeCounts||{}).map(([k,v])=>`${k} ${v}`).join(' · ')} · Δ ${minutesToDuration(p.totals.delta)}`});
+    db.pdfImports.push({id:uid(),kind:'chronotime',createdAt:new Date().toISOString(),fileName:p.file.name,attachmentId:attachment?.id||'',subject:agentName(agentById(aid)),academicYear:p.academicYear,summary:`${p.records.length}/${p.expectedDays||p.records.length} jours · infos ${p.infoCoverage||0}% · ${absences} absences · ${Object.entries(p.codeCounts||{}).map(([k,v])=>`${k} ${v}`).join(' · ')} · présence ${minutesToDuration(p.totals.presence)} · réf. ${minutesToDuration(p.totals.reference)} · Δ ${minutesToDuration(p.totals.delta)}${p.missingInfo?.length?` · manquant : ${p.missingInfo.join(', ')}`:''}`});
     save();renderCodeMap();renderHistory();renderDashboard();status('chronoImportStatus',`Injection terminée : ${p.records.length} jours, ${absences} absences, ${durations} durées.`, 'ok');document.getElementById('chronoPreview').innerHTML='';chronoPending=null;
   }
   function controlPreview(p){
@@ -236,7 +268,7 @@
   function renderControlLibrary(){ensureData();renderControlFamilyFilter();const box=document.getElementById('controlReportLibrary');if(!box)return;const filter=document.getElementById('controlReportFamily')?.value||'';const reports=[...db.pdfImports].filter(x=>x.kind==='control'&&(!filter||effectiveControlFamily(x)===filter)).sort((a,b)=>(b.reportDate||b.createdAt||'').localeCompare(a.reportDate||a.createdAt||''));if(!reports.length){box.innerHTML='<div class="empty-state">Aucun rapport de contrôle enregistré.</div>';return}const groups={};for(const r of reports){const f=effectiveControlFamily(r);(groups[f]||(groups[f]=[])).push(r)}box.innerHTML=Object.entries(groups).map(([family,arr])=>`<section class="control-report-group"><div class="control-report-group-title"><h4>${esc(family)}</h4><span>${arr.length} rapport(s)</span></div><div class="control-report-cards">${arr.map(r=>`<article class="control-report-card"><div><strong>${esc(r.fileName||'Rapport')}</strong><small>${esc(r.subject||'Organisme non renseigné')} · ${fmtDate(r.reportDate)||fmtDateTime(r.createdAt)}</small><p>${esc(r.summary||'')}</p></div><div class="control-report-actions">${r.attachmentId?`<button class="primary small" data-open-control-report="${esc(r.attachmentId)}">📄 Ouvrir le PDF</button>`:`<label class="ghost small button-link">📎 Rattacher le PDF<input type="file" accept="application/pdf,.pdf" data-reattach-report="${esc(r.id)}" hidden></label><small class="muted">Ancien rapport : PDF à rattacher une seule fois.</small>`}</div></article>`).join('')}</div></section>`).join('')}
   async function openControlReport(id){if(!id)return;try{if(typeof downloadAttachment==='function')await downloadAttachment(id);else{const rec=(db.attachments||[]).find(a=>a.id===id);if(rec&&typeof openStoragePath==='function')await openStoragePath(rec.storagePath,rec.name)}}catch(e){console.error(e);toast?.('Impossible d’ouvrir ce rapport') }}
   async function reattachControlReport(reportId,file){if(!file)return;const report=(db.pdfImports||[]).find(x=>x.id===reportId);if(!report)return;status('controlImportStatus','Rattachement du PDF original…');try{const attachment=await putFile(file,{module:'control-report',recordId:reportId});db.attachments.push(attachment);report.attachmentId=attachment.id;report.fileName=file.name||report.fileName;report.fileSize=file.size;report.fileHash=await fileFingerprint(file);save();renderControlLibrary();status('controlImportStatus','PDF rattaché. Le rapport peut maintenant être rouvert à tout moment.','ok')}catch(e){console.error(e);status('controlImportStatus','Impossible de rattacher le PDF. Vérifiez SETUP_STORAGE_RAPPORTS.sql dans Supabase.','error')}}
-  async function onChronoFile(file){if(!file)return;ensureData();status('chronoImportStatus','Lecture du PDF en cours…');try{const ex=await extractPdf(file);chronoPending=parseChronotime(ex,file);status('chronoImportStatus',chronoPending.confidence>=50?`Document Chronotime reconnu à ${chronoPending.confidence} %. Vérifiez puis validez.`:`Document lu, reconnaissance Chronotime faible (${chronoPending.confidence} %). Vérifiez l’agent et la période.`,'ok');chronoPreview(chronoPending)}catch(e){console.error(e);status('chronoImportStatus',`Impossible de lire ce PDF : ${e.message||e}`,'error')}}
+  async function onChronoFile(file){if(!file)return;ensureData();status('chronoImportStatus','Lecture du PDF en cours…');try{const ex=await extractPdf(file);chronoPending=parseChronotime(ex,file);status('chronoImportStatus',chronoPending.complete?`Document Chronotime complet : calendrier ${chronoPending.coverage}% et informations ${chronoPending.infoCoverage}%. Vérifiez puis validez.`:chronoPending.confidence>=50?`Document Chronotime reconnu, mais contrôle de complétude requis : calendrier ${chronoPending.coverage||0}% · informations ${chronoPending.infoCoverage||0}%.`:`Document lu, reconnaissance Chronotime faible (${chronoPending.confidence} %). Vérifiez l’agent et la période.`,chronoPending.complete?'ok':'warning');chronoPreview(chronoPending)}catch(e){console.error(e);status('chronoImportStatus',`Impossible de lire ce PDF : ${e.message||e}`,'error')}}
   async function onControlFile(file){if(!file)return;ensureData();status('controlImportStatus','Analyse du rapport en cours…');try{const ex=await extractPdf(file);controlPending=parseControl(ex,file);status('controlImportStatus',`Rapport analysé — reconnaissance ${controlPending.confidence} %. Vérifiez les éléments proposés.`,'ok');controlPreview(controlPending)}catch(e){console.error(e);status('controlImportStatus',`Impossible de lire ce PDF : ${e.message||e}`,'error')}}
   function bind(){const c=document.getElementById('chronoPdfFile'),r=document.getElementById('controlPdfFile'),f=document.getElementById('controlReportFamily');if(c)c.addEventListener('change',e=>onChronoFile(e.target.files?.[0]));if(r)r.addEventListener('change',e=>onControlFile(e.target.files?.[0]));if(f)f.addEventListener('change',renderControlLibrary);document.addEventListener('change',e=>{const input=e.target.closest('[data-reattach-report]');if(input){reattachControlReport(input.dataset.reattachReport,input.files?.[0]);}});document.addEventListener('click',e=>{const open=e.target.closest('[data-open-control-report]');if(open){e.preventDefault();openControlReport(open.dataset.openControlReport);return}const go=e.target.closest('[data-go="pdfimports"]');if(go){e.preventDefault();setView('pdfimports');renderHistory();renderCodeMap();}})}
   function init(){ensureData();bind();renderHistory();renderCodeMap();renderDashboard();renderControlLibrary()}
