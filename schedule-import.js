@@ -1,7 +1,8 @@
-/* Pilotage Service Technique V46 — import/export des horaires */
+/* Pilotage Service Technique V51 — import/export des horaires */
 (() => {
   'use strict';
   const DAYS=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+  const DAY_KEYS=[1,2,3,4,5,6,0];
   const PROFILES=['Standard','Matin','Soir'];
   let pending=null;
   const $i=id=>document.getElementById(id);
@@ -39,16 +40,19 @@
     if(!window.XLSX){alert('Le composant Excel ne s’est pas chargé. Vérifiez la connexion Internet, puis réessayez.');return}
     const wb=XLSX.utils.book_new(), active=(db.agents||[]).filter(a=>norm(a.status||'actif')!=='archive');
     const agentRows=active.map(a=>({
-      'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Fonction':a.role||'','Affectation principale':a.assignment||'',Actif:a.status||'Actif'
+      'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Fonction':a.role||'','Affectation principale':a.assignment||'',Actif:a.status||'Actif',
+      'Samedi travaillé':(Array.isArray(a.workdays)?a.workdays:[1,2,3,4,5]).map(Number).includes(6)?'Oui':'Non',
+      'Dimanche travaillé':(Array.isArray(a.workdays)?a.workdays:[1,2,3,4,5]).map(Number).includes(0)?'Oui':'Non'
     }));
-    const wsA=XLSX.utils.json_to_sheet(agentRows.length?agentRows:[{'Identifiant agent':'','Nom de l’agent':'','Fonction':'','Affectation principale':'','Actif':'Oui'}]);
-    setWidths(wsA,[25,28,24,28,12]);addAutoFilter(wsA,wsA['!ref']);styleSheet(wsA,5,agentRows.length+1);XLSX.utils.book_append_sheet(wb,wsA,'Agents');
+    const wsA=XLSX.utils.json_to_sheet(agentRows.length?agentRows:[{'Identifiant agent':'','Nom de l’agent':'','Fonction':'','Affectation principale':'','Actif':'Oui','Samedi travaillé':'Non','Dimanche travaillé':'Non'}]);
+    setWidths(wsA,[25,28,24,28,12,18,20]);addAutoFilter(wsA,wsA['!ref']);styleSheet(wsA,7,agentRows.length+1);XLSX.utils.book_append_sheet(wb,wsA,'Agents');
 
     const hrows=[];
     active.forEach(a=>{
+      const workdays=(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).map(Number);
       const plans=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(a.id));
-      if(!plans.length){DAYS.slice(0,5).forEach(day=>hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':'2026-09-01','Date fin':'2027-08-31','Profil horaire':'Standard','Jour':day,'Type de journée':'Travaillé','Heure début':'','Heure fin':'','Pause (minutes)':0,'Mission principale':'','Commentaire':'','Contrôle':'À compléter'}));return}
-      plans.forEach(p=>DAYS.slice(0,5).forEach((day,i)=>{const x=p.dayProfiles?.[i+1]||{};hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':p.effectiveFrom||'2026-09-01','Date fin':p.effectiveTo||'2027-08-31','Profil horaire':p.shift||'Standard','Jour':day,'Type de journée':x.start&&x.end?'Travaillé':'Repos','Heure début':x.start||'','Heure fin':x.end||'','Pause (minutes)':Number(x.pause||0),'Mission principale':x.missions||'','Commentaire':'','Contrôle':'OK'})}));
+      if(!plans.length){DAYS.forEach((day,i)=>{const key=DAY_KEYS[i],working=workdays.includes(key);hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':'2026-09-01','Date fin':'2027-08-31','Profil horaire':'Standard','Jour':day,'Type de journée':working?'Travaillé':'Repos','Heure début':'','Heure fin':'','Pause (minutes)':0,'Mission principale':'','Commentaire':'','Contrôle':working?'À compléter':'OK'})});return}
+      plans.forEach(p=>DAYS.forEach((day,i)=>{const key=DAY_KEYS[i],x=p.dayProfiles?.[key]||{},working=workdays.includes(key)&&!!(x.start&&x.end);hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':p.effectiveFrom||'2026-09-01','Date fin':p.effectiveTo||'2027-08-31','Profil horaire':p.shift||'Standard','Jour':day,'Type de journée':working?'Travaillé':'Repos','Heure début':working?x.start||'':'','Heure fin':working?x.end||'':'','Pause (minutes)':working?Number(x.pause||0):0,'Mission principale':working?x.missions||'':'','Commentaire':'','Contrôle':'OK'})}));
     });
     const wsH=XLSX.utils.json_to_sheet(hrows);
     const hHeaders=Object.keys(hrows[0]||{});setWidths(wsH,[25,28,13,13,16,13,16,12,12,16,30,28,34]);addAutoFilter(wsH,wsH['!ref']);styleSheet(wsH,hHeaders.length,hrows.length+1);
@@ -60,8 +64,8 @@
     // Les contrôles restent dans la colonne M. La couleur est appliquée dans l'application après import.
     XLSX.utils.book_append_sheet(wb,wsH,'Horaires annuels');
 
-    const rrows=(db.rotations||[]).map(r=>{const a=(db.agents||[]).find(x=>String(x.id)===String(r.agentId));return {'Identifiant roulement':r.id,'Identifiant agent':r.agentId,'Nom de l’agent':agentLabel(a),'Date d’effet':r.effectiveFrom||'','Date de fin':r.effectiveTo||'','Nom du roulement':r.no||'','Semaines Matin':Number(r.morningWeeks||2),'Semaines Soir':Number(r.eveningWeeks||2),'Commence par':r.startShift||'Matin','Heure matin début':r.morningStart||'','Heure matin fin':r.morningEnd||'','Heure soir début':r.eveningStart||'','Heure soir fin':r.eveningEnd||'','Pause (minutes)':Number(r.pause||0),'Jours travaillés':(r.weekdays||[1,2,3,4,5]).join(','),'Commentaire':r.notes||'','Contrôle':'OK'}});
-    if(!rrows.length)active.forEach(a=>rrows.push({'Identifiant roulement':'','Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date d’effet':'2026-09-01','Date de fin':'2027-08-31','Nom du roulement':'','Semaines Matin':2,'Semaines Soir':2,'Commence par':'Matin','Heure matin début':'','Heure matin fin':'','Heure soir début':'','Heure soir fin':'','Pause (minutes)':0,'Jours travaillés':'1,2,3,4,5','Commentaire':'','Contrôle':'À compléter'}));
+    const rrows=(db.rotations||[]).map(r=>{const a=(db.agents||[]).find(x=>String(x.id)===String(r.agentId));return {'Identifiant roulement':r.id,'Identifiant agent':r.agentId,'Nom de l’agent':agentLabel(a),'Date d’effet':r.effectiveFrom||'','Date de fin':r.effectiveTo||'','Nom du roulement':r.no||'','Semaines Matin':Number(r.morningWeeks||2),'Semaines Soir':Number(r.eveningWeeks||2),'Commence par':r.startShift||'Matin','Heure matin début':r.morningStart||'','Heure matin fin':r.morningEnd||'','Heure soir début':r.eveningStart||'','Heure soir fin':r.eveningEnd||'','Pause (minutes)':Number(r.pause||0),'Jours travaillés':(r.weekdays||((a&&Array.isArray(a.workdays))?a.workdays:[1,2,3,4,5])).join(','),'Commentaire':r.notes||'','Contrôle':'OK'}});
+    if(!rrows.length)active.forEach(a=>rrows.push({'Identifiant roulement':'','Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date d’effet':'2026-09-01','Date de fin':'2027-08-31','Nom du roulement':'','Semaines Matin':2,'Semaines Soir':2,'Commence par':'Matin','Heure matin début':'','Heure matin fin':'','Heure soir début':'','Heure soir fin':'','Pause (minutes)':0,'Jours travaillés':(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).join(','),'Commentaire':'','Contrôle':'À compléter'}));
     const wsR=XLSX.utils.json_to_sheet(rrows);setWidths(wsR,[24,25,28,13,13,20,15,15,15,16,16,16,16,15,18,28,32]);addAutoFilter(wsR,wsR['!ref']);styleSheet(wsR,17,rrows.length+1);XLSX.utils.book_append_sheet(wb,wsR,'Roulements');
 
     const instructions=[
@@ -71,7 +75,8 @@
       ['3. La colonne Contrôle indique les erreurs dans Excel.'],
       ['4. Réimportez ensuite ce même fichier dans l’application.'],
       ['5. Le logiciel affiche une comparaison avant d’enregistrer.'],
-      ['6. Les congés, RTT, absences et modifications ponctuelles ne sont pas supprimés.']
+      ['6. Les congés, RTT, absences et modifications ponctuelles ne sont pas supprimés.'],
+      ['7. Dans l’onglet Agents, indiquez Oui/Non pour le samedi et le dimanche : ces valeurs mettent à jour les jours travaillés.']
     ];
     const wsM=XLSX.utils.aoa_to_sheet(instructions);setWidths(wsM,[105]);wsM['A1'].s={font:{bold:true,color:{rgb:'FFFFFF'},sz:16},fill:{fgColor:{rgb:'1F4E78'}},alignment:{horizontal:'center'}};XLSX.utils.book_append_sheet(wb,wsM,'Mode d’emploi');
     wb.Workbook={Views:[{RTL:false}]};
@@ -81,8 +86,16 @@
   const readRows=(wb,name)=>{const ws=wb.Sheets[name];return ws?XLSX.utils.sheet_to_json(ws,{defval:'',raw:true}):[]};
   const get=(row,...names)=>{for(const n of names){if(Object.prototype.hasOwnProperty.call(row,n))return row[n]}const keys=Object.keys(row);for(const n of names){const k=keys.find(k=>norm(k)===norm(n));if(k)return row[k]}return ''};
   const validateWorkbook=wb=>{
-    const maps=agentMap(), hours=readRows(wb,'Horaires annuels'), rotations=readRows(wb,'Roulements');
-    const results=[], validHours=[], validRot=[], duplicate=new Set();
+    const maps=agentMap(), agentRows=readRows(wb,'Agents'), hours=readRows(wb,'Horaires annuels'), rotations=readRows(wb,'Roulements');
+    const results=[], validHours=[], validRot=[], agentSettings=[], duplicate=new Set();
+    const yes=v=>['oui','yes','1','true','x'].includes(norm(v));
+    agentRows.forEach((row,index)=>{
+      if(Object.values(row).every(v=>String(v).trim()===''))return;
+      const aid=String(get(row,'Identifiant agent','Agent ID')).trim(),name=String(get(row,"Nom de l’agent",'Nom agent','Agent')).trim(),agent=maps.byId.get(aid)||maps.byName.get(norm(name));
+      if(!agent)return;
+      const satRaw=get(row,'Samedi travaillé','Samedi'),sunRaw=get(row,'Dimanche travaillé','Dimanche');
+      if(String(satRaw).trim()!==''||String(sunRaw).trim()!==''){agentSettings.push({agent,saturday:yes(satRaw),sunday:yes(sunRaw)});results.push({kind:'Jours agent',line:index+2,agent,name:agentLabel(agent),from:'',to:'',profile:'',errors:[],warnings:[],detail:`Samedi : ${yes(satRaw)?'travaillé':'repos'} · Dimanche : ${yes(sunRaw)?'travaillé':'repos'}`})}
+    });
     hours.forEach((row,index)=>{
       if(Object.values(row).every(v=>String(v).trim()===''))return;
       const aid=String(get(row,'Identifiant agent','Agent ID')).trim(),name=String(get(row,"Nom de l’agent",'Nom agent','Agent')).trim();
@@ -106,13 +119,13 @@
     });
     // Vérifie que les profils Matin et Soir existent dans le fichier ou déjà dans la base.
     validRot.forEach(r=>{for(const profile of ['Matin','Soir']){const exists=validHours.some(h=>h.agent?.id===r.agent?.id&&h.profile===profile&&h.from<=r.from&&h.to>=r.from)||(db.weeklyPlans||[]).some(p=>String(p.agentId)===String(r.agent?.id)&&p.shift===profile);if(!exists)r.warnings.push(`Profil ${profile} introuvable`)}});
-    return {results,validHours,validRot};
+    return {results,validHours,validRot,agentSettings};
   };
   const preview=data=>{
     pending=data;const errors=data.results.filter(x=>x.errors.length),warnings=data.results.filter(x=>!x.errors.length&&x.warnings.length),ok=data.results.filter(x=>!x.errors.length&&!x.warnings.length);
     $i('scheduleImportSummary').className='import-summary';$i('scheduleImportSummary').innerHTML=`<div class="import-stat ok"><strong>${ok.length}</strong><span>lignes correctes</span></div><div class="import-stat warning"><strong>${warnings.length}</strong><span>avertissements</span></div><div class="import-stat error"><strong>${errors.length}</strong><span>erreurs bloquantes</span></div><div class="import-stat"><strong>${new Set(data.validHours.map(x=>x.agent?.id).filter(Boolean)).size}</strong><span>agents concernés</span></div>`;
     $i('confirmScheduleImport').classList.toggle('hidden',data.validHours.length+data.validRot.length===0);
-    $i('scheduleImportPreview').innerHTML=`<table><thead><tr><th>État</th><th>Type</th><th>Ligne</th><th>Agent</th><th>Période / date</th><th>Profil / cycle</th><th>Détail</th></tr></thead><tbody>${data.results.map(x=>{const cls=x.errors.length?'error':x.warnings.length?'warning':'ok',state=x.errors.length?'Erreur':x.warnings.length?'À vérifier':'OK',detail=[...x.errors,...x.warnings].join(' · ')||(x.kind==='Horaire'?`${x.day} ${x.start||'Repos'}${x.end?'–'+x.end:''} ${x.mission||''}`:`${x.mw} sem. matin / ${x.ew} sem. soir`);return `<tr class="import-row-${cls}"><td><span class="import-badge ${cls}">${state}</span></td><td>${x.kind}</td><td>${x.line}</td><td>${x.name||'—'}</td><td>${x.from||'—'}${x.to?' → '+x.to:''}</td><td>${x.kind==='Horaire'?x.profile:x.startShift}</td><td>${detail}</td></tr>`}).join('')}</tbody></table>`;
+    $i('scheduleImportPreview').innerHTML=`<table><thead><tr><th>État</th><th>Type</th><th>Ligne</th><th>Agent</th><th>Période / date</th><th>Profil / cycle</th><th>Détail</th></tr></thead><tbody>${data.results.map(x=>{const cls=x.errors.length?'error':x.warnings.length?'warning':'ok',state=x.errors.length?'Erreur':x.warnings.length?'À vérifier':'OK',detail=[...x.errors,...x.warnings].join(' · ')||x.detail||(x.kind==='Horaire'?`${x.day} ${x.start||'Repos'}${x.end?'–'+x.end:''} ${x.mission||''}`:`${x.mw||0} sem. matin / ${x.ew||0} sem. soir`);return `<tr class="import-row-${cls}"><td><span class="import-badge ${cls}">${state}</span></td><td>${x.kind}</td><td>${x.line}</td><td>${x.name||'—'}</td><td>${x.from||'—'}${x.to?' → '+x.to:''}</td><td>${x.kind==='Horaire'?x.profile:x.startShift}</td><td>${detail}</td></tr>`}).join('')}</tbody></table>`;
   };
   const importFile=async file=>{
     if(!window.XLSX){alert('Le composant Excel ne s’est pas chargé. Vérifiez Internet.');return}
@@ -121,12 +134,18 @@
   };
   const applyImport=()=>{
     if(!pending)return;
+    for(const item of pending.agentSettings||[]){
+      const a=item.agent,current=(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).map(Number).filter(d=>d!==0&&d!==6);
+      if(item.saturday)current.push(6);if(item.sunday)current.push(0);a.workdays=[...new Set(current)];
+    }
     const groups=new Map();
-    pending.validHours.forEach(x=>{const key=`${x.agent.id}|${x.from}|${x.to}|${x.profile}`;if(!groups.has(key))groups.set(key,{id:null,agentId:x.agent.id,agent:agentLabel(x.agent),shift:x.profile,effectiveFrom:x.from,effectiveTo:x.to,dayProfiles:{},rows:[]});const p=groups.get(key),dayIndex=DAYS.indexOf(x.day)+1,working=norm(x.type)!=='repos'&&x.start&&x.end;p.dayProfiles[dayIndex]={start:working?x.start:'',end:working?x.end:'',pause:working?x.pause:0,missions:x.mission||'',segments:[]};});
+    pending.validHours.forEach(x=>{const key=`${x.agent.id}|${x.from}|${x.to}|${x.profile}`;if(!groups.has(key))groups.set(key,{id:null,agentId:x.agent.id,agent:agentLabel(x.agent),shift:x.profile,effectiveFrom:x.from,effectiveTo:x.to,dayProfiles:{},rows:[]});const p=groups.get(key),dayIndex=DAY_KEYS[DAYS.indexOf(x.day)],working=norm(x.type)!=='repos'&&x.start&&x.end;p.dayProfiles[dayIndex]={start:working?x.start:'',end:working?x.end:'',pause:working?x.pause:0,missions:x.mission||'',segments:[]};});
     let created=0,updated=0;
     groups.forEach(p=>{const idx=(db.weeklyPlans||[]).findIndex(old=>String(old.agentId)===String(p.agentId)&&old.shift===p.shift&&old.effectiveFrom===p.effectiveFrom&&old.effectiveTo===p.effectiveTo);if(idx>=0){p.id=db.weeklyPlans[idx].id||uid();db.weeklyPlans[idx]=p;updated++}else{p.id=uid();db.weeklyPlans.push(p);created++}});
     let rotCreated=0,rotUpdated=0;
     pending.validRot.forEach(x=>{let idx=x.rotationId?(db.rotations||[]).findIndex(r=>String(r.id)===x.rotationId):-1;if(idx<0)idx=(db.rotations||[]).findIndex(r=>String(r.agentId)===String(x.agent.id)&&r.effectiveFrom===x.from);const r={id:idx>=0?db.rotations[idx].id:uid(),no:idx>=0?(db.rotations[idx].no||''):(typeof nextNo==='function'?nextNo('rotation','RLT'):''),agentId:x.agent.id,effectiveFrom:x.from,effectiveTo:x.to,startShift:x.startShift,morningWeeks:x.mw,eveningWeeks:x.ew,morningStart:x.ms,morningEnd:x.me,eveningStart:x.es,eveningEnd:x.ee,pause:x.pause,weekdays:x.weekdays.length?x.weekdays:[1,2,3,4,5],notes:x.notes};if(idx>=0){db.rotations[idx]=r;rotUpdated++}else{db.rotations.push(r);rotCreated++}});
+    // Les jours de week-end décochés dans l'onglet Agents sont aussi retirés des roulements existants.
+    for(const a of db.agents||[]){const allowed=(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).map(Number);for(const r of (db.rotations||[]).filter(r=>String(r.agentId)===String(a.id))){r.weekdays=(r.weekdays||[1,2,3,4,5]).map(Number).filter(d=>allowed.includes(d))}}
     db.scheduleImports=db.scheduleImports||[];db.scheduleImports.push({id:typeof uid==='function'?uid():String(Date.now()),date:new Date().toISOString(),created,updated,rotCreated,rotUpdated,errors:pending.results.filter(x=>x.errors.length).length,warnings:pending.results.filter(x=>x.warnings.length).length});
     save();pending=null;$i('confirmScheduleImport').classList.add('hidden');$i('scheduleImportSummary').innerHTML=`<div class="import-success"><strong>Import terminé</strong><span>${created} profil(s) créé(s), ${updated} modifié(s), ${rotCreated} roulement(s) créé(s), ${rotUpdated} modifié(s).</span></div>`;$i('scheduleImportPreview').innerHTML='';if(typeof toast==='function')toast('Horaires et roulements mis à jour');
   };
