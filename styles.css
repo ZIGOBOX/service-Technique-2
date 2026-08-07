@@ -299,3 +299,19 @@ body.notifications-open{overflow:hidden}
 .schedule-source.evening{background:#ffedd5;color:#9a3412;border-color:#fdba74}
 .schedule-missing{display:inline-block;color:#b42318;background:#fff1f0;border:1px solid #fda29b;border-radius:8px;padding:5px 7px;font-size:.78rem;font-weight:700}
 .rotation-hours-detail{display:grid;gap:2px;min-width:150px}.rotation-hours-detail small{display:block;white-space:nowrap}.rotation-hours-detail b{display:inline-block;min-width:26px}
+
+/* V64 — calendrier mensuel : alignement fiable sur mobile et mois de 28/29/30/31 jours */
+.month-board{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:6px;max-width:100%}
+.month-grid{display:grid;align-items:stretch;width:max-content;max-width:none}
+.month-corner,.month-day-head,.month-agent{min-height:42px;display:flex;align-items:center;border-right:1px solid #e7edf2;border-bottom:1px solid #e7edf2;background:#fff}
+.month-corner{position:sticky;left:0;top:0;z-index:5;padding:0 10px;background:#f3f7fa;font-weight:800;text-align:left}
+.month-day-head{position:sticky;top:0;z-index:4;justify-content:center;background:#f3f7fa;font-weight:800;font-size:.82rem}
+.month-day-head.weekend{background:#edf2f6;color:#657789}
+.month-agent{position:sticky;left:0;z-index:3;padding:6px 10px;font-weight:800;line-height:1.15;overflow:hidden;overflow-wrap:anywhere}
+.month-cell.day-state{width:40px;min-width:40px;max-width:40px;min-height:40px;margin:1px;padding:0}
+@media(max-width:700px){
+  .month-board{margin-left:0;margin-right:0}
+  .month-corner,.month-agent{width:150px;min-width:150px;max-width:150px}
+  .month-day-head{width:42px;min-width:42px;max-width:42px}
+  .month-cell.day-state{width:40px;min-width:40px;max-width:40px}
+}
