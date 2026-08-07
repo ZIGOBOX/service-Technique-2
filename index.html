@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#075ca8">
   <title>Pilotage Service Technique V48</title>
-  <link rel="icon" href="./assets/logo-service-technique.png?v=51.0">
-  <link rel="stylesheet" href="./styles.css?v=51.0">
+  <link rel="icon" href="./assets/logo-service-technique.png?v=52.0">
+  <link rel="stylesheet" href="./styles.css?v=52.0">
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
     <form class="auth-card" id="authForm" novalidate>
-      <img src="./assets/logo-service-technique.png?v=51.0" alt="Service technique" class="auth-logo">
+      <img src="./assets/logo-service-technique.png?v=52.0" alt="Service technique" class="auth-logo">
       <h1>Pilotage Service Technique</h1>
       <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 51.0 — mise à jour le 07/08/2026 à 02:50</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
@@ -22,7 +22,7 @@
   </section>
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <img src="./assets/logo-service-technique.png?v=51.0" alt="Logo Service technique et accueil" class="brand-logo">
+      <img src="./assets/logo-service-technique.png?v=52.0" alt="Logo Service technique et accueil" class="brand-logo">
       <div><h1 id="brandAppName">Pilotage Service Technique</h1><p id="brandSchoolName">Lycée Jean Puy</p></div>
       <button class="icon-btn mobile-only" id="closeMenu" aria-label="Fermer le menu">×</button>
     </div>
@@ -33,6 +33,7 @@
       <button class="nav-btn" data-view="rotations"><span>↻</span>Roulements annuels</button>
       <button class="nav-btn" data-view="planning"><span>◷</span>Pilotage des horaires</button>
       <button class="nav-btn" data-view="schedule-import"><span>⇄</span>Import / export horaires</button>
+      <button class="nav-btn" data-view="pdfimports"><span>📥</span>Imports PDF & Chronotime</button>
       <button class="nav-btn" data-view="absences"><span>☀</span>Congés, RTT & absences</button>
       <button class="nav-btn" data-view="vacations"><span>🏫</span>Vacances & fermetures</button>
       <button class="nav-btn" data-view="issues"><span>⚠</span>Sécurité & qualité</button>
@@ -49,7 +50,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 51.0 — 07/08/2026 02:50</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 52.0 — 07/08/2026 04:20</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -68,7 +69,7 @@
     <section class="view active" id="dashboard">
       <div class="welcome-banner">
         <div><span class="eyebrow">PILOTAGE EN TEMPS RÉEL</span><h3 id="welcomeTitle">Pilotage Service Technique</h3><p>Tout ce qui est urgent, prévu ou en attente dès l’ouverture.</p></div>
-        <img src="./assets/logo-service-technique.png?v=51.0" alt="" class="welcome-logo">
+        <img src="./assets/logo-service-technique.png?v=52.0" alt="" class="welcome-logo">
       </div>
 
       <div class="quick-actions" id="dashboardQuickActions">
@@ -123,6 +124,17 @@
         <article class="panel shortcut-panel" data-go="cleaning"><div class="panel-head"><h3>🧹 Points faibles ménage</h3><span class="go-arrow">›</span></div><div id="cleaningWeakPreview" class="card-list"></div></article>
         <article class="panel shortcut-panel" data-go="meetings"><div class="panel-head"><h3>📅 Prochains rendez-vous</h3><span class="go-arrow">›</span></div><div id="meetingPreview" class="card-list"></div></article>
       </div>
+      <article class="panel dashboard-chrono-panel"><div class="panel-head"><div><h3>Δ annuel Chronotime</h3><p class="muted" id="chronoDashboardUpdated">Aucune injection</p></div><button class="ghost small" data-go="pdfimports">Voir les imports</button></div><div id="chronoDashboard" class="chrono-dashboard-grid"></div></article>
+    </section>
+
+    <section class="view" id="pdfimports">
+      <div class="section-actions"><div><h3>Imports PDF & Chronotime</h3><p>Importer les synoptiques Chronotime et les rapports de contrôle (APAVE, SOCOTEC, VERITAS, DEKRA, Qualiconsult…). Les données sont analysées puis proposées à validation avant toute mise à jour.</p></div></div>
+      <div class="pdf-import-grid">
+        <article class="panel"><h3>⏱ Chronotime</h3><p>Congés, RTT, repos, jours fériés, durées journalières et delta annuel par agent.</p><label class="file-label primary">Choisir un PDF Chronotime<input type="file" id="chronoPdfFile" accept="application/pdf,.pdf" hidden></label><div id="chronoImportStatus" class="import-status"></div><div id="chronoPreview" class="import-preview"></div></article>
+        <article class="panel"><h3>🛡 Rapport de contrôle</h3><p>Analyse les rapports APAVE et autres organismes, repère les non-conformités et prépare leur suivi.</p><label class="file-label primary">Choisir un rapport PDF<input type="file" id="controlPdfFile" accept="application/pdf,.pdf" hidden></label><div id="controlImportStatus" class="import-status"></div><div id="controlPreview" class="import-preview"></div></article>
+      </div>
+      <article class="panel"><div class="panel-head"><div><h3>Historique des injections</h3><p class="muted">Traçabilité des imports, année scolaire, fichier, agent et anomalies.</p></div></div><div id="pdfImportHistory" class="table-wrap"></div></article>
+      <article class="panel"><h3>Correspondance des codes Chronotime</h3><p class="muted">Les codes connus sont mémorisés. Toute nouvelle abréviation est demandée au premier import.</p><div id="chronoCodeMap" class="code-map-grid"></div></article>
     </section>
 
     <section class="view" id="personal">
@@ -156,7 +168,7 @@
     <section class="view" id="schedule-import">
       <div class="section-actions"><div><h3>Import / export des horaires</h3><p>Téléchargez les agents, horaires théoriques et roulements actuels, modifiez le tableur, puis réimportez-le.</p></div></div>
       <div class="import-kpi-grid">
-        <article class="panel"><h3>1. Télécharger</h3><p>Le fichier contient automatiquement les agents déjà présents, leurs profils horaires et leurs roulements.</p><div class="button-stack"><button class="primary" id="downloadScheduleMatrix">📥 Télécharger la matrice préremplie</button><a class="ghost button-link" href="./Matrice_Horaires_Roulements_Agents.xlsx?v=51.0" download>📄 Télécharger un exemplaire vierge</a></div></article>
+        <article class="panel"><h3>1. Télécharger</h3><p>Le fichier contient automatiquement les agents déjà présents, leurs profils horaires et leurs roulements.</p><div class="button-stack"><button class="primary" id="downloadScheduleMatrix">📥 Télécharger la matrice préremplie</button><a class="ghost button-link" href="./Matrice_Horaires_Roulements_Agents.xlsx?v=52.0" download>📄 Télécharger un exemplaire vierge</a></div></article>
         <article class="panel"><h3>2. Modifier dans Excel</h3><p>Modifiez uniquement les horaires, périodes, missions ou roulements. Ne changez pas l’identifiant de l’agent.</p><ul class="compact-list"><li>Vert : ligne correcte</li><li>Jaune : ligne à vérifier</li><li>Rouge : erreur bloquante</li></ul></article>
         <article class="panel"><h3>3. Réimporter</h3><p>Le logiciel compare les données et vous montre les changements avant validation.</p><label class="primary file-label schedule-file-label">📤 Choisir le fichier Excel<input type="file" id="scheduleImportFile" accept=".xlsx,.xls"></label></article>
       </div>
@@ -318,14 +330,15 @@
 
   <dialog id="autoReportWizard" class="modal wizard-modal"><div class="modal-head"><div><h3>Assistant d’envoi automatique</h3><p class="muted">Configuration Microsoft 365 + Supabase</p></div><button type="button" class="icon-btn" id="autoReportWizardClose">×</button></div><div class="wizard-progress"><span class="active">1</span><span>2</span><span>3</span><span>4</span></div><div id="autoReportWizardBody"></div><div class="modal-actions"><button type="button" class="ghost" id="autoReportWizardBack">Précédent</button><button type="button" class="primary" id="autoReportWizardNext">Suivant</button></div></dialog>
   <div id="toast" class="toast"></div>
-  <script src="./navigation.js?v=51.0"></script>
+  <script src="./navigation.js?v=52.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./supabase-config.js?v=51.0"></script>
-  <script src="./login-bootstrap.js?v=51.0"></script>
-  <script src="./app.js?v=51.0"></script>
-  <script src="./notification-center.js?v=51.0"></script>
+  <script src="./supabase-config.js?v=52.0"></script>
+  <script src="./login-bootstrap.js?v=52.0"></script>
+  <script src="./app.js?v=52.0"></script>
+  <script src="./notification-center.js?v=52.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="./schedule-import.js?v=51.0"></script>
+  <script src="./schedule-import.js?v=52.0"></script>
+  <script src="./report-import.js?v=52.0"></script>
 
 
 </body>
