@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#075ca8">
   <title>Pilotage Service Technique V48</title>
-  <link rel="icon" href="./assets/logo-service-technique.png?v=54.0">
-  <link rel="stylesheet" href="./styles.css?v=54.0">
+  <link rel="icon" href="./assets/logo-service-technique.png?v=57.0">
+  <link rel="stylesheet" href="./styles.css?v=57.0">
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
     <form class="auth-card" id="authForm" novalidate>
-      <img src="./assets/logo-service-technique.png?v=54.0" alt="Service technique" class="auth-logo">
+      <img src="./assets/logo-service-technique.png?v=57.0" alt="Service technique" class="auth-logo">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 51.0 — mise à jour le 07/08/2026 à 02:50</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 57.0 — 07/08/2026 06:15</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -22,7 +22,7 @@
   </section>
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <img src="./assets/logo-service-technique.png?v=54.0" alt="Logo Service technique et accueil" class="brand-logo">
+      <img src="./assets/logo-service-technique.png?v=57.0" alt="Logo Service technique et accueil" class="brand-logo">
       <div><h1 id="brandAppName">Pilotage Service Technique</h1><p id="brandSchoolName">Lycée Jean Puy</p></div>
       <button class="icon-btn mobile-only" id="closeMenu" aria-label="Fermer le menu">×</button>
     </div>
@@ -50,7 +50,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 54.0 — 07/08/2026 04:20</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 57.0 — 07/08/2026 05:20</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -69,7 +69,7 @@
     <section class="view active" id="dashboard">
       <div class="welcome-banner">
         <div><span class="eyebrow">PILOTAGE EN TEMPS RÉEL</span><h3 id="welcomeTitle">Pilotage Service Technique</h3><p>Tout ce qui est urgent, prévu ou en attente dès l’ouverture.</p></div>
-        <img src="./assets/logo-service-technique.png?v=54.0" alt="" class="welcome-logo">
+        <img src="./assets/logo-service-technique.png?v=57.0" alt="" class="welcome-logo">
       </div>
 
       <div class="quick-actions" id="dashboardQuickActions">
@@ -151,9 +151,9 @@
 
     <section class="view" id="rotations">
       <div class="section-actions"><div><h3>Roulements annuels</h3><p>Cycles matin/soir par agent, versions avec date d’effet et exceptions temporaires.</p></div><div><button class="ghost" id="newRotationException">＋ Exception</button><button class="primary" id="newRotation">＋ Créer un roulement</button></div></div>
-      <div class="filters"><select id="rotationAgent"><option value="">Tous les agents</option></select><input type="number" id="rotationYear" min="2020" max="2100"><select id="rotationMonth"><option value="">Année entière</option></select><button class="ghost" id="exportRotationCsv">Excel esthétique</button><button class="ghost" data-print="rotations">Imprimer</button></div>
+      <div class="filters"><select id="rotationAgent"><option value="">Tous les agents</option></select><label class="compact-filter">Année scolaire<select id="rotationYear"></select></label><select id="rotationMonth"><option value="">Année scolaire entière</option></select><button class="ghost" id="exportRotationCsv">Excel esthétique</button><button class="ghost" data-print="rotations">Imprimer</button></div>
       <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Date d’effet</th><th>Cycle</th><th>Matin</th><th>Soir</th><th>Jours</th><th>Fin</th><th></th></tr></thead><tbody id="rotationsTable"></tbody></table></div>
-      <article class="panel"><div class="panel-head"><h3>Aperçu annuel</h3></div><div id="rotationPreview" class="rotation-preview"></div></article>
+      <article class="panel"><div class="panel-head"><div><h3>Aperçu année scolaire</h3><p class="muted">Du 1er septembre au 31 août, en plus de la définition des roulements ci-dessus.</p></div><div class="rotation-legend"><span class="legend-standard">Standard</span><span class="legend-morning">Matin</span><span class="legend-evening">Soir</span><span class="legend-off">Repos / absence</span></div></div><div id="rotationPreview" class="rotation-preview"></div></article>
     </section>
 
     <section class="view" id="planning">
@@ -167,7 +167,7 @@
     <section class="view" id="schedule-import">
       <div class="section-actions"><div><h3>Import / export des horaires</h3><p>Téléchargez les agents, horaires théoriques et roulements actuels, modifiez le tableur, puis réimportez-le.</p></div></div>
       <div class="import-kpi-grid">
-        <article class="panel"><h3>1. Télécharger</h3><p>Le fichier contient automatiquement les agents déjà présents, leurs profils horaires et leurs roulements.</p><div class="button-stack"><button class="primary" id="downloadScheduleMatrix">📥 Télécharger la matrice préremplie</button><a class="ghost button-link" href="./Matrice_Horaires_Roulements_Agents.xlsx?v=54.0" download>📄 Télécharger un exemplaire vierge</a></div></article>
+        <article class="panel"><h3>1. Télécharger</h3><p>Le fichier contient automatiquement les agents déjà présents, leurs profils horaires et leurs roulements.</p><div class="button-stack"><button class="primary" id="downloadScheduleMatrix">📥 Télécharger la matrice préremplie</button><a class="ghost button-link" href="./Matrice_Horaires_Roulements_Agents.xlsx?v=57.0" download>📄 Télécharger un exemplaire vierge</a></div></article>
         <article class="panel"><h3>2. Modifier dans Excel</h3><p>Modifiez uniquement les horaires, périodes, missions ou roulements. Ne changez pas l’identifiant de l’agent.</p><ul class="compact-list"><li>Vert : ligne correcte</li><li>Jaune : ligne à vérifier</li><li>Rouge : erreur bloquante</li></ul></article>
         <article class="panel"><h3>3. Réimporter</h3><p>Le logiciel compare les données et vous montre les changements avant validation.</p><label class="primary file-label schedule-file-label">📤 Choisir le fichier Excel<input type="file" id="scheduleImportFile" accept=".xlsx,.xls"></label></article>
       </div>
@@ -312,7 +312,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Archivage automatique</h3><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 51.0 — mise à jour le 07/08/2026 à 02:50</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 57.0 — 07/08/2026 06:15</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -331,15 +331,15 @@
 
   <dialog id="autoReportWizard" class="modal wizard-modal"><div class="modal-head"><div><h3>Assistant d’envoi automatique</h3><p class="muted">Configuration Microsoft 365 + Supabase</p></div><button type="button" class="icon-btn" id="autoReportWizardClose">×</button></div><div class="wizard-progress"><span class="active">1</span><span>2</span><span>3</span><span>4</span></div><div id="autoReportWizardBody"></div><div class="modal-actions"><button type="button" class="ghost" id="autoReportWizardBack">Précédent</button><button type="button" class="primary" id="autoReportWizardNext">Suivant</button></div></dialog>
   <div id="toast" class="toast"></div>
-  <script src="./navigation.js?v=54.0"></script>
+  <script src="./navigation.js?v=57.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./supabase-config.js?v=54.0"></script>
-  <script src="./login-bootstrap.js?v=54.0"></script>
-  <script src="./app.js?v=54.0"></script>
-  <script src="./notification-center.js?v=54.0"></script>
+  <script src="./supabase-config.js?v=57.0"></script>
+  <script src="./login-bootstrap.js?v=57.0"></script>
+  <script src="./app.js?v=57.0"></script>
+  <script src="./notification-center.js?v=57.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="./schedule-import.js?v=54.0"></script>
-  <script src="./report-import.js?v=54.0"></script>
+  <script src="./schedule-import.js?v=57.0"></script>
+  <script src="./report-import.js?v=57.0"></script>
 
 
 </body>
