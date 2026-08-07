@@ -502,6 +502,27 @@ function dayRecord(agentId,date){
 }
 function dayInfo(agentId,date){const sched=scheduledFor(agentId,date),rec=dayRecord(agentId,date);if(!rec)return {...sched,dayType:sched.shift==='Repos'?'Repos':'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',overtime:0,note:'',status:'Prévu'};return {...sched,...rec,plannedStart:rec.plannedStart??sched.start,plannedEnd:rec.plannedEnd??sched.end}}
 function isAbsenceType(t){return t&&t!=='Présence'&&t!=='Formation'}
+function easterSundayISO(year){
+ const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),month=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;
+ return `${year}-${pad(month)}-${pad(day)}`;
+}
+function frenchPublicHolidayName(date){
+ const d=normalizeDateValue(date);if(!d)return'';const y=Number(d.slice(0,4));
+ const fixed={
+  [`${y}-01-01`]:'Jour de l’an',[`${y}-05-01`]:'Fête du Travail',[`${y}-05-08`]:'Victoire 1945',[`${y}-07-14`]:'Fête nationale',[`${y}-08-15`]:'Assomption',[`${y}-11-01`]:'Toussaint',[`${y}-11-11`]:'Armistice',[`${y}-12-25`]:'Noël'
+ };
+ if(fixed[d])return fixed[d];
+ const easter=easterSundayISO(y),movable={};movable[addDays(easter,1)]='Lundi de Pâques';movable[addDays(easter,39)]='Ascension';movable[addDays(easter,50)]='Lundi de Pentecôte';
+ return movable[d]||'';
+}
+function replacementNotificationAllowed(rec,date){
+ const d=normalizeDateValue(date);if(!d)return false;const wd=parseDate(d).getDay();
+ if(wd===0||wd===6)return false;
+ if(frenchPublicHolidayName(d))return false;
+ if(rec?.noReplacementNeeded===true)return false;
+ const st=normalizeText(rec?.status||'');if(st==='refusee'||st==='annulee')return false;
+ return true;
+}
 function dayHours(info){const planned=hoursBetween(info.plannedStart,info.plannedEnd,info.pause);const actual=(info.actualStart&&info.actualEnd)?hoursBetween(info.actualStart,info.actualEnd,info.pause):planned;return {planned,actual,total:actual+Number(info.overtime||0),delta:actual+Number(info.overtime||0)-planned}}
 function agentState(agent,date=todayISO()){const info=dayInfo(agent.id,date);if(isAbsenceType(info.dayType)||info.dayType==='Repos')return {label:info.dayType,kind:'absent',info};if(info.dayType==='Formation')return {label:'Formation',kind:'info',info};if(!info.plannedStart||!info.plannedEnd)return {label:'Non planifié',kind:'info',info};return {label:`${info.plannedStart}–${info.plannedEnd}`,kind:'present',info}}
 
@@ -554,7 +575,7 @@ function openAgentDay(agentId,date,id){
  const x=old||{id:uid(),agentId:initialAgentId,date:initialDate,dayType:'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',pause:sched.pause,overtime:0,status:'Validée',note:'',replacement:'',noReplacementNeeded:false};
  const dateFrom=periodRows.length?periodRows.map(r=>r.date).sort()[0]:x.date;
  const dateTo=periodRows.length?periodRows.map(r=>r.date).sort().at(-1):x.date;
- openModal(`${agentName(agentById(x.agentId))} — saisie planning`,`<div class="day-shortcuts"><button type="button" data-set-day="Congé annuel">Congé</button><button type="button" data-set-day="RTT">RTT</button><button type="button" data-set-day="Maladie">Maladie</button><button type="button" data-set-day="Présence">Présence</button></div><div class="theoretical-schedule" id="theoreticalSchedule"></div><div class="form-grid"><label>Agent<select name="agentId">${agentOptions(x.agentId)}</select></label><label>Type de journée<select name="dayType">${selectOptions(db.lists.dayTypes,x.dayType)}</select></label>${field('Du','dateFrom',dateFrom,'date','required')}${field('Au','dateTo',dateTo,'date','required')}<label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],x.status||'Validée')}</select></label>${field('Horaire théorique — arrivée','plannedStart',x.plannedStart,'time')}${field('Horaire théorique — départ','plannedEnd',x.plannedEnd,'time')}${field('Horaire réel — arrivée','actualStart',x.actualStart,'time')}${field('Horaire réel — départ','actualEnd',x.actualEnd,'time')}${field('Pause (minutes)','pause',x.pause,'number','min="0" step="5"')}${field('Heures supplémentaires (+) / retirées (-)','overtime',x.overtime,'number','step="0.25"')}<label class="full-width replacement-choice"><span>Gestion du remplacement</span><span class="checkbox-row"><input type="checkbox" name="noReplacementNeeded" ${x.noReplacementNeeded?'checked':''}> Aucun remplacement nécessaire pendant cette période</span></label>${field('Remplacement / relais','replacement',x.replacement||'')}${textareaField('Motif / précision','note',x.note)}</div><p class="hint">Si la case « Aucun remplacement nécessaire » est cochée, aucune notification de remplacement ne sera créée pour toute la période. Tu peux modifier cette décision plus tard.</p><div class="calculation-preview" id="dayCalc"></div>`,form=>{const o=formDataObj(form);
+ openModal(`${agentName(agentById(x.agentId))} — saisie planning`,`<div class="day-shortcuts"><button type="button" data-set-day="Congé annuel">Congé</button><button type="button" data-set-day="RTT">RTT</button><button type="button" data-set-day="Maladie">Maladie</button><button type="button" data-set-day="Présence">Présence</button></div><div class="theoretical-schedule" id="theoreticalSchedule"></div><div class="form-grid"><label>Agent<select name="agentId">${agentOptions(x.agentId)}</select></label><label>Type de journée<select name="dayType">${selectOptions(db.lists.dayTypes,x.dayType)}</select></label>${field('Du','dateFrom',dateFrom,'date','required')}${field('Au','dateTo',dateTo,'date','required')}<label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],x.status||'Validée')}</select></label>${field('Horaire théorique — arrivée','plannedStart',x.plannedStart,'time')}${field('Horaire théorique — départ','plannedEnd',x.plannedEnd,'time')}${field('Horaire réel — arrivée','actualStart',x.actualStart,'time')}${field('Horaire réel — départ','actualEnd',x.actualEnd,'time')}${field('Pause (minutes)','pause',x.pause,'number','min="0" step="5"')}${field('Heures supplémentaires (+) / retirées (-)','overtime',x.overtime,'number','step="0.25"')}<label class="full-width replacement-choice"><span>Gestion du remplacement</span><span class="checkbox-row"><input type="checkbox" name="noReplacementNeeded" ${x.noReplacementNeeded?'checked':''}> Aucun remplacement nécessaire pendant cette période</span></label>${field('Remplacement / relais','replacement',x.replacement||'')}${textareaField('Motif / précision','note',x.note)}</div><p class="hint">Aucune notification de remplacement n’est créée le samedi, le dimanche ou un jour férié. Si la case « Aucun remplacement nécessaire » est cochée, aucune notification de remplacement ne sera créée pour toute la période.</p><div class="calculation-preview" id="dayCalc"></div>`,form=>{const o=formDataObj(form);
  const from=o.dateFrom, to=o.dateTo;
  if(!o.agentId){toast('Choisissez un agent');return}
  if(!from||!to){toast('Renseignez les dates du et au');return}
@@ -750,7 +771,7 @@ function computeNotifications(){
     const info=dayInfo(a.id,day)||{},records=(db.agentDays||[]).filter(x=>String(x.agentId)===String(a.id)&&normalizeDateValue(x.date)===day),rec=records[0];
     if(isAbsenceType(info.dayType)){
      abs.push({a,info,rec});
-     if(!rec?.noReplacementNeeded&&!String(rec?.replacement||'').trim())push({level:'orange',icon:'⚠️',title:`${agentName(a)} absent${day===today?' aujourd’hui':` le ${fmtDate(day)}`}`,text:`${info.dayType||'Absence'} — remplacement à organiser`,view:'absences',type:rec?'agentDay':null,id:rec?.id||'',date:day});
+     if(replacementNotificationAllowed(rec,day)&&!String(rec?.replacement||'').trim())push({level:'orange',icon:'⚠️',title:`${agentName(a)} absent${day===today?' aujourd’hui':` le ${fmtDate(day)}`}`,text:`${info.dayType||'Absence'} — remplacement à organiser`,view:'absences',type:rec?'agentDay':null,id:rec?.id||'',date:day});
      if((rec?.actualStart||rec?.actualEnd||Number(rec?.overtime||0)>0))push({level:'red',icon:'🕒',title:`Horaire incohérent — ${agentName(a)}`,text:`${fmtDate(day)} : absence avec horaire réel ou heures supplémentaires`,view:'planning',type:rec?'agentDay':null,id:rec?.id||'',date:day});
     }
     if(records.length>1)push({level:'red',icon:'🕒',title:`Horaire incohérent — ${agentName(a)}`,text:`${fmtDate(day)} : plusieurs saisies existent pour la même journée`,view:'planning',type:rec?'agentDay':null,id:rec?.id||'',date:day});
@@ -763,7 +784,8 @@ function computeNotifications(){
      if(duration&&Number(info.pause||0)>=duration)push({level:'red',icon:'🕒',title:`Pause incohérente — ${agentName(a)}`,text:`${fmtDate(day)} : la pause est supérieure ou égale à la présence`,view:'planning',type:rec?'agentDay':null,id:rec?.id||'',date:day});
     }
    }
-   if(abs.length>=2)push({level:'yellow',icon:'👥',title:`${abs.length} agents absents le ${fmtDate(day)}`,text:'Vérifier la couverture des postes',view:'absences',date:day});
+   const absToCover=abs.filter(x=>replacementNotificationAllowed(x.rec,day)&&!String(x.rec?.replacement||'').trim());
+   if(absToCover.length>=2)push({level:'yellow',icon:'👥',title:`${absToCover.length} agents à remplacer le ${fmtDate(day)}`,text:'Vérifier la couverture des postes',view:'absences',date:day});
   }
   // Vérification des profils annuels : segments qui se chevauchent et horaires invalides.
   for(const p of db.weeklyPlans||[]){
