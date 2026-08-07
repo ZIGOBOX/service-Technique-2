@@ -1,7 +1,7 @@
 'use strict';
 
-const APP_VERSION='65.0';
-const APP_BUILD='07/08/2026 14:45';
+const APP_VERSION='68.0';
+const APP_BUILD='07/08/2026 15:00';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -750,7 +750,7 @@ function runAnnualReset(){const t=parseDate(todayISO()),y=t.getFullYear(),isClos
 function runAutomaticHousekeeping(){let changed=false;try{changed=createWeeklyArchive(false)||changed;changed=runAnnualReset()||changed}catch(e){console.error('Archivage automatique',e)}if(changed){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}catch(e){console.error(e)}}}
 function notificationTarget(n){setView(n.view||'dashboard');if(n.type==='agentDay'&&n.id){const r=db.agentDays.find(x=>x.id===n.id);if(r)setTimeout(()=>openAgentDay(r.agentId,r.date),50);return}if(n.type&&n.id)setTimeout(()=>dispatchEdit(n.type,n.id),50)}
 function computeNotifications(){
- const out=[],today=todayISO(),active=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif'),days=[0,1,2,3,4,5,6].map(i=>addDays(today,i));
+ const out=[],today=todayISO(),replacementUntil=addMonths(today,1),active=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif'),days=[0,1,2,3,4,5,6].map(i=>addDays(today,i));
  const push=n=>{if(n&&n.title)out.push(n)};
  const openMaintenanceStatus=value=>{
   const s=normalizeText(value);
@@ -765,13 +765,26 @@ function computeNotifications(){
   return as<be&&bs<ae;
  };
  try{
+  // Remplacements : alerter à partir d'un mois avant l'absence, pour tous les agents actifs.
+  // Au-delà d'un mois, aucune notification de remplacement n'est affichée. Les exclusions
+  // (week-end, férié, non-remplacement, refus/annulation) sont centralisées dans replacementNotificationAllowed().
+  const activeIds=new Set(active.map(a=>String(a.id)));
+  const futureAbsences=(db.agentDays||[])
+   .filter(rec=>{const d=normalizeDateValue(rec.date);return activeIds.has(String(rec.agentId))&&d>=today&&d<=replacementUntil&&isAbsenceType(rec.dayType)})
+   .sort((a,b)=>normalizeDateValue(a.date).localeCompare(normalizeDateValue(b.date)));
+  for(const rec of futureAbsences){
+   const day=normalizeDateValue(rec.date),a=agentById(rec.agentId);
+   if(a&&replacementNotificationAllowed(rec,day)&&!String(rec.replacement||'').trim()){
+    push({level:'orange',icon:'⚠️',title:`${agentName(a)} absent${day===today?' aujourd’hui':` le ${fmtDate(day)}`}`,text:`${rec.dayType||'Absence'} — remplacement à organiser`,view:'absences',type:'agentDay',id:rec.id||'',date:day});
+   }
+  }
+  // Alertes de cohérence horaire : surveillance rapprochée sur les 7 prochains jours.
   for(const day of days){
    const abs=[];
    for(const a of active){
     const info=dayInfo(a.id,day)||{},records=(db.agentDays||[]).filter(x=>String(x.agentId)===String(a.id)&&normalizeDateValue(x.date)===day),rec=records[0];
     if(isAbsenceType(info.dayType)){
      abs.push({a,info,rec});
-     if(replacementNotificationAllowed(rec,day)&&!String(rec?.replacement||'').trim())push({level:'orange',icon:'⚠️',title:`${agentName(a)} absent${day===today?' aujourd’hui':` le ${fmtDate(day)}`}`,text:`${info.dayType||'Absence'} — remplacement à organiser`,view:'absences',type:rec?'agentDay':null,id:rec?.id||'',date:day});
      if((rec?.actualStart||rec?.actualEnd||Number(rec?.overtime||0)>0))push({level:'red',icon:'🕒',title:`Horaire incohérent — ${agentName(a)}`,text:`${fmtDate(day)} : absence avec horaire réel ou heures supplémentaires`,view:'planning',type:rec?'agentDay':null,id:rec?.id||'',date:day});
     }
     if(records.length>1)push({level:'red',icon:'🕒',title:`Horaire incohérent — ${agentName(a)}`,text:`${fmtDate(day)} : plusieurs saisies existent pour la même journée`,view:'planning',type:rec?'agentDay':null,id:rec?.id||'',date:day});
@@ -784,7 +797,10 @@ function computeNotifications(){
      if(duration&&Number(info.pause||0)>=duration)push({level:'red',icon:'🕒',title:`Pause incohérente — ${agentName(a)}`,text:`${fmtDate(day)} : la pause est supérieure ou égale à la présence`,view:'planning',type:rec?'agentDay':null,id:rec?.id||'',date:day});
     }
    }
-   const absToCover=abs.filter(x=>replacementNotificationAllowed(x.rec,day)&&!String(x.rec?.replacement||'').trim());
+  }
+  // Alerte collective de remplacement sur la même fenêtre d'un mois.
+  for(let day=today;day<=replacementUntil;day=addDays(day,1)){
+   const absToCover=(db.agentDays||[]).filter(rec=>activeIds.has(String(rec.agentId))&&normalizeDateValue(rec.date)===day&&isAbsenceType(rec.dayType)&&replacementNotificationAllowed(rec,day)&&!String(rec.replacement||'').trim());
    if(absToCover.length>=2)push({level:'yellow',icon:'👥',title:`${absToCover.length} agents à remplacer le ${fmtDate(day)}`,text:'Vérifier la couverture des postes',view:'absences',date:day});
   }
   // Vérification des profils annuels : segments qui se chevauchent et horaires invalides.
