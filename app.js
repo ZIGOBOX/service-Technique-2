@@ -1,7 +1,21 @@
 'use strict';
 
-const APP_VERSION='73.0';
-const APP_BUILD='07/08/2026 16:10';
+function appLogoURL(){
+  try{return window.APP_LOGO_DATA_URI||new URL('./assets/logo-service-technique.png?v=78.0',document.baseURI||location.href).href}
+  catch(e){return window.APP_LOGO_DATA_URI||'./assets/logo-service-technique.png?v=78.0'}
+}
+function secureAppLogos(){
+  const src=appLogoURL();
+  document.querySelectorAll('[data-app-logo],.auth-logo,.brand-logo,.welcome-logo').forEach(img=>{
+    if(!img)return;
+    img.src=src;
+    img.removeAttribute('srcset');
+    img.onerror=()=>{if(window.APP_LOGO_DATA_URI&&img.src!==window.APP_LOGO_DATA_URI){img.onerror=null;img.src=window.APP_LOGO_DATA_URI}};
+  });
+}
+
+const APP_VERSION='76.0';
+const APP_BUILD='07/08/2026 18:13';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -636,9 +650,15 @@ function openAbsence(){const agentId=$('#absenceAgent')?.value||db.agents[0]?.id
 /* ---------- Formulaires métier ---------- */
 function openPersonalEvent(id,date=todayISO()){const old=id?byId('personalEvents',id):null;const x=old||{id:uid(),no:nextNo('personal','PER'),date,start:'',end:'',type:'Rendez-vous',title:'',location:'',priority:'Normale',status:'À faire',notes:'',attachments:[]};openModal(old?'Modifier l’événement':'Nouvel événement personnel',`<div class="form-grid">${field('Date','date',x.date,'date','required')}${field('Début','start',x.start,'time')}${field('Fin','end',x.end,'time')}<label>Type<select name="type">${selectOptions(db.lists.personalTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}${field('Lieu','location',x.location)}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${textareaField('Notes','notes',x.notes)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));await processAttachments(form,x,'personal');if(!old)db.personalEvents.push(x);closeModal();save();toast('Événement enregistré')},{onDelete:old?()=>deleteRecord('personalEvents',x.id,'événement'):null})}
 function openIssue(id,defaults={}){const old=id?byId('issues',id):null;const x=old||{id:uid(),no:nextNo('issue','ACT'),date:todayISO(),agentId:'',category:'Sécurité',title:'',description:'',priority:defaults.priority||'Haute',status:'À faire',owner:'',dueDate:'',cost:'',action:'',attachments:[]};openModal(old?'Modifier l’action':'Nouvelle action sécurité / qualité',`<div class="form-grid">${field('Date','date',x.date,'date')}<label>Agent concerné<select name="agentId">${agentOptions(x.agentId,true)}</select></label><label>Catégorie<select name="category">${selectOptions(db.lists.issueCategories,x.category)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label>${field('Problématique','title',x.title,'text','required')}<label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${field('Responsable du suivi','owner',x.owner)}${field('Échéance','dueDate',x.dueDate,'date')}${field('Coût éventuel (€)','cost',x.cost,'number','min="0" step="0.01"')}${textareaField('Description','description',x.description)}${textareaField('Action corrective / décision','action',x.action)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form),{cost:Number(form.elements.cost.value||0)});await processAttachments(form,x,'issues');if(!old)db.issues.push(x);closeModal();save();toast('Action enregistrée')},{onDelete:old?()=>deleteRecord('issues',x.id,'action'):null})}
-function periodicDue(x){if(x.nextDate)return x.nextDate;if(x.lastDate&&Number(x.intervalMonths)>0)return addMonths(x.lastDate,x.intervalMonths);return ''}
-function periodicComputed(x){const due=periodicDue(x);if(x.status==='Clôturé'||x.status==='Réalisé')return x.status;if(!due)return x.status||'À planifier';const diff=(parseDate(due)-parseDate(todayISO()))/86400000;if(diff<0)return 'En retard';if(diff<=60)return 'Bientôt';return 'À jour'}
-function openPeriodic(id){const old=id?byId('periodic',id):null;const x=old||{id:uid(),no:nextNo('periodic','CP'),name:'',family:db.lists.periodicFamilies[0],intervalMonths:12,requirement:'',provider:'',register:'Registre de sécurité',building:'Tous bâtiments',lastDate:'',nextDate:'',status:'À planifier',notes:'',attachments:[]};openModal(old?'Modifier le contrôle périodique':'Nouveau contrôle périodique',`<div class="form-grid">${field('Contrôle','name',x.name,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.periodicFamilies,x.family)}</select></label><label>Bâtiment<select name="building"><option>Tous bâtiments</option>${buildingOptions(x.building)}</select></label>${field('Périodicité (mois, 0 = variable)','intervalMonths',x.intervalMonths,'number','min="0"')}${field('Dernier contrôle','lastDate',x.lastDate,'date')}${field('Prochaine échéance','nextDate',periodicDue(x),'date')}<label>Statut<select name="status">${selectOptions(['À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable'],x.status)}</select></label>${field('Prestataire / responsable','provider',x.provider)}${field('Registre / dossier','register',x.register)}${textareaField('Exigence / contenu','requirement',x.requirement)}${textareaField('Notes','notes',x.notes)}${attachmentField(x.attachments)}</div>`,async form=>{const o=formDataObj(form);Object.assign(x,o,{intervalMonths:Number(o.intervalMonths||0)});await processAttachments(form,x,'periodic');if(!old)db.periodic.push(x);closeModal();save();toast('Contrôle périodique enregistré')},{onDelete:old?()=>deleteRecord('periodic',x.id,'contrôle'):null})}
+// Les contrôles périodiques sont indépendants de l'année scolaire : leur cycle suit leur vraie échéance, même plusieurs années plus tard.
+function addMonthsClamped(dateISO,months){
+ const d=parseDate(dateISO),day=d.getDate(),target=new Date(d.getFullYear(),d.getMonth()+Number(months||0),1,12,0,0,0);
+ const last=new Date(target.getFullYear(),target.getMonth()+1,0,12,0,0,0).getDate();target.setDate(Math.min(day,last));return localISO(target)
+}
+function periodicIsInactive(x){const s=normalizeText(x?.status);return s==='cloture'||s==='cloturee'||s==='non applicable'||s==='archive'||s==='archivee'}
+function periodicDue(x){if(x.nextDate)return normalizeDateValue(x.nextDate);if(x.lastDate&&Number(x.intervalMonths)>0)return addMonthsClamped(x.lastDate,x.intervalMonths);return ''}
+function periodicComputed(x){const due=periodicDue(x);if(periodicIsInactive(x))return x.status||'Clôturé';if(!due)return x.status||'À planifier';const diff=(parseDate(due)-parseDate(todayISO()))/86400000;if(diff<0)return 'En retard';if(diff<=60)return 'Bientôt';return 'À jour'}
+function openPeriodic(id){const old=id?byId('periodic',id):null;const x=old||{id:uid(),no:nextNo('periodic','CP'),name:'',family:db.lists.periodicFamilies[0],intervalMonths:12,requirement:'',provider:'',register:'Registre de sécurité',building:'Tous bâtiments',lastDate:'',nextDate:'',status:'À planifier',notes:'',attachments:[]};openModal(old?'Modifier le contrôle périodique':'Nouveau contrôle périodique',`<div class="form-grid">${field('Contrôle','name',x.name,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.periodicFamilies,x.family)}</select></label><label>Bâtiment<select name="building"><option>Tous bâtiments</option>${buildingOptions(x.building)}</select></label>${field('Périodicité (mois, 0 = variable)','intervalMonths',x.intervalMonths,'number','min="0"')}${field('Dernier contrôle','lastDate',x.lastDate,'date')}${field('Prochaine échéance','nextDate',periodicDue(x),'date')}<label>Statut<select name="status">${selectOptions(['À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable'],x.status)}</select></label>${field('Prestataire / responsable','provider',x.provider)}${field('Registre / dossier','register',x.register)}${textareaField('Exigence / contenu','requirement',x.requirement)}${textareaField('Notes','notes',x.notes)}<p class="form-hint"><strong>Suivi permanent :</strong> ce contrôle reste suivi au-delà de l'année scolaire jusqu'à sa véritable prochaine échéance.</p>${attachmentField(x.attachments)}</div>`,async form=>{const o=formDataObj(form),intervalMonths=Number(o.intervalMonths||0);Object.assign(x,o,{intervalMonths});if(x.lastDate&&intervalMonths>0&&!o.nextDate)x.nextDate=addMonthsClamped(x.lastDate,intervalMonths);await processAttachments(form,x,'periodic');if(!old)db.periodic.push(x);closeModal();save();toast('Contrôle périodique enregistré — suivi jusqu’à la prochaine échéance')},{onDelete:old?()=>deleteRecord('periodic',x.id,'contrôle'):null})}
 function cleaningTasks(type,existing=[]){const oldMap=new Map((existing||[]).map(t=>[t.name,t]));return (GUIDE[type]||GUIDE['Autre']||[]).map(([name,freq])=>{const o=oldMap.get(name)||{name,frequency:freq,status:'Non contrôlé',comment:''};return `<div class="clean-task" data-clean-task><div><strong>${esc(name)}</strong><small>${esc(freq)}</small></div><select name="taskStatus">${selectOptions(db.lists.cleaningStatuses,o.status)}</select><input name="taskComment" value="${esc(o.comment||'')}" placeholder="Commentaire rapide"></div>`}).join('')}
 function openCleaning(id){const old=id?byId('cleaning',id):null;const b=old?.building||db.buildings[0]?.name||'',floor=old?.floor||db.buildings[0]?.floors?.[0]||'',type=old?.roomType||'Salle de classe / devoirs / informatique';const x=old||{id:uid(),no:nextNo('cleaning','MEN'),date:todayISO(),time:new Date().toTimeString().slice(0,5),inspector:db.settings.defaultInspector||'',agentId:'',building:b,floor,roomType:type,room:'Zone entière',overallStatus:'',score:0,comment:'',tasks:[],attachments:[]};openModal(old?'Modifier le contrôle ménage':'Nouveau contrôle ménage',`<div class="form-grid">${field('Date','date',x.date,'date','required')}${field('Heure','time',x.time,'time')}<label>Agent / secteur contrôlé<select name="agentId">${agentOptions(x.agentId,true)}</select></label>${field('Contrôleur','inspector',x.inspector)}<label>Bâtiment<select name="building" id="mBuilding">${buildingOptions(x.building)}</select></label><label>Étage<select name="floor" id="mFloor">${floorOptions(x.building,x.floor)}</select></label><label>Type de local<select name="roomType" id="mRoomType">${selectOptions(db.lists.roomTypes,x.roomType)}</select></label><label>Local / zone<select name="room" id="mRoom">${roomOptions(x.building,x.floor,x.roomType,x.room)}</select></label>${textareaField('Observation générale','comment',x.comment)}</div><div class="clean-bulk"><span>Tout passer en :</span>${['Conforme','À reprendre','Non conforme','Non applicable'].map(s=>`<button type="button" data-bulk-clean="${s}">${s}</button>`).join('')}</div><div id="cleanTaskEditor" class="clean-task-editor">${cleaningTasks(x.roomType,x.tasks)}</div>${attachmentField(x.attachments)}`,async form=>{const o=formDataObj(form);const rows=$$('[data-clean-task]',form).map((r,i)=>({name:r.querySelector('strong').textContent,frequency:r.querySelector('small').textContent,status:r.querySelector('[name="taskStatus"]').value,comment:r.querySelector('[name="taskComment"]').value}));const rated=rows.filter(r=>!['Non contrôlé','Non applicable'].includes(r.status)),good=rated.filter(r=>r.status==='Conforme').length;Object.assign(x,o,{tasks:rows,score:rated.length?Math.round(good/rated.length*100):0,overallStatus:rows.some(r=>r.status==='Non conforme')?'Non conforme':rows.some(r=>r.status==='À reprendre')?'À reprendre':rated.length?'Conforme':'Non contrôlé'});await processAttachments(form,x,'cleaning');if(!old)db.cleaning.push(x);closeModal();save();toast('Contrôle ménage enregistré')},{onDelete:old?()=>deleteRecord('cleaning',x.id,'contrôle'):null});const updateLocation=()=>{const bb=$('#mBuilding').value,ff=$('#mFloor').value,tt=$('#mRoomType').value;$('#mRoom').innerHTML=roomOptions(bb,ff,tt,$('#mRoom').value)};$('#mBuilding').onchange=()=>{$('#mFloor').innerHTML=floorOptions($('#mBuilding').value);updateLocation()};$('#mFloor').onchange=updateLocation;$('#mRoomType').onchange=()=>{$('#cleanTaskEditor').innerHTML=cleaningTasks($('#mRoomType').value,[]);updateLocation()};$$('[data-bulk-clean]').forEach(btn=>btn.onclick=()=>$$('[name="taskStatus"]',$('#cleanTaskEditor')).forEach(s=>s.value=btn.dataset.bulkClean))}
 function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),title:'',family:'Électricité',priority:'Normale',status:'À faire',building:db.buildings[0]?.name||'',floor:'',room:'Zone entière',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier l’intervention':'Nouvelle intervention',`<div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Objet','title',x.title,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label><label>Bâtiment<select name="building" id="mBuilding">${buildingOptions(x.building)}</select></label><label>Étage<select name="floor" id="mFloor">${floorOptions(x.building,x.floor)}</select></label><label>Local<select name="room" id="mRoom">${roomOptions(x.building,x.floor,'',x.room)}</select></label>${field('Demandeur','requester',x.requester)}${field('Assigné à / prestataire','assigned',x.assigned)}${field('Échéance','dueDate',x.dueDate,'date')}${field('Coût (€)','cost',x.cost,'number','min="0" step="0.01"')}${textareaField('Description / diagnostic','description',x.description)}${textareaField('Action réalisée / suite','action',x.action)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form),{cost:Number(form.elements.cost.value||0)});await processAttachments(form,x,'maintenance');if(!old)db.maintenance.push(x);const terminal=['Terminée','Clôturée','Annulée','Archivée'];if(terminal.includes(x.status)){db.archives=db.archives||[];db.archives.push({id:uid(),kind:'maintenance',key:x.no||x.id,year:String((x.date||todayISO()).slice(0,4)),academicYear:academicYearFor(x.date||todayISO()),start:x.date||todayISO(),end:todayISO(),createdAt:new Date().toISOString(),summary:{statut:x.status,objet:x.title||'',batiment:x.building||''},data:{maintenance:clone(x)}});db.maintenance=db.maintenance.filter(m=>m.id!==x.id);closeModal();save();toast('Intervention terminée et archivée automatiquement')}else{closeModal();save();toast('Intervention enregistrée')}},{onDelete:old?()=>deleteRecord('maintenance',x.id,'intervention'):null});$('#mBuilding').onchange=()=>{$('#mFloor').innerHTML=floorOptions($('#mBuilding').value);$('#mRoom').innerHTML=roomOptions($('#mBuilding').value,$('#mFloor').value)};$('#mFloor').onchange=()=>$('#mRoom').innerHTML=roomOptions($('#mBuilding').value,$('#mFloor').value)}
@@ -865,7 +885,7 @@ function computeNotifications(){
  }catch(error){console.error('Notifications maintenance',error)}
  try{
   for(const x of db.periodic||[]){
-   if(isClosedStatus(x.status))continue;
+   if(periodicIsInactive(x))continue;
    const due=normalizeDateValue(periodicDue(x));if(!due)continue;
    const diff=daysBetweenDates(today,due);if(diff!==null&&diff<=30){
     const level=diff<=0?'red':diff<=15?'orange':'yellow';
@@ -1087,7 +1107,7 @@ function waitAndPrint(w){
 function printReport(type){
  const r=reportData(type),orientation=db.settings.printOrientation||'landscape',w=window.open('','_blank');
  if(!w){toast('Autorisez les fenêtres contextuelles pour imprimer');return}
- w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(r.title)}</title><style>${reportPrintCSS(orientation)}</style></head><body><header class="print-header"><img src="${new URL('assets/logo-service-technique.png',location.href).href}"><div><h1>${esc(db.settings.appName)}</h1><p>${esc(db.settings.schoolName)}</p><strong>${esc(r.title)} — ${esc(r.subtitle)}</strong></div></header><main>${r.html}</main><footer class="print-footer">${esc(db.settings.appName)} — V${APP_VERSION} — imprimé le ${new Date().toLocaleString('fr-FR')}</footer></body></html>`);
+ w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(r.title)}</title><style>${reportPrintCSS(orientation)}</style></head><body><header class="print-header"><img src="${appLogoURL()}"><div><h1>${esc(db.settings.appName)}</h1><p>${esc(db.settings.schoolName)}</p><strong>${esc(r.title)} — ${esc(r.subtitle)}</strong></div></header><main>${r.html}</main><footer class="print-footer">${esc(db.settings.appName)} — V${APP_VERSION} — imprimé le ${new Date().toLocaleString('fr-FR')}</footer></body></html>`);
  w.document.close();waitAndPrint(w);
 }
 function printableViewHTML(view){
@@ -1114,7 +1134,7 @@ function printView(viewId){
  const subtitle=filterLabels.length?filterLabels.join(' · '):'';
  const days=view.id==='absences'?new Date(Number(($('#absenceMonth').value||monthISO()).slice(0,4)),Number(($('#absenceMonth').value||monthISO()).slice(5,7)),0).getDate():31;
  const specialCss=view.id==='absences'?`.month-grid{grid-template-columns:26mm repeat(${days},1fr)!important}.month-corner,.month-agent{font-size:6.6px!important}.month-day-head,.month-cell.day-state,.month-cell.day-state span{font-size:6px!important;min-height:22px!important}`:'';
- w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${reportPrintCSS(orientation)}${specialCss}</style></head><body><header class="print-header"><img src="${new URL('assets/logo-service-technique.png',location.href).href}"><div><h1>${esc(db.settings.appName)}</h1><p>${esc(db.settings.schoolName)}</p><strong>${esc(title)}</strong></div></header>${subtitle?`<div class="print-subtitle"><strong>Filtres imprimés :</strong> ${esc(subtitle)}</div>`:''}<main>${printableViewHTML(view)}</main><footer class="print-footer">${esc(db.settings.appName)} — V${APP_VERSION} — imprimé le ${new Date().toLocaleString('fr-FR')}</footer></body></html>`);
+ w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${reportPrintCSS(orientation)}${specialCss}</style></head><body><header class="print-header"><img src="${appLogoURL()}"><div><h1>${esc(db.settings.appName)}</h1><p>${esc(db.settings.schoolName)}</p><strong>${esc(title)}</strong></div></header>${subtitle?`<div class="print-subtitle"><strong>Filtres imprimés :</strong> ${esc(subtitle)}</div>`:''}<main>${printableViewHTML(view)}</main><footer class="print-footer">${esc(db.settings.appName)} — V${APP_VERSION} — imprimé le ${new Date().toLocaleString('fr-FR')}</footer></body></html>`);
  w.document.close();waitAndPrint(w);
 }
 
@@ -1135,7 +1155,7 @@ function planningPrintCSS(){
 }
 function openPlanningPrint(title,subtitle,body,orientation='landscape'){
  const w=window.open('','_blank'); if(!w){toast('Autorisez les fenêtres contextuelles pour générer le PDF');return}
- w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${planningPrintCSS()}</style></head><body><header class="print-header"><img src="${new URL('assets/logo-service-technique.png',location.href).href}"><div><h1>${esc(db.settings.schoolName||db.settings.appName)}</h1><p>${esc(db.settings.appName)}</p><strong>${esc(title)}</strong><p>${esc(subtitle)}</p></div></header>${body}<footer class="print-footer">${esc(db.settings.appName)} — V${APP_VERSION} — généré le ${new Date().toLocaleString('fr-FR')} — année scolaire ${esc(academicYearFor(todayISO()))}</footer></body></html>`);
+ w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${planningPrintCSS()}</style></head><body><header class="print-header"><img src="${appLogoURL()}"><div><h1>${esc(db.settings.schoolName||db.settings.appName)}</h1><p>${esc(db.settings.appName)}</p><strong>${esc(title)}</strong><p>${esc(subtitle)}</p></div></header>${body}<footer class="print-footer">${esc(db.settings.appName)} — V${APP_VERSION} — généré le ${new Date().toLocaleString('fr-FR')} — année scolaire ${esc(academicYearFor(todayISO()))}</footer></body></html>`);
  w.document.close();waitAndPrint(w);
 }
 function generateCollectivePlanningPDF(){
@@ -1227,13 +1247,13 @@ function exportCSV(module){const map={agents:['firstName','lastName','role','wee
 function fillSelect(id,items,keep=true){const e=document.getElementById(id);if(!e)return;const old=keep?e.value:'';const first=e.querySelector('option[value=""]')?.outerHTML||'';e.innerHTML=first+selectOptions(items,old)}
 function hydrateSelects(){fillSelect('personalType',db.lists.personalTypes);fillSelect('personalStatus',db.lists.generalStatuses);for(const id of ['rotationAgent','planningAgent','absenceAgent','issueAgent']){const e=$(`#${id}`);if(e){const old=e.value;e.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','')}}fillSelect('planningSignal',['Conforme','Heures supplémentaires','Heures manquantes','Absence']);fillSelect('absenceType',db.lists.dayTypes.filter(isAbsenceType));fillSelect('absenceStatus',['Demandée','Validée','Refusée','Annulée']);fillSelect('issueCategory',db.lists.issueCategories);fillSelect('issueStatus',db.lists.generalStatuses);fillSelect('periodicFamily',db.lists.periodicFamilies);fillSelect('periodicStatus',['À jour','Bientôt','En retard','À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable']);const pb=$('#periodicBuilding');if(pb){const old=pb.value;pb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}const cb=$('#cleanBuilding');if(cb){const old=cb.value;cb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}fillSelect('cleanRoomType',db.lists.roomTypes);fillSelect('cleanStatus',db.lists.cleaningStatuses);fillSelect('cleaningGuideType',Object.keys(GUIDE));fillSelect('maintenanceStatus',db.lists.maintenanceStatuses);fillSelect('maintenancePriority',db.lists.priorities);fillSelect('maintenanceFamily',db.lists.maintenanceFamilies);fillSelect('requestStatus',db.lists.generalStatuses);fillSelect('requestType',db.lists.requestTypes);fillSelect('workStatus',db.lists.generalStatuses);fillSelect('workType',db.lists.workTypes);fillSelect('meetingType',db.lists.meetingTypes);fillSelect('noteCategory',db.lists.noteCategories);fillSelect('notePriority',db.lists.priorities);fillSelect('noteStatus',db.lists.generalStatuses);fillSelect('documentCategory',db.lists.documentCategories);const vp=$('#vacationReportPeriod');if(vp){const old=vp.value;vp.innerHTML=selectOptions(db.vacations,old,x=>`${x.name} — ${fmtDate(x.start)}`,x=>x.id)}const csv=$('#csvModule');if(csv){const opts=[['agents','Agents'],['agentDays','Horaires, congés et absences'],['cleaning','Contrôles ménage'],['maintenance','Maintenance'],['requests','Demandes direction'],['works','Chantiers / GPA'],['meetings','Réunions'],['issues','Sécurité / qualité'],['periodic','Contrôles périodiques'],['notes','Notes'],['vacations','Vacances'],['documents','Documents']];const old=csv.value;csv.innerHTML=selectOptions(opts,old,x=>x[1],x=>x[0])}}
 function renderReportPreview(){if(!$('#reportPreview'))return;const r=reportData('daily');$('#reportPreview').innerHTML=`<h3>${esc(r.title)} — ${esc(r.subtitle)}</h3>${r.html}`}
-function renderBrand(){document.title=`${db.settings.appName} — V${APP_VERSION}`;$('#brandAppName').textContent=db.settings.appName;$('#brandSchoolName').textContent=db.settings.schoolName;$('#welcomeTitle').textContent=db.settings.appName;$('#today').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});document.documentElement.style.setProperty('--print-orientation',db.settings.printOrientation||'landscape');for(const id of ['authVersion','sidebarVersion','aboutVersion']){const el=document.getElementById(id);if(el)el.textContent=`Version ${APP_VERSION} — ${APP_BUILD}`}}
+function renderBrand(){secureAppLogos();document.title=`${db.settings.appName} — V${APP_VERSION}`;$('#brandAppName').textContent=db.settings.appName;$('#brandSchoolName').textContent=db.settings.schoolName;$('#welcomeTitle').textContent=db.settings.appName;$('#today').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});document.documentElement.style.setProperty('--print-orientation',db.settings.printOrientation||'landscape');for(const id of ['authVersion','sidebarVersion','aboutVersion']){const el=document.getElementById(id);if(el)el.textContent=`Version ${APP_VERSION} — ${APP_BUILD}`}}
 function renderAll(){return safeRenderAll()}
 
 /* ---------- Actions rapides ---------- */
-function openQuickMenu(){openDetail('Ajouter rapidement',`<div class="quick-menu-grid"><button data-quick="agent-day">👤<strong>Jour agent</strong><small>Congé, RTT, horaires, heures supp.</small></button><button data-quick="note">✎<strong>Bloc-notes</strong><small>Note et liste d’actions</small></button><button data-quick="maintenance">⚙<strong>Intervention</strong><small>Maintenance</small></button><button data-quick="cleaning">✓<strong>Contrôle ménage</strong><small>Saisie guidée</small></button><button data-quick="meeting">📅<strong>Rendez-vous</strong><small>Réunion ou visite</small></button><button data-quick="request">↗<strong>Demande direction</strong><small>Aménagement / logistique</small></button><button data-quick="issue">⚠<strong>Action urgente</strong><small>Sécurité / qualité</small></button><button data-quick="document">📎<strong>Document</strong><small>Photo, PDF, mail ou fichier</small></button></div>`)}
-const QUICK_ACTION_KEYS=['agent-day','note','maintenance','cleaning','meeting','request','issue','document'];
-function dispatchQuick(q){if($('#detailModal').open)$('#detailModal').close();({note:()=>openNote(),maintenance:()=>openMaintenance(),cleaning:()=>openCleaning(),meeting:()=>openMeeting(),request:()=>openRequest(),issue:()=>openIssue(null,{priority:'Urgente'}),document:()=>openDocument(),'agent-day':()=>{const aid=db.agents.find(a=>normalizeText(a.status)==='actif')?.id;if(aid)openAgentDay(aid,todayISO());else toast('Ajoutez d’abord un agent')}}[q]||(()=>{console.warn('Action rapide inconnue',q);toast('Cette action rapide n’est pas disponible')}))()}
+function openQuickMenu(){openDetail('Ajouter rapidement',`<div class="quick-menu-grid"><button data-quick="agent-day">👤<strong>Jour agent</strong><small>Congé, RTT, horaires, heures supp.</small></button><button data-quick="note">✎<strong>Bloc-notes</strong><small>Note et liste d’actions</small></button><button data-quick="maintenance">⚙<strong>Intervention</strong><small>Maintenance</small></button><button data-quick="cleaning">✓<strong>Contrôle ménage</strong><small>Saisie guidée</small></button><button data-quick="meeting">📅<strong>Rendez-vous</strong><small>Réunion ou visite</small></button><button data-quick="request">↗<strong>Demande direction</strong><small>Aménagement / logistique</small></button><button data-quick="issue-urgent">⚠<strong>Urgence</strong><small>Sécurité / qualité · priorité Urgente</small></button><button data-quick="issue-problem">❗<strong>Problématique</strong><small>Sécurité / qualité · priorité Normale</small></button><button data-quick="document">📎<strong>Document</strong><small>Photo, PDF, mail ou fichier</small></button></div>`)}
+const QUICK_ACTION_KEYS=['agent-day','note','maintenance','cleaning','meeting','request','issue-urgent','issue-problem','document'];
+function dispatchQuick(q){if($('#detailModal').open)$('#detailModal').close();({note:()=>openNote(),maintenance:()=>openMaintenance(),cleaning:()=>openCleaning(),meeting:()=>openMeeting(),request:()=>openRequest(),'issue-urgent':()=>openIssue(null,{priority:'Urgente'}),'issue-problem':()=>openIssue(null,{priority:'Normale'}),document:()=>openDocument(),'agent-day':()=>{const aid=db.agents.find(a=>normalizeText(a.status)==='actif')?.id;if(aid)openAgentDay(aid,todayISO());else toast('Ajoutez d’abord un agent')}}[q]||(()=>{console.warn('Action rapide inconnue',q);toast('Cette action rapide n’est pas disponible')}))()}
 function dispatchEdit(type,id){({agent:()=>openAgent(id),rotation:()=>openRotation(id),personal:()=>openPersonalEvent(id),issue:()=>openIssue(id),periodic:()=>openPeriodic(id),cleaning:()=>openCleaning(id),maintenance:()=>openMaintenance(id),request:()=>openRequest(id),work:()=>openWork(id),meeting:()=>openMeeting(id),note:()=>openNote(id),vacation:()=>openVacation(id),document:()=>openDocument(id),space:()=>openSpace(id),reportNonconformity:()=>setView('pdfimports')}[type]||(()=>{}))()}
 
 /* ---------- Sauvegarde / restauration ---------- */
@@ -1254,6 +1274,7 @@ function runDiagnostic(){
  const failed=checks.filter(x=>!x[1]).map(x=>x[0]);let notifications=[];try{notifications=computeNotifications()}catch(error){failed.push('Calcul des notifications');console.error(error)}
  const lateTest={status:'À faire',dueDate:addDays(todayISO(),-1),priority:'Normale'};if(isClosedStatus(lateTest.status)||!(recordDueDate(lateTest)<todayISO()))failed.push('Règle intervention en retard');
  const urgentIssueTest={status:'À faire',priority:'Urgent',dueDate:''};if(isClosedStatus(urgentIssueTest.status)||!isUrgentPriority(urgentIssueTest.priority))failed.push('Règle action urgente Sécurité & qualité');
+ const urgentProblemTest={status:'À faire',priority:'Urgente',title:'Test problématique'};if(!isUrgentPriority(urgentProblemTest.priority))failed.push('Câblage problématique urgente → tableau de bord');
  const dueSoonIssueTest={status:'En cours',priority:'Normale',dueDate:addDays(todayISO(),2)};if(isClosedStatus(dueSoonIssueTest.status)||!(recordDueDate(dueSoonIssueTest)<=addDays(todayISO(),3)))failed.push('Règle échéance proche Sécurité & qualité');
  if(missing.length||failed.length){console.error('Diagnostic',{missing,failed});toast(`Diagnostic : ${missing.length+failed.length} anomalie(s) détectée(s)`);return false}
  toast(`Diagnostic réussi — ${notifications.length} notification(s) calculée(s)`);return true;
@@ -1319,8 +1340,138 @@ function renderAutoReportWizard(){
 function openAutoReportWizard(){autoReportWizardStep=0;renderAutoReportWizard();const d=wizardEl();if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','')}
 function saveWizardStep(){if(autoReportWizardStep===1&&autoReportWizardData.provider==='microsoft'){autoReportWizardData.tenantId=document.getElementById('wizTenant')?.value.trim()||'';autoReportWizardData.clientId=document.getElementById('wizClient')?.value.trim()||'';autoReportWizardData.senderEmail=document.getElementById('wizSender')?.value.trim()||''}}
 
-function init(){db.settings.academicYear=normalizeAcademicYear(db.settings.academicYear)||academicYearFor(todayISO());const storedLayout=localStorage.getItem('pilotage-service-technique-layout')||db.settings.defaultLayout||'auto';const academicStart=Number((academicYearFor(todayISO())||'').split('-')[0])||new Date().getFullYear();const defaults={personalMonth:monthISO(),planningMonth:monthISO(),absenceMonth:monthISO(),issueMonth:monthISO(),cleanMonth:monthISO(),meetingMonth:monthISO(),dailyDate:todayISO(),weeklyDate:todayISO(),monthlyDate:monthISO(),teamReportMonth:monthISO(),absenceReportMonth:monthISO(),cleaningReportMonth:monthISO(),maintenanceReportMonth:monthISO(),periodicReportYear:new Date().getFullYear(),collectivePlanningDate:todayISO(),individualPlanningFrom:todayISO(),individualPlanningTo:addDays(todayISO(),6)};for(const [id,v] of Object.entries(defaults))if(document.getElementById(id))document.getElementById(id).value=v;const ipa=$('#individualPlanningAgent');if(ipa){ipa.innerHTML=db.agents.filter(a=>a.status==='Actif').map(a=>`<option value="${a.id}">${esc(agentName(a))}</option>`).join('')}const ry=$('#rotationYear');if(ry){ry.innerHTML='';for(let y=academicStart-5;y<=academicStart+5;y++)ry.insertAdjacentHTML('beforeend',`<option value="${y}" ${y===academicStart?'selected':''}>${y}–${y+1}</option>`)}const rm=$('#rotationMonth');if(rm){rm.innerHTML='<option value="">Année scolaire entière</option>';for(const i of [9,10,11,12,1,2,3,4,5,6,7,8])rm.insertAdjacentHTML('beforeend',`<option value="${i}">${new Date(2026,i-1,1).toLocaleDateString('fr-FR',{month:'long'})}</option>`)}applyLayout(storedLayout);syncAcademicYearFilters(activeAcademicYear());runAutomaticHousekeeping();bindEvents();renderAll();renderGlobalAcademicYear();setView('dashboard')}
+function init(){secureAppLogos();db.settings.academicYear=normalizeAcademicYear(db.settings.academicYear)||academicYearFor(todayISO());const storedLayout=localStorage.getItem('pilotage-service-technique-layout')||db.settings.defaultLayout||'auto';const academicStart=Number((academicYearFor(todayISO())||'').split('-')[0])||new Date().getFullYear();const defaults={personalMonth:monthISO(),planningMonth:monthISO(),absenceMonth:monthISO(),issueMonth:monthISO(),cleanMonth:monthISO(),meetingMonth:monthISO(),dailyDate:todayISO(),weeklyDate:todayISO(),monthlyDate:monthISO(),teamReportMonth:monthISO(),absenceReportMonth:monthISO(),cleaningReportMonth:monthISO(),maintenanceReportMonth:monthISO(),periodicReportYear:new Date().getFullYear(),collectivePlanningDate:todayISO(),individualPlanningFrom:todayISO(),individualPlanningTo:addDays(todayISO(),6)};for(const [id,v] of Object.entries(defaults))if(document.getElementById(id))document.getElementById(id).value=v;const ipa=$('#individualPlanningAgent');if(ipa){ipa.innerHTML=db.agents.filter(a=>a.status==='Actif').map(a=>`<option value="${a.id}">${esc(agentName(a))}</option>`).join('')}const ry=$('#rotationYear');if(ry){ry.innerHTML='';for(let y=academicStart-5;y<=academicStart+5;y++)ry.insertAdjacentHTML('beforeend',`<option value="${y}" ${y===academicStart?'selected':''}>${y}–${y+1}</option>`)}const rm=$('#rotationMonth');if(rm){rm.innerHTML='<option value="">Année scolaire entière</option>';for(const i of [9,10,11,12,1,2,3,4,5,6,7,8])rm.insertAdjacentHTML('beforeend',`<option value="${i}">${new Date(2026,i-1,1).toLocaleDateString('fr-FR',{month:'long'})}</option>`)}applyLayout(storedLayout);syncAcademicYearFilters(activeAcademicYear());runAutomaticHousekeeping();bindEvents();renderAll();renderGlobalAcademicYear();setView('dashboard')}
 window.addEventListener('DOMContentLoaded',init);
 
 document.addEventListener('DOMContentLoaded',()=>initAuth().catch(console.error),{once:true});
 window.addEventListener('load',()=>initAuth().catch(console.error),{once:true});
+
+// ===== V77 — Scanner une note manuscrite / Oxford =====
+let scannedNoteAttachment=null;
+function scanSetProgress(pct,title,text=''){
+ const wrap=$('#scanProgress'); if(!wrap)return;
+ wrap.classList.toggle('hidden',pct===null);
+ if(pct===null)return;
+ $('#scanProgressBar').style.width=`${Math.max(0,Math.min(100,pct))}%`;
+ $('#scanProgressTitle').textContent=title||'Traitement en cours…';
+ $('#scanProgressText').textContent=text||'';
+}
+function scanReset(){
+ const f=$('#scanNoteFile'); if(f)f.value='';
+ const t=$('#scanNoteText'); if(t)t.value='';
+ const title=$('#scanNoteTitle'); if(title)title.value='';
+ const img=$('#scanImagePreview'); if(img){img.src='';img.classList.remove('hidden')}
+ const cv=$('#scanPdfCanvas'); if(cv)cv.classList.add('hidden');
+ $('#scanPreviewWrap')?.classList.add('hidden');
+ if($('#scanQuality'))$('#scanQuality').innerHTML='';
+ scannedNoteAttachment=null; scanSetProgress(null);
+}
+function openScanNote(){
+ const d=$('#scanNoteModal'); if(!d)return toast('Scanner indisponible');
+ scanReset();
+ const cat=$('#scanNoteCategory'), pri=$('#scanNotePriority');
+ if(cat)cat.innerHTML=selectOptions(db.lists.noteCategories||['Autre'],'Autre');
+ if(pri)pri.innerHTML=selectOptions(db.lists.priorities||['Normale'],'Normale');
+ d.showModal();
+}
+function localCleanFrenchText(raw){
+ let s=String(raw||'').replace(/\r/g,'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n');
+ s=s.split('\n').map(x=>x.trim().replace(/\s+/g,' ')).join('\n');
+ s=s.replace(/\s+([,.;!?…:])/g,'$1').replace(/([,.;!?…:])(?=[A-Za-zÀ-ÿ])/g,'$1 ');
+ s=s.replace(/\b([Jj])\s['’]\s/g,"$1’").replace(/\b([LlDdMmTtSsCcNn])\s['’]\s/g,'$1’');
+ s=s.replace(/\b([0-9]{1,2})\s*h\s*([0-9]{2})\b/gi,'$1h$2');
+ // Common OCR / writing normalization without changing meaning.
+ const fixes=[[/\bca\b/gi,'ça'],[/\bC est\b/g,"C’est"],[/\bc est\b/g,"c’est"],[/\bd accord\b/gi,"d’accord"],[/\baujourd hui\b/gi,"aujourd’hui"],[/\bn est\b/gi,"n’est"],[/\bqu il\b/gi,"qu’il"],[/\bj ai\b/gi,"j’ai"],[/\bil y a\s+a\b/gi,'il y a']];
+ for(const [r,v] of fixes)s=s.replace(r,v);
+ s=s.split('\n').map(line=>{if(!line)return '';const m=line.match(/^(?:[-•]|\d+[.)])\s*/);const prefix=m?m[0]:'';let body=m?line.slice(prefix.length):line;if(body)body=body.charAt(0).toUpperCase()+body.slice(1);return prefix+body}).join('\n');
+ return s.trim();
+}
+function formatScannedNote(raw){
+ let s=localCleanFrenchText(raw);
+ const lines=s.split('\n').map(x=>x.trim()).filter(Boolean);
+ if(lines.length<=1){
+   // Split long OCR blocks on sentence boundaries to improve readability.
+   s=s.replace(/([.!?])\s+(?=[A-ZÀ-ÖØ-Þ])/g,'$1\n');
+ }else{
+   s=lines.join('\n');
+ }
+ return s.replace(/\n{3,}/g,'\n\n').trim();
+}
+async function languageToolCorrect(text){
+ const cleaned=formatScannedNote(text); if(!cleaned)return '';
+ const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),12000);
+ try{
+   const body=new URLSearchParams({text:cleaned,language:'fr-FR'});
+   const res=await fetch('https://api.languagetool.org/v2/check',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,signal:controller.signal});
+   if(!res.ok)throw new Error('LanguageTool '+res.status);
+   const data=await res.json(); let out=cleaned;
+   const matches=(data.matches||[]).filter(m=>m.replacements&&m.replacements[0]&&Number.isFinite(m.offset)&&Number.isFinite(m.length)).sort((a,b)=>b.offset-a.offset);
+   for(const m of matches){const rep=m.replacements[0].value;if(rep&&rep.length<80)out=out.slice(0,m.offset)+rep+out.slice(m.offset+m.length)}
+   return formatScannedNote(out);
+ }finally{clearTimeout(timer)}
+}
+async function imageSourceFromFile(file){
+ if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){
+   if(!window.pdfjsLib)throw new Error('Lecteur PDF indisponible');
+   window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+   const buf=await file.arrayBuffer(), pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+   const page=await pdf.getPage(1), vp=page.getViewport({scale:2.2});
+   const canvas=$('#scanPdfCanvas'); canvas.width=vp.width;canvas.height=vp.height;canvas.classList.remove('hidden');$('#scanImagePreview').classList.add('hidden');
+   await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+   if(pdf.numPages>1)toast(`PDF de ${pdf.numPages} pages : reconnaissance de la première page pour cette note`);
+   return canvas;
+ }
+ const url=URL.createObjectURL(file), img=$('#scanImagePreview'); img.src=url;img.classList.remove('hidden');$('#scanPdfCanvas').classList.add('hidden');
+ await new Promise((ok,ko)=>{img.onload=ok;img.onerror=ko});
+ return img;
+}
+async function recognizeScannedNote(file){
+ if(!file)return;
+ $('#scanPreviewWrap')?.classList.remove('hidden');
+ scanSetProgress(5,'Préparation du document',file.name||'Document');
+ try{
+   const source=await imageSourceFromFile(file);
+   if(!window.Tesseract)throw new Error('Moteur OCR indisponible');
+   scanSetProgress(10,'Lecture de la note','Initialisation de la reconnaissance française…');
+   const result=await Tesseract.recognize(source,'fra',{logger:m=>{
+     if(m.status==='recognizing text')scanSetProgress(15+Math.round((m.progress||0)*80),'Reconnaissance du texte',`${Math.round((m.progress||0)*100)} %`);
+     else if(m.status)scanSetProgress(10,'Préparation OCR',m.status);
+   }});
+   const raw=result?.data?.text||'', conf=Math.round(result?.data?.confidence||0);
+   $('#scanNoteText').value=formatScannedNote(raw);
+   $('#scanQuality').innerHTML=`<span class="badge">OCR : ${conf}% de confiance</span><span class="badge">${raw.trim()?raw.trim().split(/\s+/).length:0} mots détectés</span>`;
+   if(!$('#scanNoteTitle').value){const first=formatScannedNote(raw).split('\n').find(Boolean)||'Note scannée';$('#scanNoteTitle').value=first.slice(0,80)}
+   scannedNoteAttachment={name:file.name||`scan-${todayISO()}`,type:file.type||'application/octet-stream',file};
+   scanSetProgress(100,'Reconnaissance terminée','Relisez le texte, puis utilisez « Corriger et mettre en forme ».');
+   setTimeout(()=>scanSetProgress(null),1600);
+ }catch(err){console.error(err);scanSetProgress(null);toast('Impossible de reconnaître ce document. Vous pouvez saisir/coller le texte manuellement.');}
+}
+async function correctScannedNote(){
+ const ta=$('#scanNoteText'), raw=ta?.value||''; if(!raw.trim())return toast('Aucun texte à corriger');
+ scanSetProgress(15,'Correction du texte','Orthographe, accords, ponctuation et mise en forme…');
+ try{
+   ta.value=await languageToolCorrect(raw);
+   scanSetProgress(100,'Texte corrigé','Relisez le résultat avant l’enregistrement.');toast('Texte corrigé et mis en forme');
+ }catch(err){console.warn('Correction avancée indisponible',err);ta.value=formatScannedNote(raw);scanSetProgress(100,'Mise en forme terminée','La correction en ligne est indisponible : nettoyage local appliqué.');toast('Mise en forme locale appliquée');}
+ setTimeout(()=>scanSetProgress(null),1800);
+}
+async function saveScannedNote(){
+ const text=($('#scanNoteText')?.value||'').trim(), title=($('#scanNoteTitle')?.value||'').trim();
+ if(!text)return toast('Le texte de la note est vide');
+ const x={id:uid(),no:nextNo('note','NOT'),date:todayISO(),category:$('#scanNoteCategory')?.value||'Autre',agentId:'',title:title||'Note scannée',text,priority:$('#scanNotePriority')?.value||'Normale',status:'À faire',dueDate:'',items:[],attachments:[]};
+ // The source scan stays optional: store it with the normal attachment engine when possible.
+ if(scannedNoteAttachment?.file){
+   try{const f=scannedNoteAttachment.file;const max=4*1024*1024;if(f.size<=max){const data=await new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=ko;r.readAsDataURL(f)});x.attachments.push({id:uid(),name:f.name||'scan',type:f.type,size:f.size,data})}}
+   catch(e){console.warn('Scan attachment not stored',e)}
+ }
+ db.notes.push(x);await save();$('#scanNoteModal')?.close();setView('notes');toast('Note scannée enregistrée dans Notes');
+}
+function bindScanNoteV77(){
+ const b=$('#scanNoteBtn');if(b)b.onclick=openScanNote;
+ const c=$('#scanNoteClose');if(c)c.onclick=()=>$('#scanNoteModal').close();
+ const r=$('#scanRetry');if(r)r.onclick=scanReset;
+ const f=$('#scanNoteFile');if(f)f.onchange=()=>recognizeScannedNote(f.files?.[0]);
+ const corr=$('#scanCorrect');if(corr)corr.onclick=correctScannedNote;
+ const saveBtn=$('#scanSaveNote');if(saveBtn)saveBtn.onclick=saveScannedNote;
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindScanNoteV77);else bindScanNoteV77();

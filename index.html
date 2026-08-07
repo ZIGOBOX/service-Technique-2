@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#075ca8">
-  <title>Pilotage Service Technique V73</title>
-  <link rel="icon" href="./assets/logo-service-technique.png?v=68.0">
+  <title>Pilotage Service Technique V74</title>
+  <link rel="icon" href="./assets/logo-service-technique.png?v=78.0">
   <link rel="stylesheet" href="./styles.css?v=73.0">
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
     <form class="auth-card" id="authForm" novalidate>
-      <img src="./assets/logo-service-technique.png?v=68.0" alt="Service technique" class="auth-logo">
+      <img src="./assets/logo-service-technique.png?v=78.0" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 73.0 — 07/08/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 78.0 — 07/08/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -22,7 +22,7 @@
   </section>
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <img src="./assets/logo-service-technique.png?v=68.0" alt="Logo Service technique et accueil" class="brand-logo">
+      <img src="./assets/logo-service-technique.png?v=78.0" alt="Logo Service technique et accueil" class="brand-logo" data-app-logo="1">
       <div><h1 id="brandAppName">Pilotage Service Technique</h1><p id="brandSchoolName">Lycée Jean Puy</p></div>
       <button class="icon-btn mobile-only" id="closeMenu" aria-label="Fermer le menu">×</button>
     </div>
@@ -50,7 +50,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 73.0 — 07/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 78.0 — 07/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -63,6 +63,7 @@
         <select id="layoutMode" aria-label="Orientation de l'affichage"><option value="auto">Auto</option><option value="portrait">Portrait</option><option value="landscape">Paysage</option></select>
         <a class="notification-bell" id="notificationBell" href="#notificationModal" data-action="open-notifications" role="button" aria-label="Ouvrir les notifications" title="Notifications">🔔<span id="notificationCount" class="notification-count hidden">0</span></a>
         <button class="ghost compact" id="printCurrent">Imprimer</button>
+        <button class="ghost compact scan-top-btn" id="scanNoteBtn" type="button" aria-label="Scanner une note" title="Scanner une note">📷</button>
         <button class="primary compact" id="quickAdd">＋</button>
       </div>
     </header>
@@ -71,7 +72,7 @@
     <section class="view active" id="dashboard">
       <div class="welcome-banner">
         <div><span class="eyebrow">PILOTAGE EN TEMPS RÉEL</span><h3 id="welcomeTitle">Pilotage Service Technique</h3><p>Tout ce qui est urgent, prévu ou en attente dès l’ouverture.</p></div>
-        <img src="./assets/logo-service-technique.png?v=68.0" alt="" class="welcome-logo">
+        <img src="./assets/logo-service-technique.png?v=78.0" alt="" class="welcome-logo" data-app-logo="1">
       </div>
 
       <div class="quick-actions" id="dashboardQuickActions">
@@ -198,7 +199,7 @@
     </section>
 
     <section class="view" id="periodic">
-      <div class="section-actions"><div><h3>Contrôles périodiques du lycée</h3><p>Catalogue préchargé et modifiable : incendie, électricité, chauffage, cuisine, ascenseurs, eau, équipements sportifs, portes et levage.</p></div><div><button class="ghost" id="resetPeriodicCatalog">Restaurer le catalogue</button><button class="primary" id="newPeriodic">＋ Contrôle</button></div></div>
+      <div class="section-actions"><div><h3>Contrôles périodiques du lycée</h3><p>Catalogue préchargé et modifiable : incendie, électricité, chauffage, cuisine, ascenseurs, eau, équipements sportifs, portes et levage. Le suivi est permanent et indépendant de l’année scolaire : chaque contrôle reste actif jusqu’à sa vraie prochaine échéance.</p></div><div><button class="ghost" id="resetPeriodicCatalog">Restaurer le catalogue</button><button class="primary" id="newPeriodic">＋ Contrôle</button></div></div>
       <div class="notice"><strong>Important :</strong> les périodicités proposées servent de base de pilotage. Elles doivent être confirmées avec le registre de sécurité, la catégorie ERP, les contrats et les équipements réellement présents.</div>
       <div class="filters"><select id="periodicFamily"><option value="">Toutes les familles</option></select><select id="periodicStatus"><option value="">Tous les états</option></select><select id="periodicBuilding"><option value="">Tous les bâtiments</option></select><button class="ghost" data-print="periodic">Imprimer le registre</button></div>
       <div id="periodicCards" class="periodic-grid"></div>
@@ -316,7 +317,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 73.0 — 07/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 78.0 — 07/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -333,17 +334,40 @@
   </section>
 </div>
 
+  <dialog id="scanNoteModal" class="modal scan-note-modal">
+    <div class="modal-head"><div><h3>📷 Scanner une note</h3><p class="muted">Photo, scan Oxford, image ou PDF → texte informatique → Notes</p></div><button type="button" class="icon-btn" id="scanNoteClose">×</button></div>
+    <div class="scan-note-body">
+      <div class="scan-source">
+        <label class="primary file-label scan-file-label">📷 Choisir / photographier une note<input id="scanNoteFile" type="file" accept="image/*,application/pdf" capture="environment"></label>
+        <small>Pour un cahier Oxford, vous pouvez importer directement l’image/PDF produit par l’application Oxford ou prendre la page en photo.</small>
+      </div>
+      <div id="scanPreviewWrap" class="scan-preview-wrap hidden"><img id="scanImagePreview" alt="Aperçu du document"><canvas id="scanPdfCanvas" class="hidden"></canvas></div>
+      <div id="scanProgress" class="scan-progress hidden"><strong id="scanProgressTitle">Reconnaissance en cours…</strong><div class="progress"><span id="scanProgressBar" style="width:0%"></span></div><small id="scanProgressText"></small></div>
+      <div class="form-grid">
+        <label class="span2">Titre de la note<input id="scanNoteTitle" placeholder="Ex. Compte rendu réunion technique"></label>
+        <label>Catégorie<select id="scanNoteCategory"></select></label>
+        <label>Priorité<select id="scanNotePriority"></select></label>
+        <label class="span2">Texte reconnu<textarea id="scanNoteText" rows="14" spellcheck="true" placeholder="Le texte reconnu apparaîtra ici. Vous pourrez le relire avant l’enregistrement."></textarea></label>
+      </div>
+      <div class="scan-quality" id="scanQuality"></div>
+      <p class="hint">La reconnaissance manuscrite dépend de la lisibilité de l’écriture et de la qualité du scan. Le logiciel ne valide jamais la note sans vous montrer le texte obtenu.</p>
+    </div>
+    <div class="modal-actions"><button type="button" class="ghost" id="scanRetry">Recommencer</button><button type="button" class="ghost" id="scanCorrect">✨ Corriger et mettre en forme</button><button type="button" class="primary" id="scanSaveNote">Enregistrer dans Notes</button></div>
+  </dialog>
   <dialog id="autoReportWizard" class="modal wizard-modal"><div class="modal-head"><div><h3>Assistant d’envoi automatique</h3><p class="muted">Configuration Microsoft 365 + Supabase</p></div><button type="button" class="icon-btn" id="autoReportWizardClose">×</button></div><div class="wizard-progress"><span class="active">1</span><span>2</span><span>3</span><span>4</span></div><div id="autoReportWizardBody"></div><div class="modal-actions"><button type="button" class="ghost" id="autoReportWizardBack">Précédent</button><button type="button" class="primary" id="autoReportWizardNext">Suivant</button></div></dialog>
   <div id="toast" class="toast"></div>
-  <script src="./navigation.js?v=71.0"></script>
+  <script src="./navigation.js?v=77.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./supabase-config.js?v=71.0"></script>
-  <script src="./login-bootstrap.js?v=71.0"></script>
-  <script src="./app.js?v=71.0"></script>
-  <script src="./notification-center.js?v=71.0"></script>
+  <script src="./supabase-config.js?v=77.0"></script>
+  <script src="./login-bootstrap.js?v=77.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="./logo-data.js?v=78.0"></script>
+  <script src="./app.js?v=77.0"></script>
+  <script src="./notification-center.js?v=77.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="./schedule-import.js?v=71.0"></script>
-  <script src="./report-import.js?v=71.0"></script>
+  <script src="./schedule-import.js?v=77.0"></script>
+  <script src="./report-import.js?v=77.0"></script>
 
 
 </body>
