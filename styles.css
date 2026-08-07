@@ -315,3 +315,16 @@ body.notifications-open{overflow:hidden}
   .month-day-head{width:42px;min-width:42px;max-width:42px}
   .month-cell.day-state{width:40px;min-width:40px;max-width:40px}
 }
+
+
+/* V73 — année scolaire globale, dynamique et sans date d'expiration */
+.academic-year-control{display:flex;align-items:center;gap:6px;padding:5px 7px;border:1px solid var(--border);border-radius:12px;background:var(--panel)}
+.academic-year-control label{display:flex;align-items:center;gap:7px;font-size:.78rem;font-weight:700;white-space:nowrap}
+.academic-year-control select{min-width:118px;font-weight:800}
+.academic-year-control .year-step{min-width:32px;padding:6px 8px;font-size:1.15rem;line-height:1}
+.academic-year-control.mismatch{border:2px solid #c62828;background:#fff0f0;box-shadow:0 0 0 3px rgba(198,40,40,.08)}
+.academic-year-control.mismatch label{color:#a51515}.academic-year-control.mismatch select{border-color:#c62828;color:#a51515;background:#fff}
+.academic-year-warning{margin:10px 18px 0;padding:10px 14px;border-radius:10px;background:#fff0f0;border:1px solid #d43b3b;color:#8d1515;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.academic-year-warning button{border:0;border-radius:8px;padding:7px 10px;background:#a51515;color:#fff;font-weight:800;cursor:pointer}
+@media(max-width:900px){.top-actions{flex-wrap:wrap}.academic-year-control{order:-1;width:100%;justify-content:center}.academic-year-warning{margin:8px 10px 0}.academic-year-control label{flex:1;justify-content:center}.academic-year-control select{flex:1;max-width:180px}}
+@media print{.academic-year-control,.academic-year-warning{display:none!important}}
