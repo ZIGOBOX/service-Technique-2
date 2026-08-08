@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='83.0';
-const APP_BUILD='07/08/2026 21:45';
+const APP_VERSION='84.0';
+const APP_BUILD='08/08/2026 06:44';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -438,10 +438,27 @@ async function openLocalAttachment(rec){
  if(!rec?.localBlobKey)return false;try{const blob=await getLocalFileBlob(rec.localBlobKey);if(!blob)return false;const url=URL.createObjectURL(blob);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),120000);return true}catch(e){console.error(e);return false}
 }
 async function downloadAttachment(id){
- const rec=db.attachments.find(a=>a.id===id);if(!rec){toast('Fichier introuvable');return}
- if(rec.storagePath&&await openStoragePath(rec.storagePath,rec.name))return;
- if(await openLocalAttachment(rec))return;
- toast('Impossible d’ouvrir ce document sur cet appareil');
+ const rec=(db.attachments||[]).find(a=>String(a.id)===String(id));if(!rec){toast('Fichier introuvable');return}
+ // Sur Android/Chrome, ouvrir la fenêtre immédiatement pendant le clic évite le blocage
+ // de popup après l'attente d'IndexedDB ou de la création d'une URL Supabase signée.
+ let viewer=null;try{viewer=window.open('about:blank','_blank')}catch(e){}
+ const showLoading=()=>{try{if(viewer){viewer.document.title='Ouverture du document';viewer.document.body.innerHTML='<p style="font-family:system-ui;padding:24px">Ouverture du document…</p>'}}catch(e){}};showLoading();
+ const navigate=url=>{if(!url)return false;try{if(viewer&&!viewer.closed){viewer.location.replace(url);return true}}catch(e){}try{window.location.href=url;return true}catch(e){return false}};
+ try{
+  if(rec.storagePath&&supabaseClient){
+   const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(rec.storagePath,300);
+   if(!error&&data?.signedUrl&&navigate(data.signedUrl))return;
+   if(error)console.warn('Ouverture Supabase impossible',error);
+  }
+  if(rec.localBlobKey){
+   const blob=await getLocalFileBlob(rec.localBlobKey);
+   if(blob){const url=URL.createObjectURL(blob);if(navigate(url)){setTimeout(()=>URL.revokeObjectURL(url),300000);return}}
+  }
+  // Compatibilité avec les anciens scans stockés directement en Data URL.
+  if(rec.data&&navigate(rec.data))return;
+ }catch(e){console.error('Ouverture du document',e)}
+ try{if(viewer&&!viewer.closed)viewer.close()}catch(e){}
+ toast(rec.localBlobKey?'Le fichier local n’est plus présent sur cet appareil. Rattachez l’original.':'Impossible d’ouvrir ce document');
 }
 function humanSize(n){n=Number(n)||0;if(n<1024)return `${n} o`;if(n<1048576)return `${(n/1024).toFixed(1)} Ko`;return `${(n/1048576).toFixed(1)} Mo`}
 function attachmentField(existing=[]){return `<div class="attachment-box"><div class="attachment-actions"><label class="camera-label">📷 Prendre une photo<input type="file" name="cameraPhotos" accept="image/*" capture="environment" multiple></label><label>📎 Ajouter des fichiers<input type="file" name="files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.eml,.msg,.ods,.odt"></label></div><p class="hint">Les photos et fichiers sont synchronisés dans Supabase et deviennent accessibles sur le téléphone et le PC.</p>${existing.length?`<div class="attachment-list">${existing.map(a=>`<div><span>📎 ${esc(a.name)} <small>${humanSize(a.size)}</small></span><label class="inline-check"><input type="checkbox" name="removeAttachment" value="${esc(a.id)}"> Retirer</label></div>`).join('')}</div>`:''}</div>`}
@@ -981,11 +998,27 @@ function renderImportArchives(){
 }
 
 async function reattachImportOriginal(archiveId,file){
- if(!file)return;const x=(db.importArchives||[]).find(a=>String(a.id)===String(archiveId));if(!x){toast('Archive introuvable');return}
- try{const meta=await putFile(file,{module:'imports',recordId:x.sourceId||x.id});db.attachments=db.attachments||[];db.attachments.push(meta);x.attachmentId=meta.id;x.fileName=x.fileName||file.name;
-  const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));if(src)src.attachmentId=meta.id;
-  const annual=(db.chronotimeAnnual||[]).find(r=>String(r.fileName)===String(x.fileName)&&String(r.academicYear||'')===String(x.academicYear||''));if(annual&&!annual.attachmentId)annual.attachmentId=meta.id;
-  save();renderImportArchives();toast(meta.storageMode==='local'?'Original rattaché sur cet appareil':'Original rattaché et synchronisé');
+ if(!file)return;
+ let x=(db.importArchives||[]).find(a=>String(a.id)===String(archiveId));
+ // Les archives anciennes peuvent être affichées à partir de pdfImports sans avoir encore
+ // de ligne explicite dans importArchives : on la crée au premier rattachement.
+ if(!x){
+  const row=importedArchiveRows().find(a=>String(a.id)===String(archiveId));
+  if(row){x={...row,id:uid(),analysisSnapshot:row.analysisSnapshot||row.analysis||null};db.importArchives=db.importArchives||[];db.importArchives.push(x)}
+ }
+ if(!x){toast('Archive introuvable');return}
+ try{
+  const meta=await putFile(file,{module:'imports',recordId:x.sourceId||x.id});
+  db.attachments=db.attachments||[];if(!db.attachments.some(a=>String(a.id)===String(meta.id)))db.attachments.push(meta);
+  x.attachmentId=meta.id;x.fileName=file.name||x.fileName;
+  const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));if(src){src.attachmentId=meta.id;src.fileName=file.name||src.fileName}
+  const annual=(db.chronotimeAnnual||[]).find(r=>String(r.fileName)===String(x.fileName)&&String(r.academicYear||'')===String(x.academicYear||''));if(annual)annual.attachmentId=meta.id;
+  save(false);
+  // Forcer immédiatement la sauvegarde cloud du lien de rattachement au lieu d'attendre
+  // le délai normal : évite qu'un rechargement du téléphone perde l'association.
+  if(currentUser&&navigator.onLine)await cloudSaveNow({silent:true});
+  renderImportArchives();
+  toast(meta.storageMode==='local'?'Original rattaché — bouton « Relire le PDF » disponible sur cet appareil':'Original rattaché et synchronisé — vous pouvez le relire');
  }catch(e){console.error(e);toast('Impossible de rattacher ce document')}
 }
 function openImportAnalysis(id){
