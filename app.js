@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='82.0';
-const APP_BUILD='07/08/2026 20:40';
+const APP_VERSION='83.0';
+const APP_BUILD='07/08/2026 21:45';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -407,27 +407,42 @@ function buildingOptions(v=''){return selectOptions(db.buildings,v,b=>b.name,b=>
 function floorOptions(building,v=''){const b=db.buildings.find(x=>x.name===building)||db.buildings[0];return selectOptions(b?.floors||[],v)}
 function roomOptions(building,floor,type,v=''){const arr=db.spaces.filter(s=>(!building||s.building===building)&&(!floor||s.floor===floor)&&(!type||s.type===type));const values=[...new Set(['Zone entière',...arr.map(s=>s.name)])];return selectOptions(values,v)}
 
-/* ---------- Pièces jointes synchronisées dans Supabase Storage ---------- */
+/* ---------- Pièces jointes : Supabase + secours local IndexedDB ---------- */
 const STORAGE_BUCKET='documentation';
+const LOCAL_FILE_DB='pst-local-files-v83',LOCAL_FILE_STORE='files';
 function safeFileName(name){return String(name||'fichier').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'_')}
+function openLocalFileDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(LOCAL_FILE_DB,1);req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains(LOCAL_FILE_STORE))d.createObjectStore(LOCAL_FILE_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
+async function putLocalFileBlob(key,file){const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readwrite');tx.objectStore(LOCAL_FILE_STORE).put(file,key);tx.oncomplete=()=>{d.close();resolve(true)};tx.onerror=()=>{d.close();reject(tx.error)}})}
+async function getLocalFileBlob(key){const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readonly'),req=tx.objectStore(LOCAL_FILE_STORE).get(key);req.onsuccess=()=>{d.close();resolve(req.result||null)};req.onerror=()=>{d.close();reject(req.error)}})}
+async function deleteLocalFileBlob(key){if(!key)return;const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readwrite');tx.objectStore(LOCAL_FILE_STORE).delete(key);tx.oncomplete=()=>{d.close();resolve(true)};tx.onerror=()=>{d.close();reject(tx.error)}})}
 async function putFile(file,meta={}){
- if(!supabaseClient||!currentUser)throw new Error('Connexion Supabase requise');
- const id=uid();const path=`${currentUser.id}/${meta.module||'documents'}/${meta.recordId||'general'}/${id}-${safeFileName(file.name)}`;
- const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
- if(error)throw error;
- return {id,name:file.name,type:file.type||'application/octet-stream',size:file.size,createdAt:new Date().toISOString(),storagePath:path,...meta};
+ const id=uid(),base={id,name:file.name,type:file.type||'application/octet-stream',size:file.size,createdAt:new Date().toISOString(),...meta};
+ if(supabaseClient&&currentUser){
+  const path=`${currentUser.id}/${meta.module||'documents'}/${meta.recordId||'general'}/${id}-${safeFileName(file.name)}`;
+  try{const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});if(error)throw error;return {...base,storagePath:path,storageMode:'supabase'}}catch(e){console.warn('Stockage Supabase indisponible, secours local utilisé',e)}
+ }
+ const localBlobKey=`${id}-${safeFileName(file.name)}`;await putLocalFileBlob(localBlobKey,file);return {...base,localBlobKey,storageMode:'local'};
 }
 async function removeFileBlob(id){
- const meta=db.attachments.find(a=>a.id===id);if(!meta?.storagePath||!supabaseClient)return;
- const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).remove([meta.storagePath]);if(error)console.error(error);
+ const meta=db.attachments.find(a=>a.id===id);if(!meta)return;
+ if(meta.storagePath&&supabaseClient){const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).remove([meta.storagePath]);if(error)console.error(error)}
+ if(meta.localBlobKey)try{await deleteLocalFileBlob(meta.localBlobKey)}catch(e){console.warn(e)}
 }
 async function openStoragePath(path,downloadName='document'){
- if(!supabaseClient||!path){toast('Document introuvable');return}
+ if(!supabaseClient||!path)return false;
  const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(path,120);
- if(error||!data?.signedUrl){console.error(error);toast('Impossible d’ouvrir le document');return}
- window.open(data.signedUrl,'_blank','noopener');
+ if(error||!data?.signedUrl){console.error(error);return false}
+ window.open(data.signedUrl,'_blank','noopener');return true;
 }
-async function downloadAttachment(id){const rec=db.attachments.find(a=>a.id===id);if(!rec){toast('Fichier introuvable');return}await openStoragePath(rec.storagePath,rec.name)}
+async function openLocalAttachment(rec){
+ if(!rec?.localBlobKey)return false;try{const blob=await getLocalFileBlob(rec.localBlobKey);if(!blob)return false;const url=URL.createObjectURL(blob);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),120000);return true}catch(e){console.error(e);return false}
+}
+async function downloadAttachment(id){
+ const rec=db.attachments.find(a=>a.id===id);if(!rec){toast('Fichier introuvable');return}
+ if(rec.storagePath&&await openStoragePath(rec.storagePath,rec.name))return;
+ if(await openLocalAttachment(rec))return;
+ toast('Impossible d’ouvrir ce document sur cet appareil');
+}
 function humanSize(n){n=Number(n)||0;if(n<1024)return `${n} o`;if(n<1048576)return `${(n/1024).toFixed(1)} Ko`;return `${(n/1048576).toFixed(1)} Mo`}
 function attachmentField(existing=[]){return `<div class="attachment-box"><div class="attachment-actions"><label class="camera-label">📷 Prendre une photo<input type="file" name="cameraPhotos" accept="image/*" capture="environment" multiple></label><label>📎 Ajouter des fichiers<input type="file" name="files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.eml,.msg,.ods,.odt"></label></div><p class="hint">Les photos et fichiers sont synchronisés dans Supabase et deviennent accessibles sur le téléphone et le PC.</p>${existing.length?`<div class="attachment-list">${existing.map(a=>`<div><span>📎 ${esc(a.name)} <small>${humanSize(a.size)}</small></span><label class="inline-check"><input type="checkbox" name="removeAttachment" value="${esc(a.id)}"> Retirer</label></div>`).join('')}</div>`:''}</div>`}
 async function processAttachments(form,record,module){record.attachments=record.attachments||[];const removeIds=[...form.querySelectorAll('[name="removeAttachment"]:checked')].map(x=>x.value);for(const id of removeIds){await removeFileBlob(id);record.attachments=record.attachments.filter(a=>a.id!==id);db.attachments=db.attachments.filter(a=>a.id!==id)}const files=[...(form.elements.files?.files||[]),...(form.elements.cameraPhotos?.files||[])];for(const file of files){try{const meta=await putFile(file,{module,recordId:record.id});record.attachments.push(meta);db.attachments.push(meta)}catch(e){console.error(e);toast(`Impossible d’enregistrer ${file.name}`)}}}
@@ -962,9 +977,17 @@ function renderImportArchives(){
  if(type)rows=rows.filter(x=>x.type===type);if(q)rows=rows.filter(x=>normalizeText(`${x.fileName} ${x.subject} ${x.summary} ${x.academicYear} ${x.type}`).includes(q));
  const all=importedArchiveRows(),withOriginal=all.filter(x=>x.attachmentId).length;
  sum.innerHTML=`<article><span>Imports conservés</span><strong>${all.length}</strong></article><article><span>PDF / scans originaux</span><strong>${withOriginal}</strong></article><article><span>Chronotime</span><strong>${all.filter(x=>x.type==='Chronotime').length}</strong></article><article><span>Notes scannées</span><strong>${all.filter(x=>x.type==='Note scannée').length}</strong></article>`;
- box.innerHTML=rows.length?rows.map(x=>`<article class="import-archive-card"><div class="import-archive-icon">${x.type==='Chronotime'?'⏱':x.type==='Note scannée'?'📝':x.type.includes('Contrôle')||x.type.includes('Rapport')?'🛡':'📄'}</div><div class="import-archive-main"><div class="panel-head"><div><strong>${esc(x.fileName||x.subject||'Document importé')}</strong><small>${esc(x.type||'Document')} · ${x.createdAt?new Date(x.createdAt).toLocaleString('fr-FR'):'—'}</small></div>${x.academicYear?badge(x.academicYear):''}</div><p>${esc(x.subject||'')}</p><small>${esc(x.summary||'')}</small><div class="import-archive-actions">${x.attachmentId?`<button class="primary small" data-download="${esc(x.attachmentId)}">📄 Relire l’original</button>`:'<span class="muted">Original non stocké</span>'}<button class="ghost small" data-open-import-analysis="${esc(x.id)}">📊 Relire l’analyse</button>${x.recordId?`<button class="ghost small" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Relire la fiche</button>`:''}${x.module?`<button class="ghost small" data-go="${esc(x.module)}">Ouvrir le module</button>`:''}</div></div></article>`).join(''):'<div class="empty-state">Aucun import ne correspond à ces filtres.</div>';
+ box.innerHTML=rows.length?rows.map(x=>`<article class="import-archive-card"><div class="import-archive-icon">${x.type==='Chronotime'?'⏱':x.type==='Note scannée'?'📝':x.type.includes('Contrôle')||x.type.includes('Rapport')?'🛡':'📄'}</div><div class="import-archive-main"><div class="panel-head"><div><strong>${esc(x.fileName||x.subject||'Document importé')}</strong><small>${esc(x.type||'Document')} · ${x.createdAt?new Date(x.createdAt).toLocaleString('fr-FR'):'—'}</small></div>${x.academicYear?badge(x.academicYear):''}</div><p>${esc(x.subject||'')}</p><small>${esc(x.summary||'')}</small><div class="import-archive-actions">${x.attachmentId?`<button class="primary small" data-download="${esc(x.attachmentId)}">📄 Relire l’original</button>`:`<label class="ghost small button-link">📎 Rattacher l’original<input type="file" accept="application/pdf,image/*,.pdf" data-reattach-import="${esc(x.id)}" hidden></label>`}<button class="ghost small" data-open-import-analysis="${esc(x.id)}">📊 Relire l’analyse</button>${x.recordId?`<button class="ghost small" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Relire la fiche</button>`:''}${x.module?`<button class="ghost small" data-go="${esc(x.module)}">Ouvrir le module</button>`:''}</div></div></article>`).join(''):'<div class="empty-state">Aucun import ne correspond à ces filtres.</div>';
 }
 
+async function reattachImportOriginal(archiveId,file){
+ if(!file)return;const x=(db.importArchives||[]).find(a=>String(a.id)===String(archiveId));if(!x){toast('Archive introuvable');return}
+ try{const meta=await putFile(file,{module:'imports',recordId:x.sourceId||x.id});db.attachments=db.attachments||[];db.attachments.push(meta);x.attachmentId=meta.id;x.fileName=x.fileName||file.name;
+  const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));if(src)src.attachmentId=meta.id;
+  const annual=(db.chronotimeAnnual||[]).find(r=>String(r.fileName)===String(x.fileName)&&String(r.academicYear||'')===String(x.academicYear||''));if(annual&&!annual.attachmentId)annual.attachmentId=meta.id;
+  save();renderImportArchives();toast(meta.storageMode==='local'?'Original rattaché sur cet appareil':'Original rattaché et synchronisé');
+ }catch(e){console.error(e);toast('Impossible de rattacher ce document')}
+}
 function openImportAnalysis(id){
  const x=importedArchiveRows().find(r=>String(r.id)===String(id));if(!x)return;
  let a=x.analysisSnapshot||x.analysis||null;
@@ -1592,3 +1615,5 @@ function bindScanNoteV77(){
  const saveBtn=$('#scanSaveNote');if(saveBtn)saveBtn.onclick=saveScannedNote;
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindScanNoteV77);else bindScanNoteV77();
+
+document.addEventListener('change',async e=>{const inp=e.target.closest?.('[data-reattach-import]');if(inp&&inp.files?.[0]){await reattachImportOriginal(inp.dataset.reattachImport,inp.files[0]);inp.value=''}});
