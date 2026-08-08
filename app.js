@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='86.0';
-const APP_BUILD='08/08/2026 07:05';
+const APP_VERSION='88.0';
+const APP_BUILD='08/08/2026 07:46';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -410,7 +410,18 @@ function roomOptions(building,floor,type,v=''){const arr=db.spaces.filter(s=>(!b
 /* ---------- Pièces jointes : Supabase + secours local IndexedDB ---------- */
 const STORAGE_BUCKET='documentation';
 const LOCAL_FILE_DB='pst-local-files-v83',LOCAL_FILE_STORE='files';
+// V87 : le lien archive <-> original est conservé séparément du gros état applicatif.
+// Ainsi, un rechargement cloud plus ancien ne peut plus faire revenir un PDF à « Original absent ».
+const IMPORT_ORIGINAL_BINDINGS_KEY='pst-import-original-bindings-v87';
 function safeFileName(name){return String(name||'fichier').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'_')}
+function loadImportOriginalBindings(){try{return JSON.parse(localStorage.getItem(IMPORT_ORIGINAL_BINDINGS_KEY)||'{}')||{}}catch(_){return {}}}
+function saveImportOriginalBindings(map){try{localStorage.setItem(IMPORT_ORIGINAL_BINDINGS_KEY,JSON.stringify(map||{}));return true}catch(e){console.error('Sauvegarde lien original',e);return false}}
+function archiveBindingKeys(x){const a=[];if(x?.id)a.push(`archive:${x.id}`);if(x?.sourceId)a.push(`source:${x.sourceId}`);if(!a.length&&x?.fileName)a.push(`file:${normalizeText(x.fileName)}`);return a}
+function rememberImportOriginalBinding(x,meta){if(!x||!meta)return false;const map=loadImportOriginalBindings(),payload={attachment:{...meta},savedAt:new Date().toISOString(),archiveId:x.id||'',sourceId:x.sourceId||'',fileName:x.fileName||meta.name||''};for(const k of archiveBindingKeys(x))map[k]=payload;return saveImportOriginalBindings(map)}
+function restoreImportOriginalBinding(x){if(!x)return null;const map=loadImportOriginalBindings();let b=null;for(const k of archiveBindingKeys(x)){if(map[k]?.attachment){b=map[k];break}}if(!b?.attachment)return null;const meta=b.attachment;db.attachments=db.attachments||[];let changed=false,rec=db.attachments.find(a=>String(a.id)===String(meta.id));if(!rec){rec={...meta};db.attachments.push(rec);changed=true}else Object.assign(rec,meta);if(!x.attachmentId){x.attachmentId=rec.id;changed=true}const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));if(src&&!src.attachmentId){src.attachmentId=rec.id;changed=true}const stored=(db.importArchives||[]).find(r=>String(r.id)===String(x.id)||x.sourceId&&String(r.sourceId)===String(x.sourceId));if(stored&&!stored.attachmentId){stored.attachmentId=rec.id;changed=true}if(changed){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}catch(_){}}return rec}
+function resolveArchiveAttachment(x){if(!x)return null;let rec=(db.attachments||[]).find(a=>String(a.id)===String(x.attachmentId));if(rec)return rec;return restoreImportOriginalBinding(x)}
+function registerImportOriginal(archive,attachment){if(!archive||!attachment)return false;archive.attachmentId=attachment.id||archive.attachmentId||'';archive.fileName=attachment.name||archive.fileName||'';archive.originalStoredAt=archive.originalStoredAt||new Date().toISOString();archive.originalStorageMode=attachment.storageMode||archive.originalStorageMode||'';rememberImportOriginalBinding(archive,attachment);return true}
+window.PSTImportOriginals={remember:registerImportOriginal,resolve:resolveArchiveAttachment,restore:restoreImportOriginalBinding};
 function openLocalFileDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(LOCAL_FILE_DB,1);req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains(LOCAL_FILE_STORE))d.createObjectStore(LOCAL_FILE_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function putLocalFileBlob(key,file){const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readwrite');tx.objectStore(LOCAL_FILE_STORE).put(file,key);tx.oncomplete=()=>{d.close();resolve(true)};tx.onerror=()=>{d.close();reject(tx.error)}})}
 async function getLocalFileBlob(key){const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readonly'),req=tx.objectStore(LOCAL_FILE_STORE).get(key);req.onsuccess=()=>{d.close();resolve(req.result||null)};req.onerror=()=>{d.close();reject(req.error)}})}
@@ -452,7 +463,7 @@ async function verifyAttachmentCloud(id,{silent=false}={}){
  rec.cloudVerified=!!check.ok;rec.cloudCheckedAt=new Date().toISOString();rec.cloudVerifiedAt=check.ok?rec.cloudCheckedAt:'';rec.cloudError=check.ok?'':(check.reason||'Fichier non confirmé sur le cloud');
  if(check.ok&&rec.storageMode==='local')rec.storageMode=rec.localBlobKey?'supabase+local':'supabase';
  save(false);renderImportArchives();
- if(!silent)toast(check.ok?'☁️ PDF confirmé sur le cloud':'⚠️ PDF non confirmé sur le cloud');
+ if(!silent)toast(check.ok?'☁️ Document confirmé sur le cloud':'⚠️ Document non confirmé sur le cloud');
  return check.ok;
 }
 async function syncAttachmentToCloud(id){
@@ -465,14 +476,14 @@ async function syncAttachmentToCloud(id){
   if(rec.localBlobKey)blob=await getLocalFileBlob(rec.localBlobKey);
   if(!blob&&rec.data)blob=await (await fetch(rec.data)).blob();
   if(!blob&&rec.storagePath){await verifyAttachmentCloud(id);return}
-  if(!blob)return toast('La copie locale du PDF est introuvable. Rattachez le document à nouveau.');
+  if(!blob)return toast('La copie locale du document est introuvable. Rattachez l’original à nouveau.');
   const path=rec.storagePath||`${currentUser.id}/${rec.module||'imports'}/${rec.recordId||'general'}/${rec.id}-${safeFileName(rec.name)}`;
-  toast('Envoi du PDF sur le cloud…');
+  toast('Envoi du document sur le cloud…');
   const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,blob,{upsert:true,contentType:rec.type||blob.type||'application/octet-stream'});
   if(error)throw error;
   rec.storagePath=path;rec.storageMode=rec.localBlobKey?'supabase+local':'supabase';
   const ok=await verifyAttachmentCloud(id,{silent:true});
-  if(ok){rec.cloudVerified=true;rec.cloudVerifiedAt=new Date().toISOString();rec.cloudError='';save(false);renderImportArchives();try{await cloudSaveNow({silent:true})}catch(_){ }toast('☁️ PDF synchronisé et vérifié sur le cloud')}
+  if(ok){rec.cloudVerified=true;rec.cloudVerifiedAt=new Date().toISOString();rec.cloudError='';save(false);renderImportArchives();try{await cloudSaveNow({silent:true})}catch(_){ }toast('☁️ Document synchronisé et vérifié sur le cloud')}
   else toast('⚠️ Envoi effectué, mais la relecture cloud n’a pas pu être confirmée');
  }catch(e){console.error('Synchronisation PDF cloud',e);rec.cloudVerified=false;rec.cloudCheckedAt=new Date().toISOString();rec.cloudError=e?.message||String(e);save(false);renderImportArchives();toast(`Erreur cloud : ${rec.cloudError}`)}
 }
@@ -491,14 +502,15 @@ async function openLocalAttachment(rec){
  if(!rec?.localBlobKey)return false;try{const blob=await getLocalFileBlob(rec.localBlobKey);if(!blob)return false;const url=URL.createObjectURL(blob);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),120000);return true}catch(e){console.error(e);return false}
 }
 async function downloadAttachment(id){
- const rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
- if(!rec){toast('Fichier introuvable dans l’archive');return}
+ let rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
+ if(!rec){const map=loadImportOriginalBindings();for(const b of Object.values(map)){if(String(b?.attachment?.id)===String(id)){rec={...b.attachment};db.attachments=db.attachments||[];db.attachments.push(rec);break}}}
+ if(!rec){const st=$('#importArchiveStatus');if(st){st.textContent='❌ Le lien du document original est introuvable. Rattachez l’original.';st.className='import-archive-status error'}toast('Fichier introuvable dans l’archive');return}
  try{
   // Android/Chrome : navigation dans l’onglet courant = pas de popup bloquée.
   // Le bouton Retour du téléphone ramène ensuite directement à l’application.
   if(rec.storagePath&&supabaseClient){
    const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(rec.storagePath,900);
-   if(!error&&data?.signedUrl){window.location.assign(data.signedUrl);return}
+   if(!error&&data?.signedUrl){const st=$('#importArchiveStatus');if(st){st.textContent='☁️ Ouverture du document depuis le cloud…';st.className='import-archive-status ok'}window.location.assign(data.signedUrl);return}
    if(error)console.warn('Ouverture Supabase impossible',error);
   }
   if(rec.localBlobKey){
@@ -508,6 +520,7 @@ async function downloadAttachment(id){
     // Ne pas révoquer immédiatement : Android a parfois besoin de plusieurs secondes
     // pour transmettre le PDF au lecteur intégré.
     sessionStorage.setItem('pst-last-local-object-url',url);
+    const st=$('#importArchiveStatus');if(st){st.textContent='📱 Ouverture du document conservé sur cet appareil…';st.className='import-archive-status ok'}
     window.location.assign(url);
     return;
    }
@@ -1067,9 +1080,9 @@ function renderImportArchives(){
  const box=$('#importArchiveCards'),sum=$('#importArchiveSummary');if(!box||!sum)return;
  const type=$('#importArchiveType')?.value||'',q=normalizeText($('#importArchiveSearch')?.value||'');let rows=importedArchiveRows();
  if(type)rows=rows.filter(x=>x.type===type);if(q)rows=rows.filter(x=>normalizeText(`${x.fileName} ${x.subject} ${x.summary} ${x.academicYear} ${x.type}`).includes(q));
- const all=importedArchiveRows(),withOriginal=all.filter(x=>x.attachmentId).length,cloudSynced=all.filter(x=>archiveAttachmentMeta(x.attachmentId)?.cloudVerified===true).length,localOnly=all.filter(x=>{const a=archiveAttachmentMeta(x.attachmentId);return a&&(a.localBlobKey||a.data)&&a.cloudVerified!==true}).length;
+ const all=importedArchiveRows(),resolved=all.map(x=>({x,a:resolveArchiveAttachment(x)})),withOriginal=resolved.filter(o=>!!o.a).length,cloudSynced=resolved.filter(o=>o.a?.cloudVerified===true).length,localOnly=resolved.filter(o=>o.a&&(o.a.localBlobKey||o.a.data)&&o.a.cloudVerified!==true).length;
  sum.innerHTML=`<article><span>Imports conservés</span><strong>${all.length}</strong></article><article><span>Originaux disponibles</span><strong>${withOriginal}</strong></article><article><span>☁️ Cloud vérifié</span><strong>${cloudSynced}</strong></article><article><span>📱 À synchroniser</span><strong>${localOnly}</strong></article>`;
- box.innerHTML=rows.length?rows.map(x=>{const att=archiveAttachmentMeta(x.attachmentId);return `<article class="import-archive-card"><div class="import-archive-icon">${x.type==='Chronotime'?'⏱':x.type==='Note scannée'?'📝':x.type.includes('Contrôle')||x.type.includes('Rapport')?'🛡':'📄'}</div><div class="import-archive-main"><div class="panel-head"><div><strong>${esc(x.fileName||x.subject||'Document importé')}</strong><small>${esc(x.type||'Document')} · ${x.createdAt?new Date(x.createdAt).toLocaleString('fr-FR'):'—'}</small></div>${x.academicYear?badge(x.academicYear):''}</div><p>${esc(x.subject||'')}</p><small>${esc(x.summary||'')}</small><div class="import-cloud-line">${cloudStatusHtml(att)}</div><div class="import-archive-actions">${x.attachmentId?`<button class="primary small" data-download="${esc(x.attachmentId)}">📄 Relire le PDF</button>`:`<label class="ghost small button-link">📎 Rattacher le PDF<input type="file" accept="application/pdf,image/*,.pdf" data-reattach-import="${esc(x.id)}" hidden></label>`}${cloudActionHtml(att)}<button class="ghost small" data-open-import-analysis="${esc(x.id)}">📊 Relire l’analyse</button>${x.recordId?`<button class="ghost small" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Relire la fiche</button>`:''}${x.module?`<button class="ghost small" data-go="${esc(x.module)}">Ouvrir le module</button>`:''}</div></div></article>`}).join(''):'<div class="empty-state">Aucun import ne correspond à ces filtres.</div>';
+ box.innerHTML=rows.length?rows.map(x=>{const att=resolveArchiveAttachment(x);if(att)rememberImportOriginalBinding(x,att);const attachmentId=att?.id||x.attachmentId||'';return `<article class="import-archive-card"><div class="import-archive-icon">${x.type==='Chronotime'?'⏱':x.type==='Note scannée'?'📝':x.type.includes('Contrôle')||x.type.includes('Rapport')?'🛡':'📄'}</div><div class="import-archive-main"><div class="panel-head"><div><strong>${esc(x.fileName||x.subject||'Document importé')}</strong><small>${esc(x.type||'Document')} · ${x.createdAt?new Date(x.createdAt).toLocaleString('fr-FR'):'—'}</small></div>${x.academicYear?badge(x.academicYear):''}</div><p>${esc(x.subject||'')}</p><small>${esc(x.summary||'')}</small><div class="import-cloud-line">${cloudStatusHtml(att)}</div><div class="import-archive-actions">${attachmentId?`<button class="primary small" data-download="${esc(attachmentId)}">📄 Relire l’original</button>`:`<label class="ghost small button-link">📎 Rattacher l’original<input type="file" accept="application/pdf,image/*,.pdf,.png,.jpg,.jpeg,.webp" data-reattach-import="${esc(x.id)}" hidden></label>`}${cloudActionHtml(att)}<button class="ghost small" data-open-import-analysis="${esc(x.id)}">📊 Relire l’analyse</button>${x.recordId?`<button class="ghost small" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Relire la fiche</button>`:''}${x.module?`<button class="ghost small" data-go="${esc(x.module)}">Ouvrir le module</button>`:''}</div></div></article>`}).join(''):'<div class="empty-state">Aucun import ne correspond à ces filtres.</div>';
 }
 
 async function reattachImportOriginal(archiveId,file){
@@ -1079,18 +1092,22 @@ async function reattachImportOriginal(archiveId,file){
   const row=importedArchiveRows().find(a=>String(a.id)===String(archiveId));
   if(row){x={...row,id:uid(),analysisSnapshot:row.analysisSnapshot||row.analysis||null};db.importArchives=db.importArchives||[];db.importArchives.push(x)}
  }
- if(!x){toast('Archive introuvable');return}
+ if(!x){const st=$('#importArchiveStatus');if(st){st.textContent='❌ Archive introuvable.';st.className='import-archive-status error'}toast('Archive introuvable');return}
  try{
+  const st=$('#importArchiveStatus');if(st){st.textContent='⏳ Enregistrement du document original…';st.className='import-archive-status working'}
   const meta=await putFile(file,{module:'imports',recordId:x.sourceId||x.id});
   // Vérification immédiate du secours local avant d’annoncer que le rattachement a réussi.
   if(meta.localBlobKey){
    const check=await getLocalFileBlob(meta.localBlobKey);
-   if(!check)throw new Error('Le PDF n’a pas pu être conservé dans le stockage local');
+   if(!check)throw new Error('Le document n’a pas pu être conservé dans le stockage local');
   }
   db.attachments=db.attachments||[];
   const oldIndex=db.attachments.findIndex(a=>String(a.id)===String(meta.id));
   if(oldIndex>=0)db.attachments[oldIndex]=meta;else db.attachments.push(meta);
   x.attachmentId=meta.id;x.fileName=file.name||x.fileName;x.originalStoredAt=new Date().toISOString();x.originalStorageMode=meta.storageMode||'';x.cloudVerified=meta.cloudVerified===true;x.cloudVerifiedAt=meta.cloudVerifiedAt||'';
+  // Double persistance V87 : état applicatif + registre local indépendant.
+  // Le second registre survit à un écrasement temporaire de db par une ancienne copie cloud.
+  rememberImportOriginalBinding(x,meta);
   const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));
   if(src){src.attachmentId=meta.id;src.fileName=file.name||src.fileName}
   const annual=(db.chronotimeAnnual||[]).find(r=>String(r.sourceId||'')===String(x.sourceId)||String(r.fileName||'')===String(x.fileName));
@@ -1100,13 +1117,14 @@ async function reattachImportOriginal(archiveId,file){
   // un rattachement local déjà réussi.
   save(false);
   renderImportArchives();
-  toast('PDF rattaché — utilisez maintenant « Relire le PDF »');
+  if(st){st.textContent=`✅ ${file.name} est rattaché et conservé ${meta.cloudVerified?'dans le cloud':'sur cet appareil'}.`;st.className='import-archive-status ok'}
+  toast('Original rattaché — utilisez maintenant « Relire l’original »');
 
   // Synchronisation secondaire, non bloquante.
   if(currentUser&&navigator.onLine){
    try{await cloudSaveNow({silent:true})}catch(e){console.warn('Synchronisation du rattachement différée',e)}
   }
- }catch(e){console.error(e);toast(`Impossible de rattacher ce document${e?.message?` : ${e.message}`:''}`)}
+ }catch(e){console.error(e);const st=$('#importArchiveStatus');if(st){st.textContent=`❌ Rattachement impossible : ${e?.message||String(e)}`;st.className='import-archive-status error'}toast(`Impossible de rattacher ce document${e?.message?` : ${e.message}`:''}`)}
 }
 
 function openImportAnalysis(id){
@@ -1125,7 +1143,7 @@ function openImportAnalysis(id){
  $('#detailTitle').textContent=`Analyse import — ${x.fileName||x.subject||'Document'}`;
  const cards=rows.length?`<div class="summary-grid">${rows.map(([k,v])=>`<article><span>${esc(k)}</span><strong>${esc(String(v))}</strong></article>`).join('')}</div>`:'<div class="empty-state">Cet ancien import ne possède pas encore d’analyse détaillée enregistrée.</div>';
  const tech=a&&!a.legacy?`<details class="archive-tech-details"><summary>Détail technique de l’analyse</summary><pre class="archive-json">${esc(JSON.stringify(a,null,2))}</pre></details>`:'';
- $('#detailBody').innerHTML=`${cards}<div class="archive-detail-actions">${x.attachmentId?`<button class="primary" data-download="${esc(x.attachmentId)}">📄 Relire le PDF</button>`:''}${x.recordId?`<button class="ghost" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Ouvrir la fiche</button>`:''}</div>${tech}`;
+ $('#detailBody').innerHTML=`${cards}<div class="archive-detail-actions">${x.attachmentId?`<button class="primary" data-download="${esc(x.attachmentId)}">📄 Relire l’original</button>`:''}${x.recordId?`<button class="ghost" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Ouvrir la fiche</button>`:''}</div>${tech}`;
  $('#detailModal').showModal();
 }
 function renderArchives(){renderImportArchives();const year=$('#archiveYear')?.value||'',q=($('#archiveSearch')?.value||'').toLowerCase().trim();const years=[...new Set(db.archives.map(a=>a.year).filter(Boolean))].sort().reverse();if($('#archiveYear')){$('#archiveYear').innerHTML='<option value="">Toutes les années</option>'+years.map(y=>`<option ${y===year?'selected':''}>${y}</option>`).join('')}let arr=db.archives.filter(a=>(!year||a.year===year));if(q)arr=arr.filter(a=>JSON.stringify(a).toLowerCase().includes(q));arr.sort((a,b)=>b.start.localeCompare(a.start));$('#archiveSummary').innerHTML=`<article><span>Archives de pilotage</span><strong>${db.archives.length}</strong></article><article><span>Semaines</span><strong>${db.archives.filter(a=>a.kind==='weekly').length}</strong></article><article><span>Années clôturées</span><strong>${db.archives.filter(a=>a.kind==='annual').length}</strong></article><article><span>Dernière archive</span><strong>${db.archives.length?fmtDate([...db.archives].sort((a,b)=>b.createdAt.localeCompare(a.createdAt))[0].createdAt.slice(0,10)):'—'}</strong></article>`;$('#archiveCards').innerHTML=arr.length?arr.map(a=>`<article class="archive-card"><div class="panel-head"><span>${a.kind==='weekly'?'Semaine':'Année scolaire'}</span>${badge(a.academicYear||a.year)}</div><h3>${esc(a.kind==='weekly'?a.key:a.academicYear)}</h3><p>${fmtDate(a.start)} → ${fmtDate(a.end)}</p><div class="archive-metrics">${Object.entries(a.summary||{}).map(([k,v])=>`<span><strong>${esc(v)}</strong><small>${esc(k)}</small></span>`).join('')}</div><button class="ghost" data-archive-detail="${a.id}">Consulter</button></article>`).join(''):'<div class="empty-state">Aucune archive trouvée.</div>'}
@@ -1542,7 +1560,7 @@ async function genericImportedDocument(file,type){
  const id=uid();let attachment=null;
  try{attachment=await putFile(file,{module:'imports',recordId:id});db.attachments.push(attachment)}catch(e){console.error(e);toast('Impossible d’archiver le PDF original');return false}
  const doc={id,no:nextNo('document','DOC'),date:todayISO(),title:file.name.replace(/\.pdf$/i,''),category:label==='Document administratif'?'Administratif':'Autre',description:'Document importé depuis le moteur central.',linkedModule:'Général',attachments:[attachment],importedAt:new Date().toISOString()};
- db.documents.push(doc);db.importArchives=db.importArchives||[];db.importArchives.push({id:uid(),sourceId:doc.id,createdAt:doc.importedAt,type:label,fileName:file.name,attachmentId:attachment.id,subject:doc.title,summary:'PDF conservé dans Documentation',module:'documents',recordId:doc.id,analysisSnapshot:{type:label,fileName:file.name,subject:doc.title,summary:'PDF conservé dans Documentation',confidence:centralImportAnalysis?Math.max(centralImportAnalysis.chronoConfidence||0,centralImportAnalysis.controlConfidence||0):0}});await save();renderAll();return true;
+ db.documents.push(doc);db.importArchives=db.importArchives||[];const archive={id:uid(),sourceId:doc.id,createdAt:doc.importedAt,type:label,fileName:file.name,attachmentId:attachment.id,subject:doc.title,summary:'Document original conservé dans Documentation',module:'documents',recordId:doc.id,analysisSnapshot:{type:label,fileName:file.name,subject:doc.title,summary:'Document original conservé dans Documentation',confidence:centralImportAnalysis?Math.max(centralImportAnalysis.chronoConfidence||0,centralImportAnalysis.controlConfidence||0):0}};db.importArchives.push(archive);registerImportOriginal(archive,attachment);await save();renderAll();return true;
 }
 
 function centralImportValidationHtml(a){
@@ -1722,7 +1740,7 @@ async function saveScannedNote(){
    record={id,no:nextNo('document','DOC'),date:todayISO(),title:title||'Document scanné',category:'Autre',description:text,linkedModule:'Général',attachments,source:'scan',importedAt};db.documents.push(record);archiveType='Document scanné';view='documents';
  }
  db.importArchives=db.importArchives||[];
- db.importArchives.push({id:uid(),sourceId:record.id,createdAt:importedAt,type:archiveType,fileName:attachment?.name||scannedNoteAttachment?.name||record.title||record.name||'Scan',attachmentId:attachment?.id||'',subject:record.title||record.name||'',summary:text.slice(0,220),module:view,recordId:record.id,analysisSnapshot:{type:archiveType,fileName:attachment?.name||scannedNoteAttachment?.name||record.title||record.name||'Scan',subject:record.title||record.name||'',summary:text.slice(0,220),destination:view,category,priority,text,createdAt:importedAt}});
+ const scanArchive={id:uid(),sourceId:record.id,createdAt:importedAt,type:archiveType,fileName:attachment?.name||scannedNoteAttachment?.name||record.title||record.name||'Scan',attachmentId:attachment?.id||'',subject:record.title||record.name||'',summary:text.slice(0,220),module:view,recordId:record.id,analysisSnapshot:{type:archiveType,fileName:attachment?.name||scannedNoteAttachment?.name||record.title||record.name||'Scan',subject:record.title||record.name||'',summary:text.slice(0,220),destination:view,category,priority,text,createdAt:importedAt}};db.importArchives.push(scanArchive);if(attachment)registerImportOriginal(scanArchive,attachment);
  await save();renderAll();$('#scanNoteModal')?.close();setView(view);toast(`Scan enregistré dans ${$('#scanDestination')?.selectedOptions?.[0]?.textContent||'le module choisi'} et Archivage`);
 }
 

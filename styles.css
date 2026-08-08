@@ -362,3 +362,43 @@ body.notifications-open{overflow:hidden}
 
 /* V86 — état cloud vérifié des originaux archivés */
 .import-cloud-line{margin-top:9px}.cloud-status{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800;border:1px solid transparent}.cloud-status.synced{background:#e9f8ef;color:#18723b;border-color:#bfe8ce}.cloud-status.local{background:#fff4dc;color:#8a5a00;border-color:#f0d493}.cloud-status.checking{background:#eaf3fb;color:#245f8f;border-color:#bfd8ec}.cloud-status.error,.cloud-status.missing{background:#f7eded;color:#8b3030;border-color:#e6c1c1}
+
+/* V87 — Archivage mobile réellement responsive + rattachement PDF persistant */
+.import-archive-panel{max-width:100%;min-width:0;overflow:hidden}
+.import-archive-panel .filters{max-width:100%;min-width:0}
+.import-archive-panel .summary-grid{max-width:100%;min-width:0}
+.import-archive-panel .summary-grid>article{min-width:0;background:#f8fbfd;border:1px solid var(--border);border-radius:13px;padding:10px 11px;display:flex;flex-direction:column;gap:3px}
+.import-archive-panel .summary-grid>article span{font-size:10px;color:var(--muted);line-height:1.2}
+.import-archive-panel .summary-grid>article strong{font-size:19px;line-height:1.1}
+.import-archive-main{min-width:0;max-width:100%;overflow:hidden}
+.import-archive-main .panel-head{min-width:0;max-width:100%}
+.import-archive-main .panel-head>div{min-width:0;max-width:100%}
+.import-archive-main strong,.import-archive-main small,.import-archive-main p{max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+.import-archive-main .panel-head strong{display:block;white-space:normal}
+.import-archive-actions{max-width:100%;min-width:0}
+.import-archive-actions button,.import-archive-actions .button-link{max-width:100%;white-space:normal;text-align:center;justify-content:center}
+.import-archive-status{display:none;margin:0 0 12px;padding:10px 12px;border-radius:11px;font-size:11px;font-weight:800;line-height:1.35;overflow-wrap:anywhere}
+.import-archive-status:not(:empty){display:block}
+.import-archive-status.working{background:#eef5fb;border:1px solid #bfd7eb;color:#285d86}
+.import-archive-status.ok{background:#eaf8ef;border:1px solid #bde4ca;color:#176a39}
+.import-archive-status.error{background:#fff0f0;border:1px solid #efbcbc;color:#9c2525}
+@media(max-width:700px){
+  .import-archive-panel{padding:12px!important;margin-left:0!important;margin-right:0!important;width:100%!important}
+  .import-archive-panel .panel-head{display:block}
+  .import-archive-panel .filters{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;overflow:visible!important;padding:8px!important}
+  .import-archive-panel .filters input,.import-archive-panel .filters select{width:100%!important;min-width:0!important;max-width:100%!important}
+  .import-archive-panel .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+  .import-archive-panel .summary-grid>article{padding:9px!important}
+  .import-archive-grid{width:100%;min-width:0}
+  .import-archive-card{width:100%!important;max-width:100%!important;min-width:0!important;grid-template-columns:36px minmax(0,1fr)!important;gap:9px!important;padding:11px!important;box-sizing:border-box}
+  .import-archive-icon{width:34px!important;height:34px!important;font-size:18px!important}
+  .import-archive-main .panel-head{display:flex!important;flex-direction:column!important;gap:6px!important;align-items:flex-start!important}
+  .import-archive-main .panel-head .badge{align-self:flex-start}
+  .import-archive-main p{margin:5px 0!important}
+  .import-cloud-line{margin-top:8px}
+  .cloud-status{max-width:100%;white-space:normal;line-height:1.2}
+  .import-archive-actions{display:grid!important;grid-template-columns:1fr!important;gap:7px!important;width:100%!important}
+  .import-archive-actions button,.import-archive-actions .button-link{width:100%!important;min-width:0!important;box-sizing:border-box;padding:9px 8px!important}
+  #archives .table-wrap,#archives table{max-width:100%}
+}
+@media(max-width:380px){.import-archive-panel .summary-grid{grid-template-columns:1fr!important}}
