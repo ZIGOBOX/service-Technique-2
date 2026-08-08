@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='84.0';
-const APP_BUILD='08/08/2026 06:44';
+const APP_VERSION='86.0';
+const APP_BUILD='08/08/2026 07:05';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -415,13 +415,66 @@ function openLocalFileDB(){return new Promise((resolve,reject)=>{const req=index
 async function putLocalFileBlob(key,file){const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readwrite');tx.objectStore(LOCAL_FILE_STORE).put(file,key);tx.oncomplete=()=>{d.close();resolve(true)};tx.onerror=()=>{d.close();reject(tx.error)}})}
 async function getLocalFileBlob(key){const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readonly'),req=tx.objectStore(LOCAL_FILE_STORE).get(key);req.onsuccess=()=>{d.close();resolve(req.result||null)};req.onerror=()=>{d.close();reject(req.error)}})}
 async function deleteLocalFileBlob(key){if(!key)return;const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readwrite');tx.objectStore(LOCAL_FILE_STORE).delete(key);tx.oncomplete=()=>{d.close();resolve(true)};tx.onerror=()=>{d.close();reject(tx.error)}})}
+async function verifyStoragePathExists(path){
+ if(!path)return {ok:false,reason:'Chemin cloud absent'};
+ if(!navigator.onLine)return {ok:false,reason:'Hors ligne'};
+ if(!supabaseClient||!currentUser)return {ok:false,reason:'Cloud non connecté'};
+ try{
+  const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(path,90);
+  if(error||!data?.signedUrl)return {ok:false,reason:error?.message||'Lien cloud indisponible'};
+  const response=await fetch(data.signedUrl,{method:'GET',headers:{Range:'bytes=0-0'},cache:'no-store'});
+  try{await response.body?.cancel?.()}catch(_){ }
+  if(response.ok||response.status===206)return {ok:true};
+  return {ok:false,reason:`Cloud HTTP ${response.status}`};
+ }catch(e){return {ok:false,reason:e?.message||String(e)}}
+}
 async function putFile(file,meta={}){
  const id=uid(),base={id,name:file.name,type:file.type||'application/octet-stream',size:file.size,createdAt:new Date().toISOString(),...meta};
  if(supabaseClient&&currentUser){
   const path=`${currentUser.id}/${meta.module||'documents'}/${meta.recordId||'general'}/${id}-${safeFileName(file.name)}`;
-  try{const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});if(error)throw error;return {...base,storagePath:path,storageMode:'supabase'}}catch(e){console.warn('Stockage Supabase indisponible, secours local utilisé',e)}
+  try{
+   const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});if(error)throw error;
+   const check=await verifyStoragePathExists(path);
+   if(check.ok)return {...base,storagePath:path,storageMode:'supabase',cloudVerified:true,cloudVerifiedAt:new Date().toISOString(),cloudError:''};
+   // Si l'envoi a abouti mais que la relecture cloud n'est pas vérifiable, garder aussi une copie locale.
+   const localBlobKey=`${id}-${safeFileName(file.name)}`;await putLocalFileBlob(localBlobKey,file);
+   return {...base,storagePath:path,localBlobKey,storageMode:'supabase+local',cloudVerified:false,cloudCheckedAt:new Date().toISOString(),cloudError:check.reason||'Vérification cloud impossible'};
+  }catch(e){console.warn('Stockage Supabase indisponible, secours local utilisé',e)}
  }
- const localBlobKey=`${id}-${safeFileName(file.name)}`;await putLocalFileBlob(localBlobKey,file);return {...base,localBlobKey,storageMode:'local'};
+ const localBlobKey=`${id}-${safeFileName(file.name)}`;await putLocalFileBlob(localBlobKey,file);return {...base,localBlobKey,storageMode:'local',cloudVerified:false,cloudError:'Local uniquement'};
+}
+async function verifyAttachmentCloud(id,{silent=false}={}){
+ const rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
+ if(!rec){if(!silent)toast('Pièce jointe introuvable');return false}
+ if(!rec.storagePath){rec.cloudVerified=false;rec.cloudError='Aucune copie cloud';rec.cloudCheckedAt=new Date().toISOString();save(false);renderImportArchives();return false}
+ if(!navigator.onLine){if(!silent)toast('Connexion Internet nécessaire pour vérifier le cloud');return false}
+ const check=await verifyStoragePathExists(rec.storagePath);
+ rec.cloudVerified=!!check.ok;rec.cloudCheckedAt=new Date().toISOString();rec.cloudVerifiedAt=check.ok?rec.cloudCheckedAt:'';rec.cloudError=check.ok?'':(check.reason||'Fichier non confirmé sur le cloud');
+ if(check.ok&&rec.storageMode==='local')rec.storageMode=rec.localBlobKey?'supabase+local':'supabase';
+ save(false);renderImportArchives();
+ if(!silent)toast(check.ok?'☁️ PDF confirmé sur le cloud':'⚠️ PDF non confirmé sur le cloud');
+ return check.ok;
+}
+async function syncAttachmentToCloud(id){
+ const rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
+ if(!rec)return toast('Pièce jointe introuvable');
+ if(!navigator.onLine)return toast('Connexion Internet nécessaire pour envoyer sur le cloud');
+ if(!supabaseClient||!currentUser)return toast('Connectez-vous au cloud avant la synchronisation');
+ let blob=null;
+ try{
+  if(rec.localBlobKey)blob=await getLocalFileBlob(rec.localBlobKey);
+  if(!blob&&rec.data)blob=await (await fetch(rec.data)).blob();
+  if(!blob&&rec.storagePath){await verifyAttachmentCloud(id);return}
+  if(!blob)return toast('La copie locale du PDF est introuvable. Rattachez le document à nouveau.');
+  const path=rec.storagePath||`${currentUser.id}/${rec.module||'imports'}/${rec.recordId||'general'}/${rec.id}-${safeFileName(rec.name)}`;
+  toast('Envoi du PDF sur le cloud…');
+  const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,blob,{upsert:true,contentType:rec.type||blob.type||'application/octet-stream'});
+  if(error)throw error;
+  rec.storagePath=path;rec.storageMode=rec.localBlobKey?'supabase+local':'supabase';
+  const ok=await verifyAttachmentCloud(id,{silent:true});
+  if(ok){rec.cloudVerified=true;rec.cloudVerifiedAt=new Date().toISOString();rec.cloudError='';save(false);renderImportArchives();try{await cloudSaveNow({silent:true})}catch(_){ }toast('☁️ PDF synchronisé et vérifié sur le cloud')}
+  else toast('⚠️ Envoi effectué, mais la relecture cloud n’a pas pu être confirmée');
+ }catch(e){console.error('Synchronisation PDF cloud',e);rec.cloudVerified=false;rec.cloudCheckedAt=new Date().toISOString();rec.cloudError=e?.message||String(e);save(false);renderImportArchives();toast(`Erreur cloud : ${rec.cloudError}`)}
 }
 async function removeFileBlob(id){
  const meta=db.attachments.find(a=>a.id===id);if(!meta)return;
@@ -438,28 +491,32 @@ async function openLocalAttachment(rec){
  if(!rec?.localBlobKey)return false;try{const blob=await getLocalFileBlob(rec.localBlobKey);if(!blob)return false;const url=URL.createObjectURL(blob);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),120000);return true}catch(e){console.error(e);return false}
 }
 async function downloadAttachment(id){
- const rec=(db.attachments||[]).find(a=>String(a.id)===String(id));if(!rec){toast('Fichier introuvable');return}
- // Sur Android/Chrome, ouvrir la fenêtre immédiatement pendant le clic évite le blocage
- // de popup après l'attente d'IndexedDB ou de la création d'une URL Supabase signée.
- let viewer=null;try{viewer=window.open('about:blank','_blank')}catch(e){}
- const showLoading=()=>{try{if(viewer){viewer.document.title='Ouverture du document';viewer.document.body.innerHTML='<p style="font-family:system-ui;padding:24px">Ouverture du document…</p>'}}catch(e){}};showLoading();
- const navigate=url=>{if(!url)return false;try{if(viewer&&!viewer.closed){viewer.location.replace(url);return true}}catch(e){}try{window.location.href=url;return true}catch(e){return false}};
+ const rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
+ if(!rec){toast('Fichier introuvable dans l’archive');return}
  try{
+  // Android/Chrome : navigation dans l’onglet courant = pas de popup bloquée.
+  // Le bouton Retour du téléphone ramène ensuite directement à l’application.
   if(rec.storagePath&&supabaseClient){
-   const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(rec.storagePath,300);
-   if(!error&&data?.signedUrl&&navigate(data.signedUrl))return;
+   const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(rec.storagePath,900);
+   if(!error&&data?.signedUrl){window.location.assign(data.signedUrl);return}
    if(error)console.warn('Ouverture Supabase impossible',error);
   }
   if(rec.localBlobKey){
    const blob=await getLocalFileBlob(rec.localBlobKey);
-   if(blob){const url=URL.createObjectURL(blob);if(navigate(url)){setTimeout(()=>URL.revokeObjectURL(url),300000);return}}
+   if(blob){
+    const url=URL.createObjectURL(blob);
+    // Ne pas révoquer immédiatement : Android a parfois besoin de plusieurs secondes
+    // pour transmettre le PDF au lecteur intégré.
+    sessionStorage.setItem('pst-last-local-object-url',url);
+    window.location.assign(url);
+    return;
+   }
   }
-  // Compatibilité avec les anciens scans stockés directement en Data URL.
-  if(rec.data&&navigate(rec.data))return;
+  if(rec.data){window.location.assign(rec.data);return}
  }catch(e){console.error('Ouverture du document',e)}
- try{if(viewer&&!viewer.closed)viewer.close()}catch(e){}
- toast(rec.localBlobKey?'Le fichier local n’est plus présent sur cet appareil. Rattachez l’original.':'Impossible d’ouvrir ce document');
+ toast(rec.localBlobKey?'Le PDF local n’est plus présent sur cet appareil. Rattachez-le à nouveau.':'Impossible d’ouvrir ce PDF');
 }
+
 function humanSize(n){n=Number(n)||0;if(n<1024)return `${n} o`;if(n<1048576)return `${(n/1024).toFixed(1)} Ko`;return `${(n/1048576).toFixed(1)} Mo`}
 function attachmentField(existing=[]){return `<div class="attachment-box"><div class="attachment-actions"><label class="camera-label">📷 Prendre une photo<input type="file" name="cameraPhotos" accept="image/*" capture="environment" multiple></label><label>📎 Ajouter des fichiers<input type="file" name="files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.eml,.msg,.ods,.odt"></label></div><p class="hint">Les photos et fichiers sont synchronisés dans Supabase et deviennent accessibles sur le téléphone et le PC.</p>${existing.length?`<div class="attachment-list">${existing.map(a=>`<div><span>📎 ${esc(a.name)} <small>${humanSize(a.size)}</small></span><label class="inline-check"><input type="checkbox" name="removeAttachment" value="${esc(a.id)}"> Retirer</label></div>`).join('')}</div>`:''}</div>`}
 async function processAttachments(form,record,module){record.attachments=record.attachments||[];const removeIds=[...form.querySelectorAll('[name="removeAttachment"]:checked')].map(x=>x.value);for(const id of removeIds){await removeFileBlob(id);record.attachments=record.attachments.filter(a=>a.id!==id);db.attachments=db.attachments.filter(a=>a.id!==id)}const files=[...(form.elements.files?.files||[]),...(form.elements.cameraPhotos?.files||[])];for(const file of files){try{const meta=await putFile(file,{module,recordId:record.id});record.attachments.push(meta);db.attachments.push(meta)}catch(e){console.error(e);toast(`Impossible d’enregistrer ${file.name}`)}}}
@@ -988,20 +1045,36 @@ function importedArchiveRows(){
  }
  return explicit.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
 }
+function archiveAttachmentMeta(attachmentId){return (db.attachments||[]).find(a=>String(a.id)===String(attachmentId))||null}
+function cloudStatusHtml(rec){
+ if(!rec)return '<span class="cloud-status missing">⚪ Original absent</span>';
+ if(rec.cloudVerified===true)return `<span class="cloud-status synced" title="Vérifié ${esc(rec.cloudVerifiedAt?new Date(rec.cloudVerifiedAt).toLocaleString('fr-FR'):'')}">☁️ Cloud — Synchronisé</span>`;
+ if(rec.storagePath){
+  const err=rec.cloudError?` title="${esc(rec.cloudError)}"`:'';
+  return `<span class="cloud-status checking"${err}>☁️ Cloud — À vérifier</span>`;
+ }
+ if(rec.localBlobKey||rec.data)return '<span class="cloud-status local">📱 Local uniquement</span>';
+ return '<span class="cloud-status error">⚠️ Original indisponible</span>';
+}
+function cloudActionHtml(rec){
+ if(!rec)return '';
+ if(rec.cloudVerified===true)return '';
+ if(rec.storagePath)return `<button class="ghost small" data-verify-import-cloud="${esc(rec.id)}">🔎 Vérifier le cloud</button>${rec.localBlobKey||rec.data?`<button class="ghost small" data-sync-import-cloud="${esc(rec.id)}">☁️ Réenvoyer sur le cloud</button>`:''}`;
+ if(rec.localBlobKey||rec.data)return `<button class="ghost small" data-sync-import-cloud="${esc(rec.id)}">☁️ Envoyer sur le cloud</button>`;
+ return '';
+}
 function renderImportArchives(){
  const box=$('#importArchiveCards'),sum=$('#importArchiveSummary');if(!box||!sum)return;
  const type=$('#importArchiveType')?.value||'',q=normalizeText($('#importArchiveSearch')?.value||'');let rows=importedArchiveRows();
  if(type)rows=rows.filter(x=>x.type===type);if(q)rows=rows.filter(x=>normalizeText(`${x.fileName} ${x.subject} ${x.summary} ${x.academicYear} ${x.type}`).includes(q));
- const all=importedArchiveRows(),withOriginal=all.filter(x=>x.attachmentId).length;
- sum.innerHTML=`<article><span>Imports conservés</span><strong>${all.length}</strong></article><article><span>PDF / scans originaux</span><strong>${withOriginal}</strong></article><article><span>Chronotime</span><strong>${all.filter(x=>x.type==='Chronotime').length}</strong></article><article><span>Notes scannées</span><strong>${all.filter(x=>x.type==='Note scannée').length}</strong></article>`;
- box.innerHTML=rows.length?rows.map(x=>`<article class="import-archive-card"><div class="import-archive-icon">${x.type==='Chronotime'?'⏱':x.type==='Note scannée'?'📝':x.type.includes('Contrôle')||x.type.includes('Rapport')?'🛡':'📄'}</div><div class="import-archive-main"><div class="panel-head"><div><strong>${esc(x.fileName||x.subject||'Document importé')}</strong><small>${esc(x.type||'Document')} · ${x.createdAt?new Date(x.createdAt).toLocaleString('fr-FR'):'—'}</small></div>${x.academicYear?badge(x.academicYear):''}</div><p>${esc(x.subject||'')}</p><small>${esc(x.summary||'')}</small><div class="import-archive-actions">${x.attachmentId?`<button class="primary small" data-download="${esc(x.attachmentId)}">📄 Relire l’original</button>`:`<label class="ghost small button-link">📎 Rattacher l’original<input type="file" accept="application/pdf,image/*,.pdf" data-reattach-import="${esc(x.id)}" hidden></label>`}<button class="ghost small" data-open-import-analysis="${esc(x.id)}">📊 Relire l’analyse</button>${x.recordId?`<button class="ghost small" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Relire la fiche</button>`:''}${x.module?`<button class="ghost small" data-go="${esc(x.module)}">Ouvrir le module</button>`:''}</div></div></article>`).join(''):'<div class="empty-state">Aucun import ne correspond à ces filtres.</div>';
+ const all=importedArchiveRows(),withOriginal=all.filter(x=>x.attachmentId).length,cloudSynced=all.filter(x=>archiveAttachmentMeta(x.attachmentId)?.cloudVerified===true).length,localOnly=all.filter(x=>{const a=archiveAttachmentMeta(x.attachmentId);return a&&(a.localBlobKey||a.data)&&a.cloudVerified!==true}).length;
+ sum.innerHTML=`<article><span>Imports conservés</span><strong>${all.length}</strong></article><article><span>Originaux disponibles</span><strong>${withOriginal}</strong></article><article><span>☁️ Cloud vérifié</span><strong>${cloudSynced}</strong></article><article><span>📱 À synchroniser</span><strong>${localOnly}</strong></article>`;
+ box.innerHTML=rows.length?rows.map(x=>{const att=archiveAttachmentMeta(x.attachmentId);return `<article class="import-archive-card"><div class="import-archive-icon">${x.type==='Chronotime'?'⏱':x.type==='Note scannée'?'📝':x.type.includes('Contrôle')||x.type.includes('Rapport')?'🛡':'📄'}</div><div class="import-archive-main"><div class="panel-head"><div><strong>${esc(x.fileName||x.subject||'Document importé')}</strong><small>${esc(x.type||'Document')} · ${x.createdAt?new Date(x.createdAt).toLocaleString('fr-FR'):'—'}</small></div>${x.academicYear?badge(x.academicYear):''}</div><p>${esc(x.subject||'')}</p><small>${esc(x.summary||'')}</small><div class="import-cloud-line">${cloudStatusHtml(att)}</div><div class="import-archive-actions">${x.attachmentId?`<button class="primary small" data-download="${esc(x.attachmentId)}">📄 Relire le PDF</button>`:`<label class="ghost small button-link">📎 Rattacher le PDF<input type="file" accept="application/pdf,image/*,.pdf" data-reattach-import="${esc(x.id)}" hidden></label>`}${cloudActionHtml(att)}<button class="ghost small" data-open-import-analysis="${esc(x.id)}">📊 Relire l’analyse</button>${x.recordId?`<button class="ghost small" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Relire la fiche</button>`:''}${x.module?`<button class="ghost small" data-go="${esc(x.module)}">Ouvrir le module</button>`:''}</div></div></article>`}).join(''):'<div class="empty-state">Aucun import ne correspond à ces filtres.</div>';
 }
 
 async function reattachImportOriginal(archiveId,file){
  if(!file)return;
  let x=(db.importArchives||[]).find(a=>String(a.id)===String(archiveId));
- // Les archives anciennes peuvent être affichées à partir de pdfImports sans avoir encore
- // de ligne explicite dans importArchives : on la crée au premier rattachement.
  if(!x){
   const row=importedArchiveRows().find(a=>String(a.id)===String(archiveId));
   if(row){x={...row,id:uid(),analysisSnapshot:row.analysisSnapshot||row.analysis||null};db.importArchives=db.importArchives||[];db.importArchives.push(x)}
@@ -1009,18 +1082,33 @@ async function reattachImportOriginal(archiveId,file){
  if(!x){toast('Archive introuvable');return}
  try{
   const meta=await putFile(file,{module:'imports',recordId:x.sourceId||x.id});
-  db.attachments=db.attachments||[];if(!db.attachments.some(a=>String(a.id)===String(meta.id)))db.attachments.push(meta);
-  x.attachmentId=meta.id;x.fileName=file.name||x.fileName;
-  const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));if(src){src.attachmentId=meta.id;src.fileName=file.name||src.fileName}
-  const annual=(db.chronotimeAnnual||[]).find(r=>String(r.fileName)===String(x.fileName)&&String(r.academicYear||'')===String(x.academicYear||''));if(annual)annual.attachmentId=meta.id;
+  // Vérification immédiate du secours local avant d’annoncer que le rattachement a réussi.
+  if(meta.localBlobKey){
+   const check=await getLocalFileBlob(meta.localBlobKey);
+   if(!check)throw new Error('Le PDF n’a pas pu être conservé dans le stockage local');
+  }
+  db.attachments=db.attachments||[];
+  const oldIndex=db.attachments.findIndex(a=>String(a.id)===String(meta.id));
+  if(oldIndex>=0)db.attachments[oldIndex]=meta;else db.attachments.push(meta);
+  x.attachmentId=meta.id;x.fileName=file.name||x.fileName;x.originalStoredAt=new Date().toISOString();x.originalStorageMode=meta.storageMode||'';x.cloudVerified=meta.cloudVerified===true;x.cloudVerifiedAt=meta.cloudVerifiedAt||'';
+  const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));
+  if(src){src.attachmentId=meta.id;src.fileName=file.name||src.fileName}
+  const annual=(db.chronotimeAnnual||[]).find(r=>String(r.sourceId||'')===String(x.sourceId)||String(r.fileName||'')===String(x.fileName));
+  if(annual)annual.attachmentId=meta.id;
+
+  // Sauvegarder + rafraîchir D’ABORD. Une panne cloud ne doit jamais annuler
+  // un rattachement local déjà réussi.
   save(false);
-  // Forcer immédiatement la sauvegarde cloud du lien de rattachement au lieu d'attendre
-  // le délai normal : évite qu'un rechargement du téléphone perde l'association.
-  if(currentUser&&navigator.onLine)await cloudSaveNow({silent:true});
   renderImportArchives();
-  toast(meta.storageMode==='local'?'Original rattaché — bouton « Relire le PDF » disponible sur cet appareil':'Original rattaché et synchronisé — vous pouvez le relire');
- }catch(e){console.error(e);toast('Impossible de rattacher ce document')}
+  toast('PDF rattaché — utilisez maintenant « Relire le PDF »');
+
+  // Synchronisation secondaire, non bloquante.
+  if(currentUser&&navigator.onLine){
+   try{await cloudSaveNow({silent:true})}catch(e){console.warn('Synchronisation du rattachement différée',e)}
+  }
+ }catch(e){console.error(e);toast(`Impossible de rattacher ce document${e?.message?` : ${e.message}`:''}`)}
 }
+
 function openImportAnalysis(id){
  const x=importedArchiveRows().find(r=>String(r.id)===String(id));if(!x)return;
  let a=x.analysisSnapshot||x.analysis||null;
@@ -1037,7 +1125,7 @@ function openImportAnalysis(id){
  $('#detailTitle').textContent=`Analyse import — ${x.fileName||x.subject||'Document'}`;
  const cards=rows.length?`<div class="summary-grid">${rows.map(([k,v])=>`<article><span>${esc(k)}</span><strong>${esc(String(v))}</strong></article>`).join('')}</div>`:'<div class="empty-state">Cet ancien import ne possède pas encore d’analyse détaillée enregistrée.</div>';
  const tech=a&&!a.legacy?`<details class="archive-tech-details"><summary>Détail technique de l’analyse</summary><pre class="archive-json">${esc(JSON.stringify(a,null,2))}</pre></details>`:'';
- $('#detailBody').innerHTML=`${cards}<div class="archive-detail-actions">${x.attachmentId?`<button class="primary" data-download="${esc(x.attachmentId)}">📄 Relire l’original</button>`:''}${x.recordId?`<button class="ghost" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Ouvrir la fiche</button>`:''}</div>${tech}`;
+ $('#detailBody').innerHTML=`${cards}<div class="archive-detail-actions">${x.attachmentId?`<button class="primary" data-download="${esc(x.attachmentId)}">📄 Relire le PDF</button>`:''}${x.recordId?`<button class="ghost" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Ouvrir la fiche</button>`:''}</div>${tech}`;
  $('#detailModal').showModal();
 }
 function renderArchives(){renderImportArchives();const year=$('#archiveYear')?.value||'',q=($('#archiveSearch')?.value||'').toLowerCase().trim();const years=[...new Set(db.archives.map(a=>a.year).filter(Boolean))].sort().reverse();if($('#archiveYear')){$('#archiveYear').innerHTML='<option value="">Toutes les années</option>'+years.map(y=>`<option ${y===year?'selected':''}>${y}</option>`).join('')}let arr=db.archives.filter(a=>(!year||a.year===year));if(q)arr=arr.filter(a=>JSON.stringify(a).toLowerCase().includes(q));arr.sort((a,b)=>b.start.localeCompare(a.start));$('#archiveSummary').innerHTML=`<article><span>Archives de pilotage</span><strong>${db.archives.length}</strong></article><article><span>Semaines</span><strong>${db.archives.filter(a=>a.kind==='weekly').length}</strong></article><article><span>Années clôturées</span><strong>${db.archives.filter(a=>a.kind==='annual').length}</strong></article><article><span>Dernière archive</span><strong>${db.archives.length?fmtDate([...db.archives].sort((a,b)=>b.createdAt.localeCompare(a.createdAt))[0].createdAt.slice(0,10)):'—'}</strong></article>`;$('#archiveCards').innerHTML=arr.length?arr.map(a=>`<article class="archive-card"><div class="panel-head"><span>${a.kind==='weekly'?'Semaine':'Année scolaire'}</span>${badge(a.academicYear||a.year)}</div><h3>${esc(a.kind==='weekly'?a.key:a.academicYear)}</h3><p>${fmtDate(a.start)} → ${fmtDate(a.end)}</p><div class="archive-metrics">${Object.entries(a.summary||{}).map(([k,v])=>`<span><strong>${esc(v)}</strong><small>${esc(k)}</small></span>`).join('')}</div><button class="ghost" data-archive-detail="${a.id}">Consulter</button></article>`).join(''):'<div class="empty-state">Aucune archive trouvée.</div>'}
@@ -1408,7 +1496,7 @@ $('#archiveNow').onclick=()=>{const made=createWeeklyArchive(false);save();toast
  document.addEventListener('click',e=>{const b=e.target.closest('[data-edit-weekly-plan]');if(b)openWeeklyPlan(Number(b.dataset.editWeeklyPlan))});
  document.addEventListener('click',e=>{const b=e.target.closest('[data-new-weekly-agent]');if(b)openWeeklyPlan(null,b.dataset.newWeeklyAgent)});
  const filterIds=['personalMonth','personalType','personalStatus','agentSearch','agentStatus','rotationAgent','rotationYear','rotationMonth','planningMonth','planningAgent','planningSignal','absenceMonth','absenceAgent','absenceType','absenceStatus','vacationZone','vacationStatus','issueMonth','issueAgent','issueCategory','issueStatus','periodicFamily','periodicStatus','periodicBuilding','cleanMonth','cleanBuilding','cleanRoomType','cleanStatus','cleaningGuideType','maintenanceStatus','maintenancePriority','maintenanceFamily','requestStatus','requestType','workStatus','workType','meetingMonth','meetingType','noteCategory','notePriority','noteStatus','noteSearch','documentCategory','documentSearch','archiveYear','archiveSearch','importArchiveType','importArchiveSearch'];for(const id of filterIds){const e=document.getElementById(id);if(e)e.addEventListener(e.tagName==='INPUT'&&e.type==='text'?'input':'change',()=>{if(id==='cleaningGuideType')renderCleaningGuide();else if(id.startsWith('personal'))renderPersonal();else if(id.startsWith('agent'))renderAgents();else if(id.startsWith('rotation'))renderRotations();else if(id.startsWith('planning'))renderPlanning();else if(id.startsWith('absence'))renderAbsences();else if(id.startsWith('vacation'))renderVacations();else if(id.startsWith('issue'))renderIssues();else if(id.startsWith('periodic'))renderPeriodic();else if(id.startsWith('clean'))renderCleaning();else if(id.startsWith('maintenance'))renderMaintenance();else if(id.startsWith('request'))renderRequests();else if(id.startsWith('work'))renderWorks();else if(id.startsWith('meeting'))renderMeetings();else if(id.startsWith('note'))renderNotes();else if(id.startsWith('document'))renderDocuments();else if(id.startsWith('archive')||id.startsWith('importArchive'))renderArchives()})}
- document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date);return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
+ document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date);return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
 }
 
 
