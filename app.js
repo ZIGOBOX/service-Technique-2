@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='93.0';
-const APP_BUILD='09/08/2026 15:05';
+const APP_VERSION='95.0';
+const APP_BUILD='09/08/2026 19:15';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -901,19 +901,23 @@ function renderTeamCalendar(){
 function eventsForDate(d){return [...db.personalEvents.filter(x=>x.date===d).map(x=>({...x,source:'personal'})),...db.meetings.filter(x=>x.date===d).map(x=>({...x,title:x.title,source:'meeting'})),...db.notes.filter(x=>x.dueDate===d&&!['Terminé','Clôturé'].includes(x.status)).map(x=>({...x,date:d,start:'',source:'note'}))].sort((a,b)=>(a.start||'99:99').localeCompare(b.start||'99:99'))}
 function renderPersonalCalendar(){const days=Array.from({length:7},(_,i)=>addDays(personalWeek,i));$('#personalWeekLabel').textContent=`${fmtDate(days[0])} au ${fmtDate(days[6])}`;$('#personalWeekCalendar').innerHTML=days.map(d=>`<div class="personal-day ${d===todayISO()?'today':''}"><button class="personal-day-head" data-new-personal-date="${d}"><strong>${parseDate(d).toLocaleDateString('fr-FR',{weekday:'long'})}</strong><span>${parseDate(d).getDate()}</span></button><div>${cardList(eventsForDate(d).map(e=>`<button class="mini-event" data-edit-type="${e.source==='meeting'?'meeting':e.source==='note'?'note':'personal'}" data-edit-id="${e.id}"><b>${esc(e.start||'')}</b> ${esc(e.title)}</button>`),'Libre')}</div></div>`).join('')}
 function calendarDayVisual(info){
- const day=normalizeText(info.dayType||'Présence'),shift=normalizeText(info.shift||'Standard');
- if(/maladie/.test(day))return {cls:'sick',code:'MAL',label:'Maladie'};
- if(/rtt/.test(day))return {cls:'rtt',code:'RTT',label:'RTT'};
- if(/congé|conge/.test(day))return {cls:'leave',code:'C',label:'Congé'};
- if(/férié|ferie|rfe/.test(day))return {cls:'holiday',code:'JF',label:'Jour férié'};
- if(/repos/.test(day))return {cls:'off',code:'—',label:'Repos'};
- if(/absence temps partiel/.test(day))return {cls:'other',code:'RTP',label:'Absence temps partiel'};
- if(day!=='presence')return {cls:'other',code:day==='formation'?'F':'ABS',label:info.dayType||'Absence'};
- if(shift==='matin')return {cls:'morning',code:'M',label:'Matin'};
- if(shift==='soir')return {cls:'evening',code:'S',label:'Soir'};
- return {cls:'standard',code:'ST',label:'Standard'};
+ const raw=info.dayType||'Présence',day=normalizeText(raw),shift=normalizeText(info.shift||'Standard'),disp=db.settings?.chronoDayDisplay?.[raw]||{};
+ let v;
+ if(/maladie/.test(day))v={cls:'sick',code:'MAL',label:'Maladie'};
+ else if(/rtt/.test(day))v={cls:'rtt',code:'RTT',label:'RTT'};
+ else if(/congé|conge/.test(day))v={cls:'leave',code:'CA',label:'Congé annuel'};
+ else if(/férié|ferie|rfe/.test(day))v={cls:'holiday',code:'RFE',label:'Jour férié'};
+ else if(/repos/.test(day))v={cls:'off',code:'RH',label:'Repos'};
+ else if(/absence temps partiel/.test(day))v={cls:'other',code:'RTP',label:'Absence temps partiel'};
+ else if(day!=='presence')v={cls:'other',code:day==='formation'?'F':'ABS',label:raw||'Absence'};
+ else if(shift==='matin')v={cls:'morning',code:'M',label:'Matin'};
+ else if(shift==='soir')v={cls:'evening',code:'S',label:'Soir'};
+ else v={cls:'standard',code:'ST',label:'Standard'};
+ if(day!=='presence'&&disp.abbr)v.code=(raw==='Absence temps partiel'&&disp.abbr==='ATP')?'RTP':disp.abbr;
+ if(day!=='presence'&&disp.color)v.color=disp.color;
+ return v;
 }
-function renderAbsenceBoard(){const month=$('#absenceMonth').value||monthISO(),[y,m]=month.split('-').map(Number),count=new Date(y,m,0).getDate(),agents=db.agents.filter(a=>a.status==='Actif'),gridWidth=150+(count*42);let html=`<div class="month-grid" style="grid-template-columns:150px repeat(${count},42px);min-width:${gridWidth}px"><div class="month-corner">Agent</div>`+Array.from({length:count},(_,i)=>{const d=`${month}-${pad(i+1)}`;return `<div class="month-day-head ${[0,6].includes(parseDate(d).getDay())?'weekend':''}">${i+1}</div>`}).join('');for(const a of agents){html+=`<div class="month-agent">${esc(agentName(a))}</div>`;for(let i=1;i<=count;i++){const d=`${month}-${pad(i)}`,info=dayInfo(a.id,d),v=calendarDayVisual(info),hours=info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:'';html+=`<button class="month-cell day-state ${v.cls}" data-agent-day="${a.id}" data-date="${d}" data-day-type="${esc(info.dayType||'Présence')}" title="${fmtDate(d)} — ${esc(v.label)}${esc(hours)}"><span>${v.code}</span></button>`}}html+='</div>';$('#absenceMonthBoard').innerHTML=html}
+function renderAbsenceBoard(){const month=$('#absenceMonth').value||monthISO(),[y,m]=month.split('-').map(Number),count=new Date(y,m,0).getDate(),agents=db.agents.filter(a=>a.status==='Actif'),gridWidth=150+(count*42);let html=`<div class="month-grid" style="grid-template-columns:150px repeat(${count},42px);min-width:${gridWidth}px"><div class="month-corner">Agent</div>`+Array.from({length:count},(_,i)=>{const d=`${month}-${pad(i+1)}`;return `<div class="month-day-head ${[0,6].includes(parseDate(d).getDay())?'weekend':''}">${i+1}</div>`}).join('');for(const a of agents){html+=`<div class="month-agent">${esc(agentName(a))}</div>`;for(let i=1;i<=count;i++){const d=`${month}-${pad(i)}`,info=dayInfo(a.id,d),v=calendarDayVisual(info),hours=info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:'';html+=`<button class="month-cell day-state ${v.cls}" ${v.color?`style="background:${esc(v.color)}!important"`:``} data-agent-day="${a.id}" data-date="${d}" data-day-type="${esc(info.dayType||'Présence')}" title="${fmtDate(d)} — ${esc(v.label)}${esc(hours)}"><span>${v.code}</span></button>`}}html+='</div>';$('#absenceMonthBoard').innerHTML=html}
 
 /* ---------- Rendu : modules ---------- */
 function renderAgents(){const q=($('#agentSearch').value||'').toLowerCase(),status=$('#agentStatus').value;const arr=db.agents.filter(a=>(!status||a.status===status)&&(!q||agentName(a).toLowerCase().includes(q)||String(a.assignment).toLowerCase().includes(q)));$('#agentCards').innerHTML=cardList(arr.map(a=>{const state=agentState(a),month=$('#planningMonth').value||monthISO(),rows=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)),absence=rows.filter(x=>isAbsenceType(x.dayType)).length,ot=rows.reduce((s,x)=>s+Number(x.overtime||0),0);return `<article class="agent-card"><div class="agent-avatar">${esc((a.firstName||'?')[0])}</div><div class="agent-main"><div class="panel-head"><h3>${esc(agentName(a))}</h3>${badge(a.status)}</div><p>${esc(a.role)} · ${esc(a.assignment||'Sans affectation')}</p><div class="agent-stats"><span>${badge(state.label)}</span><span>${esc(a.weeklyHours)} h/semaine</span><span>${absence} absence(s) ce mois</span><span>${ot>=0?'+':''}${ot} h supp.</span></div><div class="card-actions"><button data-edit-type="agent" data-edit-id="${a.id}">Modifier</button><button data-new-weekly-agent="${a.id}">Horaires annuels</button><button data-new-rotation-agent="${a.id}">Roulement</button><button data-agent-day="${a.id}" data-date="${todayISO()}">Signaler un écart</button></div></div></article>`}),'Aucun agent trouvé.')}
