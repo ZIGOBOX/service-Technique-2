@@ -457,5 +457,5 @@ body.notifications-open{overflow:hidden}
  .chrono-change-table{overflow-x:auto;-webkit-overflow-scrolling:touch}
 }
 
-/* V94 — réglages Chronotime regroupés */
-.chrono-rule-row-v94{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(105px,.7fr) minmax(90px,.5fr) minmax(180px,1fr);gap:10px;align-items:end}.chrono-rule-row-v94>strong{align-self:center}.chrono-rule-row-v94 label{display:grid;gap:5px;font-size:.82rem;font-weight:700}.chrono-rule-row-v94 input[type=color]{width:100%;height:44px;padding:3px;border:1px solid #d5e0e9;border-radius:10px;background:#fff}.chrono-rule-row-v94 small{grid-column:1/-1}@media(max-width:720px){.chrono-rule-row-v94{grid-template-columns:1fr 1fr}.chrono-rule-row-v94>strong,.chrono-rule-row-v94 small{grid-column:1/-1}}
+/* V94 */
+.chrono-rule-row label{display:grid;gap:4px;font-size:.82rem}.chrono-rule-row input[type=color]{height:42px;padding:3px;border:1px solid #d5e0e9;border-radius:10px;background:#fff}@media(max-width:720px){.chrono-rule-row{grid-template-columns:1fr 1fr}.chrono-rule-row strong,.chrono-rule-row small{grid-column:1/-1}}
