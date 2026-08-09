@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='92.0';
-const APP_BUILD='09/08/2026 13:20';
+const APP_VERSION='93.0';
+const APP_BUILD='09/08/2026 15:05';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -680,6 +680,17 @@ function dayTypeOptions(current=''){
 }
 function dayInfo(agentId,date){const sched=scheduledFor(agentId,date),rec=dayRecord(agentId,date);if(!rec)return {...sched,dayType:sched.shift==='Repos'?'Repos':'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',overtime:0,note:'',status:'Prévu'};return {...sched,...rec,plannedStart:rec.plannedStart??sched.start,plannedEnd:rec.plannedEnd??sched.end}}
 function isAbsenceType(t){return t&&t!=='Présence'&&t!=='Formation'}
+function dayCountingRule(dayType){
+ const rules=db.settings?.chronoDayRules||{};
+ if(dayType==='Maladie')return {mode:'fixed',hours:7};
+ return rules[dayType]||{mode:'planned',hours:null};
+}
+function dayCountingLabel(dayType){
+ const r=dayCountingRule(dayType);
+ if(r.mode==='fixed')return `${Number(r.hours||0).toLocaleString('fr-FR')} h fixes`;
+ if(r.mode==='zero')return '0 h';
+ return 'Horaires prévus';
+}
 function easterSundayISO(year){
  const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),month=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;
  return `${year}-${pad(month)}-${pad(day)}`;
@@ -703,8 +714,7 @@ function replacementNotificationAllowed(rec,date){
 }
 function dayHours(info){
  const planned=hoursBetween(info.plannedStart,info.plannedEnd,info.pause);
- const rules=db.settings?.chronoDayRules||{};
- const rule=rules[info.dayType]||null;
+ const rule=dayCountingRule(info.dayType);
  let actual;
  if(rule?.mode==='fixed')actual=Math.max(0,Number(rule.hours||0));
  else if(rule?.mode==='zero')actual=0;
@@ -743,15 +753,24 @@ function openRotationException(id){const old=id?byId('rotationExceptions',id):nu
 function updateDayCalc(){
  const f=$('#modalForm'), box=$('#dayCalc'); if(!f||!box||!f.elements.plannedStart)return;
  const dayType=f.elements.dayType?.value||'Présence';
- if(dayType!=='Présence'){box.innerHTML='<strong>Journée non travaillée</strong><span>Aucun horaire réel nécessaire.</span>';return}
+ const rule=dayCountingRule(dayType);
  const plannedStart=f.elements.plannedStart.value, plannedEnd=f.elements.plannedEnd.value;
  const actualStart=f.elements.actualStart.value, actualEnd=f.elements.actualEnd.value;
  const pause=Number(f.elements.pause.value||0), overtime=Number(f.elements.overtime.value||0);
- if(!plannedStart||!plannedEnd){box.innerHTML='<strong>Horaire théorique incomplet</strong><span>Choisissez un horaire de référence ou renseignez arrivée et départ.</span>';return}
- const planned=hoursBetween(plannedStart,plannedEnd,pause);
- const actual=(actualStart&&actualEnd)?hoursBetween(actualStart,actualEnd,pause):planned;
+ const planned=(plannedStart&&plannedEnd)?hoursBetween(plannedStart,plannedEnd,pause):0;
+ let actual=planned;
+ if(rule.mode==='fixed')actual=Math.max(0,Number(rule.hours||0));
+ else if(rule.mode==='zero')actual=0;
+ else if(actualStart&&actualEnd)actual=hoursBetween(actualStart,actualEnd,pause);
  const total=actual+overtime, delta=total-planned;
- box.innerHTML=`<strong>Calcul de la journée</strong><span>Prévu : ${fmtHours(planned)}</span><span>Réalisé : ${fmtHours(total)}</span><b>Écart : ${delta>=0?'+':''}${fmtHours(delta)}</b>`;
+ if(rule.mode==='fixed'){
+   box.innerHTML=`<strong>Comptabilisation — ${esc(dayType)}</strong><span>Règle : ${esc(dayCountingLabel(dayType))}</span>${plannedStart&&plannedEnd?`<span>Horaire prévu conservé : ${esc(plannedStart)}–${esc(plannedEnd)}</span>`:''}<b>Comptabilisé : ${fmtHours(total)}</b>`;return;
+ }
+ if(rule.mode==='zero'){
+   box.innerHTML=`<strong>Comptabilisation — ${esc(dayType)}</strong><span>Règle : 0 h</span><b>Comptabilisé : ${fmtHours(total)}</b>`;return;
+ }
+ if(!plannedStart||!plannedEnd){box.innerHTML=`<strong>Horaires prévus à définir</strong><span>La règle « ${esc(dayType)} » conserve les horaires prévus. Définissez-les dans Pilotage des horaires ou renseignez-les ici.</span>`;return}
+ box.innerHTML=`<strong>Comptabilisation — ${esc(dayType)}</strong><span>Règle : Horaires prévus</span><span>Prévu : ${fmtHours(planned)}</span><span>Comptabilisé : ${fmtHours(total)}</span><b>Écart : ${delta>=0?'+':''}${fmtHours(delta)}</b>`;
 }
 
 function openAgentDay(agentId,date,id,preferredDayType=''){
@@ -772,11 +791,14 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  if(to<from){toast('La date de fin doit être après la date de début');return}
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
  if(!Array.isArray(db.agentDays))db.agentDays=[];
- if(o.dayType==='Présence'){
+ const countingRule=dayCountingRule(o.dayType);
+ // Congé, RTT, formation et autres types doivent toujours pouvoir être enregistrés.
+ // Quand la règle vaut « Horaires prévus », on conserve/reprend le Pilotage des horaires.
+ if(countingRule.mode==='planned'){
    const firstSchedule=scheduledFor(o.agentId,from);
    o.plannedStart=o.plannedStart||firstSchedule.start||'';
    o.plannedEnd=o.plannedEnd||firstSchedule.end||'';
-   if(!o.plannedStart||!o.plannedEnd){toast('Aucun horaire théorique trouvé : renseignez arrivée et départ, ou créez les horaires de référence');return}
+   if(o.dayType==='Présence'&&(!o.plannedStart||!o.plannedEnd)){toast('Aucun horaire théorique trouvé : renseignez arrivée et départ, ou créez les horaires de référence');return}
    if((o.actualStart&&!o.actualEnd)||(!o.actualStart&&o.actualEnd)){toast('Pour un horaire réel, renseignez à la fois l’arrivée et le départ');return}
  }
  if(periodId)db.agentDays=db.agentDays.filter(r=>r.periodId!==periodId);
@@ -788,8 +810,9 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    if(!isPeriod||weekday){
      db.agentDays=db.agentDays.filter(r=>!(String(r.agentId)===String(o.agentId)&&r.date===d));
      const sc=scheduledFor(o.agentId,d), sameStart=d===from;
-     const pStart=o.dayType==='Présence'?((from===to?o.plannedStart:'')||sc.start||o.plannedStart||''):'';
-     const pEnd=o.dayType==='Présence'?((from===to?o.plannedEnd:'')||sc.end||o.plannedEnd||''):'';
+     const rule=dayCountingRule(o.dayType);
+     const pStart=rule.mode==='planned'?((from===to?o.plannedStart:'')||sc.start||o.plannedStart||''):(from===to?(o.plannedStart||''):'');
+     const pEnd=rule.mode==='planned'?((from===to?o.plannedEnd:'')||sc.end||o.plannedEnd||''):(from===to?(o.plannedEnd||''):'');
      db.agentDays.push({id:uid(),periodId:newPeriodId,agentId:o.agentId,date:d,dayType:o.dayType,plannedStart:pStart,plannedEnd:pEnd,actualStart:sameStart?(o.actualStart||''):'',actualEnd:sameStart?(o.actualEnd||''):'',pause:Number((from===to&&o.pause!==''?o.pause:sc.pause??o.pause)||0),overtime:Number(sameStart?o.overtime||0:0),status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||''});
      added++;
    }
@@ -800,11 +823,12 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    const f=$('#modalForm');if(!f)return;
    const aid=f.elements.agentId.value, d=f.elements.dateFrom.value||todayISO(), sc=scheduledFor(aid,d);
    const box=$('#theoreticalSchedule'),currentType=f.elements.dayType.value||'Présence';
+   const rule=dayCountingRule(currentType);
    if(box){
-     if(currentType!=='Présence')box.innerHTML=`<strong>Pastille du calendrier — ${fmtDate(d)}</strong><b>${esc(currentType)}</b><small>Cette journée reprend exactement le motif enregistré dans le calendrier.</small>`;
+     if(currentType!=='Présence')box.innerHTML=`<strong>Pastille du calendrier — ${fmtDate(d)}</strong><b>${esc(currentType)}</b><small>Comptabilisation : ${esc(dayCountingLabel(currentType))}</small>${rule.mode==='planned'&&sc.start&&sc.end?`<small>Horaire prévu : ${esc(sc.start)} – ${esc(sc.end)}</small>`:''}`;
      else box.innerHTML=`<strong>Horaire théorique du ${fmtDate(d)}</strong><b>${sc.start&&sc.end?`${esc(sc.start)} – ${esc(sc.end)}`:'Aucun horaire défini'}</b>${sc.pause?`<small>Pause : ${sc.pause} min</small>`:''}${sc.missions?`<small>${esc(sc.missions)}</small>`:''}`;
    }
-   if(currentType==='Présence'&&(force||(!f.elements.plannedStart.value&&!f.elements.plannedEnd.value))){
+   if(rule.mode==='planned'&&(force||(!f.elements.plannedStart.value&&!f.elements.plannedEnd.value))){
      f.elements.plannedStart.value=sc.start||'';f.elements.plannedEnd.value=sc.end||'';f.elements.pause.value=Number(sc.pause||0);
    }
    updateDayCalc();
@@ -883,7 +907,8 @@ function calendarDayVisual(info){
  if(/congé|conge/.test(day))return {cls:'leave',code:'C',label:'Congé'};
  if(/férié|ferie|rfe/.test(day))return {cls:'holiday',code:'JF',label:'Jour férié'};
  if(/repos/.test(day))return {cls:'off',code:'—',label:'Repos'};
- if(day!=='presence')return {cls:'other',code:day==='formation'?'F':'A',label:info.dayType||'Absence'};
+ if(/absence temps partiel/.test(day))return {cls:'other',code:'ATP',label:'Absence temps partiel'};
+ if(day!=='presence')return {cls:'other',code:day==='formation'?'F':'ABS',label:info.dayType||'Absence'};
  if(shift==='matin')return {cls:'morning',code:'M',label:'Matin'};
  if(shift==='soir')return {cls:'evening',code:'S',label:'Soir'};
  return {cls:'standard',code:'ST',label:'Standard'};
