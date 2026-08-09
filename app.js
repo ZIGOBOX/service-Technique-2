@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='106.0';
-const APP_BUILD='10/08/2026 01:15';
+const APP_VERSION='108.0';
+const APP_BUILD='10/08/2026 11:30';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{

@@ -13,7 +13,11 @@ const DEF=[
   {name:'Internat — moitié étage',rooms:[room('','Internat 2e — local 1','Internat'),room('','Internat 2e — local 2','Internat'),room('','Foyer internat 2e','Foyer'),...common('internat 2e',['A1','A2','A3'])]},
   {name:'Salles de classe — moitié étage',rooms:[...Array.from({length:5},(_,i)=>room(String(121+i),'','Salle')),...common('classes 2e',['A1','A2','A3'])]}
  ]},
- {name:'3e étage — Internat',sectors:[{name:'Internat',rooms:[room('','Internat 3e — local 1','Internat'),room('','Internat 3e — local 2','Internat'),room('','Foyer internat 3e','Foyer'),...common('internat 3e',['A1','A2','A3'])]}]}
+ {name:'3e étage — Internat',sectors:[{name:'Internat',rooms:[
+ room('131','Chambre 131','Chambre'),room('132','Chambre 132','Chambre'),room('133','Chambre 133','Chambre'),room('134','Chambre 134','Chambre'),
+ room('135','Chambre 135','Chambre'),room('136','Chambre 136','Chambre'),room('137','Chambre 137','Chambre'),room('138','Chambre 138','Chambre'),
+ room('','Salle zen','Salle'),room('','Circulation 3e étage','Circulation'),room('','Foyer internat 3e','Foyer')
+ ]}]}
 ]},
 {id:'B',name:'Bâtiment B',floors:[
  {name:'RDC',sectors:[{name:'Vie scolaire / espaces communs',rooms:[

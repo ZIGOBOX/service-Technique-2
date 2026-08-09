@@ -2,7 +2,7 @@
 (()=>{'use strict';
 const KEY='pst_room_preps_v106', PRONOTE_KEY='pst_pronote_url_v106';
 const $=id=>document.getElementById(id), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-let editingId='';
+let editingId='';window.__rpImportedFile=null;
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{return[]}}
 function saveList(v){localStorage.setItem(KEY,JSON.stringify(v));render()}
@@ -19,7 +19,7 @@ function formData(){
   layout:$('rpLayout').value,tables:Number($('rpTables').value||0),chairs:Number($('rpChairs').value||0),
   roomSetup:{projector:checked('rpProjector'),screen:checked('rpScreen'),mic:checked('rpMic'),extension:checked('rpExtension'),tablecloth:checked('rpTablecloth'),bins:checked('rpBins'),signage:checked('rpSignage'),pmr:checked('rpPMR')},
   coffee:{coffee:checked('rpCoffee'),decaf:checked('rpDecaf'),tea:checked('rpTea'),water:checked('rpWater'),sugar:checked('rpSugar'),milk:checked('rpMilk'),cups:checked('rpCups'),spoons:checked('rpSpoons'),napkins:checked('rpNapkins'),biscuits:checked('rpBiscuits'),time:$('rpCoffeeTime').value},
-  notes:$('rpNotes').value.trim(),updatedAt:new Date().toISOString()
+  notes:$('rpNotes').value.trim(),sourceDocument:window.__rpImportedFile||null,updatedAt:new Date().toISOString()
  }
 }
 function reset(){
@@ -91,11 +91,41 @@ function pronote(){
  const u=(localStorage.getItem(PRONOTE_KEY)||'').trim()||'https://www.index-education.com/fr/';
  window.open(u,'_blank','noopener')
 }
+
+function openRoomPrep(){
+ const btn=document.querySelector('.nav-btn[data-view="room-prep"]');
+ if(btn){btn.click();setTimeout(()=>{$('roomPrepEditorPanel')?.scrollIntoView({behavior:'smooth'})},80)}
+}
+async function importRequestFile(file){
+ const st=$('rpImportStatus'); if(!file)return;
+ if(st)st.textContent=`Document chargé : ${file.name}. Analyse en cours…`;
+ // Keep document reference metadata with the draft; browsers cannot persist the file itself safely in localStorage.
+ window.__rpImportedFile={name:file.name,type:file.type,size:file.size,lastModified:file.lastModified};
+ let text='';
+ try{
+   if(file.type.startsWith('text/')) text=await file.text();
+ }catch(e){}
+ // Conservative extraction: only populate obvious date/time/person count patterns from accessible text.
+ if(text){
+   const dm=text.match(/\b(\d{1,2})[\/.-](\d{1,2})[\/.-](20\d{2})\b/);
+   if(dm){$('rpDate').value=`${dm[3]}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`}
+   const tm=text.match(/\b([01]?\d|2[0-3])[:h]([0-5]\d)\b/i);
+   if(tm)$('rpTime').value=`${tm[1].padStart(2,'0')}:${tm[2]}`;
+   const pm=text.match(/\b(\d{1,3})\s*(?:personnes?|pers\.?)\b/i);
+   if(pm)$('rpPeople').value=pm[1];
+ }
+ if(st)st.textContent=`${file.name} chargé. Vérifiez et complétez la fiche avant d’enregistrer. Les informations non détectées ne sont pas inventées.`;
+}
+
 function init(){
  reset();render();
  const saved=localStorage.getItem(PRONOTE_KEY)||'';
  if($('pronoteUrl'))$('pronoteUrl').value=saved;
  $('pronoteUrl')?.addEventListener('change',e=>localStorage.setItem(PRONOTE_KEY,e.target.value.trim()));
+
+ document.querySelectorAll('[data-quick-roomprep]').forEach(x=>x.addEventListener('click',openRoomPrep));
+ $('rpImportFile')?.addEventListener('change',e=>importRequestFile(e.target.files?.[0]));
+
  $('roomPrepPronote')?.addEventListener('click',pronote);
  $('roomPrepSave')?.addEventListener('click',save);
  $('roomPrepReset')?.addEventListener('click',reset);

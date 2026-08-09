@@ -555,3 +555,7 @@ body.notifications-open{overflow:hidden}
 .roomprep-agenda{display:grid;gap:7px}.roomprep-agenda-item{width:100%;text-align:left;border:1px solid #dfe8ee;border-radius:11px;background:#fff;padding:10px;display:grid;gap:3px}.roomprep-agenda-item span{font-size:.8rem;color:#587080}.roomprep-agenda-item small{color:#657a87}
 @media(max-width:900px){.roomprep-grid{grid-template-columns:1fr 1fr}.roomprep-columns{grid-template-columns:1fr}}
 @media(max-width:600px){.roomprep-grid,.roomprep-checks,.roomprep-small-grid{grid-template-columns:1fr}.roomprep-save-actions,.roomprep-top-actions{display:grid;grid-template-columns:1fr}.roomprep-card-head{flex-direction:column}}
+
+/* V108 import demandes salle/café */
+.roomprep-import-box{border:1px dashed #b8cbd6;border-radius:12px;padding:12px;margin-bottom:12px;background:#f8fbfd;display:grid;gap:7px}
+.roomprep-import-box p{margin:0}.roomprep-import-box input[type=file]{max-width:100%}
