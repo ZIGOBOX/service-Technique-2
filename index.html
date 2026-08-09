@@ -13,7 +13,7 @@
     <form class="auth-card" id="authForm" novalidate>
       <img src="./assets/logo-service-technique.png?v=86.0" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 98.0 — 09/08/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 102.0 — 09/08/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -47,10 +47,12 @@
       <button class="nav-btn" data-view="documents"><span>📚</span>Documentation</button>
       <button class="nav-btn" data-view="outlook"><span>✉</span>Outlook professionnel</button>
       <button class="nav-btn" data-view="archives"><span>🗃</span>Archivage</button>
+      <button class="nav-btn" data-view="weather"><span>☁️</span>Météo</button>
+      <button class="nav-btn" data-view="waste"><span>🗑️</span>Poubelles</button>
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 98.0 — 09/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 102.0 — 09/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -268,6 +270,65 @@
       <article class="panel"><div class="panel-head"><div><h3>🗃 Archives de pilotage</h3><p class="muted">Archives hebdomadaires et clôtures annuelles.</p></div></div><div class="filters"><select id="archiveYear"><option value="">Toutes les années</option></select><input id="archiveSearch" placeholder="Rechercher un agent, un local ou une intervention"><button class="ghost" data-print="archives">Imprimer</button></div><div id="archiveSummary" class="summary-grid"></div><div id="archiveCards" class="archive-grid"></div></article>
     </section>
 
+
+    <section class="view" id="weather">
+      <div class="section-actions">
+        <div>
+          <h3>Météo</h3>
+          <p>Météo actuelle et prévisions sur 15 jours à Roanne.</p>
+        </div>
+        <button class="ghost" type="button" id="weatherRefresh">Actualiser</button>
+      </div>
+
+      <article class="panel weather-now-card">
+        <div class="panel-head">
+          <div><span class="eyebrow">ROANNE</span><h3>Météo actuelle</h3></div>
+          <span id="weatherUpdated" class="muted"></span>
+        </div>
+        <div id="weatherNow" class="weather-now"><div class="empty">Chargement de la météo…</div></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div><h3>Prévisions météo sur 15 jours</h3><p class="muted">Températures, conditions et probabilité de pluie.</p></div>
+        </div>
+        <div id="weatherForecast" class="weather-forecast weather-forecast-15"></div>
+      </article>
+    </section>
+
+    <section class="view" id="waste">
+      <div class="section-actions">
+        <div>
+          <h3>Passage des poubelles</h3>
+          <p>Rue Noëlas et rue Jean Puy — collecte habituelle le vendredi.</p>
+        </div>
+        <button class="ghost" type="button" id="wasteRefresh">Actualiser</button>
+      </div>
+
+      <article class="panel waste-next-card">
+        <div class="panel-head">
+          <div><span class="eyebrow">ROANNAIS AGGLOMÉRATION</span><h3>Prochain passage</h3></div>
+        </div>
+        <div id="wasteNext" class="waste-next"></div>
+        <p class="hint">Penser à sortir le bac la veille au soir. En cas de jour férié ou de modification exceptionnelle, vérifier l'information de Roannais Agglomération.</p>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div><h3>Calendrier des collectes</h3><p class="muted">Rue Noëlas et rue Jean Puy — vendredi, alternance bac jaune / bac bordeaux.</p></div>
+        </div>
+        <div class="waste-addresses">
+          <span>📍 Rue Noëlas — Roanne</span>
+          <span>📍 Rue Jean Puy — Roanne</span>
+        </div>
+        <div id="wasteCalendar" class="waste-calendar"></div>
+        <div class="source-note">
+          <strong>Source collecte :</strong> Roannais Agglomération / portail Icitoyen.
+          <a href="https://demarches-aggloroanne.icitoyen.fr/environnement-proprete-dechets-menagers/je-souhaite-connaitre-mon-jour-de-collecte-des-dechets-menagers/" target="_blank" rel="noopener">Vérifier sur le portail officiel</a>
+        </div>
+      </article>
+    </section>
+
     <section class="view" id="reports">
       <div class="section-actions"><div><h3>Rapports & impressions</h3><p>Tous les rapports peuvent être imprimés ou enregistrés en PDF depuis le téléphone ou l’ordinateur.</p></div><button class="ghost" id="printFullRegister">Imprimer le registre complet</button></div>
       <div class="report-grid">
@@ -315,7 +376,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 98.0 — 09/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 102.0 — 09/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -380,12 +441,13 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js?v=95.0"></script>
-  <script src="./app.js?v=99.0"></script>
+  <script src="./app.js?v=102.0"></script>
   <script src="./notification-center.js?v=95.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./schedule-import.js?v=95.0"></script>
-  <script src="./report-import.js?v=99.0"></script>
+  <script src="./report-import.js?v=100.0"></script>
 
+  <script src="./weather-waste.js?v=102.0"></script>
 
 </body>
 </html>

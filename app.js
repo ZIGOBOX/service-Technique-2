@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='98.0';
-const APP_BUILD='09/08/2026 21:55';
+const APP_VERSION='102.0';
+const APP_BUILD='09/08/2026 23:50';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -602,7 +602,7 @@ function formDataObj(form){return Object.fromEntries(new FormData(form).entries(
 function deleteRecord(type,id,label='élément'){if(!confirm(`Supprimer cet ${label} ?`))return;db[type]=db[type].filter(x=>x.id!==id);closeModal();save();toast('Supprimé')}
 
 /* ---------- Navigation ---------- */
-const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',reports:'Rapports & impressions',settings:'Paramètres'};
+const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',settings:'Paramètres'};
 function setView(view){if(!document.getElementById(view))return;currentView=view;$$('.view').forEach(v=>v.classList.toggle('active',v.id===view));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if($('#pageTitle'))$('#pageTitle').textContent=VIEW_TITLES[view]||view;document.body.classList.remove('menu-open');window.PSTNavigation?.closeMenu?.();window.scrollTo({top:0,behavior:'auto'});renderAll()}
 function applyLayout(mode=db.settings.defaultLayout||'auto'){document.body.dataset.layout=mode;$('#layoutMode').value=mode;localStorage.setItem('pilotage-service-technique-layout',mode)}
 
@@ -1012,9 +1012,28 @@ function createWeeklyArchive(force=false){const end=addDays(startOfWeek(todayISO
 function runAnnualReset(){const t=parseDate(todayISO()),y=t.getFullYear(),isCloseDay=t.getMonth()===7&&t.getDate()===31,isAfterClose=t.getMonth()>=8;if(!isCloseDay&&!isAfterClose)return false;const closeYear=y;if(db.settings.lastAnnualResetYear>=closeYear)return false;const prevStart=closeYear-1,from=`${prevStart}-09-01`,to=`${closeYear}-08-31`,key=`${prevStart}-${closeYear}`;if(!db.archives.some(a=>a.kind==='annual'&&a.key===key)){db.archives.push({id:uid(),kind:'annual',key,year:String(closeYear),academicYear:key,start:from,end:to,createdAt:new Date().toISOString(),summary:{leaveDays:db.agentDays.filter(x=>x.date>=from&&x.date<=to&&isAbsenceType(x.dayType)).length,overtime:db.agentDays.filter(x=>x.date>=from&&x.date<=to).reduce((n,x)=>n+Number(x.overtime||0),0)},data:{agentDays:recordsInRange(db.agentDays,from,to),rotations:clone(db.rotations),weeklyPlans:clone(db.weeklyPlans)}})}db.settings.lastAnnualResetYear=closeYear;db.settings.leaveBalances={};db.settings.overtimeBalances={};return true}
 function runAutomaticHousekeeping(){let changed=false;try{changed=createWeeklyArchive(false)||changed;changed=runAnnualReset()||changed}catch(e){console.error('Archivage automatique',e)}if(changed){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}catch(e){console.error(e)}}}
 function notificationTarget(n){setView(n.view||'dashboard');if(n.type==='agentDay'&&n.id){const r=db.agentDays.find(x=>x.id===n.id);if(r)setTimeout(()=>openAgentDay(r.agentId,r.date),50);return}if(n.type&&n.id)setTimeout(()=>dispatchEdit(n.type,n.id),50)}
+function wasteCollectionShiftInfo(referenceDate=todayISO()){
+ const ref=normalizeDateValue(referenceDate)||todayISO(),d=parseDate(ref),day=d.getDay();
+ // Semaine lundi -> dimanche contenant la date de référence.
+ const monday=addDays(ref,-((day+6)%7)),friday=addDays(monday,4);
+ const holidays=[];
+ for(let x=monday;x<=friday;x=addDays(x,1)){
+  const name=frenchPublicHolidayName(x);if(name)holidays.push({date:x,name});
+ }
+ const shifted=holidays.length>0,actualDate=shifted?addDays(friday,1):friday;
+ return {monday,friday,actualDate,shifted,holidays};
+}
 function computeNotifications(){
  const out=[],today=todayISO(),replacementUntil=addMonths(today,1),active=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif'),days=[0,1,2,3,4,5,6].map(i=>addDays(today,i));
  const push=n=>{if(n&&n.title)out.push(n)};
+ // Poubelles : le jeudi, avertir si un jour férié de la semaine décale la collecte du vendredi au samedi.
+ try{
+  const shift=wasteCollectionShiftInfo(today),wd=parseDate(today).getDay();
+  if(wd===4&&shift.shifted){
+   const names=shift.holidays.map(h=>`${h.name} (${fmtDate(h.date)})`).join(', ');
+   push({level:'orange',icon:'🗑️',title:'Collecte des poubelles décalée d’un jour',text:`Jour férié cette semaine : ${names}. Passage samedi ${fmtDate(shift.actualDate)} au lieu du vendredi ${fmtDate(shift.friday)}.`,view:'waste',type:'waste-holiday-shift',id:shift.friday,date:today});
+  }
+ }catch(error){console.error('Notification collecte déchets',error)}
  const openMaintenanceStatus=value=>{
   const s=normalizeText(value);
   return s==='a faire'||s==='en cours'||s.startsWith('en attente')||s==='a qualifier'||s==='planifiee'||s==='planifie'||s==='bloquee'||s==='bloque';

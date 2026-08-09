@@ -475,3 +475,40 @@ body.notifications-open{overflow:hidden}
 #dashboard .kpi.clickable,#dashboard .shortcut-panel[data-go]{cursor:pointer;touch-action:manipulation}
 #dashboard .kpi.clickable:active,#dashboard .shortcut-panel[data-go]:active{transform:scale(.995)}
 #dashboard .shortcut-panel[data-go] .preview-item{position:relative;z-index:2}
+
+/* V100 — Météo & collecte */
+.weather-summary-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-bottom:16px}
+.weather-now{display:grid;gap:16px}.weather-main{display:flex;align-items:center;gap:18px}.weather-icon{font-size:4rem;line-height:1}
+.weather-main>div{display:grid;gap:2px}.weather-main strong{font-size:2.5rem;line-height:1}.weather-main span{font-weight:700;color:#476274}
+.weather-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.weather-stats span{background:#f5f9fc;border:1px solid #e2ebf1;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}
+.weather-forecast{display:grid;grid-template-columns:repeat(7,minmax(105px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
+.forecast-day{min-width:105px;border:1px solid #e1e9ef;border-radius:14px;padding:12px 8px;text-align:center;display:grid;gap:6px;background:#fbfdff}
+.forecast-icon{font-size:2rem}.forecast-day small{font-size:.75rem;color:#617888}
+.waste-next{display:grid;gap:12px}.waste-bin{display:flex;align-items:center;gap:14px;border-radius:15px;padding:14px;border:1px solid #e4ebef}
+.waste-bin.yellow{background:#fffbea;border-color:#f2db6f}.waste-bin.burgundy{background:#fff3f4;border-color:#c98a91}
+.waste-bin-icon{font-size:2.6rem}.waste-bin>div:last-child{display:grid;gap:3px}.waste-bin strong{font-size:1.2rem}.waste-bin small{color:#61717d}
+.waste-label{font-size:.8rem;text-transform:uppercase;font-weight:800;color:#547084}
+.waste-streets,.waste-addresses{display:flex;flex-wrap:wrap;gap:8px}.waste-streets span,.waste-addresses span{background:#f2f6f9;border-radius:999px;padding:7px 10px;font-size:.82rem}
+.waste-calendar{display:grid;gap:8px;margin-top:12px}.waste-row{display:grid;grid-template-columns:minmax(190px,1fr) 150px minmax(160px,1fr);align-items:center;gap:12px;padding:10px 12px;border:1px solid #e4ebef;border-radius:12px}
+.waste-row>div{display:grid}.waste-row small{color:#607482}.waste-badge{display:inline-flex;align-items:center;justify-content:center;padding:7px 10px;border-radius:999px;font-weight:800}
+.waste-badge.yellow{background:#fff2a8;color:#665200}.waste-badge.burgundy{background:#7c1f2c;color:#fff}
+.source-note{margin-top:14px;padding:10px 12px;border-radius:10px;background:#f4f8fb;font-size:.82rem;color:#546b7a}.source-note a{margin-left:6px;font-weight:800}
+@media(max-width:900px){.weather-summary-grid{grid-template-columns:1fr}.weather-forecast{grid-template-columns:repeat(7,118px)}.waste-row{grid-template-columns:1fr auto}.waste-row>small{grid-column:1/-1}}
+@media(max-width:600px){.weather-stats{grid-template-columns:1fr}.weather-main strong{font-size:2.1rem}.weather-icon{font-size:3.2rem}.waste-row{grid-template-columns:1fr}.waste-badge{justify-self:start}}
+
+/* V101 — météo et poubelles séparés */
+.weather-forecast-15{
+  grid-template-columns:repeat(15,minmax(108px,1fr));
+  overflow-x:auto;
+  scroll-snap-type:x proximity;
+  padding-bottom:8px;
+}
+.weather-forecast-15 .forecast-day{scroll-snap-align:start}
+#waste .waste-next-card,#weather .weather-now-card{margin-bottom:16px}
+@media(max-width:900px){
+  .weather-forecast-15{grid-template-columns:repeat(15,118px)}
+}
+
+/* V102 — décalage collecte en semaine fériée */
+.waste-holiday-alert{display:grid;gap:4px;padding:12px 14px;border:1px solid #f0a23a;background:#fff4df;border-radius:12px;color:#7c4600}.waste-holiday-alert strong{color:#9a5300}.waste-row.is-shifted{border-color:#f0a23a;background:#fffaf1}
