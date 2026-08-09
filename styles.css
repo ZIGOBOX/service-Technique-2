@@ -437,3 +437,22 @@ body.notifications-open{overflow:hidden}
 
 /* V90 — la nouvelle problématique est immédiatement visible dans sa liste */
 #issues .table-wrap{scroll-margin-top:90px}
+
+/* V92 — règles Chronotime et comparaison des types de journée */
+.chrono-rule-settings{display:grid;gap:10px}
+.chrono-rule-row{display:grid;grid-template-columns:minmax(170px,1.2fr) minmax(180px,.9fr) minmax(130px,.6fr) minmax(180px,1fr);gap:10px;align-items:center;padding:12px;border:1px solid var(--border,#dbe3ec);border-radius:12px;background:#fff}
+.chrono-rule-row strong{overflow-wrap:anywhere}
+.chrono-rule-row select,.chrono-rule-row input{width:100%}
+.chrono-fixed-hours{display:grid;grid-template-columns:auto 90px;gap:8px;align-items:center}
+.chrono-rule-help{margin-bottom:12px;padding:10px 12px;border-radius:10px;background:#f4f8fc;color:#334155}
+.chrono-new-code{display:grid;grid-template-columns:110px minmax(180px,1fr) minmax(180px,1fr) minmax(120px,.6fr);gap:10px;align-items:end;padding:10px 0;border-top:1px solid #e5e7eb}
+.chrono-new-code:first-of-type{border-top:0}
+.chrono-change-preview{margin-top:14px}
+.chrono-change-table td,.chrono-change-table th{white-space:normal}
+.code-map-item small{display:block;margin-top:3px;color:#64748b}
+@media(max-width:760px){
+ .chrono-rule-row,.chrono-new-code{grid-template-columns:1fr}
+ .chrono-fixed-hours{grid-template-columns:1fr}
+ .chrono-change-table table{min-width:620px}
+ .chrono-change-table{overflow-x:auto;-webkit-overflow-scrolling:touch}
+}

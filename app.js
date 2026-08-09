@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='90.0';
-const APP_BUILD='09/08/2026 10:57';
+const APP_VERSION='92.0';
+const APP_BUILD='09/08/2026 13:20';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -78,7 +78,7 @@ const initialBuildings=[
 ].map(x=>({id:uid(),...x}));
 const defaultLists={
  roles:['Agent polyvalent','Agent d’entretien','Agent de maintenance','Agent d’accueil','Responsable d’équipe','Remplaçant'],
- dayTypes:['Présence','Congé annuel','RTT','Récupération','Maladie','Accident du travail','Enfant malade','Décès / deuil','Mariage / PACS','Naissance / adoption','Autorisation d’absence','Formation','Repos','Grève','Autre absence'],
+ dayTypes:['Présence','Congé annuel','RTT','Récupération','Maladie','Accident du travail','Enfant malade','Décès / deuil','Mariage / PACS','Naissance / adoption','Autorisation d’absence','Formation','Absence temps partiel','Repos','Jour férié','Grève','Autre absence'],
  priorities:['Basse','Normale','Haute','Urgente'],
  generalStatuses:['À faire','Planifié','En cours','En attente','Terminé','Clôturé','Bloqué'],
  issueCategories:['Sécurité','Qualité','Organisation','Matériel','Comportement','Absentéisme','Formation','Coût','Autre'],
@@ -662,9 +662,21 @@ function scheduledFor(agentId,date){
  if(!p?.start||!p?.end)return {shift,start:'',end:'',pause:0,missions:'Horaire à définir dans Pilotage des horaires',segments:[],source:'rotation-missing'};
  return {shift,start:p.start,end:p.end,pause:Number(p.pause||0),missions:p.missions||'',segments:p.segments||[],source:'rotation'};
 }
-function dayRecord(agentId,date){
-  const records=Array.isArray(db.agentDays)?db.agentDays:[];
-  return records.find(r=>String(r.agentId)===String(agentId)&&String(r.date)===String(date))||null;
+function dayRecord(agentId,date,preferredDayType=''){
+  const records=(Array.isArray(db.agentDays)?db.agentDays:[]).filter(r=>String(r.agentId)===String(agentId)&&String(r.date)===String(date));
+  if(!records.length)return null;
+  const preferred=normalizeText(preferredDayType||'');
+  if(preferred){const exact=records.find(r=>normalizeText(r.dayType||'')===preferred);if(exact)return exact}
+  return records[0]||null;
+}
+function dayTypeOptions(current=''){
+  const items=[...(db.lists?.dayTypes||[])];
+  const value=String(current||'').trim();
+  // Une pastille peut provenir d'un import (Chronotime ou ancienne donnée) avec un libellé
+  // qui n'existe pas encore dans la liste standard. On l'ajoute au menu au lieu de laisser
+  // le navigateur retomber silencieusement sur « Présence ».
+  if(value&&!items.some(x=>String(x)===value))items.unshift(value);
+  return selectOptions(items,value||'Présence');
 }
 function dayInfo(agentId,date){const sched=scheduledFor(agentId,date),rec=dayRecord(agentId,date);if(!rec)return {...sched,dayType:sched.shift==='Repos'?'Repos':'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',overtime:0,note:'',status:'Prévu'};return {...sched,...rec,plannedStart:rec.plannedStart??sched.start,plannedEnd:rec.plannedEnd??sched.end}}
 function isAbsenceType(t){return t&&t!=='Présence'&&t!=='Formation'}
@@ -689,7 +701,19 @@ function replacementNotificationAllowed(rec,date){
  const st=normalizeText(rec?.status||'');if(st==='refusee'||st==='annulee')return false;
  return true;
 }
-function dayHours(info){const planned=hoursBetween(info.plannedStart,info.plannedEnd,info.pause);const actual=(info.actualStart&&info.actualEnd)?hoursBetween(info.actualStart,info.actualEnd,info.pause):planned;return {planned,actual,total:actual+Number(info.overtime||0),delta:actual+Number(info.overtime||0)-planned}}
+function dayHours(info){
+ const planned=hoursBetween(info.plannedStart,info.plannedEnd,info.pause);
+ const rules=db.settings?.chronoDayRules||{};
+ const rule=rules[info.dayType]||null;
+ let actual;
+ if(rule?.mode==='fixed')actual=Math.max(0,Number(rule.hours||0));
+ else if(rule?.mode==='zero')actual=0;
+ else actual=(info.actualStart&&info.actualEnd)?hoursBetween(info.actualStart,info.actualEnd,info.pause):planned;
+ // Règle métier immuable : une journée Maladie compte 7 h.
+ if(info.dayType==='Maladie')actual=7;
+ const total=actual+Number(info.overtime||0);
+ return {planned,actual,total,delta:total-planned}
+}
 function agentState(agent,date=todayISO()){const info=dayInfo(agent.id,date);if(isAbsenceType(info.dayType)||info.dayType==='Repos')return {label:info.dayType,kind:'absent',info};if(info.dayType==='Formation')return {label:'Formation',kind:'info',info};if(!info.plannedStart||!info.plannedEnd)return {label:'Non planifié',kind:'info',info};return {label:`${info.plannedStart}–${info.plannedEnd}`,kind:'present',info}}
 
 /* ---------- Formulaires agents / planning ---------- */
@@ -730,8 +754,8 @@ function updateDayCalc(){
  box.innerHTML=`<strong>Calcul de la journée</strong><span>Prévu : ${fmtHours(planned)}</span><span>Réalisé : ${fmtHours(total)}</span><b>Écart : ${delta>=0?'+':''}${fmtHours(delta)}</b>`;
 }
 
-function openAgentDay(agentId,date,id){
- const clicked=id?byId('agentDays',id):dayRecord(agentId,date);
+function openAgentDay(agentId,date,id,preferredDayType=''){
+ const clicked=id?byId('agentDays',id):dayRecord(agentId,date,preferredDayType);
  const periodId=clicked?.periodId||'';
  const periodRows=periodId?db.agentDays.filter(x=>x.periodId===periodId):[];
  const old=clicked;
@@ -741,7 +765,7 @@ function openAgentDay(agentId,date,id){
  const x=old||{id:uid(),agentId:initialAgentId,date:initialDate,dayType:'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',pause:sched.pause,overtime:0,status:'Validée',note:'',replacement:'',noReplacementNeeded:false};
  const dateFrom=periodRows.length?periodRows.map(r=>r.date).sort()[0]:x.date;
  const dateTo=periodRows.length?periodRows.map(r=>r.date).sort().at(-1):x.date;
- openModal(`${agentName(agentById(x.agentId))} — saisie planning`,`<div class="day-shortcuts"><button type="button" data-set-day="Congé annuel">Congé</button><button type="button" data-set-day="RTT">RTT</button><button type="button" data-set-day="Maladie">Maladie</button><button type="button" data-set-day="Présence">Présence</button></div><div class="theoretical-schedule" id="theoreticalSchedule"></div><div class="form-grid"><label>Agent<select name="agentId">${agentOptions(x.agentId)}</select></label><label>Type de journée<select name="dayType">${selectOptions(db.lists.dayTypes,x.dayType)}</select></label>${field('Du','dateFrom',dateFrom,'date','required')}${field('Au','dateTo',dateTo,'date','required')}<label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],x.status||'Validée')}</select></label>${field('Horaire théorique — arrivée','plannedStart',x.plannedStart,'time')}${field('Horaire théorique — départ','plannedEnd',x.plannedEnd,'time')}${field('Horaire réel — arrivée','actualStart',x.actualStart,'time')}${field('Horaire réel — départ','actualEnd',x.actualEnd,'time')}${field('Pause (minutes)','pause',x.pause,'number','min="0" step="5"')}${field('Heures supplémentaires (+) / retirées (-)','overtime',x.overtime,'number','step="0.25"')}<label class="full-width replacement-choice"><span>Gestion du remplacement</span><span class="checkbox-row"><input type="checkbox" name="noReplacementNeeded" ${x.noReplacementNeeded?'checked':''}> Aucun remplacement nécessaire pendant cette période</span></label>${field('Remplacement / relais','replacement',x.replacement||'')}${textareaField('Motif / précision','note',x.note)}</div><p class="hint">Aucune notification de remplacement n’est créée le samedi, le dimanche ou un jour férié. Si la case « Aucun remplacement nécessaire » est cochée, aucune notification de remplacement ne sera créée pour toute la période.</p><div class="calculation-preview" id="dayCalc"></div>`,form=>{const o=formDataObj(form);
+ openModal(`${agentName(agentById(x.agentId))} — saisie planning`,`<div class="day-shortcuts"><button type="button" data-set-day="Congé annuel">Congé</button><button type="button" data-set-day="RTT">RTT</button><button type="button" data-set-day="Maladie">Maladie</button><button type="button" data-set-day="Présence">Présence</button></div><div class="theoretical-schedule" id="theoreticalSchedule"></div><div class="form-grid"><label>Agent<select name="agentId">${agentOptions(x.agentId)}</select></label><label>Type de journée<select name="dayType">${dayTypeOptions(x.dayType)}</select></label>${field('Du','dateFrom',dateFrom,'date','required')}${field('Au','dateTo',dateTo,'date','required')}<label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],x.status||'Validée')}</select></label>${field('Horaire théorique — arrivée','plannedStart',x.plannedStart,'time')}${field('Horaire théorique — départ','plannedEnd',x.plannedEnd,'time')}${field('Horaire réel — arrivée','actualStart',x.actualStart,'time')}${field('Horaire réel — départ','actualEnd',x.actualEnd,'time')}${field('Pause (minutes)','pause',x.pause,'number','min="0" step="5"')}${field('Heures supplémentaires (+) / retirées (-)','overtime',x.overtime,'number','step="0.25"')}<label class="full-width replacement-choice"><span>Gestion du remplacement</span><span class="checkbox-row"><input type="checkbox" name="noReplacementNeeded" ${x.noReplacementNeeded?'checked':''}> Aucun remplacement nécessaire pendant cette période</span></label>${field('Remplacement / relais','replacement',x.replacement||'')}${textareaField('Motif / précision','note',x.note)}</div><p class="hint">Aucune notification de remplacement n’est créée le samedi, le dimanche ou un jour férié. Si la case « Aucun remplacement nécessaire » est cochée, aucune notification de remplacement ne sera créée pour toute la période.</p><div class="calculation-preview" id="dayCalc"></div>`,form=>{const o=formDataObj(form);
  const from=o.dateFrom, to=o.dateTo;
  if(!o.agentId){toast('Choisissez un agent');return}
  if(!from||!to){toast('Renseignez les dates du et au');return}
@@ -775,9 +799,12 @@ function openAgentDay(agentId,date,id){
  function refreshTheoretical(force=false){
    const f=$('#modalForm');if(!f)return;
    const aid=f.elements.agentId.value, d=f.elements.dateFrom.value||todayISO(), sc=scheduledFor(aid,d);
-   const box=$('#theoreticalSchedule');
-   if(box)box.innerHTML=`<strong>Horaire théorique du ${fmtDate(d)}</strong><b>${sc.start&&sc.end?`${esc(sc.start)} – ${esc(sc.end)}`:'Aucun horaire défini'}</b>${sc.pause?`<small>Pause : ${sc.pause} min</small>`:''}${sc.missions?`<small>${esc(sc.missions)}</small>`:''}`;
-   if(force||(!f.elements.plannedStart.value&&!f.elements.plannedEnd.value)){
+   const box=$('#theoreticalSchedule'),currentType=f.elements.dayType.value||'Présence';
+   if(box){
+     if(currentType!=='Présence')box.innerHTML=`<strong>Pastille du calendrier — ${fmtDate(d)}</strong><b>${esc(currentType)}</b><small>Cette journée reprend exactement le motif enregistré dans le calendrier.</small>`;
+     else box.innerHTML=`<strong>Horaire théorique du ${fmtDate(d)}</strong><b>${sc.start&&sc.end?`${esc(sc.start)} – ${esc(sc.end)}`:'Aucun horaire défini'}</b>${sc.pause?`<small>Pause : ${sc.pause} min</small>`:''}${sc.missions?`<small>${esc(sc.missions)}</small>`:''}`;
+   }
+   if(currentType==='Présence'&&(force||(!f.elements.plannedStart.value&&!f.elements.plannedEnd.value))){
      f.elements.plannedStart.value=sc.start||'';f.elements.plannedEnd.value=sc.end||'';f.elements.pause.value=Number(sc.pause||0);
    }
    updateDayCalc();
@@ -861,7 +888,7 @@ function calendarDayVisual(info){
  if(shift==='soir')return {cls:'evening',code:'S',label:'Soir'};
  return {cls:'standard',code:'ST',label:'Standard'};
 }
-function renderAbsenceBoard(){const month=$('#absenceMonth').value||monthISO(),[y,m]=month.split('-').map(Number),count=new Date(y,m,0).getDate(),agents=db.agents.filter(a=>a.status==='Actif'),gridWidth=150+(count*42);let html=`<div class="month-grid" style="grid-template-columns:150px repeat(${count},42px);min-width:${gridWidth}px"><div class="month-corner">Agent</div>`+Array.from({length:count},(_,i)=>{const d=`${month}-${pad(i+1)}`;return `<div class="month-day-head ${[0,6].includes(parseDate(d).getDay())?'weekend':''}">${i+1}</div>`}).join('');for(const a of agents){html+=`<div class="month-agent">${esc(agentName(a))}</div>`;for(let i=1;i<=count;i++){const d=`${month}-${pad(i)}`,info=dayInfo(a.id,d),v=calendarDayVisual(info),hours=info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:'';html+=`<button class="month-cell day-state ${v.cls}" data-agent-day="${a.id}" data-date="${d}" title="${fmtDate(d)} — ${esc(v.label)}${esc(hours)}"><span>${v.code}</span></button>`}}html+='</div>';$('#absenceMonthBoard').innerHTML=html}
+function renderAbsenceBoard(){const month=$('#absenceMonth').value||monthISO(),[y,m]=month.split('-').map(Number),count=new Date(y,m,0).getDate(),agents=db.agents.filter(a=>a.status==='Actif'),gridWidth=150+(count*42);let html=`<div class="month-grid" style="grid-template-columns:150px repeat(${count},42px);min-width:${gridWidth}px"><div class="month-corner">Agent</div>`+Array.from({length:count},(_,i)=>{const d=`${month}-${pad(i+1)}`;return `<div class="month-day-head ${[0,6].includes(parseDate(d).getDay())?'weekend':''}">${i+1}</div>`}).join('');for(const a of agents){html+=`<div class="month-agent">${esc(agentName(a))}</div>`;for(let i=1;i<=count;i++){const d=`${month}-${pad(i)}`,info=dayInfo(a.id,d),v=calendarDayVisual(info),hours=info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:'';html+=`<button class="month-cell day-state ${v.cls}" data-agent-day="${a.id}" data-date="${d}" data-day-type="${esc(info.dayType||'Présence')}" title="${fmtDate(d)} — ${esc(v.label)}${esc(hours)}"><span>${v.code}</span></button>`}}html+='</div>';$('#absenceMonthBoard').innerHTML=html}
 
 /* ---------- Rendu : modules ---------- */
 function renderAgents(){const q=($('#agentSearch').value||'').toLowerCase(),status=$('#agentStatus').value;const arr=db.agents.filter(a=>(!status||a.status===status)&&(!q||agentName(a).toLowerCase().includes(q)||String(a.assignment).toLowerCase().includes(q)));$('#agentCards').innerHTML=cardList(arr.map(a=>{const state=agentState(a),month=$('#planningMonth').value||monthISO(),rows=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)),absence=rows.filter(x=>isAbsenceType(x.dayType)).length,ot=rows.reduce((s,x)=>s+Number(x.overtime||0),0);return `<article class="agent-card"><div class="agent-avatar">${esc((a.firstName||'?')[0])}</div><div class="agent-main"><div class="panel-head"><h3>${esc(agentName(a))}</h3>${badge(a.status)}</div><p>${esc(a.role)} · ${esc(a.assignment||'Sans affectation')}</p><div class="agent-stats"><span>${badge(state.label)}</span><span>${esc(a.weeklyHours)} h/semaine</span><span>${absence} absence(s) ce mois</span><span>${ot>=0?'+':''}${ot} h supp.</span></div><div class="card-actions"><button data-edit-type="agent" data-edit-id="${a.id}">Modifier</button><button data-new-weekly-agent="${a.id}">Horaires annuels</button><button data-new-rotation-agent="${a.id}">Roulement</button><button data-agent-day="${a.id}" data-date="${todayISO()}">Signaler un écart</button></div></div></article>`}),'Aucun agent trouvé.')}
@@ -1564,7 +1591,7 @@ $('#archiveNow').onclick=()=>{const made=createWeeklyArchive(false);save();toast
  document.addEventListener('click',e=>{const b=e.target.closest('[data-edit-weekly-plan]');if(b)openWeeklyPlan(Number(b.dataset.editWeeklyPlan))});
  document.addEventListener('click',e=>{const b=e.target.closest('[data-new-weekly-agent]');if(b)openWeeklyPlan(null,b.dataset.newWeeklyAgent)});
  const filterIds=['personalMonth','personalType','personalStatus','agentSearch','agentStatus','rotationAgent','rotationYear','rotationMonth','planningMonth','planningAgent','planningSignal','absenceMonth','absenceAgent','absenceType','absenceStatus','vacationZone','vacationStatus','issueMonth','issueAgent','issueCategory','issueStatus','periodicFamily','periodicStatus','periodicBuilding','cleanMonth','cleanBuilding','cleanRoomType','cleanStatus','cleaningGuideType','maintenanceStatus','maintenancePriority','maintenanceFamily','requestStatus','requestType','workStatus','workType','meetingMonth','meetingType','noteCategory','notePriority','noteStatus','noteSearch','documentCategory','documentSearch','archiveYear','archiveSearch','importArchiveType','importArchiveSearch'];for(const id of filterIds){const e=document.getElementById(id);if(e)e.addEventListener(e.tagName==='INPUT'&&e.type==='text'?'input':'change',()=>{if(id==='cleaningGuideType')renderCleaningGuide();else if(id.startsWith('personal'))renderPersonal();else if(id.startsWith('agent'))renderAgents();else if(id.startsWith('rotation'))renderRotations();else if(id.startsWith('planning'))renderPlanning();else if(id.startsWith('absence'))renderAbsences();else if(id.startsWith('vacation'))renderVacations();else if(id.startsWith('issue'))renderIssues();else if(id.startsWith('periodic'))renderPeriodic();else if(id.startsWith('clean'))renderCleaning();else if(id.startsWith('maintenance'))renderMaintenance();else if(id.startsWith('request'))renderRequests();else if(id.startsWith('work'))renderWorks();else if(id.startsWith('meeting'))renderMeetings();else if(id.startsWith('note'))renderNotes();else if(id.startsWith('document'))renderDocuments();else if(id.startsWith('archive')||id.startsWith('importArchive'))renderArchives()})}
- document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date);return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
+ document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date,null,ad.dataset.dayType||'');return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
 }
 
 
