@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='102.0';
-const APP_BUILD='09/08/2026 23:50';
+const APP_VERSION='106.0';
+const APP_BUILD='10/08/2026 01:15';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -602,7 +602,7 @@ function formDataObj(form){return Object.fromEntries(new FormData(form).entries(
 function deleteRecord(type,id,label='élément'){if(!confirm(`Supprimer cet ${label} ?`))return;db[type]=db[type].filter(x=>x.id!==id);closeModal();save();toast('Supprimé')}
 
 /* ---------- Navigation ---------- */
-const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',settings:'Paramètres'};
+const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage','room-prep':'Préparation salle & café',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',settings:'Paramètres'};
 function setView(view){if(!document.getElementById(view))return;currentView=view;$$('.view').forEach(v=>v.classList.toggle('active',v.id===view));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if($('#pageTitle'))$('#pageTitle').textContent=VIEW_TITLES[view]||view;document.body.classList.remove('menu-open');window.PSTNavigation?.closeMenu?.();window.scrollTo({top:0,behavior:'auto'});renderAll()}
 function applyLayout(mode=db.settings.defaultLayout||'auto'){document.body.dataset.layout=mode;$('#layoutMode').value=mode;localStorage.setItem('pilotage-service-technique-layout',mode)}
 

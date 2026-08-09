@@ -512,3 +512,46 @@ body.notifications-open{overflow:hidden}
 
 /* V102 — décalage collecte en semaine fériée */
 .waste-holiday-alert{display:grid;gap:4px;padding:12px 14px;border:1px solid #f0a23a;background:#fff4df;border-radius:12px;color:#7c4600}.waste-holiday-alert strong{color:#9a5300}.waste-row.is-shifted{border-color:#f0a23a;background:#fffaf1}
+
+/* V103 contrôles ménage */
+.rc-main-panel{margin-bottom:16px}.rc-scope{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.rc-scope label,.rc-result label{display:grid;gap:5px;font-size:.82rem;font-weight:800}
+.rc-picker-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:14px 0 8px}.rc-picker-head>div{display:flex;gap:6px}.rc-rooms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rc-room{display:flex;gap:9px;align-items:center;padding:10px;border:1px solid #dfe8ee;border-radius:11px;background:#fff;cursor:pointer}.rc-room span{display:grid}.rc-room small{color:#607684}.rc-actions{display:flex;justify-content:flex-end;margin-top:12px}
+.rc-form{display:grid;gap:10px;margin-top:15px;padding-top:14px;border-top:1px solid #dfe8ee}.rc-check{padding:12px;border:1px solid #dfe8ee;border-radius:12px;background:#fbfdff;display:grid;gap:8px}.rc-check h4{margin:0}.rc-result{display:grid;grid-template-columns:1fr 120px;gap:9px}
+.rc-settings{display:grid;gap:10px}.rc-building{border:1px solid #dfe8ee;border-radius:13px;overflow:hidden}.rc-building summary{cursor:pointer;padding:12px;background:#f6fafc;display:flex;justify-content:space-between}.rc-build-body{padding:10px;display:grid;gap:10px}
+.rc-floor{border-left:4px solid #dbe9f1;padding-left:10px;display:grid;gap:9px}.rc-sector{padding:9px;border-radius:11px;background:#f8fbfd;display:grid;gap:7px}.rc-edit-head{display:flex;align-items:end;justify-content:space-between;gap:8px}.rc-edit-head label{flex:1}
+.rc-room-table{display:grid;gap:6px}.rc-room-row{display:grid;grid-template-columns:80px minmax(150px,1fr) 120px auto;gap:6px;align-items:center}.small{padding:6px 8px!important;font-size:.78rem!important}
+@media(max-width:900px){.rc-scope{grid-template-columns:1fr 1fr}.rc-rooms{grid-template-columns:1fr 1fr}.rc-room-row{grid-template-columns:70px 1fr 110px}.rc-room-row button{grid-column:1/-1;justify-self:end}}
+@media(max-width:600px){.rc-scope,.rc-rooms,.rc-result,.rc-room-row{grid-template-columns:1fr}.rc-edit-head,.rc-picker-head{flex-direction:column;align-items:stretch}.rc-room-row button{grid-column:auto}.rc-picker-head>div{display:grid;grid-template-columns:1fr 1fr}}
+
+/* V104 — exploitation et impression contrôle ménage */
+.rc-history-panel{margin-top:16px}.rc-history-actions{display:flex;gap:8px;flex-wrap:wrap}
+.rc-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}.rc-filters label{display:grid;gap:4px;font-size:.8rem;font-weight:800}
+.rc-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:12px 0}.rc-stats article{border:1px solid #dfe8ee;border-radius:12px;padding:10px;background:#fbfdff;display:grid;gap:4px}.rc-stats span{font-size:.76rem;color:#667c89}.rc-stats strong{font-size:1.25rem}
+.rc-history{display:grid;gap:10px}.rc-history-card{border:1px solid #dfe8ee;border-radius:13px;padding:11px;background:#fff}.rc-history-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:9px}.rc-history-head>div:first-child{display:grid}.rc-history-head small{color:#667c89}
+.rc-history-items{display:grid;gap:6px}.rc-history-item{display:grid;grid-template-columns:minmax(180px,1.2fr) 120px 75px minmax(180px,1fr);gap:8px;align-items:center;padding:8px;border-radius:9px;background:#f7fafc}.rc-history-item.good{border-left:4px solid #55a96a}.rc-history-item.warn{border-left:4px solid #d49a28}.rc-history-item.bad{border-left:4px solid #c74343}.rc-history-item>div{display:grid}.rc-history-item p{margin:0;font-size:.83rem;color:#536976}
+@media(max-width:1000px){.rc-stats{grid-template-columns:repeat(3,1fr)}.rc-filters{grid-template-columns:1fr 1fr}.rc-history-item{grid-template-columns:1fr 110px 70px}.rc-history-item p{grid-column:1/-1}}
+@media(max-width:600px){.rc-stats{grid-template-columns:1fr 1fr}.rc-filters{grid-template-columns:1fr}.rc-history-head{align-items:stretch;flex-direction:column}.rc-history-head>div:last-child{display:flex;gap:6px}.rc-history-item{grid-template-columns:1fr}.rc-history-item p{grid-column:auto}}
+
+/* V105 — historique récent pendant un contrôle ménage */
+.rc-recent-history{border:1px solid #d9e5ec;border-radius:10px;background:#f7fbfd;overflow:hidden}
+.rc-recent-history summary{cursor:pointer;padding:9px 10px;font-weight:800;color:#31546a;background:#eef6fa}
+.rc-recent-latest{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:10px;border-bottom:1px solid #dfe9ee}
+.rc-recent-latest p{grid-column:1/-1;margin:0;color:#536b78;font-size:.85rem}
+.rc-recent-list{display:grid;gap:1px}
+.rc-recent-list>div{display:grid;grid-template-columns:90px 110px 70px 1fr;gap:8px;padding:7px 10px;background:#fff;align-items:center}
+.rc-recent-list small{color:#607684}
+@media(max-width:650px){
+ .rc-recent-latest{grid-template-columns:1fr}
+ .rc-recent-latest p{grid-column:auto}
+ .rc-recent-list>div{grid-template-columns:1fr 1fr}
+ .rc-recent-list small{grid-column:1/-1}
+}
+
+/* V106 — Préparation de salle & café */
+.roomprep-top-actions{display:flex;gap:8px;flex-wrap:wrap}.roomprep-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.roomprep-grid label,.roomprep-block label{display:grid;gap:5px;font-size:.82rem;font-weight:800}
+.roomprep-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:15px 0}.roomprep-block{border:1px solid #dfe8ee;border-radius:13px;padding:12px;background:#fbfdff}.roomprep-block h4{margin-top:0}.roomprep-small-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.roomprep-checks{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.roomprep-checks label{display:flex;gap:8px;align-items:center;font-weight:600}.roomprep-save-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.roomprep-list{display:grid;gap:9px}.roomprep-card{border:1px solid #dfe8ee;border-radius:13px;padding:12px;background:#fff}.roomprep-card-head{display:flex;justify-content:space-between;gap:10px}.roomprep-card-head h4{margin:4px 0}.roomprep-card p{margin:7px 0}.roomprep-card small{color:#617584}.roomprep-card-actions{display:flex;gap:7px;justify-content:flex-end;margin-top:9px;flex-wrap:wrap}
+.roomprep-agenda{display:grid;gap:7px}.roomprep-agenda-item{width:100%;text-align:left;border:1px solid #dfe8ee;border-radius:11px;background:#fff;padding:10px;display:grid;gap:3px}.roomprep-agenda-item span{font-size:.8rem;color:#587080}.roomprep-agenda-item small{color:#657a87}
+@media(max-width:900px){.roomprep-grid{grid-template-columns:1fr 1fr}.roomprep-columns{grid-template-columns:1fr}}
+@media(max-width:600px){.roomprep-grid,.roomprep-checks,.roomprep-small-grid{grid-template-columns:1fr}.roomprep-save-actions,.roomprep-top-actions{display:grid;grid-template-columns:1fr}.roomprep-card-head{flex-direction:column}}

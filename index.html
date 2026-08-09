@@ -13,7 +13,7 @@
     <form class="auth-card" id="authForm" novalidate>
       <img src="./assets/logo-service-technique.png?v=86.0" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 102.0 — 09/08/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 106.0 — 10/08/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -39,6 +39,7 @@
       <button class="nav-btn" data-view="issues"><span>⚠</span>Sécurité & qualité</button>
       <button class="nav-btn" data-view="periodic"><span>🛡</span>Contrôles périodiques</button>
       <button class="nav-btn" data-view="cleaning"><span>✓</span>Contrôle ménage</button>
+      <button class="nav-btn" data-view="room-prep"><span>☕</span>Préparation salle & café</button>
       <button class="nav-btn" data-view="maintenance"><span>⚙</span>Maintenance</button>
       <button class="nav-btn" data-view="requests"><span>↗</span>Demandes direction</button>
       <button class="nav-btn" data-view="works"><span>▦</span>Chantiers & GPA</button>
@@ -52,7 +53,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 102.0 — 09/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 106.0 — 10/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -148,7 +149,15 @@
       <div class="table-wrap desktop-table"><table><thead><tr><th>Date</th><th>Horaire</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="personalTable"></tbody></table></div>
     </section>
 
-    <section class="view" id="agents">
+    
+      <article class="panel">
+        <div class="panel-head">
+          <div><h3>Préparations de salle & café</h3><p class="muted">Préparations synchronisées avec votre agenda personnel.</p></div>
+          <button type="button" class="ghost" data-go="room-prep">Ouvrir les préparations</button>
+        </div>
+        <div id="roomPrepAgenda" class="roomprep-agenda"></div>
+      </article>
+<section class="view" id="agents">
       <div class="section-actions"><div><h3>Agents & recrutements</h3><p>Ajoutez autant d’agents que nécessaire. Les nouveaux agents apparaissent immédiatement dans les calendriers.</p></div><div class="action-row"><button class="ghost" id="weekendRestAll">🗓️ Week-end en repos pour tous</button><button class="primary" id="newAgent">＋ Agent</button></div></div>
       <div class="filters"><input id="agentSearch" placeholder="Rechercher"><select id="agentStatus"><option value="">Tous</option><option>Actif</option><option>Inactif</option></select><button class="ghost" data-print="agents">Imprimer</button></div>
       <div id="agentCards" class="agent-grid"></div>
@@ -210,6 +219,20 @@
     </section>
 
     <section class="view" id="cleaning">
+      <article class="panel rc-main-panel">
+        <div class="panel-head"><div><h3>Contrôle ménage par secteur / locaux</h3><p class="muted">Choisissez un secteur entier, une salle ou plusieurs locaux.</p></div></div>
+        <div class="rc-scope">
+          <label>Bâtiment<select id="rcBuilding"></select></label>
+          <label>Étage<select id="rcFloor"></select></label>
+          <label>Secteur<select id="rcSector"></select></label>
+          <label>Périmètre<select id="rcMode"><option value="sector">Secteur entier</option><option value="single">Une salle / un local</option><option value="multiple">Plusieurs salles / locaux</option></select></label>
+        </div>
+        <div class="rc-picker-head"><strong>Locaux concernés</strong><div><button type="button" class="ghost small" id="rcAll">Tout sélectionner</button><button type="button" class="ghost small" id="rcNone">Tout décocher</button></div></div>
+        <div id="rcRooms" class="rc-rooms"></div>
+        <div class="rc-actions"><button type="button" class="primary" id="rcStart">Démarrer le contrôle</button></div>
+        <div id="rcForm" class="rc-form hidden"></div>
+      </article>
+
       <div class="section-actions"><div><h3>Contrôle ménage</h3><p>Saisie mobile guidée avec bâtiments, étages et types de zones en listes déroulantes.</p></div><button class="primary" id="newCleaning">＋ Contrôle</button></div>
       <div class="filters"><input type="month" id="cleanMonth"><select id="cleanBuilding"><option value="">Tous les bâtiments</option></select><select id="cleanRoomType"><option value="">Tous les types de zone</option></select><select id="cleanStatus"><option value="">Tous les résultats</option></select><button class="ghost" data-print="cleaning">Imprimer</button></div>
       <div id="cleaningSummary" class="summary-grid"></div>
@@ -217,7 +240,33 @@
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Lieu</th><th>Type</th><th>Agent</th><th>Score</th><th>Résultat</th><th>Points faibles</th><th></th></tr></thead><tbody id="cleaningTable"></tbody></table></div>
     </section>
 
-    <section class="view" id="maintenance">
+    
+      <article class="panel rc-history-panel">
+        <div class="panel-head">
+          <div>
+            <h3>Historique & exploitation des contrôles ménage</h3>
+            <p class="muted">Rechercher, filtrer, analyser et imprimer les contrôles enregistrés.</p>
+          </div>
+          <div class="rc-history-actions">
+            <button type="button" class="ghost" id="rcPrintFiltered">Imprimer la sélection</button>
+            <button type="button" class="ghost" id="rcExportFiltered">Exporter CSV</button>
+          </div>
+        </div>
+        <div class="rc-filters">
+          <label>Du<input type="date" id="rcFilterFrom"></label>
+          <label>Au<input type="date" id="rcFilterTo"></label>
+          <label>Bâtiment<select id="rcFilterBuilding"><option value="">Tous</option></select></label>
+          <label>Étage<select id="rcFilterFloor"><option value="">Tous</option></select></label>
+          <label>Secteur<select id="rcFilterSector"><option value="">Tous</option></select></label>
+          <label>Résultat<select id="rcFilterResult"><option value="">Tous</option><option>Conforme</option><option>À améliorer</option><option>Non conforme</option></select></label>
+          <label>Local / salle<input id="rcFilterRoom" placeholder="Ex. 124 ou Chambre"></label>
+          <button type="button" class="ghost" id="rcApplyFilters">Filtrer</button>
+          <button type="button" class="ghost" id="rcResetFilters">Réinitialiser</button>
+        </div>
+        <div id="rcStats" class="rc-stats"></div>
+        <div id="rcHistory" class="rc-history"></div>
+      </article>
+<section class="view" id="maintenance">
       <div class="section-actions"><div><h3>Interventions de maintenance</h3><p>Demandes, diagnostic, affectation, suivi et clôture.</p></div><button class="primary" id="newMaintenance">＋ Intervention</button></div>
       <div class="filters"><select id="maintenanceStatus"><option value="">Tous les statuts</option></select><select id="maintenancePriority"><option value="">Toutes les priorités</option></select><select id="maintenanceFamily"><option value="">Tous les domaines</option></select><button class="ghost" data-print="maintenance">Imprimer</button></div>
       <div class="table-wrap"><table><thead><tr><th>N°</th><th>Date</th><th>Lieu</th><th>Domaine</th><th>Problème</th><th>Priorité</th><th>Affecté à</th><th>Échéance</th><th>Statut</th><th></th></tr></thead><tbody id="maintenanceTable"></tbody></table></div>
@@ -349,6 +398,17 @@
     </section>
 
     <section class="view" id="settings">
+      <article class="panel">
+        <div class="panel-head"><div><h3>PRONOTE</h3><p class="muted">Adresse utilisée par le bouton « Ouvrir PRONOTE ».</p></div></div>
+        <label>Adresse PRONOTE<input type="url" id="pronoteUrl" placeholder="https://..."></label>
+        <p class="hint">Si l’adresse n’est pas renseignée, le bouton ouvrira le site INDEX ÉDUCATION.</p>
+      </article>
+
+      <article class="panel rc-settings-panel">
+        <div class="panel-head"><div><h3>Bâtiments, étages, secteurs & salles</h3><p class="muted">Référentiel des contrôles ménage. Numéros, noms et locaux entièrement modifiables.</p></div><button type="button" class="ghost" id="rcAddBuilding">+ Bâtiment</button></div>
+        <div id="rcSettings" class="rc-settings"></div>
+      </article>
+
       <div class="section-actions"><div><h3>Paramètres</h3><p>Application, listes déroulantes, bâtiments, étages et destinataires.</p></div><button class="primary" id="saveSettings">Enregistrer</button></div>
       <div class="settings-grid">
         <article class="panel"><h3>Application</h3>
@@ -376,7 +436,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 102.0 — 09/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 106.0 — 10/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -441,7 +501,7 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js?v=95.0"></script>
-  <script src="./app.js?v=102.0"></script>
+  <script src="./app.js?v=106.0"></script>
   <script src="./notification-center.js?v=95.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./schedule-import.js?v=95.0"></script>
@@ -449,5 +509,7 @@
 
   <script src="./weather-waste.js?v=102.0"></script>
 
+  <script src="./room-cleaning.js?v=105.0"></script>
+  <script src="./room-prep.js?v=106.0"></script>
 </body>
 </html>
