@@ -117,15 +117,28 @@ async function importRequestFile(file){
  if(st)st.textContent=`${file.name} chargé. Vérifiez et complétez la fiche avant d’enregistrer. Les informations non détectées ne sont pas inventées.`;
 }
 
+
+function forceOpenRoomPrep(){
+ const btn=document.querySelector('.nav-btn[data-view="room-prep"]');
+ const target=document.getElementById('room-prep');
+ if(btn){ btn.click(); }
+ else if(target){
+   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+   target.classList.add('active');
+ }
+ setTimeout(()=>document.getElementById('roomPrepEditorPanel')?.scrollIntoView({behavior:'smooth'}),60);
+}
+
 function init(){
  reset();render();
  const saved=localStorage.getItem(PRONOTE_KEY)||'';
  if($('pronoteUrl'))$('pronoteUrl').value=saved;
  $('pronoteUrl')?.addEventListener('change',e=>localStorage.setItem(PRONOTE_KEY,e.target.value.trim()));
 
- document.querySelectorAll('[data-quick-roomprep]').forEach(x=>x.addEventListener('click',openRoomPrep));
+ document.querySelectorAll('[data-quick-roomprep]').forEach(x=>x.addEventListener('click',forceOpenRoomPrep));
  $('rpImportFile')?.addEventListener('change',e=>importRequestFile(e.target.files?.[0]));
 
+ $('openRoomPrepFromAgenda')?.addEventListener('click',forceOpenRoomPrep);
  $('roomPrepPronote')?.addEventListener('click',pronote);
  $('roomPrepSave')?.addEventListener('click',save);
  $('roomPrepReset')?.addEventListener('click',reset);

@@ -13,7 +13,7 @@
     <form class="auth-card" id="authForm" novalidate>
       <img src="./assets/logo-service-technique.png?v=86.0" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 108.0 — 10/08/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 109.0 — 10/08/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -53,7 +53,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 108.0 — 10/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données enregistrées sur ce téléphone</span><small id="sidebarVersion" class="app-version">Version 109.0 — 10/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -147,16 +147,15 @@
       <div class="filters"><input type="month" id="personalMonth"><select id="personalType"><option value="">Tous les types</option></select><select id="personalStatus"><option value="">Tous les statuts</option></select><button class="ghost" data-print="personal">Imprimer</button></div>
       <div id="personalCards" class="mobile-cards"></div>
       <div class="table-wrap desktop-table"><table><thead><tr><th>Date</th><th>Horaire</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="personalTable"></tbody></table></div>
-    </section>
-
     
       <article class="panel">
         <div class="panel-head">
           <div><h3>Préparations de salle & café</h3><p class="muted">Préparations synchronisées avec votre agenda personnel.</p></div>
-          <button type="button" class="ghost" data-go="room-prep">Ouvrir les préparations</button>
+          <button type="button" class="ghost" id="openRoomPrepFromAgenda">Ouvrir les préparations</button>
         </div>
         <div id="roomPrepAgenda" class="roomprep-agenda"></div>
       </article>
+</section>
 <section class="view" id="agents">
       <div class="section-actions"><div><h3>Agents & recrutements</h3><p>Ajoutez autant d’agents que nécessaire. Les nouveaux agents apparaissent immédiatement dans les calendriers.</p></div><div class="action-row"><button class="ghost" id="weekendRestAll">🗓️ Week-end en repos pour tous</button><button class="primary" id="newAgent">＋ Agent</button></div></div>
       <div class="filters"><input id="agentSearch" placeholder="Rechercher"><select id="agentStatus"><option value="">Tous</option><option>Actif</option><option>Inactif</option></select><button class="ghost" data-print="agents">Imprimer</button></div>
@@ -238,7 +237,7 @@
       <div id="cleaningSummary" class="summary-grid"></div>
       <article class="panel guide-panel"><div class="panel-head"><div><h3>Référentiel des fréquences d’entretien</h3><p>Issu du Guide de l’entretien dans les lycées de la Région Auvergne-Rhône-Alpes.</p></div><div class="panel-actions"><select id="cleaningGuideType"></select><button class="ghost" data-guide-path="guides/Guide_Entretien_Lycees_2023.pdf">Ouvrir le guide PDF</button></div></div><div id="cleaningGuideTable" class="table-wrap compact"></div></article>
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Lieu</th><th>Type</th><th>Agent</th><th>Score</th><th>Résultat</th><th>Points faibles</th><th></th></tr></thead><tbody id="cleaningTable"></tbody></table></div>
-    </section>
+    
 
     
       <article class="panel rc-history-panel">
@@ -267,7 +266,8 @@
         <div id="rcHistory" class="rc-history"></div>
       </article>
 
-    <section class="view" id="room-prep">
+    </section>
+<section class="view" id="room-prep">
       <div class="section-actions">
         <div>
           <h3>Préparation de salle & café</h3>
@@ -306,7 +306,7 @@
             <label>Disposition<select id="rpLayout"><option>Réunion</option><option>Classe</option><option>U</option><option>Théâtre</option><option>Cocktail</option><option>Autre</option></select></label>
             <div class="roomprep-small-grid">
               <label>Tables<input type="number" min="0" id="rpTables" value="0"></label>
-              <label>Chaises<input type="number" min="0" id="rpChairs" value="0"></label>
+              <label>Nombre de chaises<input type="number" min="0" id="rpChairs" value="0"></label>
             </div>
             <div class="roomprep-checks">
               <label><input type="checkbox" id="rpProjector"> Vidéoprojecteur</label>
@@ -521,7 +521,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 108.0 — 10/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 109.0 — 10/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -586,7 +586,7 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js?v=95.0"></script>
-  <script src="./app.js?v=108.0"></script>
+  <script src="./app.js?v=109.0"></script>
   <script src="./notification-center.js?v=95.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./schedule-import.js?v=95.0"></script>
@@ -595,6 +595,6 @@
   <script src="./weather-waste.js?v=102.0"></script>
 
   <script src="./room-cleaning.js?v=105.0"></script>
-  <script src="./room-prep.js?v=108.0"></script>
+  <script src="./room-prep.js?v=109.0"></script>
 </body>
 </html>

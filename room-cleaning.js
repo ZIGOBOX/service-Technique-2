@@ -75,22 +75,26 @@ function renderSettings(){
 
 function renderBuildings(){
  let e=$('rcBuilding');if(!e)return;
- let v=e.value;
+ const old=e.value;
  e.innerHTML=data.map((b,i)=>`<option value="${i}">${esc(b.name)}</option>`).join('');
- if([...e.options].some(o=>o.value===v))e.value=v;
+ e.value=[...e.options].some(o=>o.value===old)?old:(e.options[0]?.value||'0');
  renderFloors();renderFilterOptions();
 }
 function renderFloors(){
- let b=+$('rcBuilding').value,e=$('rcFloor'),v=e?.value;if(!e||!data[b])return;
- e.innerHTML=data[b].floors.map((f,i)=>`<option value="${i}">${esc(f.name)}</option>`).join('');
- if([...e.options].some(o=>o.value===v))e.value=v;
- renderSectors()
+ const be=$('rcBuilding'),e=$('rcFloor');if(!be||!e)return;
+ const b=Number(be.value)||0,old=e.value, floors=data[b]?.floors||[];
+ e.innerHTML=floors.map((f,i)=>`<option value="${i}">${esc(f.name)}</option>`).join('');
+ e.disabled=!floors.length;
+ if(floors.length)e.value=[...e.options].some(o=>o.value===old)?old:e.options[0].value;
+ renderSectors();
 }
 function renderSectors(){
- let b=+$('rcBuilding').value,f=+$('rcFloor').value,e=$('rcSector'),v=e?.value;if(!e||!data[b]?.floors[f])return;
- e.innerHTML=data[b].floors[f].sectors.map((s,i)=>`<option value="${i}">${esc(s.name)}</option>`).join('');
- if([...e.options].some(o=>o.value===v))e.value=v;
- renderRooms()
+ const be=$('rcBuilding'),fe=$('rcFloor'),e=$('rcSector');if(!be||!fe||!e)return;
+ const b=Number(be.value)||0,f=Number(fe.value)||0,old=e.value,sectors=data[b]?.floors[f]?.sectors||[];
+ e.innerHTML=sectors.map((s,i)=>`<option value="${i}">${esc(s.name)}</option>`).join('');
+ e.disabled=!sectors.length;
+ if(sectors.length)e.value=[...e.options].some(o=>o.value===old)?old:e.options[0].value;
+ renderRooms();
 }
 function rooms(){let b=+$('rcBuilding').value,f=+$('rcFloor').value,s=+$('rcSector').value;return data[b]?.floors[f]?.sectors[s]?.rooms||[]}
 function renderRooms(){
