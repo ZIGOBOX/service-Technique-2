@@ -592,3 +592,6 @@ input,select,textarea{border-radius:10px}textarea{min-height:74px;resize:vertica
 .note-edit-button{min-width:110px;cursor:pointer;position:relative;z-index:2}
 .note-edit-button:active,[data-edit-type]:active,[data-go]:active,[data-quick]:active{transform:scale(.98)}
 button{user-select:none;-webkit-user-select:none}
+
+/* V118 — boutons dynamiques */
+.note-edit-button,[data-edit-type]{pointer-events:auto!important;touch-action:manipulation}
