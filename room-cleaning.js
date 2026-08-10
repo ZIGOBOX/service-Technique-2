@@ -110,7 +110,11 @@ function renderSectors(){
 function rooms(){let b=+$('rcBuilding').value,f=+$('rcFloor').value,s=+$('rcSector').value;return data[b]?.floors[f]?.sectors[s]?.rooms||[]}
 function renderRooms(){
  let box=$('rcRooms');if(!box)return;let mode=$('rcMode')?.value||'sector';
- box.innerHTML=rooms().map((r,i)=>`<label class="rc-room"><input name="rcr" type="${mode==='single'?'radio':'checkbox'}" value="${i}" ${mode==='sector'?'checked':''}><span><b>${esc(label(r))}</b><small>${esc(r.type)}</small></span></label>`).join('')||'<div class="empty">Aucun local dans ce secteur.</div>'
+ const list=rooms();
+ box.innerHTML=list.map((r,i)=>`<label class="rc-room"><input name="rcr" type="${mode==='single'?'radio':'checkbox'}" value="${i}" ${mode==='sector'?'checked':''}><span><b>${esc(label(r))}</b><small>${esc(r.type)}</small></span></label>`).join('')||'<div class="empty">Aucun local dans ce secteur.</div>';
+ box.querySelectorAll('input[name="rcr"]').forEach(inp=>inp.addEventListener('change',renderSelectedHistory));
+ renderSelectedHistory();
+ const form=$('rcForm');if(form){form.classList.add('hidden');form.innerHTML=''}
 }
 function selected(){let rr=rooms();return [...document.querySelectorAll('#rcRooms input:checked')].map(x=>rr[+x.value]).filter(Boolean)}
 
@@ -135,6 +139,57 @@ function recentHistoryForRoom(roomObj,days=15){
    }
  }
  return out.sort((a,b)=>new Date(b.date)-new Date(a.date));
+}
+
+function allHistoryForRoom(roomObj){
+ const out=[];
+ for(const check of loadChecks()){
+   for(const item of (check.items||[])){
+     if(sameRoom(item.room,roomObj)){
+       out.push({
+         date:check.date,building:check.building,floor:check.floor,sector:check.sector,
+         result:item.result,score:item.score,note:item.note||'',room:item.room
+       });
+     }
+   }
+ }
+ return out.sort((x,y)=>new Date(y.date)-new Date(x.date));
+}
+function selectedHistoryHtml(roomObj){
+ const all=allHistoryForRoom(roomObj);
+ if(!all.length){
+   return `<article class="rc-history-preview-card empty-history"><strong>${esc(label(roomObj))}</strong><span>Aucun ancien contrôle enregistré pour cette pièce.</span></article>`;
+ }
+ const now=Date.now(),recent=all.filter(x=>{
+   const t=new Date(x.date||0).getTime();
+   return t&&now-t<=15*86400000&&t<=now+86400000;
+ });
+ const shown=(recent.length?recent:all).slice(0,5);
+ return `<article class="rc-history-preview-card">
+   <div class="rc-history-preview-head">
+     <div><strong>${esc(label(roomObj))}</strong><small>${esc(roomObj.type||'')}</small></div>
+     <span class="${recent.length?'recent':'old'}">${recent.length?`${recent.length} contrôle(s) sur 15 jours`:`Dernier ancien contrôle`}</span>
+   </div>
+   <div class="rc-history-preview-list">
+     ${shown.map((x,n)=>`<div class="${n===0?'latest':''}">
+       <b>${fmtDate(x.date)}</b>
+       <span class="${x.result==='Non conforme'?'bad':x.result==='À améliorer'?'warn':'good'}">${esc(x.result||'—')}</span>
+       <strong>${Number(x.score||0).toFixed(1)}/10</strong>
+       ${x.note?`<p>${esc(x.note)}</p>`:''}
+     </div>`).join('')}
+   </div>
+   ${recent.length&&all.length>recent.length?`<small class="rc-older-note">${all.length-recent.length} contrôle(s) plus ancien(s) également conservé(s).</small>`:''}
+ </article>`;
+}
+function renderSelectedHistory(){
+ const box=$('rcSelectedHistory');if(!box)return;
+ const rs=selected();
+ if(!rs.length){
+   box.innerHTML='<div class="rc-history-prompt">Sélectionnez une salle pour afficher ses anciens contrôles.</div>';
+   return;
+ }
+ const limited=rs.slice(0,6);
+ box.innerHTML=`<div class="rc-selected-history-title"><strong>🕘 Anciens contrôles des locaux sélectionnés</strong><small>Priorité aux 15 derniers jours</small></div>${limited.map(selectedHistoryHtml).join('')}${rs.length>6?`<div class="rc-history-prompt">+ ${rs.length-6} autre(s) local(aux) sélectionné(s). Leur historique sera visible pendant le contrôle.</div>`:''}`;
 }
 function recentHistoryHtml(roomObj){
  const hist=recentHistoryForRoom(roomObj,15);
@@ -318,7 +373,7 @@ function init(){
  renderSettings();renderBuildings();renderHistory();
  $('rcAddBuilding')?.addEventListener('click',()=>{data.push({id:uid(),name:'Nouveau bâtiment',floors:[{name:'RDC',sectors:[{name:'Secteur principal',rooms:[]}]}]});save()});
  $('rcBuilding')?.addEventListener('change',renderFloors);$('rcFloor')?.addEventListener('change',renderSectors);$('rcSector')?.addEventListener('change',renderRooms);$('rcMode')?.addEventListener('change',renderRooms);
- $('rcAll')?.addEventListener('click',()=>document.querySelectorAll('#rcRooms input[type=checkbox]').forEach(x=>x.checked=true));$('rcNone')?.addEventListener('click',()=>document.querySelectorAll('#rcRooms input').forEach(x=>x.checked=false));$('rcStart')?.addEventListener('click',start);
+ $('rcAll')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input[type=checkbox]').forEach(x=>x.checked=true);renderSelectedHistory()});$('rcNone')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input').forEach(x=>x.checked=false);renderSelectedHistory()});$('rcStart')?.addEventListener('click',start);
  ['rcFilterFrom','rcFilterTo','rcFilterBuilding','rcFilterFloor','rcFilterSector','rcFilterResult','rcFilterRoom'].forEach(id=>$(id)?.addEventListener('change',renderHistory));
  $('rcApplyFilters')?.addEventListener('click',renderHistory);
  $('rcResetFilters')?.addEventListener('click',()=>{['rcFilterFrom','rcFilterTo','rcFilterBuilding','rcFilterFloor','rcFilterSector','rcFilterResult','rcFilterRoom'].forEach(id=>{if($(id))$(id).value=''});renderHistory()});

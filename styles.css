@@ -595,3 +595,23 @@ button{user-select:none;-webkit-user-select:none}
 
 /* V118 — boutons dynamiques */
 .note-edit-button,[data-edit-type]{pointer-events:auto!important;touch-action:manipulation}
+
+/* V120 — contrôle ménage : historique proposé avant démarrage */
+.rc-selected-history{margin:12px 0;display:grid;gap:9px}
+.rc-selected-history-title{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 2px}
+.rc-selected-history-title small{color:var(--muted)}
+.rc-history-preview-card{border:1px solid #d7e3ea;background:#f9fbfc;border-radius:13px;padding:11px}
+.rc-history-preview-card.empty-history{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.rc-history-preview-card.empty-history span{color:var(--muted);font-size:10px}
+.rc-history-preview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+.rc-history-preview-head div{display:grid;gap:2px}
+.rc-history-preview-head small{color:var(--muted)}
+.rc-history-preview-head>span{font-size:9px;font-weight:800;border-radius:999px;padding:5px 8px;background:#eef3f6}
+.rc-history-preview-head>span.recent{background:#fff2d8;color:#8c5d00}
+.rc-history-preview-list{display:grid;gap:6px}
+.rc-history-preview-list>div{display:grid;grid-template-columns:110px 1fr 65px;gap:8px;align-items:center;border-top:1px solid #e5edf1;padding-top:6px}
+.rc-history-preview-list>div.latest{border-top:0;padding-top:0}
+.rc-history-preview-list p{grid-column:1/-1;margin:0;color:var(--muted);font-size:10px}
+.rc-history-preview-list .bad{color:#b32727;font-weight:800}.rc-history-preview-list .warn{color:#a96500;font-weight:800}.rc-history-preview-list .good{color:#18724d;font-weight:800}
+.rc-older-note,.rc-history-prompt{font-size:10px;color:var(--muted);padding:7px 2px}
+@media(max-width:600px){.rc-history-preview-list>div{grid-template-columns:1fr auto}.rc-history-preview-list>div>strong:last-of-type{grid-column:2}.rc-history-preview-card.empty-history{align-items:flex-start;flex-direction:column}}
