@@ -36,6 +36,16 @@ const DEF=[
  {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(411),...common('1er étage')]}]},
  {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(421),...common('2e étage')]}]}
 ]},
+{id:'E',name:'Bâtiment E',floors:[
+ {name:'RDC',sectors:[{name:'Secteur principal',rooms:[...std(501),...common('RDC')]}]},
+ {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(511),...common('1er étage')]}]},
+ {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(521),...common('2e étage')]}]}
+]},
+{id:'F',name:'Bâtiment F',floors:[
+ {name:'RDC',sectors:[{name:'Secteur principal',rooms:[...std(601),...common('RDC')]}]},
+ {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(611),...common('1er étage')]}]},
+ {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(621),...common('2e étage')]}]}
+]},
 {id:'ALG',name:'Algeco',floors:[{name:'Locaux',sectors:[{name:'Algeco',rooms:[room('1','Algeco 1','Local'),room('2','Algeco 2','Local'),room('3','Algeco 3','Local'),room('4','Algeco 4','Local'),room('5','Algeco 5','Local'),room('6','Algeco 6','Local')]}]}]},
 {id:'EXT',name:'Extension',floors:[{name:'Locaux',sectors:[{name:'Extension',rooms:[room('','Local extension','Local'),room('','Sanitaires','Sanitaires'),room('','Circulation','Circulation')]}]}]}
 ];

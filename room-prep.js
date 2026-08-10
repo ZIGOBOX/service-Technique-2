@@ -17,11 +17,6 @@ function render(){const now=today(),a=load().filter(x=>x.date>=now&&x.status!=='
 function openPrep(){document.querySelector('.nav-btn[data-view="room-prep"]')?.click();setTimeout(()=>$('roomPrepEditorPanel')?.scrollIntoView({behavior:'smooth'}),50)}
 function pronote(){window.open((localStorage.getItem(PRONOTE_KEY)||'').trim()||'https://www.index-education.com/fr/','_blank','noopener')}
 function init(){
- $('rpBuilding')?.addEventListener('change',()=>fillFloors());
- $('rpFloor')?.addEventListener('change',()=>fillSectors());
- $('rpSector')?.addEventListener('change',()=>fillRooms());
- $('rpRoom')?.addEventListener('change',toggleOtherLocation);
  $('rpOtherPrep')?.addEventListener('change',()=>$('rpOtherPrepCommentWrap')?.classList.toggle('hidden',$('rpOtherPrep').value!=='Oui'));
-reset();render();$('rpBuilding')?.addEventListener('change',()=>fillF());$('rpFloor')?.addEventListener('change',()=>fillS());$('rpSector')?.addEventListener('change',()=>fillR());$('rpRoom')?.addEventListener('change',toggleOther);$('rpOtherPrep')?.addEventListener('change',()=>$('rpOtherPrepCommentWrap').classList.toggle('hidden',$('rpOtherPrep').value!=='Oui'));document.querySelectorAll('[data-quick-roomprep]').forEach(x=>x.addEventListener('click',openPrep));$('openRoomPrepFromAgenda')?.addEventListener('click',openPrep);$('openRoomPrepFromAgenda')?.addEventListener('click',forceOpenRoomPrep);
- $('roomPrepPronote')?.addEventListener('click',pronote);$('roomPrepSave')?.addEventListener('click',save);$('roomPrepReset')?.addEventListener('click',reset)}
+reset();render();$('rpBuilding')?.addEventListener('change',()=>fillF());$('rpFloor')?.addEventListener('change',()=>fillS());$('rpSector')?.addEventListener('change',()=>fillR());$('rpRoom')?.addEventListener('change',toggleOther);$('rpOtherPrep')?.addEventListener('change',()=>$('rpOtherPrepCommentWrap').classList.toggle('hidden',$('rpOtherPrep').value!=='Oui'));document.querySelectorAll('[data-quick-roomprep]').forEach(x=>x.addEventListener('click',openPrep));$('openRoomPrepFromAgenda')?.addEventListener('click',openPrep);$('roomPrepPronote')?.addEventListener('click',pronote);$('roomPrepSave')?.addEventListener('click',save);$('roomPrepReset')?.addEventListener('click',reset)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();window.PSTRoomPrep={render,load,pronote};})();
