@@ -144,5 +144,5 @@
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
 
-  window.PSTWeatherWaste={loadWeather,renderWaste,binForDate,nextFriday};
+  window.PSTWeatherWaste={loadWeather,renderWaste,binForDate,nextFriday,collectionInfo,localISO,holidayName};setTimeout(()=>window.PSTRefreshPersonalAgenda?.(),0);
 })();

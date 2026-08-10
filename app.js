@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='115.0';
-const APP_BUILD='10/08/2026 14:55';
+const APP_VERSION='116.0';
+const APP_BUILD='10/08/2026 15:50';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -904,8 +904,46 @@ function renderTeamCalendar(){
   }).join('');
   $('#teamWeekCalendar').innerHTML=`<div class="team-week-cards">${html}</div>`;
 }
-function eventsForDate(d){return [...db.personalEvents.filter(x=>x.date===d).map(x=>({...x,source:'personal'})),...db.meetings.filter(x=>x.date===d).map(x=>({...x,title:x.title,source:'meeting'})),...db.notes.filter(x=>x.dueDate===d&&!['Terminé','Clôturé'].includes(x.status)).map(x=>({...x,date:d,start:'',source:'note'}))].sort((a,b)=>(a.start||'99:99').localeCompare(b.start||'99:99'))}
-function renderPersonalCalendar(){const days=Array.from({length:7},(_,i)=>addDays(personalWeek,i));$('#personalWeekLabel').textContent=`${fmtDate(days[0])} au ${fmtDate(days[6])}`;$('#personalWeekCalendar').innerHTML=days.map(d=>`<div class="personal-day ${d===todayISO()?'today':''}"><button class="personal-day-head" data-new-personal-date="${d}"><strong>${parseDate(d).toLocaleDateString('fr-FR',{weekday:'long'})}</strong><span>${parseDate(d).getDate()}</span></button><div>${cardList(eventsForDate(d).map(e=>`<button class="mini-event" data-edit-type="${e.source==='meeting'?'meeting':e.source==='note'?'note':'personal'}" data-edit-id="${e.id}"><b>${esc(e.start||'')}</b> ${esc(e.title)}</button>`),'Libre')}</div></div>`).join('')}
+function roomPrepAgendaItems(){
+ try{return (JSON.parse(localStorage.getItem('pst_room_preps_v106'))||[])}catch(_){return[]}
+}
+function wasteAgendaItemForDate(d){
+ const api=window.PSTWeatherWaste;if(!api?.collectionInfo||!api?.binForDate||!api?.localISO)return null;
+ const day=parseDate(d),wd=day.getDay();let friday=null;
+ if(wd===5)friday=new Date(day);
+ else if(wd===6){friday=new Date(day);friday.setDate(friday.getDate()-1)}
+ else return null;
+ const ci=api.collectionInfo(friday),actual=api.localISO(ci.actual);
+ if(actual!==d)return null;
+ const bin=api.binForDate(friday);
+ return {id:`waste-${d}`,date:d,start:'',title:`${bin.icon} Sortir / passage ${bin.label}`,source:'waste',view:'waste',meta:`Rue Noëlas · Rue Jean Puy${ci.shifted?' · collecte décalée':''}`};
+}
+function eventsForDate(d){
+ const rows=[
+  ...(db.personalEvents||[]).filter(x=>x.date===d).map(x=>({...x,source:'personal',start:x.start||''})),
+  ...(db.meetings||[]).filter(x=>normalizeDateValue(x.date)===d&&!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule').map(x=>({...x,source:'meeting',start:x.time||'',title:x.title||'Rendez-vous'})),
+  ...(db.notes||[]).filter(x=>normalizeDateValue(x.dueDate)===d&&!isClosedStatus(x.status)).map(x=>({...x,date:d,start:'',source:'note',title:x.title||'Note à traiter'})),
+  ...(db.maintenance||[]).filter(x=>normalizeDateValue(recordDueDate(x))===d&&!isClosedStatus(x.status)).map(x=>({...x,date:d,start:'',source:'maintenance',title:`Maintenance · ${x.title||'Intervention'}`})),
+  ...(db.requests||[]).filter(x=>normalizeDateValue(recordDueDate(x))===d&&!isClosedStatus(x.status)).map(x=>({...x,date:d,start:'',source:'request',title:`Direction · ${x.title||x.description||'Demande'}`})),
+  ...(db.works||[]).filter(x=>normalizeDateValue(recordDueDate(x))===d&&!isClosedStatus(x.status)).map(x=>({...x,date:d,start:'',source:'work',title:`Chantier/GPA · ${x.title||'Action'}`})),
+  ...(db.issues||[]).filter(x=>normalizeDateValue(recordDueDate(x))===d&&!isClosedStatus(x.status)).map(x=>({...x,date:d,start:'',source:'issue',title:`${normalizeText(x.priority)==='urgente'?'⚠️ ':''}${x.title||x.description||'Sécurité / qualité'}`})),
+  ...(db.periodic||[]).filter(x=>normalizeDateValue(periodicDue(x))===d).map(x=>({...x,date:d,start:'',source:'periodic',title:`Contrôle périodique · ${x.name||x.title||x.family||'Contrôle'}`})),
+  ...roomPrepAgendaItems().filter(x=>normalizeDateValue(x.date)===d&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||'',source:'roomprep',title:`☕ ${x.room||'Préparation salle'}${x.coffee?.enabled?' · Café':''}`})),
+  ...(db.vacations||[]).filter(x=>normalizeDateValue(x.start)===d&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
+ ];
+ const waste=wasteAgendaItemForDate(d);if(waste)rows.push(waste);
+ return rows.sort((x,y)=>`${x.start||'99:99'}${x.title||''}`.localeCompare(`${y.start||'99:99'}${y.title||''}`));
+}
+function personalEventButton(e){
+ const meta=e.meta?`<small>${esc(e.meta)}</small>`:'';
+ return `<button class="mini-event agenda-action ${esc(e.source||'personal')}" data-agenda-source="${esc(e.source||'personal')}" data-agenda-id="${esc(e.id||'')}"><b>${esc(e.start||'')}</b><span>${esc(e.title||'Événement')}</span>${meta}</button>`;
+}
+function renderPersonalCalendar(){
+ const days=Array.from({length:7},(_,i)=>addDays(personalWeek,i));
+ $('#personalWeekLabel').textContent=`${fmtDate(days[0])} au ${fmtDate(days[6])}`;
+ $('#personalWeekCalendar').innerHTML=days.map(d=>`<div class="personal-day ${d===todayISO()?'today':''}"><button class="personal-day-head" data-new-personal-date="${d}"><strong>${parseDate(d).toLocaleDateString('fr-FR',{weekday:'long'})}</strong><span>${parseDate(d).getDate()}</span></button><div>${cardList(eventsForDate(d).map(personalEventButton),'Libre')}</div></div>`).join('');
+}
+window.PSTRefreshPersonalAgenda=()=>{try{renderPersonalCalendar()}catch(e){console.warn('Actualisation agenda',e)}};
 function calendarDayVisual(info){
  const raw=info.dayType||'Présence',day=normalizeText(raw),shift=normalizeText(info.shift||'Standard'),disp=db.settings?.chronoDayDisplay?.[raw]||{};
  let v;
@@ -1658,7 +1696,22 @@ $('#archiveNow').onclick=()=>{const made=createWeeklyArchive(false);save();toast
  document.addEventListener('click',e=>{const b=e.target.closest('[data-edit-weekly-plan]');if(b)openWeeklyPlan(Number(b.dataset.editWeeklyPlan))});
  document.addEventListener('click',e=>{const b=e.target.closest('[data-new-weekly-agent]');if(b)openWeeklyPlan(null,b.dataset.newWeeklyAgent)});
  const filterIds=['personalMonth','personalType','personalStatus','agentSearch','agentStatus','rotationAgent','rotationYear','rotationMonth','planningMonth','planningAgent','planningSignal','absenceMonth','absenceAgent','absenceType','absenceStatus','vacationZone','vacationStatus','issueMonth','issueAgent','issueCategory','issueStatus','periodicFamily','periodicStatus','periodicBuilding','cleanMonth','cleanBuilding','cleanRoomType','cleanStatus','cleaningGuideType','maintenanceStatus','maintenancePriority','maintenanceFamily','requestStatus','requestType','workStatus','workType','meetingMonth','meetingType','noteCategory','notePriority','noteStatus','noteSearch','documentCategory','documentSearch','archiveYear','archiveSearch','importArchiveType','importArchiveSearch'];for(const id of filterIds){const e=document.getElementById(id);if(e)e.addEventListener(e.tagName==='INPUT'&&e.type==='text'?'input':'change',()=>{if(id==='cleaningGuideType')renderCleaningGuide();else if(id.startsWith('personal'))renderPersonal();else if(id.startsWith('agent'))renderAgents();else if(id.startsWith('rotation'))renderRotations();else if(id.startsWith('planning'))renderPlanning();else if(id.startsWith('absence'))renderAbsences();else if(id.startsWith('vacation'))renderVacations();else if(id.startsWith('issue'))renderIssues();else if(id.startsWith('periodic'))renderPeriodic();else if(id.startsWith('clean'))renderCleaning();else if(id.startsWith('maintenance'))renderMaintenance();else if(id.startsWith('request'))renderRequests();else if(id.startsWith('work'))renderWorks();else if(id.startsWith('meeting'))renderMeetings();else if(id.startsWith('note'))renderNotes();else if(id.startsWith('document'))renderDocuments();else if(id.startsWith('archive')||id.startsWith('importArchive'))renderArchives()})}
- document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){if(go.closest('#dashboard'))dashboardShortcut(go.dataset.go);else setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date,null,ad.dataset.dayType||'');return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
+ document.addEventListener('keydown',e=>{const go=e.target.closest?.('#dashboard [data-go]');if(go&&(e.key==='Enter'||e.key===' ')){e.preventDefault();dashboardShortcut(go.dataset.go)}});
+ document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){if(go.closest('#dashboard'))dashboardShortcut(go.dataset.go);else setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ae=e.target.closest('[data-agenda-source]');if(ae){
+ const source=ae.dataset.agendaSource,id=ae.dataset.agendaId;
+ if(source==='personal')openPersonalEvent(id);
+ else if(source==='meeting')openMeeting(id);
+ else if(source==='note')openNote(id);
+ else if(source==='maintenance')openMaintenance(id);
+ else if(source==='request')openRequest(id);
+ else if(source==='work')openWork(id);
+ else if(source==='issue')openIssue(id);
+ else if(source==='periodic')openPeriodic(id);
+ else if(source==='vacation')openVacation(id);
+ else if(source==='roomprep'){setView('room-prep');setTimeout(()=>window.PSTRoomPrep?.edit?.(id),60)}
+ else if(source==='waste')setView('waste');
+ return
+}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date,null,ad.dataset.dayType||'');return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
 }
 
 

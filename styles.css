@@ -573,3 +573,16 @@ input,select,textarea{border-radius:10px}textarea{min-height:74px;resize:vertica
 #rcBuilding,#rcFloor,#rcSector,#rpBuilding,#rpFloor,#rpSector,#rpRoom{font-weight:700;min-height:46px}.nav-btn{padding-top:11px;padding-bottom:11px;line-height:1.15}.hint,.muted{line-height:1.35}.roomprep-block{padding:14px}.roomprep-checks{gap:10px}
 @media(max-width:820px){.view{padding-left:10px;padding-right:10px}.panel{padding:12px;border-radius:14px}.section-actions,.panel-head{align-items:stretch;flex-direction:column}.section-actions>div:last-child,.panel-head>button,.section-actions button{width:100%}.roomprep-grid,.rc-form-grid{grid-template-columns:1fr 1fr!important;gap:10px}.roomprep-columns{grid-template-columns:1fr!important}.roomprep-save-actions{display:grid;grid-template-columns:1fr 1fr}.roomprep-card-actions{display:grid;grid-template-columns:1fr 1fr}.roomprep-card-actions button{width:100%;min-width:0}}
 @media(max-width:520px){.roomprep-grid,.rc-form-grid,.roomprep-small-grid,.roomprep-special-options,.roomprep-checks{grid-template-columns:1fr!important}.roomprep-save-actions{grid-template-columns:1fr;bottom:4px}button,.nav-btn,select,input{min-height:48px}.roomprep-card-actions{grid-template-columns:1fr}.badge{justify-self:start}}
+
+/* V116 — cartes cliquables + agenda personnel centralisé */
+#dashboard [data-go]{cursor:pointer;touch-action:manipulation}
+#dashboard [data-go]:focus-visible{outline:3px solid rgba(28,126,207,.28);outline-offset:2px}
+.agenda-action{width:100%;text-align:left;display:grid;grid-template-columns:auto 1fr;gap:3px 7px;align-items:center;cursor:pointer}
+.agenda-action small{grid-column:2;color:var(--muted);font-size:9px}
+.agenda-action.waste{border-left:4px solid #c39426}
+.agenda-action.roomprep{border-left:4px solid #7a5ca8}
+.agenda-action.maintenance{border-left:4px solid #1f9a70}
+.agenda-action.issue{border-left:4px solid #d95555}
+.agenda-action.periodic{border-left:4px solid #e18b37}
+.roomprep-card-button{display:block;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.roomprep-card-button:hover{border-color:#9ec5df}
