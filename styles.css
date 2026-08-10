@@ -586,3 +586,9 @@ input,select,textarea{border-radius:10px}textarea{min-height:74px;resize:vertica
 .agenda-action.periodic{border-left:4px solid #e18b37}
 .roomprep-card-button{display:block;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer}
 .roomprep-card-button:hover{border-color:#9ec5df}
+
+/* V117 — boutons mobiles fiables et clairement interactifs */
+[data-edit-type],[data-go],[data-quick],[data-agenda-source]{touch-action:manipulation;-webkit-tap-highlight-color:rgba(28,126,207,.12)}
+.note-edit-button{min-width:110px;cursor:pointer;position:relative;z-index:2}
+.note-edit-button:active,[data-edit-type]:active,[data-go]:active,[data-quick]:active{transform:scale(.98)}
+button{user-select:none;-webkit-user-select:none}

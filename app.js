@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='116.0';
-const APP_BUILD='10/08/2026 15:50';
+const APP_VERSION='117.0';
+const APP_BUILD='10/08/2026 16:45';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -1003,7 +1003,7 @@ function renderRequests(){const st=$('#requestStatus').value,t=$('#requestType')
 function renderWorks(){const st=$('#workStatus').value,t=$('#workType').value;const arr=db.works.filter(x=>(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderMeetings(){const m=$('#meetingMonth').value,t=$('#meetingType').value;const arr=db.meetings.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));$('#meetingsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.time||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${esc(x.participants||'—')}</td><td>${badge(x.status)}</td><td>${editButton('meeting',x.id)}</td></tr>`).join(''):emptyRow(8)}
 function renderPersonal(){const m=$('#personalMonth').value,t=$('#personalType').value,s=$('#personalStatus').value;const arr=db.personalEvents.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)&&(!s||x.status===s)).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));$('#personalTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc([x.start,x.end].filter(Boolean).join('–')||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('personal',x.id)}</td></tr>`).join(''):emptyRow(8);$('#personalCards').innerHTML=cardList(arr.map(x=>`<article class="list-card"><div><strong>${fmtDate(x.date)} ${esc(x.start||'')}</strong>${badge(x.status)}</div><h3>${esc(x.title)}</h3><p>${esc(x.type)} · ${esc(x.location||'Sans lieu')}</p><button data-edit-type="personal" data-edit-id="${x.id}">Modifier</button></article>`))}
-function renderNotes(){const cat=$('#noteCategory').value,p=$('#notePriority').value,s=$('#noteStatus').value,q=($('#noteSearch').value||'').toLowerCase();const arr=db.notes.filter(x=>(!cat||x.category===cat)&&(!p||x.priority===p)&&(!s||x.status===s)&&(!q||`${x.title} ${x.text}`.toLowerCase().includes(q))).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#notesBoard').innerHTML=cardList(arr.map(x=>{const done=(x.items||[]).filter(i=>i.done).length;return `<article class="note-card"><div class="panel-head"><span>${esc(x.category)}</span>${badge(x.priority)}</div><h3>${esc(x.title)}</h3><p>${esc(x.text||'')}</p>${x.agentId?`<p>👤 ${esc(agentName(agentById(x.agentId)))}</p>`:''}<p>Échéance : ${fmtDate(x.dueDate)||'—'} · ${done}/${(x.items||[]).length} items</p><ul>${(x.items||[]).map(i=>`<li class="${i.done?'done':''}">${i.done?'✓':'○'} ${esc(i.text)}</li>`).join('')}</ul>${attachmentButtons(x.attachments)}<div class="card-actions"><span>${badge(x.status)}</span><button data-edit-type="note" data-edit-id="${x.id}">Modifier</button></div></article>`}),'Aucune note.')}
+function renderNotes(){const cat=$('#noteCategory').value,p=$('#notePriority').value,s=$('#noteStatus').value,q=($('#noteSearch').value||'').toLowerCase();const arr=db.notes.filter(x=>(!cat||x.category===cat)&&(!p||x.priority===p)&&(!s||x.status===s)&&(!q||`${x.title} ${x.text}`.toLowerCase().includes(q))).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#notesBoard').innerHTML=cardList(arr.map(x=>{const done=(x.items||[]).filter(i=>i.done).length;return `<article class="note-card"><div class="panel-head"><span>${esc(x.category)}</span>${badge(x.priority)}</div><h3>${esc(x.title)}</h3><p>${esc(x.text||'')}</p>${x.agentId?`<p>👤 ${esc(agentName(agentById(x.agentId)))}</p>`:''}<p>Échéance : ${fmtDate(x.dueDate)||'—'} · ${done}/${(x.items||[]).length} items</p><ul>${(x.items||[]).map(i=>`<li class="${i.done?'done':''}">${i.done?'✓':'○'} ${esc(i.text)}</li>`).join('')}</ul>${attachmentButtons(x.attachments)}<div class="card-actions"><span>${badge(x.status)}</span><button type="button" class="note-edit-button" data-edit-type="note" data-edit-id="${x.id}" aria-label="Modifier la note ${esc(x.title)}">Modifier</button></div></article>`}),'Aucune note.')}
 function renderDocuments(){const cat=$('#documentCategory').value,q=($('#documentSearch').value||'').toLowerCase();const arr=db.documents.filter(x=>(!cat||x.category===cat)&&(!q||`${x.title} ${x.description}`.toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));
  const guides=BUILTIN_GUIDES.filter(x=>(!cat||x.category===cat)&&(!q||x.title.toLowerCase().includes(q)));
  $('#documentCards').innerHTML=cardList([
@@ -1665,6 +1665,47 @@ function runDiagnostic(){
  if(missing.length||failed.length){console.error('Diagnostic',{missing,failed});toast(`Diagnostic : ${missing.length+failed.length} anomalie(s) détectée(s)`);return false}
  toast(`Diagnostic réussi — ${notifications.length} notification(s) calculée(s)`);return true;
 }
+
+/* V117 — routage fiable des boutons dynamiques sur mobile */
+function pstReliableDynamicButtons(){
+ if(window.__pstReliableDynamicButtons)return;
+ window.__pstReliableDynamicButtons=true;
+ document.addEventListener('click',e=>{
+   const edit=e.target.closest?.('[data-edit-type]');
+   if(edit){
+     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+     dispatchEdit(edit.dataset.editType,edit.dataset.editId);return;
+   }
+   const agenda=e.target.closest?.('[data-agenda-source]');
+   if(agenda){
+     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+     const source=agenda.dataset.agendaSource,id=agenda.dataset.agendaId;
+     if(source==='personal')openPersonalEvent(id);
+     else if(source==='meeting')openMeeting(id);
+     else if(source==='note')openNote(id);
+     else if(source==='maintenance')openMaintenance(id);
+     else if(source==='request')openRequest(id);
+     else if(source==='work')openWork(id);
+     else if(source==='issue')openIssue(id);
+     else if(source==='periodic')openPeriodic(id);
+     else if(source==='vacation')openVacation(id);
+     else if(source==='roomprep'){setView('room-prep');setTimeout(()=>window.PSTRoomPrep?.edit?.(id),60)}
+     else if(source==='waste')setView('waste');
+     return;
+   }
+   const go=e.target.closest?.('[data-go]');
+   if(go){
+     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+     if(go.closest('#dashboard'))dashboardShortcut(go.dataset.go);else setView(go.dataset.go);return;
+   }
+   const quick=e.target.closest?.('[data-quick]');
+   if(quick){
+     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+     dispatchQuick(quick.dataset.quick);return;
+   }
+ },true);
+}
+
 function bindEvents(){
  $('#modalForm').addEventListener('submit',async e=>{
   e.preventDefault();if(!modalHandler)return;
@@ -1742,7 +1783,7 @@ function openAutoReportWizard(){autoReportWizardStep=0;renderAutoReportWizard();
 function saveWizardStep(){if(autoReportWizardStep===1&&autoReportWizardData.provider==='microsoft'){autoReportWizardData.tenantId=document.getElementById('wizTenant')?.value.trim()||'';autoReportWizardData.clientId=document.getElementById('wizClient')?.value.trim()||'';autoReportWizardData.senderEmail=document.getElementById('wizSender')?.value.trim()||''}}
 
 document.addEventListener('change',e=>{const s=e.target.closest?.('[data-nc-status]');if(!s)return;const n=(db.reportNonconformities||[]).find(x=>String(x.id)===String(s.dataset.ncStatus));if(!n)return;const before=n.status;n.status=s.value;n.updatedAt=new Date().toISOString();n.statusHistory=n.statusHistory||[];n.statusHistory.push({at:n.updatedAt,from:before,to:n.status});const closed=['FAIT','Levée'].includes(n.status);for(const x of (db.issues||[]).filter(x=>String(x.sourceNonconformityId||'')===String(n.id))){x.status=closed?'Clôturé':'À faire';x.updatedAt=n.updatedAt;}for(const x of (db.maintenance||[]).filter(x=>String(x.sourceNonconformityId||'')===String(n.id))){x.status=closed?'Clôturé':'À faire';x.updatedAt=n.updatedAt;}save();renderPeriodic();renderIssues();renderMaintenance();toast(`Observation ${n.observationNo||''} : ${n.status} — plan d’action ${closed?'clôturé':'rouvert'}`)});
-function init(){secureAppLogos();db.settings.academicYear=normalizeAcademicYear(db.settings.academicYear)||academicYearFor(todayISO());const storedLayout=localStorage.getItem('pilotage-service-technique-layout')||db.settings.defaultLayout||'auto';const academicStart=Number((academicYearFor(todayISO())||'').split('-')[0])||new Date().getFullYear();const defaults={personalMonth:monthISO(),planningMonth:monthISO(),absenceMonth:monthISO(),issueMonth:monthISO(),cleanMonth:monthISO(),meetingMonth:monthISO(),dailyDate:todayISO(),weeklyDate:todayISO(),monthlyDate:monthISO(),teamReportMonth:monthISO(),absenceReportMonth:monthISO(),cleaningReportMonth:monthISO(),maintenanceReportMonth:monthISO(),periodicReportYear:new Date().getFullYear(),collectivePlanningDate:todayISO(),individualPlanningFrom:todayISO(),individualPlanningTo:addDays(todayISO(),6)};for(const [id,v] of Object.entries(defaults))if(document.getElementById(id))document.getElementById(id).value=v;const ipa=$('#individualPlanningAgent');if(ipa){ipa.innerHTML=db.agents.filter(a=>a.status==='Actif').map(a=>`<option value="${a.id}">${esc(agentName(a))}</option>`).join('')}const ry=$('#rotationYear');if(ry){ry.innerHTML='';for(let y=academicStart-5;y<=academicStart+5;y++)ry.insertAdjacentHTML('beforeend',`<option value="${y}" ${y===academicStart?'selected':''}>${y}–${y+1}</option>`)}const rm=$('#rotationMonth');if(rm){rm.innerHTML='<option value="">Année scolaire entière</option>';for(const i of [9,10,11,12,1,2,3,4,5,6,7,8])rm.insertAdjacentHTML('beforeend',`<option value="${i}">${new Date(2026,i-1,1).toLocaleDateString('fr-FR',{month:'long'})}</option>`)}applyLayout(storedLayout);syncAcademicYearFilters(activeAcademicYear());runAutomaticHousekeeping();bindEvents();renderAll();renderGlobalAcademicYear();setView('dashboard')}
+function init(){secureAppLogos();db.settings.academicYear=normalizeAcademicYear(db.settings.academicYear)||academicYearFor(todayISO());const storedLayout=localStorage.getItem('pilotage-service-technique-layout')||db.settings.defaultLayout||'auto';const academicStart=Number((academicYearFor(todayISO())||'').split('-')[0])||new Date().getFullYear();const defaults={personalMonth:monthISO(),planningMonth:monthISO(),absenceMonth:monthISO(),issueMonth:monthISO(),cleanMonth:monthISO(),meetingMonth:monthISO(),dailyDate:todayISO(),weeklyDate:todayISO(),monthlyDate:monthISO(),teamReportMonth:monthISO(),absenceReportMonth:monthISO(),cleaningReportMonth:monthISO(),maintenanceReportMonth:monthISO(),periodicReportYear:new Date().getFullYear(),collectivePlanningDate:todayISO(),individualPlanningFrom:todayISO(),individualPlanningTo:addDays(todayISO(),6)};for(const [id,v] of Object.entries(defaults))if(document.getElementById(id))document.getElementById(id).value=v;const ipa=$('#individualPlanningAgent');if(ipa){ipa.innerHTML=db.agents.filter(a=>a.status==='Actif').map(a=>`<option value="${a.id}">${esc(agentName(a))}</option>`).join('')}const ry=$('#rotationYear');if(ry){ry.innerHTML='';for(let y=academicStart-5;y<=academicStart+5;y++)ry.insertAdjacentHTML('beforeend',`<option value="${y}" ${y===academicStart?'selected':''}>${y}–${y+1}</option>`)}const rm=$('#rotationMonth');if(rm){rm.innerHTML='<option value="">Année scolaire entière</option>';for(const i of [9,10,11,12,1,2,3,4,5,6,7,8])rm.insertAdjacentHTML('beforeend',`<option value="${i}">${new Date(2026,i-1,1).toLocaleDateString('fr-FR',{month:'long'})}</option>`)}applyLayout(storedLayout);syncAcademicYearFilters(activeAcademicYear());runAutomaticHousekeeping();pstReliableDynamicButtons();bindEvents();renderAll();renderGlobalAcademicYear();setView('dashboard')}
 window.addEventListener('DOMContentLoaded',init);
 
 document.addEventListener('DOMContentLoaded',()=>initAuth().catch(console.error),{once:true});
