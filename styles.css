@@ -615,3 +615,9 @@ button{user-select:none;-webkit-user-select:none}
 .rc-history-preview-list .bad{color:#b32727;font-weight:800}.rc-history-preview-list .warn{color:#a96500;font-weight:800}.rc-history-preview-list .good{color:#18724d;font-weight:800}
 .rc-older-note,.rc-history-prompt{font-size:10px;color:var(--muted);padding:7px 2px}
 @media(max-width:600px){.rc-history-preview-list>div{grid-template-columns:1fr auto}.rc-history-preview-list>div>strong:last-of-type{grid-column:2}.rc-history-preview-card.empty-history{align-items:flex-start;flex-direction:column}}
+
+/* V122 — actions Préparation salle & café */
+.roomprep-card-action{cursor:pointer}
+.roomprep-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.roomprep-card-actions button{min-width:100px}
+@media(max-width:600px){.roomprep-card-actions{display:grid;grid-template-columns:1fr 1fr}.roomprep-card-actions .danger-lite{grid-column:1/-1}.roomprep-card-actions button{width:100%}}
