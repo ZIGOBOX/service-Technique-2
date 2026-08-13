@@ -1,6 +1,9 @@
 (()=>{'use strict';
-const KEY='pst_room_preps_v106',PRONOTE_KEY='pst_pronote_url_v106';const $=id=>document.getElementById(id),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);let editingId='';
-const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{return[]}}, saveList=v=>{localStorage.setItem(KEY,JSON.stringify(v));render()}, esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const $=id=>document.getElementById(id),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);let editingId='';
+const mainDb=()=>window.PSTMainState?.get?.()||null;
+const load=()=>{const d=mainDb();return d&&Array.isArray(d.roomPreps)?d.roomPreps:[]};
+const saveList=v=>{const d=mainDb();if(!d){console.warn('État principal indisponible');return false}d.roomPreps=Array.isArray(v)?v:[];window.PSTMainState?.save?.(false);render();try{window.dispatchEvent(new Event('pst:data-saved'))}catch(_){}return true};
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}, fmtDate=v=>v?new Date(`${v}T12:00:00`).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'';
 const ref=()=>window.PSTCleaningRooms?.get?.()||[], roomLabel=r=>[r?.number||'',r?.name||''].filter(Boolean).join(' — ')||r?.type||'Local';
 function fillB(sel={}){const d=ref(),e=$('rpBuilding');if(!e)return;e.innerHTML=d.map((x,i)=>`<option value="${i}">${esc(x.name)}</option>`).join('');e.value=String(sel.building??0);fillF(sel)}
@@ -81,9 +84,11 @@ function render(){
  }
 }
 function openPrep(){document.querySelector('.nav-btn[data-view="room-prep"]')?.click();setTimeout(()=>$('roomPrepEditorPanel')?.scrollIntoView({behavior:'smooth'}),50)}
-function pronote(){window.open((localStorage.getItem(PRONOTE_KEY)||'').trim()||'https://www.index-education.com/fr/','_blank','noopener')}
+function pronote(){const d=mainDb();window.open(String(d?.settings?.pronoteUrl||'').trim()||'https://www.index-education.com/fr/','_blank','noopener')}
 function init(){
  $('rpOtherPrep')?.addEventListener('change',()=>$('rpOtherPrepCommentWrap')?.classList.toggle('hidden',$('rpOtherPrep').value!=='Oui'));
+ window.addEventListener('pst:data-loaded',render);
+ window.addEventListener('pst:data-saved',render);
 reset();render();$('rpBuilding')?.addEventListener('change',()=>fillF());$('rpFloor')?.addEventListener('change',()=>fillS());$('rpSector')?.addEventListener('change',()=>fillR());$('rpRoom')?.addEventListener('change',toggleOther);$('rpOtherPrep')?.addEventListener('change',()=>$('rpOtherPrepCommentWrap').classList.toggle('hidden',$('rpOtherPrep').value!=='Oui'));document.querySelectorAll('[data-quick-roomprep]').forEach(x=>x.addEventListener('click',openPrep));$('openRoomPrepFromAgenda')?.addEventListener('click',openPrep);$('roomPrepPronote')?.addEventListener('click',pronote);document.addEventListener('click',e=>{
  const del=e.target.closest('[data-roomprep-delete]');if(del){e.preventDefault();e.stopPropagation();deletePrep(del.dataset.roomprepDelete);return}
  const pr=e.target.closest('[data-roomprep-print]');if(pr){e.preventDefault();e.stopPropagation();printPrep(pr.dataset.roomprepPrint);return}

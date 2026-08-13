@@ -24,7 +24,6 @@
     if(title && activeBtn) title.textContent=activeBtn.textContent.trim();
     closeMenu();
     window.scrollTo(0,0);
-    try{ localStorage.setItem('pst-last-view',id); }catch(e){}
     return true;
   }
   function initNavigation(){
@@ -47,8 +46,7 @@
       const go=e.target.closest('[data-go]');
       if(go && go.dataset.go){e.preventDefault();switchView(go.dataset.go);}
     },true);
-    let last='dashboard'; try{last=localStorage.getItem('pst-last-view')||'dashboard';}catch(e){}
-    if(!switchView(last)) switchView('dashboard');
+    if(!switchView('dashboard')) switchView('dashboard');
     document.documentElement.classList.add('navigation-ready');
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initNavigation,{once:true});

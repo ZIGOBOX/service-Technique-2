@@ -1,6 +1,5 @@
 
 (()=>{'use strict';
-const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103';
 const $=x=>document.getElementById(x), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const room=(number,name,type='Salle')=>({id:uid(),number,name,type});
 const std=(base)=>Array.from({length:9},(_,i)=>room(String(base+i),'','Salle'));
@@ -54,10 +53,11 @@ let data=load();
 let currentFiltered=[];
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
-function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return Array.isArray(x)&&x.length?x:clone(DEF)}catch(e){return clone(DEF)}}
-function loadChecks(){try{return JSON.parse(localStorage.getItem(CK))||[]}catch(e){return[]}}
-function save(redraw=true){localStorage.setItem(KEY,JSON.stringify(data));if(redraw){renderSettings();renderBuildings();renderHistory()}}
-function saveChecks(arr){localStorage.setItem(CK,JSON.stringify(arr));renderHistory()}
+function mainDb(){return window.PSTMainState?.get?.()||null}
+function load(){const d=mainDb();return Array.isArray(d?.cleaningRoomsConfig)&&d.cleaningRoomsConfig.length?clone(d.cleaningRoomsConfig):clone(DEF)}
+function loadChecks(){const d=mainDb();return Array.isArray(d?.cleaningRoomChecks)?d.cleaningRoomChecks:[]}
+function save(redraw=true){const d=mainDb();if(!d)return false;d.cleaningRoomsConfig=clone(data);window.PSTMainState?.save?.(false);if(redraw){renderSettings();renderBuildings();renderHistory()}return true}
+function saveChecks(arr){const d=mainDb();if(!d)return false;d.cleaningRoomChecks=Array.isArray(arr)?arr:[];window.PSTMainState?.save?.(false);renderHistory();return true}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function label(r){return [r.number?`${r.number}`:'',r.name].filter(Boolean).join(' — ')||r.type}
 function fmtDate(v){try{return new Date(v).toLocaleDateString('fr-FR')}catch{return v||''}}
@@ -249,7 +249,7 @@ function saveCheck(rs){
    };
  });
 
- localStorage.setItem(KEY,JSON.stringify(data));
+ const d=mainDb();if(d){d.cleaningRoomsConfig=clone(data);window.PSTMainState?.save?.(false);}
 
  const check={
    id:uid(),
@@ -263,7 +263,7 @@ function saveCheck(rs){
 
  let a=loadChecks();
  a.unshift(check);
- localStorage.setItem(CK,JSON.stringify(a));
+ const cloudDb=mainDb();if(cloudDb){cloudDb.cleaningRoomChecks=a;window.PSTMainState?.save?.(false);}
 
  alert(`Contrôle ménage enregistré : ${rs.length} local(aux). Les modifications de type/nom des locaux deviennent la nouvelle référence.`);
  $('rcForm').classList.add('hidden');

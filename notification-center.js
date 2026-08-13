@@ -1,13 +1,14 @@
 /* Pilotage Service Technique V50 — cartes mobiles, masquage et détails */
 (() => {
  'use strict';
- const byId=id=>document.getElementById(id),STORE='pst-notification-dismissals-v59';let opened=false,lastNotifications=[];
+ const byId=id=>document.getElementById(id);let opened=false,lastNotifications=[];
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const key=n=>n.type==='cleaning-summary'?[n.type||'',n.id||'',n.title||'',...(n.details||[])].join('|'):[n.type||'',n.id||'',n.date||'',n.title||'',n.text||''].join('|');
- const load=()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch{return{}}};
- const save=x=>localStorage.setItem(STORE,JSON.stringify(x));
+ const mainDb=()=>window.PSTMainState?.get?.()||null;
+ const load=()=>{const d=mainDb();return d&&d.notificationDismissals&&typeof d.notificationDismissals==='object'?d.notificationDismissals:{}};
+ const save=x=>{const d=mainDb();if(!d)return false;d.notificationDismissals=x||{};window.PSTMainState?.save?.(false);return true};
  function prune(store){const now=Date.now();for(const [k,v] of Object.entries(store))if(!v||Number(v)<=now)delete store[k];return store}
- function compute(){try{const raw=window.PSTNotifications?.compute?.()||[],store=prune(load());save(store);return{all:Array.isArray(raw)?raw:[],list:(Array.isArray(raw)?raw:[]).filter(n=>!store[key(n)]),error:''}}catch(e){return{all:[],list:[],error:e?.message||String(e)}}}
+ function compute(){try{const raw=window.PSTNotifications?.compute?.()||[],before=load(),beforeCount=Object.keys(before).length,store=prune(before);if(Object.keys(store).length!==beforeCount)save(store);return{all:Array.isArray(raw)?raw:[],list:(Array.isArray(raw)?raw:[]).filter(n=>!store[key(n)]),error:''}}catch(e){return{all:[],list:[],error:e?.message||String(e)}}}
  function diagnostic(){try{return window.PSTDiagnostics?.notificationSummary?.()||null}catch{return null}}
  function diagnosticHtml(){const d=diagnostic();if(!d)return'';return `<details class="notification-diagnostic"><summary>Diagnostic notifications</summary><div class="diagnostic-grid"><span>Interventions lues <b>${esc(d.maintenanceTotal)}</b></span><span>Interventions en retard <b>${esc(d.maintenanceLate)}</b></span><span>Notifications calculées <b>${esc(d.notifications)}</b></span><span>Agents lus <b>${esc(d.agents)}</b></span></div></details>`}
  function render(){const result=compute(),list=result.list;lastNotifications=list;window.__notifications=list;const count=byId('notificationCount'),subtitle=byId('notificationSubtitle'),box=byId('notificationList');if(count){count.textContent=String(list.length);count.classList.toggle('hidden',!list.length)}if(subtitle)subtitle.textContent=result.error?'Erreur de calcul':list.length?`${list.length} notification${list.length>1?'s':''} à consulter`:'Aucune notification visible';if(!box)return list;
@@ -16,7 +17,7 @@
   box.innerHTML=toolbar+(items||'<div class="empty-state">✓ Aucune notification à traiter.</div>')+diagnosticHtml();return list}
  function dismiss(index,days=7){const n=lastNotifications[index];if(!n)return;const store=load();store[key(n)]=Date.now()+days*86400000;save(store);render()}
  function dismissAll(){const store=load(),until=Date.now()+86400000;for(const n of lastNotifications)store[key(n)]=until;save(store);render()}
- function restore(){localStorage.removeItem(STORE);render()}
+ function restore(){save({});render()}
  function open(e){e?.preventDefault?.();e?.stopPropagation?.();const m=byId('notificationModal');if(!m)return;render();m.classList.remove('hidden');m.classList.add('is-open');m.setAttribute('aria-hidden','false');document.body.classList.add('notifications-open');opened=true}
  function close(e){e?.preventDefault?.();const m=byId('notificationModal');if(!m)return;m.classList.remove('is-open');m.classList.add('hidden');m.setAttribute('aria-hidden','true');document.body.classList.remove('notifications-open');opened=false}
  function activate(i){const n=lastNotifications[i];close();if(n)window.PSTNotifications?.target?.(n)}

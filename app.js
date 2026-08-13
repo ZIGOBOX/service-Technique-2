@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='124.0';
+const APP_VERSION='127.0';
 const APP_BUILD='13/08/2026 22:46';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -202,15 +202,19 @@ function makePeriodic(){return PERIODIC_CATALOG.map((x,i)=>({id:uid(),no:`CP-${S
 function defaultSpaces(buildings){const out=[];for(const b of buildings){for(const f of b.floors){out.push({id:uid(),building:b.name,floor:f,type:b.name==='Gymnase'?'Salle de sport / gymnase':b.name==='Cour'?'Cour / extérieurs':'Circulations / halls / escaliers',name:'Zone entière'});if(!['Cour','Gymnase'].includes(b.name)){out.push({id:uid(),building:b.name,floor:f,type:'Sanitaires / vestiaires',name:'Sanitaires'});if(/^Bâtiment/.test(b.name)||b.name==='Extension')out.push({id:uid(),building:b.name,floor:f,type:'Salle de classe / devoirs / informatique',name:'Salles de classe'})}}}return out}
 function clone(x){return structuredClone(x)}
 function defaultData(){const buildings=clone(initialBuildings);const agents=[['Mme','Tarrio','Agent d’accueil'],['Mme','Delorme','Agent d’accueil / lingerie'],['Complément','accueil','Agent d’accueil'],['Mme','Berthoux','Agent de restauration'],['Mme','Bozio','Agent d’accueil']].map((n,i)=>({id:uid(),no:`AGT-${String(i+1).padStart(3,'0')}`,firstName:n[0],lastName:n[1],role:n[2],weeklyHours:35,email:'',phone:'',assignment:'',status:'Actif',arrivalDate:'',workdays:[1,2,3,4,5],notes:''}));const monday=startOfWeek(todayISO());const maintenance=IMPORTED_INTERVENTIONS.map((x,i)=>({id:uid(),no:`MAI-2026-${String(i+1).padStart(4,'0')}`,date:todayISO(),title:x[0],family:x[1],priority:x[2],status:x[3],building:x[5]||'',floor:'',room:x[5]||'',requester:'Direction',assigned:'',dueDate:'',cost:'',description:x[4]||'',action:'',attachments:[],importBatch:'excel-2026-08'}));return {version:31,settings:{initialSeedCompleted:true,seedVersion:31,cleaningAlertDays:30,cleaningNotificationsEnabled:true,cleaningNotifyNever:true,cleaningNotifyOverdue:true,cleaningNotifyPlanned:true,meetingAlertDays:3,
-autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:'2026-2027',defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:agents.map((a,i)=>({id:uid(),no:`RLT-${String(i+1).padStart(3,'0')}`,agentId:a.id,effectiveFrom:monday,effectiveTo:'',startShift:i%2?'Soir':'Matin',morningWeeks:2,eveningWeeks:2,morningStart:'06:00',morningEnd:'13:30',eveningStart:'13:00',eveningEnd:'20:30',pause:30,weekdays:[1,2,3,4,5],notes:''})),rotationExceptions:[],agentDays:[],personalEvents:[],issues:[],periodic:makePeriodic(),cleaning:[],maintenance,requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],contacts:[],attachments:[],archives:[],importArchives:[]}}
+autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:'2026-2027',defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:agents.map((a,i)=>({id:uid(),no:`RLT-${String(i+1).padStart(3,'0')}`,agentId:a.id,effectiveFrom:monday,effectiveTo:'',startShift:i%2?'Soir':'Matin',morningWeeks:2,eveningWeeks:2,morningStart:'06:00',morningEnd:'13:30',eveningStart:'13:00',eveningEnd:'20:30',pause:30,weekdays:[1,2,3,4,5],notes:''})),rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],issues:[],periodic:makePeriodic(),cleaning:[],maintenance,requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],notificationDismissals:{},importOriginalBindings:{}}}
 function nextSeedNo(rows){return `MAI-2026-${String((rows?.length||0)+1).padStart(4,'0')}`}
 function migrate(raw){
  const base=defaultData();
  if(!raw||typeof raw!=='object')return base;
  const d={...base,...raw,settings:{...base.settings,...(raw.settings||{}),counters:{...base.settings.counters,...(raw.settings?.counters||{})}},lists:{...base.lists,...(raw.lists||{})}};
- for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities']){
+ for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities']){
    if(!Array.isArray(d[k]))d[k]=base[k];
  }
+ if(!Array.isArray(d.cleaningRoomChecks))d.cleaningRoomChecks=[];
+ if(!d.notificationDismissals||typeof d.notificationDismissals!=='object'||Array.isArray(d.notificationDismissals))d.notificationDismissals={};
+ if(!d.importOriginalBindings||typeof d.importOriginalBindings!=='object'||Array.isArray(d.importOriginalBindings))d.importOriginalBindings={};
+ if(d.cleaningRoomsConfig!==null&&!Array.isArray(d.cleaningRoomsConfig))d.cleaningRoomsConfig=null;
  // Jours travaillés : par défaut lundi à vendredi. Les anciens agents sont migrés automatiquement.
  for(const a of d.agents){
    if(!Array.isArray(a.workdays)||!a.workdays.length)a.workdays=[1,2,3,4,5];
@@ -253,19 +257,37 @@ function restoreSuppliedData(showMessage=true){
  if(!Array.isArray(db.spaces)||!db.spaces.length) db.spaces=defaultSpaces(db.buildings);
  db.version=30;
  db.settings.initialSeedCompleted=true;db.settings.seedVersion=31;
- localStorage.setItem(STORAGE_KEY,JSON.stringify(db));try{window.dispatchEvent(new Event('pst:data-saved'))}catch(_){ }
+ try{window.dispatchEvent(new Event('pst:data-saved'))}catch(_){ }
  if(showMessage){renderAll();toast('Toutes les données fournies ont été restaurées')}
 }
-function loadLocal(){for(const k of [STORAGE_KEY,...OLD_KEYS]){try{const s=localStorage.getItem(k);if(s){return migrate(JSON.parse(s))}}catch(e){console.error(e)}}return defaultData()}
-let db=loadLocal(); let teamWeek=startOfWeek(todayISO()),personalWeek=startOfWeek(todayISO()),modalHandler=null,modalDeleteHandler=null,currentView='dashboard',modalAuditInitial=null,modalAuditTitle='';
+let db=defaultData(); let teamWeek=startOfWeek(todayISO()),personalWeek=startOfWeek(todayISO()),modalHandler=null,modalDeleteHandler=null,currentView='dashboard',modalAuditInitial=null,modalAuditTitle='';
 let supabaseClient=null,currentUser=null,cloudReady=false,cloudSaveTimer=null,cloudRetryTimer=null,cloudBusy=false,cloudPollTimer=null,lastCloudUpdatedAt='',localDirty=false;
+const OFFLINE_CACHE_KEY='pst_offline_pending_v127';
 function setSaveState(text,state=''){const s=$('#saveState');if(!s)return;s.textContent=text;s.dataset.state=state}
 function withTimeout(promise,ms=9000){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('Délai de connexion dépassé')),ms))])}
 function hasUsefulData(x){return !!(x&&((x.agents&&x.agents.length)||(x.maintenance&&x.maintenance.length)||(x.weeklyPlans&&x.weeklyPlans.length)||(x.notes&&x.notes.length)))}
-function scheduleCloudRetry(delay=30000){clearTimeout(cloudRetryTimer);cloudRetryTimer=setTimeout(()=>{if(navigator.onLine)cloudLoad({silent:true})},delay)}
+function readOfflinePending(){try{const raw=localStorage.getItem(OFFLINE_CACHE_KEY);return raw?JSON.parse(raw):null}catch(error){console.warn('Lecture attente hors ligne impossible',error);return null}}
+function writeOfflinePending(reason='hors ligne'){try{const item={userId:currentUser?.id||'',savedAt:new Date().toISOString(),baseCloudUpdatedAt:lastCloudUpdatedAt||'',reason,data:db};localStorage.setItem(OFFLINE_CACHE_KEY,JSON.stringify(item));localDirty=true;setSaveState('Hors ligne — modifications gardées sur cet appareil','local');return true}catch(error){console.error('Sauvegarde hors ligne impossible',error);setSaveState('Hors ligne — stockage local impossible','error');return false}}
+function clearOfflinePending(){try{localStorage.removeItem(OFFLINE_CACHE_KEY)}catch(_){}}
+function loadOfflinePendingIntoMemory(){const pending=readOfflinePending();if(!pending?.data)return false;if(currentUser?.id&&pending.userId&&pending.userId!==currentUser.id)return false;db=migrate(pending.data);localDirty=true;safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}setSaveState('Hors ligne — modifications en attente de synchronisation','local');return true}
+function scheduleCloudRetry(delay=15000){clearTimeout(cloudRetryTimer);cloudRetryTimer=setTimeout(()=>{if(navigator.onLine&&currentUser){if(localDirty||readOfflinePending())syncOfflinePending();else cloudLoad({silent:true})}},delay)}
 function useLocalMode(reason='Connexion momentanément indisponible'){
- cloudReady=false;setSaveState('Mode local — synchronisation automatique en attente','local');
- console.warn(reason);scheduleCloudRetry();
+ cloudReady=false;console.warn(reason);
+ if(!loadOfflinePendingIntoMemory())setSaveState('Hors ligne — les nouvelles modifications seront gardées sur cet appareil','local');
+ scheduleCloudRetry();
+}
+async function syncOfflinePending(){
+ if(!supabaseClient||!currentUser||!navigator.onLine)return false;
+ const pending=readOfflinePending();
+ if(pending?.data){
+   if(pending.userId&&pending.userId!==currentUser.id)return false;
+   db=migrate(pending.data);localDirty=true;
+ }
+ if(!localDirty)return true;
+ setSaveState('Connexion revenue — synchronisation…','loading');
+ const ok=await cloudSaveNow({silent:true});
+ if(ok){clearOfflinePending();setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');}
+ return ok;
 }
 async function cloudLoad({silent=false}={}){
  if(!supabaseClient||!currentUser||cloudBusy)return false;
@@ -283,20 +305,18 @@ async function cloudLoad({silent=false}={}){
        await cloudSaveNow({silent:true});
      }
    }else{
-     // Ne jamais effacer les données présentes sur l'appareil quand le cloud est vide.
-     db=migrate(db||loadLocal());runAutomaticHousekeeping();
-     if(!hasUsefulData(db))db=defaultData();
+     // Base cloud vide : initialisation directement dans Supabase, sans secours local.
+     db=defaultData();runAutomaticHousekeeping();
      restoreSuppliedData(false);db.settings.initialSeedCompleted=true;db.settings.seedVersion=31;
      await cloudSaveNow({silent:true});
    }
-   localStorage.setItem(STORAGE_KEY,JSON.stringify(db));cloudReady=true;renderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
+   cloudReady=true;renderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
    setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
    clearTimeout(cloudRetryTimer);return true;
  }catch(error){
-   console.error('Supabase indisponible, poursuite locale :',error);
+   console.error('Supabase indisponible :',error);
    useLocalMode(error?.message||String(error));
-   // L'application reste entièrement utilisable sans afficher de fenêtre bloquante.
-   renderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }return false;
+   try{window.dispatchEvent(new CustomEvent('pst:cloud-error',{detail:{message:error?.message||String(error)}}))}catch(_){ }return false;
  }finally{cloudBusy=false}
 }
 async function cloudSaveNow({silent=false}={}){
@@ -307,11 +327,12 @@ async function cloudSaveNow({silent=false}={}){
    const {error}=await withTimeout(supabaseClient.from('app_state').upsert(payload,{onConflict:'user_id'}));
    if(error)throw error;
    lastCloudUpdatedAt=stamp;localDirty=false;
-   cloudReady=true;setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+   cloudReady=true;clearOfflinePending();setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
    clearTimeout(cloudRetryTimer);return true;
  }catch(error){
-   console.error('Sauvegarde cloud différée :',error);useLocalMode(error?.message||String(error));
-   if(!silent)toast('Données conservées sur cet appareil — synchronisation différée');return false;
+   console.error('Sauvegarde cloud différée :',error);
+   writeOfflinePending(error?.message||'serveur indisponible');useLocalMode(error?.message||String(error));
+   if(!silent)toast('Connexion indisponible — modification gardée sur cet appareil et synchronisée automatiquement au retour du réseau');return false;
  }
 }
 function safeRenderAll(){
@@ -328,16 +349,18 @@ function safeRenderAll(){
  return errors;
 }
 function save(render=true){
- try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}catch(error){console.error(error);toast('Stockage local presque plein : exportez une sauvegarde')}
  localDirty=true;
- setSaveState(`Envoi au serveur…`,'loading');
+ if(!currentUser){setSaveState('Non connecté — non enregistré','error');if(render)safeRenderAll();return false}
+ if(!navigator.onLine){writeOfflinePending('appareil hors connexion');if(render)safeRenderAll();return true}
+ setSaveState('Envoi au serveur…','loading');
  clearTimeout(cloudSaveTimer);
- // V123 : envoi quasi immédiat au cloud. Un second essai est gardé pour les saisies très rapprochées.
- if(currentUser&&navigator.onLine){cloudSaveNow({silent:true}).then(ok=>{if(!ok)setSaveState('Enregistré sur cet appareil — synchronisation en attente','local')})}
- cloudSaveTimer=setTimeout(()=>{if(localDirty&&currentUser&&navigator.onLine)cloudSaveNow({silent:true})},1200);
+ cloudSaveNow({silent:true}).then(ok=>{if(!ok)writeOfflinePending('serveur indisponible')});
+ cloudSaveTimer=setTimeout(()=>{if(localDirty&&currentUser){if(navigator.onLine)cloudSaveNow({silent:true});else writeOfflinePending('appareil hors connexion')}},1000);
  if(render)safeRenderAll();
  return true;
 }
+// API interne utilisée par les modules annexes afin qu'ils enregistrent eux aussi dans le même état Supabase.
+window.PSTMainState={get:()=>db,save:(render=true)=>save(render)};
 
 async function pollCloudChanges(){
  if(!supabaseClient||!currentUser||!navigator.onLine||cloudBusy||localDirty)return;
@@ -348,7 +371,6 @@ async function pollCloudChanges(){
    const remoteStamp=data.updated_at||'';
    if(remoteStamp&&remoteStamp!==lastCloudUpdatedAt){
      db=migrate(data.data);lastCloudUpdatedAt=remoteStamp;
-     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}catch(_){ }
      safeRenderAll();
      try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
@@ -383,7 +405,7 @@ async function initAuth(){
        for(const url of fallbacks){try{await loadScript(url);if(window.supabase){loaded=true;break}}catch(error){console.warn(error)}}
        if(!loaded)throw new Error('Le composant de connexion ne s’est pas chargé. Vérifiez Internet puis rechargez la page.');
      }
-     if(!supabaseClient)supabaseClient=window.supabase.createClient(cfg.url,cfg.publishableKey);
+     if(!supabaseClient)supabaseClient=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:false}});
      return supabaseClient;
    };
    const doLogin=async()=>{
@@ -420,11 +442,19 @@ async function initAuth(){
 }
 async function enterApp(user){
  currentUser=user;$('#authScreen').classList.add('hidden');$('#logoutBtn')?.classList.remove('hidden');
- // Afficher immédiatement la base locale puis synchroniser sans bloquer l'application.
- renderAll();setSaveState('Connexion au serveur…','loading');await cloudLoad();startCloudPolling();
+ const pending=readOfflinePending();
+ if(!navigator.onLine){
+   if(!loadOfflinePendingIntoMemory()){setSaveState('Hors ligne — aucune modification en attente','local');}
+ }else if(pending?.data){
+   loadOfflinePendingIntoMemory();
+   await syncOfflinePending();
+ }else{
+   setSaveState('Connexion au serveur…','loading');await cloudLoad();
+ }
+ startCloudPolling();
 }
-window.addEventListener('online',()=>{if(!currentUser)return;if(localDirty)cloudSaveNow({silent:true});else cloudLoad({silent:true});startCloudPolling()});
-window.addEventListener('offline',()=>useLocalMode('Appareil hors connexion'));
+window.addEventListener('online',()=>{if(!currentUser)return;syncOfflinePending().then(ok=>{if(ok&&!localDirty)pollCloudChanges()});startCloudPolling()});
+window.addEventListener('offline',()=>{if(localDirty)writeOfflinePending('appareil hors connexion');useLocalMode('Appareil hors connexion')});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser&&navigator.onLine){if(localDirty)cloudSaveNow({silent:true});else pollCloudChanges()}});
 function nextNo(type,prefix){db.settings.counters[type]=(db.settings.counters[type]||0)+1;return `${prefix}-${new Date().getFullYear()}-${String(db.settings.counters[type]).padStart(4,'0')}`}
 function toast(msg){const e=$('#toast');e.textContent=msg;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2200)}
@@ -474,18 +504,16 @@ function roomOptions(building,floor,type,v=''){
  return selectOptions(values,v);
 }
 
-/* ---------- Pièces jointes : Supabase + secours local IndexedDB ---------- */
+/* ---------- Pièces jointes : Supabase Storage uniquement ---------- */
 const STORAGE_BUCKET='documentation';
-const LOCAL_FILE_DB='pst-local-files-v83',LOCAL_FILE_STORE='files';
 // V87 : le lien archive <-> original est conservé séparément du gros état applicatif.
 // Ainsi, un rechargement cloud plus ancien ne peut plus faire revenir un PDF à « Original absent ».
-const IMPORT_ORIGINAL_BINDINGS_KEY='pst-import-original-bindings-v87';
 function safeFileName(name){return String(name||'fichier').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'_')}
-function loadImportOriginalBindings(){try{return JSON.parse(localStorage.getItem(IMPORT_ORIGINAL_BINDINGS_KEY)||'{}')||{}}catch(_){return {}}}
-function saveImportOriginalBindings(map){try{localStorage.setItem(IMPORT_ORIGINAL_BINDINGS_KEY,JSON.stringify(map||{}));return true}catch(e){console.error('Sauvegarde lien original',e);return false}}
+function loadImportOriginalBindings(){db.importOriginalBindings=db.importOriginalBindings||{};return db.importOriginalBindings}
+function saveImportOriginalBindings(map){db.importOriginalBindings=map||{};save(false);return true}
 function archiveBindingKeys(x){const a=[];if(x?.id)a.push(`archive:${x.id}`);if(x?.sourceId)a.push(`source:${x.sourceId}`);if(!a.length&&x?.fileName)a.push(`file:${normalizeText(x.fileName)}`);return a}
 function rememberImportOriginalBinding(x,meta){if(!x||!meta)return false;const map=loadImportOriginalBindings(),payload={attachment:{...meta},savedAt:new Date().toISOString(),archiveId:x.id||'',sourceId:x.sourceId||'',fileName:x.fileName||meta.name||''};for(const k of archiveBindingKeys(x))map[k]=payload;return saveImportOriginalBindings(map)}
-function restoreImportOriginalBinding(x){if(!x)return null;const map=loadImportOriginalBindings();let b=null;for(const k of archiveBindingKeys(x)){if(map[k]?.attachment){b=map[k];break}}if(!b?.attachment)return null;const meta=b.attachment;db.attachments=db.attachments||[];let changed=false,rec=db.attachments.find(a=>String(a.id)===String(meta.id));if(!rec){rec={...meta};db.attachments.push(rec);changed=true}else Object.assign(rec,meta);if(!x.attachmentId){x.attachmentId=rec.id;changed=true}const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));if(src&&!src.attachmentId){src.attachmentId=rec.id;changed=true}const stored=(db.importArchives||[]).find(r=>String(r.id)===String(x.id)||x.sourceId&&String(r.sourceId)===String(x.sourceId));if(stored&&!stored.attachmentId){stored.attachmentId=rec.id;changed=true}if(changed){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}catch(_){}}return rec}
+function restoreImportOriginalBinding(x){if(!x)return null;const map=loadImportOriginalBindings();let b=null;for(const k of archiveBindingKeys(x)){if(map[k]?.attachment){b=map[k];break}}if(!b?.attachment)return null;const meta=b.attachment;db.attachments=db.attachments||[];let changed=false,rec=db.attachments.find(a=>String(a.id)===String(meta.id));if(!rec){rec={...meta};db.attachments.push(rec);changed=true}else Object.assign(rec,meta);if(!x.attachmentId){x.attachmentId=rec.id;changed=true}const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));if(src&&!src.attachmentId){src.attachmentId=rec.id;changed=true}const stored=(db.importArchives||[]).find(r=>String(r.id)===String(x.id)||x.sourceId&&String(r.sourceId)===String(x.sourceId));if(stored&&!stored.attachmentId){stored.attachmentId=rec.id;changed=true}if(changed)save(false);return rec}
 function resolveArchiveAttachment(x){if(!x)return null;let rec=(db.attachments||[]).find(a=>String(a.id)===String(x.attachmentId));if(rec)return rec;return restoreImportOriginalBinding(x)}
 function registerImportOriginal(archive,attachment){if(!archive||!attachment)return false;archive.attachmentId=attachment.id||archive.attachmentId||'';archive.fileName=attachment.name||archive.fileName||'';archive.originalStoredAt=archive.originalStoredAt||new Date().toISOString();archive.originalStorageMode=attachment.storageMode||archive.originalStorageMode||'';rememberImportOriginalBinding(archive,attachment);return true}
 window.PSTImportOriginals={remember:registerImportOriginal,resolve:resolveArchiveAttachment,restore:restoreImportOriginalBinding};
@@ -516,10 +544,6 @@ async function inspectImportDuplicate(file){const fileHash=await importFileFinge
 function duplicateWarningHtml(info){if(!info?.matches?.length)return '';const rows=info.matches.slice(0,5).map(x=>`<li><strong>${esc(x.fileName||'Document')}</strong> — ${esc(x.type||'Import')} · ${x.createdAt?new Date(x.createdAt).toLocaleString('fr-FR'):'date inconnue'} · ${esc(x.duplicateReason||'Doublon possible')}</li>`).join('');return `<div class="import-message warning duplicate-warning"><strong>⚠️ Doublon possible</strong><p>Un fichier portant le même nom ou la même empreinte existe déjà dans Archivage.</p><ul>${rows}</ul><p>Vous pourrez continuer si cet import est volontaire.</p></div>`}
 function confirmDuplicateImport(info){if(!info?.matches?.length)return true;const first=info.matches[0];return confirm(`⚠️ DOUBLON POSSIBLE\n\nLe fichier « ${first.fileName||'document'} » existe déjà (${first.type||'import'}, ${first.createdAt?new Date(first.createdAt).toLocaleString('fr-FR'):'date inconnue'}).\n\nVoulez-vous quand même créer un nouvel import ?`)}
 window.PSTImportDuplicates={fingerprint:importFileFingerprint,inspect:inspectImportDuplicate,candidates:importDuplicateCandidates,confirm:confirmDuplicateImport,warningHtml:duplicateWarningHtml};
-function openLocalFileDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(LOCAL_FILE_DB,1);req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains(LOCAL_FILE_STORE))d.createObjectStore(LOCAL_FILE_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
-async function putLocalFileBlob(key,file){const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readwrite');tx.objectStore(LOCAL_FILE_STORE).put(file,key);tx.oncomplete=()=>{d.close();resolve(true)};tx.onerror=()=>{d.close();reject(tx.error)}})}
-async function getLocalFileBlob(key){const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readonly'),req=tx.objectStore(LOCAL_FILE_STORE).get(key);req.onsuccess=()=>{d.close();resolve(req.result||null)};req.onerror=()=>{d.close();reject(req.error)}})}
-async function deleteLocalFileBlob(key){if(!key)return;const d=await openLocalFileDB();return new Promise((resolve,reject)=>{const tx=d.transaction(LOCAL_FILE_STORE,'readwrite');tx.objectStore(LOCAL_FILE_STORE).delete(key);tx.oncomplete=()=>{d.close();resolve(true)};tx.onerror=()=>{d.close();reject(tx.error)}})}
 async function verifyStoragePathExists(path){
  if(!path)return {ok:false,reason:'Chemin cloud absent'};
  if(!navigator.onLine)return {ok:false,reason:'Hors ligne'};
@@ -534,19 +558,15 @@ async function verifyStoragePathExists(path){
  }catch(e){return {ok:false,reason:e?.message||String(e)}}
 }
 async function putFile(file,meta={}){
+ if(!navigator.onLine)throw new Error('Connexion Internet requise : aucun fichier n’est conservé localement.');
+ if(!supabaseClient||!currentUser)throw new Error('Connexion Supabase requise.');
  const id=uid(),base={id,name:file.name,type:file.type||'application/octet-stream',size:file.size,createdAt:new Date().toISOString(),...meta};
- if(supabaseClient&&currentUser){
-  const path=`${currentUser.id}/${meta.module||'documents'}/${meta.recordId||'general'}/${id}-${safeFileName(file.name)}`;
-  try{
-   const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});if(error)throw error;
-   const check=await verifyStoragePathExists(path);
-   if(check.ok)return {...base,storagePath:path,storageMode:'supabase',cloudVerified:true,cloudVerifiedAt:new Date().toISOString(),cloudError:''};
-   // Si l'envoi a abouti mais que la relecture cloud n'est pas vérifiable, garder aussi une copie locale.
-   const localBlobKey=`${id}-${safeFileName(file.name)}`;await putLocalFileBlob(localBlobKey,file);
-   return {...base,storagePath:path,localBlobKey,storageMode:'supabase+local',cloudVerified:false,cloudCheckedAt:new Date().toISOString(),cloudError:check.reason||'Vérification cloud impossible'};
-  }catch(e){console.warn('Stockage Supabase indisponible, secours local utilisé',e)}
- }
- const localBlobKey=`${id}-${safeFileName(file.name)}`;await putLocalFileBlob(localBlobKey,file);return {...base,localBlobKey,storageMode:'local',cloudVerified:false,cloudError:'Local uniquement'};
+ const path=`${currentUser.id}/${meta.module||'documents'}/${meta.recordId||'general'}/${id}-${safeFileName(file.name)}`;
+ const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
+ if(error)throw error;
+ const check=await verifyStoragePathExists(path);
+ if(!check.ok){try{await supabaseClient.storage.from(STORAGE_BUCKET).remove([path])}catch(_){ }throw new Error(check.reason||'Le fichier cloud n’a pas pu être vérifié.');}
+ return {...base,storagePath:path,storageMode:'supabase',cloudVerified:true,cloudVerifiedAt:new Date().toISOString(),cloudError:''};
 }
 async function verifyAttachmentCloud(id,{silent=false}={}){
  const rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
@@ -555,7 +575,7 @@ async function verifyAttachmentCloud(id,{silent=false}={}){
  if(!navigator.onLine){if(!silent)toast('Connexion Internet nécessaire pour vérifier le cloud');return false}
  const check=await verifyStoragePathExists(rec.storagePath);
  rec.cloudVerified=!!check.ok;rec.cloudCheckedAt=new Date().toISOString();rec.cloudVerifiedAt=check.ok?rec.cloudCheckedAt:'';rec.cloudError=check.ok?'':(check.reason||'Fichier non confirmé sur le cloud');
- if(check.ok&&rec.storageMode==='local')rec.storageMode=rec.localBlobKey?'supabase+local':'supabase';
+ if(check.ok)rec.storageMode='supabase';
  save(false);renderImportArchives();
  if(!silent)toast(check.ok?'☁️ Document confirmé sur le cloud':'⚠️ Document non confirmé sur le cloud');
  return check.ok;
@@ -563,28 +583,12 @@ async function verifyAttachmentCloud(id,{silent=false}={}){
 async function syncAttachmentToCloud(id){
  const rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
  if(!rec)return toast('Pièce jointe introuvable');
- if(!navigator.onLine)return toast('Connexion Internet nécessaire pour envoyer sur le cloud');
- if(!supabaseClient||!currentUser)return toast('Connectez-vous au cloud avant la synchronisation');
- let blob=null;
- try{
-  if(rec.localBlobKey)blob=await getLocalFileBlob(rec.localBlobKey);
-  if(!blob&&rec.data)blob=await (await fetch(rec.data)).blob();
-  if(!blob&&rec.storagePath){await verifyAttachmentCloud(id);return}
-  if(!blob)return toast('La copie locale du document est introuvable. Rattachez l’original à nouveau.');
-  const path=rec.storagePath||`${currentUser.id}/${rec.module||'imports'}/${rec.recordId||'general'}/${rec.id}-${safeFileName(rec.name)}`;
-  toast('Envoi du document sur le cloud…');
-  const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,blob,{upsert:true,contentType:rec.type||blob.type||'application/octet-stream'});
-  if(error)throw error;
-  rec.storagePath=path;rec.storageMode=rec.localBlobKey?'supabase+local':'supabase';
-  const ok=await verifyAttachmentCloud(id,{silent:true});
-  if(ok){rec.cloudVerified=true;rec.cloudVerifiedAt=new Date().toISOString();rec.cloudError='';save(false);renderImportArchives();try{await cloudSaveNow({silent:true})}catch(_){ }toast('☁️ Document synchronisé et vérifié sur le cloud')}
-  else toast('⚠️ Envoi effectué, mais la relecture cloud n’a pas pu être confirmée');
- }catch(e){console.error('Synchronisation PDF cloud',e);rec.cloudVerified=false;rec.cloudCheckedAt=new Date().toISOString();rec.cloudError=e?.message||String(e);save(false);renderImportArchives();toast(`Erreur cloud : ${rec.cloudError}`)}
+ if(!rec.storagePath)return toast('Aucune copie cloud : rattachez le document original.');
+ await verifyAttachmentCloud(id);
 }
 async function removeFileBlob(id){
  const meta=db.attachments.find(a=>a.id===id);if(!meta)return;
  if(meta.storagePath&&supabaseClient){const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).remove([meta.storagePath]);if(error)console.error(error)}
- if(meta.localBlobKey)try{await deleteLocalFileBlob(meta.localBlobKey)}catch(e){console.warn(e)}
 }
 function forgetImportOriginalBinding(x){
  if(!x)return;const map=loadImportOriginalBindings();for(const k of archiveBindingKeys(x))delete map[k];saveImportOriginalBindings(map);
@@ -615,9 +619,6 @@ async function openStoragePath(path,downloadName='document'){
  if(error||!data?.signedUrl){console.error(error);return false}
  window.open(data.signedUrl,'_blank','noopener');return true;
 }
-async function openLocalAttachment(rec){
- if(!rec?.localBlobKey)return false;try{const blob=await getLocalFileBlob(rec.localBlobKey);if(!blob)return false;const url=URL.createObjectURL(blob);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),120000);return true}catch(e){console.error(e);return false}
-}
 async function downloadAttachment(id){
  let rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
  if(!rec){const map=loadImportOriginalBindings();for(const b of Object.values(map)){if(String(b?.attachment?.id)===String(id)){rec={...b.attachment};db.attachments=db.attachments||[];db.attachments.push(rec);break}}}
@@ -630,21 +631,8 @@ async function downloadAttachment(id){
    if(!error&&data?.signedUrl){const st=$('#importArchiveStatus');if(st){st.textContent='☁️ Ouverture du document depuis le cloud…';st.className='import-archive-status ok'}window.location.assign(data.signedUrl);return}
    if(error)console.warn('Ouverture Supabase impossible',error);
   }
-  if(rec.localBlobKey){
-   const blob=await getLocalFileBlob(rec.localBlobKey);
-   if(blob){
-    const url=URL.createObjectURL(blob);
-    // Ne pas révoquer immédiatement : Android a parfois besoin de plusieurs secondes
-    // pour transmettre le PDF au lecteur intégré.
-    sessionStorage.setItem('pst-last-local-object-url',url);
-    const st=$('#importArchiveStatus');if(st){st.textContent='📱 Ouverture du document conservé sur cet appareil…';st.className='import-archive-status ok'}
-    window.location.assign(url);
-    return;
-   }
-  }
-  if(rec.data){window.location.assign(rec.data);return}
  }catch(e){console.error('Ouverture du document',e)}
- toast(rec.localBlobKey?'Le PDF local n’est plus présent sur cet appareil. Rattachez-le à nouveau.':'Impossible d’ouvrir ce PDF');
+ toast('Impossible d’ouvrir ce PDF depuis Supabase.');
 }
 
 function humanSize(n){n=Number(n)||0;if(n<1024)return `${n} o`;if(n<1048576)return `${(n/1024).toFixed(1)} Ko`;return `${(n/1048576).toFixed(1)} Mo`}
@@ -681,7 +669,7 @@ function deleteRecord(type,id,label='élément'){if(!confirm(`Supprimer cet ${la
 /* ---------- Navigation ---------- */
 const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage','room-prep':'Préparation salle & café',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',settings:'Paramètres'};
 function setView(view){if(!document.getElementById(view))return;currentView=view;$$('.view').forEach(v=>v.classList.toggle('active',v.id===view));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if($('#pageTitle'))$('#pageTitle').textContent=VIEW_TITLES[view]||view;document.body.classList.remove('menu-open');window.PSTNavigation?.closeMenu?.();window.scrollTo({top:0,behavior:'auto'});renderAll()}
-function applyLayout(mode=db.settings.defaultLayout||'auto'){document.body.dataset.layout=mode;$('#layoutMode').value=mode;localStorage.setItem('pilotage-service-technique-layout',mode)}
+function applyLayout(mode=db.settings.defaultLayout||'auto'){document.body.dataset.layout=mode;$('#layoutMode').value=mode}
 
 /* ---------- Calcul du roulement et du jour agent ---------- */
 function activeRotation(agentId,date){return db.rotations.filter(r=>r.agentId===agentId&&r.effectiveFrom<=date&&(!r.effectiveTo||r.effectiveTo>=date)).sort((a,b)=>b.effectiveFrom.localeCompare(a.effectiveFrom))[0]||null}
@@ -975,7 +963,7 @@ function renderTeamCalendar(){
   $('#teamWeekCalendar').innerHTML=`<div class="team-week-cards">${html}</div>`;
 }
 function roomPrepAgendaItems(){
- try{return (JSON.parse(localStorage.getItem('pst_room_preps_v106'))||[])}catch(_){return[]}
+ return Array.isArray(db.roomPreps)?db.roomPreps:[];
 }
 function wasteAgendaItemForDate(d){
  const api=window.PSTWeatherWaste;if(!api?.collectionInfo||!api?.binForDate||!api?.localISO)return null;
@@ -1112,7 +1100,6 @@ function syncAcademicYearFilters(label){
 function setActiveAcademicYear(year,{render=true}={}){
  const y=normalizeAcademicYear(year);if(!y)return false;db.settings.academicYear=y;syncAcademicYearFilters(y);
  const mismatch=window.PSTAcademicMismatch;if(mismatch?.year===y)window.PSTAcademicMismatch=null;
- try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}catch(_){ }
  if(render)safeRenderAll();renderGlobalAcademicYear();return true
 }
 function renderGlobalAcademicYear(){
@@ -1124,7 +1111,7 @@ function renderGlobalAcademicYear(){
 function recordsInRange(arr,start,end,dateFields=['date']){return (arr||[]).filter(x=>dateFields.some(f=>x[f]&&x[f]>=start&&x[f]<=end)).map(clone)}
 function createWeeklyArchive(force=false){const end=addDays(startOfWeek(todayISO()),-1),start=addDays(end,-6),key=isoWeekKey(start);if(!force&&db.archives.some(a=>a.kind==='weekly'&&a.key===key))return false;const absent=recordsInRange(db.agentDays,start,end).filter(x=>isAbsenceType(x.dayType));const snapshot={id:uid(),kind:'weekly',key,year:start.slice(0,4),academicYear:academicYearFor(start),start,end,createdAt:new Date().toISOString(),summary:{agents:db.agents.filter(a=>a.status==='Actif').length,absences:absent.length,maintenance:recordsInRange(db.maintenance,start,end,['date','dueDate']).length,cleaning:recordsInRange(db.cleaning,start,end).length,meetings:recordsInRange(db.meetings,start,end).length,notes:recordsInRange(db.notes,start,end,['date','dueDate']).length},data:{agentDays:recordsInRange(db.agentDays,start,end),maintenance:recordsInRange(db.maintenance,start,end,['date','dueDate']),cleaning:recordsInRange(db.cleaning,start,end),meetings:recordsInRange(db.meetings,start,end),personalEvents:recordsInRange(db.personalEvents,start,end),notes:recordsInRange(db.notes,start,end,['date','dueDate']),issues:recordsInRange(db.issues,start,end,['date','dueDate']),requests:recordsInRange(db.requests,start,end,['date','dueDate']),works:recordsInRange(db.works,start,end,['date','dueDate'])}};db.archives.push(snapshot);db.settings.lastWeeklyArchiveKey=key;return true}
 function runAnnualReset(){const t=parseDate(todayISO()),y=t.getFullYear(),isCloseDay=t.getMonth()===7&&t.getDate()===31,isAfterClose=t.getMonth()>=8;if(!isCloseDay&&!isAfterClose)return false;const closeYear=y;if(db.settings.lastAnnualResetYear>=closeYear)return false;const prevStart=closeYear-1,from=`${prevStart}-09-01`,to=`${closeYear}-08-31`,key=`${prevStart}-${closeYear}`;if(!db.archives.some(a=>a.kind==='annual'&&a.key===key)){db.archives.push({id:uid(),kind:'annual',key,year:String(closeYear),academicYear:key,start:from,end:to,createdAt:new Date().toISOString(),summary:{leaveDays:db.agentDays.filter(x=>x.date>=from&&x.date<=to&&isAbsenceType(x.dayType)).length,overtime:db.agentDays.filter(x=>x.date>=from&&x.date<=to).reduce((n,x)=>n+Number(x.overtime||0),0)},data:{agentDays:recordsInRange(db.agentDays,from,to),rotations:clone(db.rotations),weeklyPlans:clone(db.weeklyPlans)}})}db.settings.lastAnnualResetYear=closeYear;db.settings.leaveBalances={};db.settings.overtimeBalances={};return true}
-function runAutomaticHousekeeping(){let changed=false;try{changed=createWeeklyArchive(false)||changed;changed=runAnnualReset()||changed}catch(e){console.error('Archivage automatique',e)}if(changed){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}catch(e){console.error(e)}}}
+function runAutomaticHousekeeping(){let changed=false;try{changed=createWeeklyArchive(false)||changed;changed=runAnnualReset()||changed}catch(e){console.error('Archivage automatique',e)}return changed}
 function notificationTarget(n){setView(n.view||'dashboard');if(n.type==='agentDay'&&n.id){const r=db.agentDays.find(x=>x.id===n.id);if(r)setTimeout(()=>openAgentDay(r.agentId,r.date),50);return}if(n.type&&n.id)setTimeout(()=>dispatchEdit(n.type,n.id),50)}
 function wasteCollectionShiftInfo(referenceDate=todayISO()){
  const ref=normalizeDateValue(referenceDate)||todayISO(),d=parseDate(ref),day=d.getDay();
@@ -1305,22 +1292,20 @@ function cloudStatusHtml(rec){
   const err=rec.cloudError?` title="${esc(rec.cloudError)}"`:'';
   return `<span class="cloud-status checking"${err}>☁️ Cloud — À vérifier</span>`;
  }
- if(rec.localBlobKey||rec.data)return '<span class="cloud-status local">📱 Local uniquement</span>';
  return '<span class="cloud-status error">⚠️ Original indisponible</span>';
 }
 function cloudActionHtml(rec){
  if(!rec)return '';
  if(rec.cloudVerified===true)return '';
- if(rec.storagePath)return `<button class="ghost small" data-verify-import-cloud="${esc(rec.id)}">🔎 Vérifier le cloud</button>${rec.localBlobKey||rec.data?`<button class="ghost small" data-sync-import-cloud="${esc(rec.id)}">☁️ Réenvoyer sur le cloud</button>`:''}`;
- if(rec.localBlobKey||rec.data)return `<button class="ghost small" data-sync-import-cloud="${esc(rec.id)}">☁️ Envoyer sur le cloud</button>`;
+ if(rec.storagePath)return `<button class="ghost small" data-verify-import-cloud="${esc(rec.id)}">🔎 Vérifier le cloud</button>`;
  return '';
 }
 function renderImportArchives(){
  const box=$('#importArchiveCards'),sum=$('#importArchiveSummary');if(!box||!sum)return;
  const type=$('#importArchiveType')?.value||'',q=normalizeText($('#importArchiveSearch')?.value||'');let rows=importedArchiveRows();
  if(type)rows=rows.filter(x=>x.type===type);if(q)rows=rows.filter(x=>normalizeText(`${x.fileName} ${x.subject} ${x.summary} ${x.academicYear} ${x.type}`).includes(q));
- const all=importedArchiveRows(),resolved=all.map(x=>({x,a:resolveArchiveAttachment(x)})),withOriginal=resolved.filter(o=>!!o.a).length,cloudSynced=resolved.filter(o=>o.a?.cloudVerified===true).length,localOnly=resolved.filter(o=>o.a&&(o.a.localBlobKey||o.a.data)&&o.a.cloudVerified!==true).length;
- sum.innerHTML=`<article><span>Imports conservés</span><strong>${all.length}</strong></article><article><span>Originaux disponibles</span><strong>${withOriginal}</strong></article><article><span>☁️ Cloud vérifié</span><strong>${cloudSynced}</strong></article><article><span>📱 À synchroniser</span><strong>${localOnly}</strong></article>`;
+ const all=importedArchiveRows(),resolved=all.map(x=>({x,a:resolveArchiveAttachment(x)})),withOriginal=resolved.filter(o=>!!o.a?.storagePath).length,cloudSynced=resolved.filter(o=>o.a?.cloudVerified===true).length,cloudPending=resolved.filter(o=>o.a?.storagePath&&o.a?.cloudVerified!==true).length;
+ sum.innerHTML=`<article><span>Imports conservés</span><strong>${all.length}</strong></article><article><span>Originaux cloud</span><strong>${withOriginal}</strong></article><article><span>☁️ Cloud vérifié</span><strong>${cloudSynced}</strong></article><article><span>☁️ À vérifier</span><strong>${cloudPending}</strong></article>`;
  box.innerHTML=rows.length?rows.map(x=>{const att=resolveArchiveAttachment(x);if(att)rememberImportOriginalBinding(x,att);const attachmentId=att?.id||x.attachmentId||'';return `<article class="import-archive-card"><div class="import-archive-icon">${x.type==='Chronotime'?'⏱':x.type==='Note scannée'?'📝':x.type.includes('Contrôle')||x.type.includes('Rapport')?'🛡':'📄'}</div><div class="import-archive-main"><div class="panel-head"><div><strong>${esc(x.fileName||x.subject||'Document importé')}</strong><small>${esc(x.type||'Document')} · ${x.createdAt?new Date(x.createdAt).toLocaleString('fr-FR'):'—'}</small></div>${x.academicYear?badge(x.academicYear):''}</div><p>${esc(x.subject||'')}</p><small>${esc(x.summary||'')}</small><div class="import-cloud-line">${cloudStatusHtml(att)}</div><div class="import-archive-actions">${attachmentId?`<button class="primary small" data-download="${esc(attachmentId)}">📄 Relire l’original</button>`:`<label class="ghost small button-link">📎 Rattacher l’original<input type="file" accept="application/pdf,image/*,.pdf,.png,.jpg,.jpeg,.webp" data-reattach-import="${esc(x.id)}" hidden></label>`}${cloudActionHtml(att)}<button class="ghost small" data-open-import-analysis="${esc(x.id)}">📊 Relire l’analyse</button>${x.recordId?`<button class="ghost small" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Relire la fiche</button>`:''}${x.module?`<button class="ghost small" data-go="${esc(x.module)}">Ouvrir le module</button>`:''}<button class="ghost small danger-mini" data-delete-import="${esc(x.id)}">🗑 Supprimer</button></div></div></article>`}).join(''):'<div class="empty-state">Aucun import ne correspond à ces filtres.</div>';
 }
 
@@ -1335,33 +1320,26 @@ async function reattachImportOriginal(archiveId,file){
  try{
   const st=$('#importArchiveStatus');if(st){st.textContent='⏳ Enregistrement du document original…';st.className='import-archive-status working'}
   const meta=await putFile(file,{module:'imports',recordId:x.sourceId||x.id});
-  // Vérification immédiate du secours local avant d’annoncer que le rattachement a réussi.
-  if(meta.localBlobKey){
-   const check=await getLocalFileBlob(meta.localBlobKey);
-   if(!check)throw new Error('Le document n’a pas pu être conservé dans le stockage local');
-  }
   db.attachments=db.attachments||[];
   const oldIndex=db.attachments.findIndex(a=>String(a.id)===String(meta.id));
   if(oldIndex>=0)db.attachments[oldIndex]=meta;else db.attachments.push(meta);
   x.attachmentId=meta.id;x.fileName=file.name||x.fileName;x.originalStoredAt=new Date().toISOString();x.originalStorageMode=meta.storageMode||'';x.cloudVerified=meta.cloudVerified===true;x.cloudVerifiedAt=meta.cloudVerifiedAt||'';
-  // Double persistance V87 : état applicatif + registre local indépendant.
-  // Le second registre survit à un écrasement temporaire de db par une ancienne copie cloud.
+  // Le lien archive ↔ original est conservé dans l’état Supabase commun.
   rememberImportOriginalBinding(x,meta);
   const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));
   if(src){src.attachmentId=meta.id;src.fileName=file.name||src.fileName}
   const annual=(db.chronotimeAnnual||[]).find(r=>String(r.sourceId||'')===String(x.sourceId)||String(r.fileName||'')===String(x.fileName));
   if(annual)annual.attachmentId=meta.id;
 
-  // Sauvegarder + rafraîchir D’ABORD. Une panne cloud ne doit jamais annuler
-  // un rattachement local déjà réussi.
+  // Sauvegarder l’état applicatif dans Supabase puis rafraîchir.
   save(false);
   renderImportArchives();
-  if(st){st.textContent=`✅ ${file.name} est rattaché et conservé ${meta.cloudVerified?'dans le cloud':'sur cet appareil'}.`;st.className='import-archive-status ok'}
+  if(st){st.textContent=`✅ ${file.name} est rattaché et conservé dans Supabase.`;st.className='import-archive-status ok'}
   toast('Original rattaché — utilisez maintenant « Relire l’original »');
 
-  // Synchronisation secondaire, non bloquante.
+  // Confirmation de synchronisation cloud.
   if(currentUser&&navigator.onLine){
-   try{await cloudSaveNow({silent:true})}catch(e){console.warn('Synchronisation du rattachement différée',e)}
+   try{await cloudSaveNow({silent:true})}catch(e){console.warn('Confirmation du rattachement cloud impossible',e)}
   }
  }catch(e){console.error(e);const st=$('#importArchiveStatus');if(st){st.textContent=`❌ Rattachement impossible : ${e?.message||String(e)}`;st.className='import-archive-status error'}toast(`Impossible de rattacher ce document${e?.message?` : ${e.message}`:''}`)}
 }
@@ -1841,7 +1819,7 @@ function openAutoReportWizard(){autoReportWizardStep=0;renderAutoReportWizard();
 function saveWizardStep(){if(autoReportWizardStep===1&&autoReportWizardData.provider==='microsoft'){autoReportWizardData.tenantId=document.getElementById('wizTenant')?.value.trim()||'';autoReportWizardData.clientId=document.getElementById('wizClient')?.value.trim()||'';autoReportWizardData.senderEmail=document.getElementById('wizSender')?.value.trim()||''}}
 
 document.addEventListener('change',e=>{const s=e.target.closest?.('[data-nc-status]');if(!s)return;const n=(db.reportNonconformities||[]).find(x=>String(x.id)===String(s.dataset.ncStatus));if(!n)return;const before=n.status;n.status=s.value;n.updatedAt=new Date().toISOString();n.statusHistory=n.statusHistory||[];n.statusHistory.push({at:n.updatedAt,from:before,to:n.status});const closed=['FAIT','Levée'].includes(n.status);for(const x of (db.issues||[]).filter(x=>String(x.sourceNonconformityId||'')===String(n.id))){x.status=closed?'Clôturé':'À faire';x.updatedAt=n.updatedAt;}for(const x of (db.maintenance||[]).filter(x=>String(x.sourceNonconformityId||'')===String(n.id))){x.status=closed?'Clôturé':'À faire';x.updatedAt=n.updatedAt;}save();renderPeriodic();renderIssues();renderMaintenance();toast(`Observation ${n.observationNo||''} : ${n.status} — plan d’action ${closed?'clôturé':'rouvert'}`)});
-function init(){secureAppLogos();db.settings.academicYear=normalizeAcademicYear(db.settings.academicYear)||academicYearFor(todayISO());const storedLayout=localStorage.getItem('pilotage-service-technique-layout')||db.settings.defaultLayout||'auto';const academicStart=Number((academicYearFor(todayISO())||'').split('-')[0])||new Date().getFullYear();const defaults={personalMonth:monthISO(),planningMonth:monthISO(),absenceMonth:monthISO(),issueMonth:monthISO(),cleanMonth:monthISO(),meetingMonth:monthISO(),dailyDate:todayISO(),weeklyDate:todayISO(),monthlyDate:monthISO(),teamReportMonth:monthISO(),absenceReportMonth:monthISO(),cleaningReportMonth:monthISO(),maintenanceReportMonth:monthISO(),periodicReportYear:new Date().getFullYear(),collectivePlanningDate:todayISO(),individualPlanningFrom:todayISO(),individualPlanningTo:addDays(todayISO(),6)};for(const [id,v] of Object.entries(defaults))if(document.getElementById(id))document.getElementById(id).value=v;const ipa=$('#individualPlanningAgent');if(ipa){ipa.innerHTML=db.agents.filter(a=>a.status==='Actif').map(a=>`<option value="${a.id}">${esc(agentName(a))}</option>`).join('')}const ry=$('#rotationYear');if(ry){ry.innerHTML='';for(let y=academicStart-5;y<=academicStart+5;y++)ry.insertAdjacentHTML('beforeend',`<option value="${y}" ${y===academicStart?'selected':''}>${y}–${y+1}</option>`)}const rm=$('#rotationMonth');if(rm){rm.innerHTML='<option value="">Année scolaire entière</option>';for(const i of [9,10,11,12,1,2,3,4,5,6,7,8])rm.insertAdjacentHTML('beforeend',`<option value="${i}">${new Date(2026,i-1,1).toLocaleDateString('fr-FR',{month:'long'})}</option>`)}applyLayout(storedLayout);syncAcademicYearFilters(activeAcademicYear());runAutomaticHousekeeping();bindEvents();bindReliableDynamicActions();renderAll();renderGlobalAcademicYear();setView('dashboard')}
+function init(){secureAppLogos();db.settings.academicYear=normalizeAcademicYear(db.settings.academicYear)||academicYearFor(todayISO());const storedLayout=db.settings.defaultLayout||'auto';const academicStart=Number((academicYearFor(todayISO())||'').split('-')[0])||new Date().getFullYear();const defaults={personalMonth:monthISO(),planningMonth:monthISO(),absenceMonth:monthISO(),issueMonth:monthISO(),cleanMonth:monthISO(),meetingMonth:monthISO(),dailyDate:todayISO(),weeklyDate:todayISO(),monthlyDate:monthISO(),teamReportMonth:monthISO(),absenceReportMonth:monthISO(),cleaningReportMonth:monthISO(),maintenanceReportMonth:monthISO(),periodicReportYear:new Date().getFullYear(),collectivePlanningDate:todayISO(),individualPlanningFrom:todayISO(),individualPlanningTo:addDays(todayISO(),6)};for(const [id,v] of Object.entries(defaults))if(document.getElementById(id))document.getElementById(id).value=v;const ipa=$('#individualPlanningAgent');if(ipa){ipa.innerHTML=db.agents.filter(a=>a.status==='Actif').map(a=>`<option value="${a.id}">${esc(agentName(a))}</option>`).join('')}const ry=$('#rotationYear');if(ry){ry.innerHTML='';for(let y=academicStart-5;y<=academicStart+5;y++)ry.insertAdjacentHTML('beforeend',`<option value="${y}" ${y===academicStart?'selected':''}>${y}–${y+1}</option>`)}const rm=$('#rotationMonth');if(rm){rm.innerHTML='<option value="">Année scolaire entière</option>';for(const i of [9,10,11,12,1,2,3,4,5,6,7,8])rm.insertAdjacentHTML('beforeend',`<option value="${i}">${new Date(2026,i-1,1).toLocaleDateString('fr-FR',{month:'long'})}</option>`)}applyLayout(storedLayout);syncAcademicYearFilters(activeAcademicYear());runAutomaticHousekeeping();bindEvents();bindReliableDynamicActions();renderAll();renderGlobalAcademicYear();setView('dashboard')}
 window.addEventListener('DOMContentLoaded',init);
 
 document.addEventListener('DOMContentLoaded',()=>initAuth().catch(console.error),{once:true});
