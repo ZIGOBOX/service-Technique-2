@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='123.0';
+const APP_VERSION='122.0';
 const APP_BUILD='13/08/2026 22:30';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -258,75 +258,61 @@ function restoreSuppliedData(showMessage=true){
 }
 function loadLocal(){for(const k of [STORAGE_KEY,...OLD_KEYS]){try{const s=localStorage.getItem(k);if(s){return migrate(JSON.parse(s))}}catch(e){console.error(e)}}return defaultData()}
 let db=loadLocal(); let teamWeek=startOfWeek(todayISO()),personalWeek=startOfWeek(todayISO()),modalHandler=null,modalDeleteHandler=null,currentView='dashboard',modalAuditInitial=null,modalAuditTitle='';
-let supabaseClient=null,currentUser=null,cloudReady=false,cloudSaveTimer=null,cloudRetryTimer=null,cloudPollTimer=null,cloudBusy=false,localDirty=false,lastCloudUpdatedAt='';
+let supabaseClient=null,currentUser=null,cloudReady=false,cloudSaveTimer=null,cloudRetryTimer=null,cloudBusy=false,cloudPollTimer=null,lastCloudUpdatedAt='',localDirty=false;
 function setSaveState(text,state=''){const s=$('#saveState');if(!s)return;s.textContent=text;s.dataset.state=state}
 function withTimeout(promise,ms=9000){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('Délai de connexion dépassé')),ms))])}
 function hasUsefulData(x){return !!(x&&((x.agents&&x.agents.length)||(x.maintenance&&x.maintenance.length)||(x.weeklyPlans&&x.weeklyPlans.length)||(x.notes&&x.notes.length)))}
-function scheduleCloudRetry(delay=30000){clearTimeout(cloudRetryTimer);cloudRetryTimer=setTimeout(()=>{if(navigator.onLine){if(localDirty)cloudSaveNow({silent:true});else cloudLoad({silent:true})}},delay)}
-function startCloudPolling(){
- clearInterval(cloudPollTimer);
- cloudPollTimer=setInterval(()=>{
-  if(!currentUser||!navigator.onLine||document.hidden||localDirty)return;
-  cloudLoad({silent:true});
- },8000);
-}
+function scheduleCloudRetry(delay=30000){clearTimeout(cloudRetryTimer);cloudRetryTimer=setTimeout(()=>{if(navigator.onLine)cloudLoad({silent:true})},delay)}
 function useLocalMode(reason='Connexion momentanément indisponible'){
  cloudReady=false;setSaveState('Mode local — synchronisation automatique en attente','local');
  console.warn(reason);scheduleCloudRetry();
 }
 async function cloudLoad({silent=false}={}){
- if(!supabaseClient||!currentUser||cloudBusy||localDirty)return false;
+ if(!supabaseClient||!currentUser||cloudBusy)return false;
  cloudBusy=true;if(!silent)setSaveState('Connexion au serveur…','loading');
  try{
    const result=await withTimeout(supabaseClient.from('app_state').select('data,updated_at').eq('user_id',currentUser.id).maybeSingle());
    const {data,error}=result||{};if(error)throw error;
-   const remoteUpdatedAt=data?.updated_at||'';
-   // En mode silencieux, ne recharge l'interface que si un autre appareil a réellement publié une version plus récente.
-   if(silent&&remoteUpdatedAt&&lastCloudUpdatedAt&&new Date(remoteUpdatedAt).getTime()<=new Date(lastCloudUpdatedAt).getTime()){
-     cloudReady=true;clearTimeout(cloudRetryTimer);return true;
-   }
    if(data?.data&&hasUsefulData(data.data)){
      db=migrate(data.data);
+     lastCloudUpdatedAt=data.updated_at||lastCloudUpdatedAt;
+     // Une migration de référence est exécutée une seule fois par version majeure.
+     // Après seedVersion 25, les suppressions et modifications de l'utilisateur sont respectées.
      if(Number(db.settings?.seedVersion||0)<26){
        restoreSuppliedData(false);db.settings.initialSeedCompleted=true;db.settings.seedVersion=31;
-       // La sauvegarde sera faite après libération du verrou cloudBusy.
-       localDirty=true;
+       await cloudSaveNow({silent:true});
      }
    }else{
+     // Ne jamais effacer les données présentes sur l'appareil quand le cloud est vide.
      db=migrate(db||loadLocal());runAutomaticHousekeeping();
      if(!hasUsefulData(db))db=defaultData();
      restoreSuppliedData(false);db.settings.initialSeedCompleted=true;db.settings.seedVersion=31;
-     localDirty=true;
+     await cloudSaveNow({silent:true});
    }
-   localStorage.setItem(STORAGE_KEY,JSON.stringify(db));
-   if(remoteUpdatedAt)lastCloudUpdatedAt=remoteUpdatedAt;
-   cloudReady=true;renderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
+   localStorage.setItem(STORAGE_KEY,JSON.stringify(db));cloudReady=true;renderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
    setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
    clearTimeout(cloudRetryTimer);return true;
  }catch(error){
    console.error('Supabase indisponible, poursuite locale :',error);
    useLocalMode(error?.message||String(error));
+   // L'application reste entièrement utilisable sans afficher de fenêtre bloquante.
    renderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }return false;
- }finally{
-   cloudBusy=false;
-   if(localDirty&&navigator.onLine)clearTimeout(cloudSaveTimer),cloudSaveTimer=setTimeout(()=>cloudSaveNow({silent:true}),150);
- }
+ }finally{cloudBusy=false}
 }
 async function cloudSaveNow({silent=false}={}){
- if(!supabaseClient||!currentUser||cloudBusy)return false;
- cloudBusy=true;
+ if(!supabaseClient||!currentUser||cloudBusy&&!silent)return false;
  try{
    const stamp=new Date().toISOString();
    const payload={user_id:currentUser.id,data:db,updated_at:stamp};
    const {error}=await withTimeout(supabaseClient.from('app_state').upsert(payload,{onConflict:'user_id'}));
    if(error)throw error;
-   localDirty=false;lastCloudUpdatedAt=stamp;cloudReady=true;
-   setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+   lastCloudUpdatedAt=stamp;localDirty=false;
+   cloudReady=true;setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
    clearTimeout(cloudRetryTimer);return true;
  }catch(error){
    console.error('Sauvegarde cloud différée :',error);useLocalMode(error?.message||String(error));
    if(!silent)toast('Données conservées sur cet appareil — synchronisation différée');return false;
- }finally{cloudBusy=false}
+ }
 }
 function safeRenderAll(){
  const renderers=[
@@ -344,10 +330,34 @@ function safeRenderAll(){
 function save(render=true){
  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}catch(error){console.error(error);toast('Stockage local presque plein : exportez une sauvegarde')}
  localDirty=true;
- setSaveState(navigator.onLine?'Synchronisation en cours…':'Enregistré sur cet appareil — hors connexion',navigator.onLine?'loading':'local');
- clearTimeout(cloudSaveTimer);cloudSaveTimer=setTimeout(()=>cloudSaveNow({silent:true}),180);
+ setSaveState(`Envoi au serveur…`,'loading');
+ clearTimeout(cloudSaveTimer);
+ // V123 : envoi quasi immédiat au cloud. Un second essai est gardé pour les saisies très rapprochées.
+ if(currentUser&&navigator.onLine){cloudSaveNow({silent:true}).then(ok=>{if(!ok)setSaveState('Enregistré sur cet appareil — synchronisation en attente','local')})}
+ cloudSaveTimer=setTimeout(()=>{if(localDirty&&currentUser&&navigator.onLine)cloudSaveNow({silent:true})},1200);
  if(render)safeRenderAll();
  return true;
+}
+
+async function pollCloudChanges(){
+ if(!supabaseClient||!currentUser||!navigator.onLine||cloudBusy||localDirty)return;
+ try{
+   const result=await withTimeout(supabaseClient.from('app_state').select('data,updated_at').eq('user_id',currentUser.id).maybeSingle(),7000);
+   const {data,error}=result||{};if(error)throw error;
+   if(!data?.data)return;
+   const remoteStamp=data.updated_at||'';
+   if(remoteStamp&&remoteStamp!==lastCloudUpdatedAt){
+     db=migrate(data.data);lastCloudUpdatedAt=remoteStamp;
+     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(db))}catch(_){ }
+     safeRenderAll();
+     try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
+     setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+   }
+ }catch(error){console.warn('Vérification cloud différée',error)}
+}
+function startCloudPolling(){
+ clearInterval(cloudPollTimer);
+ cloudPollTimer=setInterval(pollCloudChanges,4000);
 }
 let authInitPromise=null;
 async function initAuth(){
@@ -413,9 +423,9 @@ async function enterApp(user){
  // Afficher immédiatement la base locale puis synchroniser sans bloquer l'application.
  renderAll();setSaveState('Connexion au serveur…','loading');await cloudLoad();startCloudPolling();
 }
-window.addEventListener('online',()=>{if(currentUser){if(localDirty)cloudSaveNow({silent:true});else cloudLoad({silent:true})}});
+window.addEventListener('online',()=>{if(!currentUser)return;if(localDirty)cloudSaveNow({silent:true});else cloudLoad({silent:true});startCloudPolling()});
 window.addEventListener('offline',()=>useLocalMode('Appareil hors connexion'));
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser&&navigator.onLine){if(localDirty)cloudSaveNow({silent:true});else cloudLoad({silent:true})}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser&&navigator.onLine){if(localDirty)cloudSaveNow({silent:true});else pollCloudChanges()}});
 function nextNo(type,prefix){db.settings.counters[type]=(db.settings.counters[type]||0)+1;return `${prefix}-${new Date().getFullYear()}-${String(db.settings.counters[type]).padStart(4,'0')}`}
 function toast(msg){const e=$('#toast');e.textContent=msg;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2200)}
 function byId(type,id){return db[type]?.find(x=>x.id===id)} function agentById(id){return db.agents.find(a=>a.id===id)} function agentName(a){return a?`${a.firstName||''} ${a.lastName||''}`.trim():'Équipe'}
