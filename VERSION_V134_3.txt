@@ -1,0 +1,11 @@
+PILOTAGE SERVICE TECHNIQUE — V134.3
+
+Base : V134.2.
+
+Correction minimale :
+- corrige l'indicateur « Envoi au serveur… » pouvant rester bloqué ;
+- si une modification est réellement en attente, l'envoi est relancé ;
+- s'il n'y a plus rien à envoyer, l'état repasse automatiquement à « Synchronisé à HH:MM » ;
+- le bouton Supabase remet également l'état à Synchronisé après une lecture réussie si aucune sauvegarde n'est en attente.
+
+Aucune modification du modèle de données ou des modules métier.

@@ -1,4 +1,4 @@
-window.PST_APP_VERSION='V134.2';
+window.PST_APP_VERSION='V134.3';
 'use strict';
 
 function appLogoURL(){
@@ -20,7 +20,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='134.2';
+const APP_VERSION='134.3';
 const APP_BUILD='13/08/2026 22:46';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -389,6 +389,7 @@ async function pingSupabaseActivity(){
    // Vraie lecture de la ligne app_state : aucune donnée n'est modifiée.
    await fetchRemote();
    recordSupabaseActivity();
+   if(!localDirty&&!cloudBusy)setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
    toast('Supabase actif ✓ — requête réussie');
    return true;
  }catch(error){
@@ -492,6 +493,31 @@ async function pollCloudChanges(){
  }catch(error){console.warn('Vérification cloud différée',error);scheduleCloudRetry()}
 }
 function startCloudPolling(){clearInterval(cloudPollTimer);cloudPollTimer=setInterval(pollCloudChanges,3000)}
+let saveStatusWatchdogBusy=false;
+async function repairStuckSaveStatus(){
+ if(saveStatusWatchdogBusy||!currentUser)return;
+ const s=document.querySelector('#saveState');if(!s)return;
+ const sending=(s.dataset.state==='loading'||/Envoi au serveur|Connexion au serveur|synchronisation/i.test(s.textContent||''));
+ if(!sending)return;
+
+ // Une opération cloud réelle est encore en cours : on la laisse finir.
+ if(cloudBusy)return;
+
+ // Une modification est réellement en attente : on relance une seule sauvegarde.
+ if(localDirty&&navigator.onLine){
+   saveStatusWatchdogBusy=true;
+   try{await cloudSaveNow({silent:true,mergeRemote:true})}
+   finally{saveStatusWatchdogBusy=false}
+   return;
+ }
+
+ // Plus rien à envoyer : seul le libellé était resté bloqué.
+ if(!localDirty&&navigator.onLine){
+   setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+ }
+}
+setInterval(repairStuckSaveStatus,1500);
+
 function safeRenderAll(){
  const renderers=[
   ['Sélecteurs',hydrateSelects],['Marque',renderBrand],['Tableau de bord',renderDashboard],['Notifications',renderNotifications],['Agenda',renderPersonal],
