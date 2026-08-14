@@ -627,3 +627,10 @@ button{user-select:none;-webkit-user-select:none}
 .roomprep-save-status[data-state="ok"]{color:#177245}.roomprep-save-status[data-state="offline"]{color:#9a6500}.roomprep-save-status[data-state="error"]{color:#b42318}.roomprep-save-status[data-state="loading"]{color:#245b82}
 #roomPrepSave:disabled{opacity:.65;cursor:wait}
 @media(max-width:520px){.roomprep-save-status{text-align:left}.roomprep-save-actions{position:sticky;bottom:4px}.roomprep-save-actions #roomPrepSave{order:-1}}
+
+
+/* V133 — agenda journalier : heure + lieu sur dashboard et calendrier */
+.dashboard-today-agenda{display:grid;gap:8px}
+.today-agenda-row{width:100%;display:grid;grid-template-columns:74px 1fr 24px;gap:10px;align-items:center;text-align:left;border:1px solid #d8e5ee;background:#f8fbfd;border-radius:12px;padding:11px 12px;color:#183247}
+.today-agenda-row:hover{background:#eef8fd;border-color:#a9d7eb}.today-agenda-time{font-weight:800;color:#0a79ae;font-variant-numeric:tabular-nums}.today-agenda-main{min-width:0;display:flex;flex-direction:column;gap:3px}.today-agenda-main strong{overflow-wrap:anywhere}.today-agenda-main small{color:#617786;overflow-wrap:anywhere}.today-agenda-arrow{font-size:24px;color:#7d96a5}.mini-event small{display:block;margin-top:4px;color:#5d7483;font-size:.78rem;line-height:1.25}.mini-event b{white-space:nowrap}
+@media(max-width:600px){.today-agenda-row{grid-template-columns:60px 1fr 18px;padding:10px}.dashboard-today-panel .panel-head{align-items:flex-start}.mini-event b{font-size:.82rem}}

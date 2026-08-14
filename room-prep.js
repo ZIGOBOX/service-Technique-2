@@ -87,35 +87,35 @@ async function deletePrep(id){
 function printPrep(id){
  const v=load().find(x=>String(x.id)===String(id));if(!v)return;
  const yes=x=>x?'Oui':'Non';
- const w=window.open('','_blank');
- if(!w){alert("L'impression a été bloquée par le navigateur. Autorisez les fenêtres pour ce site puis réessayez.");return}
  const roomSetup=v.roomSetup||{}, coffee=v.coffee||{};
  const equipment=[
    ['Vidéoprojecteur',roomSetup.projector],['Écran',roomSetup.screen],['Micro',roomSetup.mic],
    ['Rallonge',roomSetup.extension],['Nappe',roomSetup.tablecloth],['Poubelles',roomSetup.bins],
    ['Signalétique',roomSetup.signage],['PMR',roomSetup.pmr]
  ].filter(x=>x[1]).map(x=>x[0]).join(', ')||'Aucun équipement particulier';
- w.document.open();
- w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Préparation salle & café</title>
+ const html=`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Préparation salle & café</title>
  <style>
- body{font-family:Arial,sans-serif;color:#183247;margin:28px}h1{margin:0 0 5px;font-size:24px}h2{font-size:16px;margin:18px 0 8px;color:#235b79}
- .head{border-bottom:3px solid #169ad2;padding-bottom:12px}.muted{color:#667b88}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
- .box{border:1px solid #cfdce5;border-radius:10px;padding:12px;background:#f8fbfd}.box p{margin:5px 0}
- .full{grid-column:1/-1}.strong{font-weight:700}.coffee{border-left:5px solid #b77b1b}
- @media print{body{margin:12mm}.no-print{display:none}}
- </style></head><body>
- <div class="head"><h1>Préparation de salle & café</h1><div class="muted">${esc(fmtDate(v.date))}${v.time?` · ${esc(v.time)}`:''}</div></div>
+ *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#183247;margin:0;background:#eef5f9}.sheet{max-width:900px;margin:0 auto;background:#fff;min-height:100vh;padding:22px}.toolbar{position:sticky;top:0;z-index:5;display:flex;gap:10px;justify-content:center;padding:12px;background:#123c5a;border-radius:0 0 14px 14px;margin:-22px -22px 20px}.toolbar button{border:0;border-radius:10px;padding:13px 18px;font-size:16px;font-weight:700;cursor:pointer}.toolbar .print{background:#0d9bd7;color:#fff}.toolbar .close{background:#fff;color:#183247}
+ h1{margin:0 0 5px;font-size:24px}h2{font-size:16px;margin:0 0 8px;color:#235b79}.head{border-bottom:3px solid #169ad2;padding-bottom:12px;margin-bottom:14px}.muted{color:#667b88}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.box{border:1px solid #cfdce5;border-radius:10px;padding:12px;background:#f8fbfd;overflow-wrap:anywhere}.box p{margin:5px 0}.full{grid-column:1/-1}.coffee{border-left:5px solid #b77b1b}.print-help{font-size:13px;color:#5c7180;text-align:center;margin:0 0 14px}
+ @media(max-width:680px){.sheet{padding:14px}.toolbar{margin:-14px -14px 14px;flex-direction:column}.toolbar button{width:100%}.grid{grid-template-columns:1fr}.full{grid-column:auto}.box{padding:14px}h1{font-size:21px}}
+ @media print{body{background:#fff}.sheet{max-width:none;padding:0;min-height:0}.toolbar,.print-help{display:none!important}.grid{grid-template-columns:1fr 1fr}.full{grid-column:1/-1}@page{size:A4 portrait;margin:12mm}}
+ </style></head><body><main class="sheet">
+ <div class="toolbar"><button class="print" onclick="window.print()">🖨 Imprimer / Enregistrer en PDF</button><button class="close" onclick="window.close();history.back()">← Retour</button></div>
+ <p class="print-help">Sur Android, appuyez sur « Imprimer / Enregistrer en PDF ». L’impression automatique est volontairement désactivée car certaines WebView la bloquent.</p>
+ <div class="head"><h1>Préparation de salle & café</h1><div class="muted">${esc(fmtDate(v.date))}${v.time?` · 🕒 ${esc(v.time)}`:''} · 📍 ${esc([v.room,v.building,v.floor].filter(Boolean).join(' · '))}</div></div>
  <div class="grid">
-  <div class="box"><h2>Lieu</h2><p><b>${esc(v.room||'—')}</b></p><p>${esc(v.building||'')} ${v.floor?`· ${esc(v.floor)}`:''} ${v.sector?`· ${esc(v.sector)}`:''}</p></div>
+  <div class="box"><h2>Lieu</h2><p><b>${esc(v.room||'—')}</b></p><p>${esc(v.building||'')} ${v.floor?`· ${esc(v.floor)}`:''} ${v.sector?`· ${esc(v.sector)}`:''}</p><p>Heure : <b>${esc(v.time||'—')}</b></p></div>
   <div class="box"><h2>Demande</h2><p>Demandeur : <b>${esc(v.requester||'—')}</b></p><p>Responsable : ${esc(v.owner||'—')}</p><p>Statut : ${esc(v.status||'—')}</p></div>
   <div class="box"><h2>Mise en place salle</h2><p>Disposition : ${esc(v.layout||'—')}</p><p>Personnes : ${Number(v.people||0)}</p><p>Tables : ${Number(v.tables||0)} · Chaises : ${Number(v.chairs||0)}</p><p>Ouvrir cloison salle polyvalente : <b>${esc(v.partition||'Non')}</b></p><p>Équipements : ${esc(equipment)}</p></div>
-  <div class="box coffee"><h2>Café</h2><p>Café à prévoir : <b>${yes(!!coffee.enabled)}</b></p><p>Nombre de personnes : ${Number(coffee.people||0)}</p><p>Heure de mise en place : ${esc(coffee.time||'—')}</p><p>Commentaire : ${esc(coffee.comment||'—')}</p></div>
+  <div class="box coffee"><h2>Café</h2><p>Café à prévoir : <b>${yes(!!coffee.enabled)}</b></p>${coffee.enabled?`<p>Nombre de personnes : ${Number(coffee.people||0)}</p><p>Heure de mise en place : <b>${esc(coffee.time||'—')}</b></p><p>Commentaire : ${esc(coffee.comment||'—')}</p>`:'<p>Aucune préparation café.</p>'}</div>
   <div class="box full"><h2>Autre préparation</h2><p>${esc(v.otherPrep||'Non')}${v.otherPrepComment?` — ${esc(v.otherPrepComment)}`:''}</p></div>
   <div class="box full"><h2>Observations</h2><p>${esc(v.notes||'—')}</p></div>
- </div>
- <script>window.onload=()=>setTimeout(()=>window.print(),150)</script>
- </body></html>`);
- w.document.close();
+ </div></main></body></html>`;
+ const w=window.open('','_blank');
+ if(!w){
+   const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);window.location.href=url;setTimeout(()=>URL.revokeObjectURL(url),60000);return;
+ }
+ w.document.open();w.document.write(html);w.document.close();
 }
 
 function render(){
