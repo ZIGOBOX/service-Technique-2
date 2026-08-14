@@ -336,8 +336,71 @@ function scheduleCloudRetry(delay=12000){clearTimeout(cloudRetryTimer);cloudRetr
 function useLocalMode(reason='Connexion momentanément indisponible'){cloudReady=false;console.warn(reason);if(!loadOfflinePendingIntoMemory()&&!loadMirrorIntoMemory())setSaveState('Hors ligne — les nouvelles modifications seront gardées sur cet appareil','local');else setSaveState('Hors ligne — données locales disponibles','local');scheduleCloudRetry()}
 async function fetchRemote(){
  const result=await withTimeout(supabaseClient.from('app_state').select('data,updated_at').eq('user_id',currentUser.id).maybeSingle());
- const {data,error}=result||{};if(error)throw error;return data||null;
+ const {data,error}=result||{};if(error)throw error;
+ try{localStorage.setItem('pst_supabase_last_activity_v134',new Date().toISOString())}catch(_){}
+ try{updateSupabaseActivityButton()}catch(_){}
+ return data||null;
 }
+
+const SUPABASE_ACTIVITY_KEY='pst_supabase_last_activity_v134';
+function getLastSupabaseActivity(){
+ const raw=localStorage.getItem(SUPABASE_ACTIVITY_KEY)||'';
+ const t=Date.parse(raw);return Number.isFinite(t)?t:0;
+}
+function recordSupabaseActivity(){
+ const now=new Date().toISOString();
+ try{localStorage.setItem(SUPABASE_ACTIVITY_KEY,now)}catch(_){}
+ updateSupabaseActivityButton();
+}
+function supabaseActivityAgeDays(){
+ const t=getLastSupabaseActivity();
+ return t?Math.max(0,(Date.now()-t)/86400000):Infinity;
+}
+function updateSupabaseActivityButton(){
+ const b=document.getElementById('supabaseActivityBtn');if(!b)return;
+ const days=supabaseActivityAgeDays();
+ if(!Number.isFinite(days)){
+   b.dataset.level='warn';b.textContent='☁ Supabase à vérifier';
+   b.title='Aucune vérification Supabase enregistrée sur cet appareil.';
+ }else if(days>=6){
+   b.dataset.level='danger';b.textContent='☁ Supabase · relancer';
+   b.title=`Dernière activité Supabase réussie il y a ${Math.floor(days)} jour(s). Cliquez pour effectuer une requête.`;
+ }else if(days>=4){
+   b.dataset.level='warn';b.textContent='☁ Supabase · vérifier';
+   b.title=`Dernière activité Supabase réussie il y a ${Math.floor(days)} jour(s).`;
+ }else{
+   b.dataset.level='ok';b.textContent='☁ Supabase actif ✓';
+   const d=new Date(getLastSupabaseActivity());
+   b.title=`Dernière requête Supabase réussie : ${d.toLocaleString('fr-FR')}`;
+ }
+}
+async function pingSupabaseActivity(){
+ const b=document.getElementById('supabaseActivityBtn');
+ if(!navigator.onLine){toast('Pas de connexion Internet');return false}
+ if(!supabaseClient||!currentUser){toast('Connectez-vous d’abord à Pilotage');return false}
+ if(b){b.dataset.level='busy';b.textContent='☁ Vérification…';b.disabled=true}
+ try{
+   // Vraie lecture de la ligne app_state : aucune donnée n'est modifiée.
+   await fetchRemote();
+   recordSupabaseActivity();
+   toast('Supabase actif ✓ — requête réussie');
+   return true;
+ }catch(error){
+   console.error('Vérification activité Supabase',error);
+   if(b){b.dataset.level='danger';b.textContent='☁ Supabase · erreur';b.title=error?.message||'Requête Supabase impossible'}
+   toast('Impossible de joindre Supabase');
+   return false;
+ }finally{
+   if(b)b.disabled=false;
+   updateSupabaseActivityButton();
+ }
+}
+document.addEventListener('click',e=>{
+ const b=e.target.closest?.('#supabaseActivityBtn');
+ if(b){e.preventDefault();pingSupabaseActivity()}
+});
+document.addEventListener('DOMContentLoaded',updateSupabaseActivityButton);
+setInterval(updateSupabaseActivityButton,60000);
 async function syncOfflinePending(){
  if(!supabaseClient||!currentUser||!navigator.onLine)return false;
  const pending=readOfflinePending();

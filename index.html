@@ -7,6 +7,14 @@
   <title>Pilotage Service Technique V127</title>
   <link rel="icon" href="./assets/logo-service-technique.png?v=134.0">
   <link rel="stylesheet" href="./styles.css?v=134.0">
+
+<style id="supabaseActivityStyle">
+.supabase-activity-btn[data-level="ok"]{border-color:#9bd5ae;background:#effaf3;color:#18733a}
+.supabase-activity-btn[data-level="warn"]{border-color:#f0c36b;background:#fff8e8;color:#8a5a00}
+.supabase-activity-btn[data-level="danger"]{border-color:#ee9aa2;background:#fff0f1;color:#a51f2b}
+.supabase-activity-btn[data-level="busy"]{opacity:.65}
+</style>
+
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -64,6 +72,7 @@
       <div class="top-actions">
         <select id="layoutMode" aria-label="Orientation de l'affichage"><option value="auto">Auto</option><option value="portrait">Portrait</option><option value="landscape">Paysage</option></select>
         <a class="notification-bell" id="notificationBell" href="#notificationModal" data-action="open-notifications" role="button" aria-label="Ouvrir les notifications" title="Notifications">🔔<span id="notificationCount" class="notification-count hidden">0</span></a>
+        <button class="ghost compact supabase-activity-btn" id="supabaseActivityBtn" type="button" title="Effectuer une lecture réelle de la base Supabase">☁ Supabase</button>
         <button class="ghost compact" id="printCurrent">Imprimer</button>
         <button class="primary compact" id="quickAdd">＋</button>
       </div>
