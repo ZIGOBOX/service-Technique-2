@@ -621,3 +621,9 @@ button{user-select:none;-webkit-user-select:none}
 .roomprep-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .roomprep-card-actions button{min-width:100px}
 @media(max-width:600px){.roomprep-card-actions{display:grid;grid-template-columns:1fr 1fr}.roomprep-card-actions .danger-lite{grid-column:1/-1}.roomprep-card-actions button{width:100%}}
+
+/* V131 — ergonomie et confirmation d'enregistrement salle/café */
+.roomprep-save-status{grid-column:1/-1;min-height:20px;font-size:.84rem;font-weight:700;text-align:right;color:#506878}
+.roomprep-save-status[data-state="ok"]{color:#177245}.roomprep-save-status[data-state="offline"]{color:#9a6500}.roomprep-save-status[data-state="error"]{color:#b42318}.roomprep-save-status[data-state="loading"]{color:#245b82}
+#roomPrepSave:disabled{opacity:.65;cursor:wait}
+@media(max-width:520px){.roomprep-save-status{text-align:left}.roomprep-save-actions{position:sticky;bottom:4px}.roomprep-save-actions #roomPrepSave{order:-1}}

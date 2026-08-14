@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='128.0';
+const APP_VERSION='131.0';
 const APP_BUILD='13/08/2026 22:46';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -262,8 +262,8 @@ function restoreSuppliedData(showMessage=true){
 }
 let db=defaultData(); let teamWeek=startOfWeek(todayISO()),personalWeek=startOfWeek(todayISO()),modalHandler=null,modalDeleteHandler=null,currentView='dashboard',modalAuditInitial=null,modalAuditTitle='';
 let supabaseClient=null,currentUser=null,cloudReady=false,cloudSaveTimer=null,cloudRetryTimer=null,cloudBusy=false,cloudPollTimer=null,lastCloudUpdatedAt='',localDirty=false,lastCloudData=null;
-const OFFLINE_CACHE_KEY='pst_offline_pending_v128';
-const OFFLINE_MIRROR_KEY='pst_offline_mirror_v128';
+const OFFLINE_CACHE_KEY='pst_offline_pending_v130';
+const OFFLINE_MIRROR_KEY='pst_offline_mirror_v130';
 function setSaveState(text,state=''){const s=$('#saveState');if(!s)return;s.textContent=text;s.dataset.state=state}
 function withTimeout(promise,ms=9000){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('Délai de connexion dépassé')),ms))])}
 function hasUsefulData(x){return !!(x&&((x.agents&&x.agents.length)||(x.maintenance&&x.maintenance.length)||(x.weeklyPlans&&x.weeklyPlans.length)||(x.notes&&x.notes.length)))}
@@ -368,7 +368,12 @@ async function cloudLoad({silent=false}={}){
  finally{cloudBusy=false}
 }
 async function cloudSaveNow({silent=false,mergeRemote=true}={}){
- if(!supabaseClient||!currentUser||cloudBusy)return false;
+ if(!supabaseClient||!currentUser)return false;
+ if(cloudBusy){
+   clearTimeout(cloudSaveTimer);
+   cloudSaveTimer=setTimeout(()=>{if(localDirty&&currentUser){if(navigator.onLine)cloudSaveNow({silent:true,mergeRemote:true});else writeOfflinePending('appareil hors connexion')}},700);
+   return false;
+ }
  cloudBusy=true;
  try{
    let toSave=deepClone(db),remoteRow=null;
@@ -395,7 +400,20 @@ function save(render=true){
  cloudSaveTimer=setTimeout(()=>{if(localDirty&&currentUser){if(navigator.onLine)cloudSaveNow({silent:true,mergeRemote:true});else writeOfflinePending('appareil hors connexion')}},350);
  if(render)safeRenderAll();return true;
 }
-window.PSTMainState={get:()=>db,save:(render=true)=>save(render)};
+window.PSTMainState={
+ get:()=>db,
+ save:(render=true)=>save(render),
+ // Sauvegarde immédiate utilisée par les formulaires sensibles (ex. salle/café).
+ // En ligne : attend la confirmation Supabase. Hors ligne : met explicitement en attente locale.
+ persistNow:async()=>{
+   localDirty=true;
+   if(!currentUser){setSaveState('Non connecté — non enregistré','error');return {ok:false,offline:false}}
+   if(!navigator.onLine){const ok=writeOfflinePending('appareil hors connexion');return {ok:!!ok,offline:true}}
+   setSaveState('Envoi au serveur…','loading');
+   const ok=await cloudSaveNow({silent:false,mergeRemote:true});
+   return {ok:!!ok,offline:!ok};
+ }
+};
 async function pollCloudChanges(){
  if(!supabaseClient||!currentUser||!navigator.onLine||cloudBusy||localDirty)return;
  try{
@@ -417,39 +435,6 @@ function safeRenderAll(){
  for(const [name,fn] of renderers){try{fn()}catch(error){console.error(`Erreur d’affichage — ${name}`,error);errors.push(name)}}
  if(errors.length)setSaveState(`Enregistré — affichage partiel (${errors.join(', ')})`,'local');
  return errors;
-}
-function save(render=true){
- localDirty=true;
- if(!currentUser){setSaveState('Non connecté — non enregistré','error');if(render)safeRenderAll();return false}
- if(!navigator.onLine){writeOfflinePending('appareil hors connexion');if(render)safeRenderAll();return true}
- setSaveState('Envoi au serveur…','loading');
- clearTimeout(cloudSaveTimer);
- cloudSaveNow({silent:true}).then(ok=>{if(!ok)writeOfflinePending('serveur indisponible')});
- cloudSaveTimer=setTimeout(()=>{if(localDirty&&currentUser){if(navigator.onLine)cloudSaveNow({silent:true});else writeOfflinePending('appareil hors connexion')}},1000);
- if(render)safeRenderAll();
- return true;
-}
-// API interne utilisée par les modules annexes afin qu'ils enregistrent eux aussi dans le même état Supabase.
-window.PSTMainState={get:()=>db,save:(render=true)=>save(render)};
-
-async function pollCloudChanges(){
- if(!supabaseClient||!currentUser||!navigator.onLine||cloudBusy||localDirty)return;
- try{
-   const result=await withTimeout(supabaseClient.from('app_state').select('data,updated_at').eq('user_id',currentUser.id).maybeSingle(),7000);
-   const {data,error}=result||{};if(error)throw error;
-   if(!data?.data)return;
-   const remoteStamp=data.updated_at||'';
-   if(remoteStamp&&remoteStamp!==lastCloudUpdatedAt){
-     db=migrate(data.data);lastCloudUpdatedAt=remoteStamp;
-     safeRenderAll();
-     try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
-     setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
-   }
- }catch(error){console.warn('Vérification cloud différée',error)}
-}
-function startCloudPolling(){
- clearInterval(cloudPollTimer);
- cloudPollTimer=setInterval(pollCloudChanges,4000);
 }
 let authInitPromise=null;
 async function initAuth(){
@@ -1030,7 +1015,7 @@ function renderTeamCalendar(){
   $('#teamWeekCalendar').innerHTML=`<div class="team-week-cards">${html}</div>`;
 }
 function roomPrepAgendaItems(){
- return Array.isArray(db.roomPreps)?db.roomPreps:[];
+ return Array.isArray(db.roomPreps)?db.roomPreps.filter(x=>!x?.deletedAt):[];
 }
 function wasteAgendaItemForDate(d){
  const api=window.PSTWeatherWaste;if(!api?.collectionInfo||!api?.binForDate||!api?.localISO)return null;

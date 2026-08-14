@@ -1,8 +1,23 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);let editingId='';
 const mainDb=()=>window.PSTMainState?.get?.()||null;
-const load=()=>{const d=mainDb();return d&&Array.isArray(d.roomPreps)?d.roomPreps:[]};
-const saveList=v=>{const d=mainDb();if(!d){console.warn('État principal indisponible');return false}d.roomPreps=Array.isArray(v)?v:[];window.PSTMainState?.save?.(false);render();try{window.dispatchEvent(new Event('pst:data-saved'))}catch(_){}return true};
+const load=()=>{const d=mainDb();return d&&Array.isArray(d.roomPreps)?d.roomPreps.filter(x=>!x?.deletedAt):[]};
+const cloneList=()=>load().map(x=>({...x}));
+// Ne jamais écraser roomPreps avec uniquement les fiches visibles : les suppressions
+// synchronisées (deletedAt) doivent être conservées jusqu'à propagation sur tous les appareils.
+const replaceActiveList=v=>{
+ const d=mainDb();if(!d){console.warn('État principal indisponible');return false}
+ const tombstones=(Array.isArray(d.roomPreps)?d.roomPreps:[]).filter(x=>x?.deletedAt).map(x=>({...x}));
+ d.roomPreps=[...(Array.isArray(v)?v:[]),...tombstones];
+ return true;
+};
+const notify=(msg,type='ok')=>{const el=$('roomPrepSaveStatus');if(el){el.textContent=msg;el.dataset.state=type}try{window.toast?.(msg)}catch(_){}};
+const setSaving=busy=>{const b=$('roomPrepSave');if(!b)return;b.disabled=busy;b.textContent=busy?'Enregistrement…':(editingId?'Enregistrer les modifications':'Enregistrer la préparation')};
+async function persistRoomPrep(){
+ const api=window.PSTMainState;if(!api)return {ok:false,offline:false};
+ if(api.persistNow)return await api.persistNow();
+ const ok=api.save?.(false);return {ok:!!ok,offline:!navigator.onLine};
+}
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}, fmtDate=v=>v?new Date(`${v}T12:00:00`).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'';
 const ref=()=>window.PSTCleaningRooms?.get?.()||[], roomLabel=r=>[r?.number||'',r?.name||''].filter(Boolean).join(' — ')||r?.type||'Local';
@@ -13,24 +28,61 @@ function fillR(sel={}){const d=ref(),bi=+$('rpBuilding').value,fi=+$('rpFloor').
 function toggleOther(){$('rpOtherLocationWrap')?.classList.toggle('hidden',$('rpRoom')?.value!=='other')}
 function loc(){const d=ref(),bi=+$('rpBuilding').value,fi=+$('rpFloor').value,si=+$('rpSector').value,rv=$('rpRoom').value,b=d[bi],f=b?.floors[fi],s=f?.sectors[si];if(rv==='other')return{building:b?.name||'',floor:f?.name||'',sector:s?.name||'',room:$('rpOtherLocation').value.trim()||'Autre lieu',roomId:'',other:true};const r=s?.rooms?.[+rv];return{building:b?.name||'',floor:f?.name||'',sector:s?.name||'',room:roomLabel(r),roomId:r?.id||'',other:false}}
 function data(){const l=loc();return{id:editingId||uid(),date:$('rpDate').value,time:$('rpTime').value,...l,requester:$('rpRequester').value.trim(),people:+$('rpPeople').value||0,owner:$('rpOwner').value.trim(),status:$('rpStatus').value,deadlineTime:$('rpDeadlineTime').value,layout:$('rpLayout').value,tables:+$('rpTables').value||0,chairs:+$('rpChairs').value||0,partition:$('rpPartition').value,otherPrep:$('rpOtherPrep').value,otherPrepComment:$('rpOtherPrepComment').value.trim(),roomSetup:{projector:!!$('rpProjector').checked,screen:!!$('rpScreen').checked,mic:!!$('rpMic').checked,extension:!!$('rpExtension').checked,tablecloth:!!$('rpTablecloth').checked,bins:!!$('rpBins').checked,signage:!!$('rpSignage').checked,pmr:!!$('rpPMR').checked},coffee:{enabled:$('rpCoffee').value==='Oui',people:+$('rpCoffeePeople').value||0,time:$('rpCoffeeTime').value,comment:$('rpCoffeeComment').value.trim()},notes:$('rpNotes').value.trim(),updatedAt:new Date().toISOString()}}
-function reset(){editingId='';$('rpDate').value=today();$('rpTime').value='';$('rpRequester').value='';$('rpPeople').value=10;$('rpOwner').value='';$('rpStatus').value='À préparer';$('rpDeadlineTime').value='';$('rpLayout').value='Réunion';$('rpTables').value=0;$('rpChairs').value=0;$('rpPartition').value='Non';$('rpOtherPrep').value='Non';$('rpOtherPrepComment').value='';$('rpOtherPrepCommentWrap').classList.add('hidden');$('rpCoffee').value='Non';$('rpCoffeePeople').value=0;$('rpCoffeeTime').value='';$('rpCoffeeComment').value='';$('rpNotes').value='';['rpProjector','rpScreen','rpMic','rpExtension','rpTablecloth','rpBins','rpSignage','rpPMR'].forEach(id=>$(id).checked=false);fillB()}
-function save(){const v=data();if(!v.date||!v.room)return alert('Renseignez la date et le lieu.');let a=load(),i=a.findIndex(x=>x.id===v.id);if(i>=0)a[i]=v;else a.push(v);a.sort((x,y)=>`${x.date}T${x.time||'00:00'}`.localeCompare(`${y.date}T${y.time||'00:00'}`));saveList(a);reset();alert('Préparation enregistrée et ajoutée à Agenda personnel.')}
+function toggleCoffeeFields(){
+ const enabled=$('rpCoffee')?.value==='Oui';
+ ['rpCoffeePeople','rpCoffeeTime','rpCoffeeComment'].forEach(id=>{const el=$(id),lab=el?.closest('label');if(lab)lab.classList.toggle('hidden',!enabled);if(el)el.disabled=!enabled});
+ if(enabled&&+( $('rpCoffeePeople')?.value||0)<=0&&$('rpPeople'))$('rpCoffeePeople').value=+$('rpPeople').value||0;
+}
+function updateEditorMode(){
+ const title=$('roomPrepEditorTitle');if(title)title.textContent=editingId?'Modifier la préparation':'Nouvelle préparation';
+ const b=$('roomPrepSave');if(b&&!b.disabled)b.textContent=editingId?'Enregistrer les modifications':'Enregistrer la préparation';
+ const r=$('roomPrepReset');if(r)r.textContent=editingId?'Annuler la modification':'Réinitialiser';
+}
+function reset(){editingId='';$('rpDate').value=today();$('rpTime').value='';$('rpRequester').value='';$('rpPeople').value=10;$('rpOwner').value='';$('rpStatus').value='À préparer';$('rpDeadlineTime').value='';$('rpLayout').value='Réunion';$('rpTables').value=0;$('rpChairs').value=0;$('rpPartition').value='Non';$('rpOtherPrep').value='Non';$('rpOtherPrepComment').value='';$('rpOtherPrepCommentWrap').classList.add('hidden');$('rpCoffee').value='Non';$('rpCoffeePeople').value=0;$('rpCoffeeTime').value='';$('rpCoffeeComment').value='';$('rpNotes').value='';$('rpOtherLocation').value='';['rpProjector','rpScreen','rpMic','rpExtension','rpTablecloth','rpBins','rpSignage','rpPMR'].forEach(id=>$(id).checked=false);fillB();toggleCoffeeFields();updateEditorMode();const st=$('roomPrepSaveStatus');if(st)st.textContent=''}
+async function save(){
+ const v=data();
+ if(!v.date)return notify('La date est obligatoire.','error');
+ if(!v.room)return notify('Le lieu est obligatoire.','error');
+ if(v.other&&(!$('rpOtherLocation').value.trim()))return notify('Indiquez le lieu dans « Autre lieu ».','error');
+ if(v.coffee.enabled&&v.coffee.people<=0)v.coffee.people=v.people||0;
+ let a=cloneList(),i=a.findIndex(x=>String(x.id)===String(v.id));if(i>=0)a[i]=v;else a.push(v);
+ a.sort((x,y)=>`${x.date}T${x.time||'00:00'}`.localeCompare(`${y.date}T${y.time||'00:00'}`));
+ if(!replaceActiveList(a))return notify('Enregistrement impossible : état principal indisponible.','error');
+ setSaving(true);notify(navigator.onLine?'Enregistrement sur le serveur…':'Hors ligne : mise en attente sur ce téléphone.','loading');
+ try{
+   const result=await persistRoomPrep();
+   render();try{window.dispatchEvent(new Event('pst:data-saved'))}catch(_){}
+   if(!result?.ok)return notify('La préparation n’a pas pu être enregistrée. Elle reste en attente si le mode hors ligne est disponible.','error');
+   const msg=result.offline?'Préparation enregistrée hors ligne — synchronisation automatique au retour d’Internet.':'Préparation enregistrée et synchronisée.';
+   reset();notify(msg,result.offline?'offline':'ok');
+ }finally{setSaving(false);updateEditorMode()}
+}
 
 function editPrep(id){
  const v=load().find(x=>String(x.id)===String(id));if(!v)return;
  editingId=v.id;
  $('rpDate').value=v.date||today();$('rpTime').value=v.time||'';$('rpRequester').value=v.requester||'';$('rpPeople').value=v.people||10;$('rpOwner').value=v.owner||'';$('rpStatus').value=v.status||'À préparer';$('rpDeadlineTime').value=v.deadlineTime||'';$('rpLayout').value=v.layout||'Réunion';$('rpTables').value=v.tables||0;$('rpChairs').value=v.chairs||0;$('rpPartition').value=v.partition||'Non';$('rpOtherPrep').value=v.otherPrep||'Non';$('rpOtherPrepComment').value=v.otherPrepComment||'';$('rpOtherPrepCommentWrap')?.classList.toggle('hidden',(v.otherPrep||'Non')!=='Oui');$('rpCoffee').value=v.coffee?.enabled?'Oui':'Non';$('rpCoffeePeople').value=v.coffee?.people||0;$('rpCoffeeTime').value=v.coffee?.time||'';$('rpCoffeeComment').value=v.coffee?.comment||'';$('rpNotes').value=v.notes||'';
  ['projector','screen','mic','extension','tablecloth','bins','signage','pmr'].forEach(k=>{const id='rp'+k.charAt(0).toUpperCase()+k.slice(1);if($(id))$(id).checked=!!v.roomSetup?.[k]});
- const d=ref();let bi=d.findIndex(b=>b.name===v.building);if(bi<0)bi=0;fillB({building:bi});let b=d[bi],fi=(b?.floors||[]).findIndex(f=>f.name===v.floor);if(fi<0)fi=0;fillF({floor:fi});let f=b?.floors?.[fi],si=(f?.sectors||[]).findIndex(s=>s.name===v.sector);if(si<0)si=0;fillS({sector:si});let s=f?.sectors?.[si],ri=(s?.rooms||[]).findIndex(rr=>rr.id===v.roomId||roomLabel(rr)===v.room);if(ri<0)ri=0;fillR({room:ri});
+ const d=ref();let bi=d.findIndex(b=>b.name===v.building);if(bi<0)bi=0;fillB({building:bi});let b=d[bi],fi=(b?.floors||[]).findIndex(f=>f.name===v.floor);if(fi<0)fi=0;fillF({floor:fi});let f=b?.floors?.[fi],si=(f?.sectors||[]).findIndex(s=>s.name===v.sector);if(si<0)si=0;fillS({sector:si});let s=f?.sectors?.[si],ri=(s?.rooms||[]).findIndex(rr=>rr.id===v.roomId||roomLabel(rr)===v.room);
+ if(v.other){fillR({room:'other'});$('rpRoom').value='other';$('rpOtherLocation').value=v.room||'';toggleOther()}else{if(ri<0)ri=0;fillR({room:ri})}
+ toggleCoffeeFields();updateEditorMode();const st=$('roomPrepSaveStatus');if(st)st.textContent='Modification en cours';
  $('roomPrepEditorPanel')?.scrollIntoView({behavior:'smooth',block:'start'})
 }
 function summary(v){return [`${v.tables||0} table(s)`,`${v.chairs||0} chaise(s)`,v.partition==='Oui'?'Cloison ouverte':'',v.coffee?.enabled?`Café ${v.coffee.people||v.people||0} pers.`:''].filter(Boolean).join(' · ')}
 
-function deletePrep(id){
- const v=load().find(x=>String(x.id)===String(id));if(!v)return;
+async function deletePrep(id){
+ const d=mainDb();
+ const v=d&&Array.isArray(d.roomPreps)?d.roomPreps.find(x=>String(x.id)===String(id)):null;if(!v||v.deletedAt)return;
  if(!confirm(`Supprimer la demande ${v.room||'salle / café'} du ${fmtDate(v.date)} ?`))return;
- saveList(load().filter(x=>String(x.id)!==String(id)));
+ // IMPORTANT : on conserve une pierre tombale synchronisable au lieu de retirer l'objet.
+ // Cela empêche une ancienne copie PC/Android/Supabase de recréer la fiche après fusion.
+ const stamp=new Date().toISOString();
+ v.deletedAt=stamp;v.updatedAt=stamp;v.deletedByDevice=true;
+ render();try{window.dispatchEvent(new Event('pst:data-saved'))}catch(_){}
+ const result=await persistRoomPrep();
  if(String(editingId)===String(id))reset();
+ if(result?.ok)notify(result.offline?'Préparation supprimée hors ligne — synchronisation automatique au retour d’Internet.':'Préparation supprimée et synchronisée.',result.offline?'offline':'ok');
+ else notify('Suppression en attente : synchronisation serveur non confirmée.','error');
 }
 function printPrep(id){
  const v=load().find(x=>String(x.id)===String(id));if(!v)return;
@@ -87,6 +139,8 @@ function openPrep(){document.querySelector('.nav-btn[data-view="room-prep"]')?.c
 function pronote(){const d=mainDb();window.open(String(d?.settings?.pronoteUrl||'').trim()||'https://www.index-education.com/fr/','_blank','noopener')}
 function init(){
  $('rpOtherPrep')?.addEventListener('change',()=>$('rpOtherPrepCommentWrap')?.classList.toggle('hidden',$('rpOtherPrep').value!=='Oui'));
+ $('rpCoffee')?.addEventListener('change',toggleCoffeeFields);
+ $('rpPeople')?.addEventListener('change',()=>{if($('rpCoffee')?.value==='Oui'&&+($('rpCoffeePeople')?.value||0)<=0)$('rpCoffeePeople').value=+$('rpPeople').value||0});
  window.addEventListener('pst:data-loaded',render);
  window.addEventListener('pst:data-saved',render);
 reset();render();$('rpBuilding')?.addEventListener('change',()=>fillF());$('rpFloor')?.addEventListener('change',()=>fillS());$('rpSector')?.addEventListener('change',()=>fillR());$('rpRoom')?.addEventListener('change',toggleOther);$('rpOtherPrep')?.addEventListener('change',()=>$('rpOtherPrepCommentWrap').classList.toggle('hidden',$('rpOtherPrep').value!=='Oui'));document.querySelectorAll('[data-quick-roomprep]').forEach(x=>x.addEventListener('click',openPrep));$('openRoomPrepFromAgenda')?.addEventListener('click',openPrep);$('roomPrepPronote')?.addEventListener('click',pronote);document.addEventListener('click',e=>{
