@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='133.0';
+const APP_VERSION='134.0';
 const APP_BUILD='13/08/2026 22:46';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -890,6 +890,22 @@ function updateDayCalc(){
  box.innerHTML=`<strong>Comptabilisation — ${esc(dayType)}</strong><span>Règle : Horaires prévus</span><span>Prévu : ${fmtHours(planned)}</span><span>Comptabilisé : ${fmtHours(total)}</span><b>Écart : ${delta>=0?'+':''}${fmtHours(delta)}</b>`;
 }
 
+
+function agentAnnualScheduleSummary(agentId,focusDate=''){
+ normalizeWeeklyPlans();
+ const aid=String(agentId||'');
+ const plans=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===aid).sort((a,b)=>(a.effectiveFrom||'').localeCompare(b.effectiveFrom||''));
+ if(!plans.length)return `<div class="annual-theoretical-card empty"><strong>Horaires théoriques enregistrés</strong><span>Aucun planning annuel enregistré pour cet agent.</span></div>`;
+ const dayNames={1:'Lundi',2:'Mardi',3:'Mercredi',4:'Jeudi',5:'Vendredi',6:'Samedi',0:'Dimanche'};
+ const today=focusDate||todayISO();
+ return `<div class="annual-theoretical-card"><div class="annual-theoretical-head"><div><strong>🕒 Horaires théoriques enregistrés</strong><small>Ils proviennent de « Pilotage des horaires ».</small></div></div>${plans.map(p=>{
+   const active=(!p.effectiveFrom||p.effectiveFrom<=today)&&(!p.effectiveTo||p.effectiveTo>=today);
+   const future=!active&&p.effectiveFrom&&p.effectiveFrom>today;
+   const rows=[1,2,3,4,5,6,0].map(d=>{const x=p.dayProfiles?.[d]||{};return `<div class="annual-theoretical-day"><span>${dayNames[d]}</span><b>${x.start&&x.end?`${esc(x.start)} – ${esc(x.end)}`:'Repos / non travaillé'}</b>${x.pause?`<small>Pause ${Number(x.pause)} min</small>`:''}${x.missions?`<small>${esc(x.missions)}</small>`:''}</div>`}).join('');
+   return `<section class="annual-theoretical-period ${active?'is-active':future?'is-future':''}"><div class="annual-theoretical-period-head"><span>${badge(p.shift||'Standard')}</span><strong>${fmtDate(p.effectiveFrom)||'—'} → ${fmtDate(p.effectiveTo)||'—'}</strong><small>${active?'Applicable à la date sélectionnée':future?'Prochain planning enregistré':'Planning archivé / hors période'}</small></div><div class="annual-theoretical-grid">${rows}</div></section>`;
+ }).join('')}</div>`;
+}
+
 function openAgentDay(agentId,date,id,preferredDayType=''){
  const clicked=id?byId('agentDays',id):dayRecord(agentId,date,preferredDayType);
  const periodId=clicked?.periodId||'';
@@ -901,7 +917,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  const x=old||{id:uid(),agentId:initialAgentId,date:initialDate,dayType:'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',pause:sched.pause,overtime:0,status:'Validée',note:'',replacement:'',noReplacementNeeded:false};
  const dateFrom=periodRows.length?periodRows.map(r=>r.date).sort()[0]:x.date;
  const dateTo=periodRows.length?periodRows.map(r=>r.date).sort().at(-1):x.date;
- openModal(`${agentName(agentById(x.agentId))} — saisie planning`,`<div class="day-shortcuts"><button type="button" data-set-day="Congé annuel">Congé</button><button type="button" data-set-day="RTT">RTT</button><button type="button" data-set-day="Maladie">Maladie</button><button type="button" data-set-day="Présence">Présence</button></div><div class="theoretical-schedule" id="theoreticalSchedule"></div><div class="form-grid"><label>Agent<select name="agentId">${agentOptions(x.agentId)}</select></label><label>Type de journée<select name="dayType">${dayTypeOptions(x.dayType)}</select></label>${field('Du','dateFrom',dateFrom,'date','required')}${field('Au','dateTo',dateTo,'date','required')}<label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],x.status||'Validée')}</select></label>${field('Horaire théorique — arrivée','plannedStart',x.plannedStart,'time')}${field('Horaire théorique — départ','plannedEnd',x.plannedEnd,'time')}${field('Horaire réel — arrivée','actualStart',x.actualStart,'time')}${field('Horaire réel — départ','actualEnd',x.actualEnd,'time')}${field('Pause (minutes)','pause',x.pause,'number','min="0" step="5"')}${field('Heures supplémentaires (+) / retirées (-)','overtime',x.overtime,'number','step="0.25"')}<label class="full-width replacement-choice"><span>Gestion du remplacement</span><span class="checkbox-row"><input type="checkbox" name="noReplacementNeeded" ${x.noReplacementNeeded?'checked':''}> Aucun remplacement nécessaire pendant cette période</span></label>${field('Remplacement / relais','replacement',x.replacement||'')}${textareaField('Motif / précision','note',x.note)}</div><p class="hint">Aucune notification de remplacement n’est créée le samedi, le dimanche ou un jour férié. Si la case « Aucun remplacement nécessaire » est cochée, aucune notification de remplacement ne sera créée pour toute la période.</p><div class="calculation-preview" id="dayCalc"></div>`,form=>{const o=formDataObj(form);
+ openModal(`${agentName(agentById(x.agentId))} — saisie planning`,`<div id="annualTheoreticalSummary">${agentAnnualScheduleSummary(x.agentId,initialDate)}</div><div class="day-shortcuts"><button type="button" data-set-day="Congé annuel">Congé</button><button type="button" data-set-day="RTT">RTT</button><button type="button" data-set-day="Maladie">Maladie</button><button type="button" data-set-day="Présence">Présence</button></div><div class="theoretical-schedule" id="theoreticalSchedule"></div><div class="form-grid"><label>Agent<select name="agentId">${agentOptions(x.agentId)}</select></label><label>Type de journée<select name="dayType">${dayTypeOptions(x.dayType)}</select></label>${field('Du','dateFrom',dateFrom,'date','required')}${field('Au','dateTo',dateTo,'date','required')}<label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],x.status||'Validée')}</select></label>${field('Horaire théorique — arrivée','plannedStart',x.plannedStart,'time')}${field('Horaire théorique — départ','plannedEnd',x.plannedEnd,'time')}${field('Horaire réel — arrivée','actualStart',x.actualStart,'time')}${field('Horaire réel — départ','actualEnd',x.actualEnd,'time')}${field('Pause (minutes)','pause',x.pause,'number','min="0" step="5"')}${field('Heures supplémentaires (+) / retirées (-)','overtime',x.overtime,'number','step="0.25"')}<label class="full-width replacement-choice"><span>Gestion du remplacement</span><span class="checkbox-row"><input type="checkbox" name="noReplacementNeeded" ${x.noReplacementNeeded?'checked':''}> Aucun remplacement nécessaire pendant cette période</span></label>${field('Remplacement / relais','replacement',x.replacement||'')}${textareaField('Motif / précision','note',x.note)}</div><p class="hint">Aucune notification de remplacement n’est créée le samedi, le dimanche ou un jour férié. Si la case « Aucun remplacement nécessaire » est cochée, aucune notification de remplacement ne sera créée pour toute la période.</p><div class="calculation-preview" id="dayCalc"></div>`,form=>{const o=formDataObj(form);
  const from=o.dateFrom, to=o.dateTo;
  if(!o.agentId){toast('Choisissez un agent');return}
  if(!from||!to){toast('Renseignez les dates du et au');return}
@@ -940,10 +956,11 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    const f=$('#modalForm');if(!f)return;
    const aid=f.elements.agentId.value, d=f.elements.dateFrom.value||todayISO(), sc=scheduledFor(aid,d);
    const box=$('#theoreticalSchedule'),currentType=f.elements.dayType.value||'Présence';
+   const annualBox=$('#annualTheoreticalSummary');if(annualBox)annualBox.innerHTML=agentAnnualScheduleSummary(aid,d);
    const rule=dayCountingRule(currentType);
    if(box){
      if(currentType!=='Présence')box.innerHTML=`<strong>Pastille du calendrier — ${fmtDate(d)}</strong><b>${esc(currentType)}</b><small>Comptabilisation : ${esc(dayCountingLabel(currentType))}</small>${rule.mode==='planned'&&sc.start&&sc.end?`<small>Horaire prévu : ${esc(sc.start)} – ${esc(sc.end)}</small>`:''}`;
-     else box.innerHTML=`<strong>Horaire théorique du ${fmtDate(d)}</strong><b>${sc.start&&sc.end?`${esc(sc.start)} – ${esc(sc.end)}`:'Aucun horaire défini'}</b>${sc.pause?`<small>Pause : ${sc.pause} min</small>`:''}${sc.missions?`<small>${esc(sc.missions)}</small>`:''}`;
+     else {const nextPlan=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(aid)&&p.effectiveFrom&&p.effectiveFrom>d).sort((a,b)=>a.effectiveFrom.localeCompare(b.effectiveFrom))[0];box.innerHTML=`<strong>Horaire théorique du ${fmtDate(d)}</strong><b>${sc.start&&sc.end?`${esc(sc.start)} – ${esc(sc.end)}`:'Aucun horaire applicable à cette date'}</b>${sc.pause?`<small>Pause : ${sc.pause} min</small>`:''}${sc.missions?`<small>${esc(sc.missions)}</small>`:''}${!sc.start&&nextPlan?`<small>Prochain planning enregistré à partir du ${fmtDate(nextPlan.effectiveFrom)}.</small>`:''}`;}
    }
    if(rule.mode==='planned'&&(force||(!f.elements.plannedStart.value&&!f.elements.plannedEnd.value))){
      f.elements.plannedStart.value=sc.start||'';f.elements.plannedEnd.value=sc.end||'';f.elements.pause.value=Number(sc.pause||0);

@@ -634,3 +634,17 @@ button{user-select:none;-webkit-user-select:none}
 .today-agenda-row{width:100%;display:grid;grid-template-columns:74px 1fr 24px;gap:10px;align-items:center;text-align:left;border:1px solid #d8e5ee;background:#f8fbfd;border-radius:12px;padding:11px 12px;color:#183247}
 .today-agenda-row:hover{background:#eef8fd;border-color:#a9d7eb}.today-agenda-time{font-weight:800;color:#0a79ae;font-variant-numeric:tabular-nums}.today-agenda-main{min-width:0;display:flex;flex-direction:column;gap:3px}.today-agenda-main strong{overflow-wrap:anywhere}.today-agenda-main small{color:#617786;overflow-wrap:anywhere}.today-agenda-arrow{font-size:24px;color:#7d96a5}.mini-event small{display:block;margin-top:4px;color:#5d7483;font-size:.78rem;line-height:1.25}.mini-event b{white-space:nowrap}
 @media(max-width:600px){.today-agenda-row{grid-template-columns:60px 1fr 18px;padding:10px}.dashboard-today-panel .panel-head{align-items:flex-start}.mini-event b{font-size:.82rem}}
+
+
+/* V134 — horaires théoriques visibles depuis la fiche agent */
+.annual-theoretical-card{margin:0 0 14px;padding:14px;border:1px solid #cfe0ee;border-radius:16px;background:#f8fbfe;display:grid;gap:12px}
+.annual-theoretical-card.empty{color:#60758a}
+.annual-theoretical-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.annual-theoretical-head strong{display:block;font-size:1rem;color:#123f5d}.annual-theoretical-head small{display:block;color:#6d7f90;margin-top:3px}
+.annual-theoretical-period{border:1px solid #d7e3ec;border-radius:14px;background:#fff;padding:10px;display:grid;gap:9px}
+.annual-theoretical-period.is-active{border-color:#26a269;box-shadow:0 0 0 2px rgba(38,162,105,.08)}
+.annual-theoretical-period.is-future{border-color:#2397d4;box-shadow:0 0 0 2px rgba(35,151,212,.06)}
+.annual-theoretical-period-head{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}.annual-theoretical-period-head small{width:100%;color:#6c7b88}
+.annual-theoretical-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.annual-theoretical-day{border:1px solid #e3ebf1;border-radius:11px;padding:8px 9px;display:grid;gap:2px;min-width:0}.annual-theoretical-day span{font-size:.78rem;color:#687d90}.annual-theoretical-day b{font-size:.92rem;color:#15324a}.annual-theoretical-day small{font-size:.72rem;color:#6e7d89;overflow-wrap:anywhere}
+@media(max-width:640px){.annual-theoretical-grid{grid-template-columns:1fr}.annual-theoretical-card{padding:10px}.annual-theoretical-period{padding:8px}}
