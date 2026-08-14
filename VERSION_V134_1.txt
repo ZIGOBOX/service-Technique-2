@@ -1,0 +1,7 @@
+PILOTAGE SERVICE TECHNIQUE — V134.1
+
+Base : V134.
+Ajout : bouton Activité Supabase.
+La version V134.1 est affichée directement dans la barre supérieure de l'application.
+
+Aucune modification des clés de stockage ou de la structure des données.

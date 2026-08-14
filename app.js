@@ -1,8 +1,9 @@
+window.PST_APP_VERSION='V134.2';
 'use strict';
 
 function appLogoURL(){
-  try{return window.APP_LOGO_DATA_URI||new URL('./assets/logo-service-technique.png?v=82.0',document.baseURI||location.href).href}
-  catch(e){return window.APP_LOGO_DATA_URI||'./assets/logo-service-technique.png?v=82.0'}
+  try{return new URL('./assets/logo-service-technique.png?v=134.2',document.baseURI||location.href).href}
+  catch(e){return './assets/logo-service-technique.png?v=134.2'}
 }
 function secureAppLogos(){
   const src=appLogoURL();
@@ -10,11 +11,16 @@ function secureAppLogos(){
     if(!img)return;
     img.src=src;
     img.removeAttribute('srcset');
-    img.onerror=()=>{if(window.APP_LOGO_DATA_URI&&img.src!==window.APP_LOGO_DATA_URI){img.onerror=null;img.src=window.APP_LOGO_DATA_URI}};
+    img.onerror=()=>{
+      if(window.APP_LOGO_DATA_URI&&img.src!==window.APP_LOGO_DATA_URI){
+        img.onerror=null;
+        img.src=window.APP_LOGO_DATA_URI;
+      }
+    };
   });
 }
 
-const APP_VERSION='134.0';
+const APP_VERSION='134.2';
 const APP_BUILD='13/08/2026 22:46';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.

@@ -1,0 +1,8 @@
+PILOTAGE SERVICE TECHNIQUE — V134.2
+
+Base : V134.1.
+Correctifs uniquement :
+- logo officiel forcé depuis assets/logo-service-technique.png ;
+- dimensions du logo sécurisées sur mobile ;
+- icône ☁ visible sur le bouton Supabase sur mobile ;
+- aucune modification des données, de la synchronisation ou des modules métier.
