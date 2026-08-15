@@ -1,0 +1,6 @@
+V147.22 — 15/08/2026
+- Horaire théorique partout : Permanence > Roulement > Standard.
+- Clic tableau de bord / agent : horaires théoriques rechargés depuis les horaires enregistrés.
+- Matrice Excel : colonnes Permanence début / fin / pause ajoutées à Agents.
+- Export matrice préremplit la permanence ; réimport la réapplique à l'agent.
+- Chronotime permanence recalculé après import.

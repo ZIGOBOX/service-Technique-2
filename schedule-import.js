@@ -42,10 +42,13 @@
     const agentRows=active.map(a=>({
       'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Fonction':a.role||'','Affectation principale':a.assignment||'',Actif:a.status||'Actif',
       'Samedi travaillé':(Array.isArray(a.workdays)?a.workdays:[1,2,3,4,5]).map(Number).includes(6)?'Oui':'Non',
-      'Dimanche travaillé':(Array.isArray(a.workdays)?a.workdays:[1,2,3,4,5]).map(Number).includes(0)?'Oui':'Non'
+      'Dimanche travaillé':(Array.isArray(a.workdays)?a.workdays:[1,2,3,4,5]).map(Number).includes(0)?'Oui':'Non',
+      'Permanence début':a.permanenceSchedule?.start||a.permanenceStart||'',
+      'Permanence fin':a.permanenceSchedule?.end||a.permanenceEnd||'',
+      'Permanence pause (minutes)':Number(a.permanenceSchedule?.pause??a.permanencePause??0)
     }));
-    const wsA=XLSX.utils.json_to_sheet(agentRows.length?agentRows:[{'Identifiant agent':'','Nom de l’agent':'','Fonction':'','Affectation principale':'','Actif':'Oui','Samedi travaillé':'Non','Dimanche travaillé':'Non'}]);
-    setWidths(wsA,[25,28,24,28,12,18,20]);addAutoFilter(wsA,wsA['!ref']);styleSheet(wsA,7,agentRows.length+1);XLSX.utils.book_append_sheet(wb,wsA,'Agents');
+    const wsA=XLSX.utils.json_to_sheet(agentRows.length?agentRows:[{'Identifiant agent':'','Nom de l’agent':'','Fonction':'','Affectation principale':'','Actif':'Oui','Samedi travaillé':'Non','Dimanche travaillé':'Non','Permanence début':'','Permanence fin':'','Permanence pause (minutes)':0}]);
+    setWidths(wsA,[25,28,24,28,12,18,20,18,18,24]);addAutoFilter(wsA,wsA['!ref']);styleSheet(wsA,10,agentRows.length+1);XLSX.utils.book_append_sheet(wb,wsA,'Agents');
 
     const hrows=[];
     active.forEach(a=>{
@@ -76,7 +79,7 @@
       ['4. Réimportez ensuite ce même fichier dans l’application.'],
       ['5. Le logiciel affiche une comparaison avant d’enregistrer.'],
       ['6. Les congés, RTT, absences et modifications ponctuelles ne sont pas supprimés.'],
-      ['7. Dans l’onglet Agents, indiquez Oui/Non pour le samedi et le dimanche : ces valeurs mettent à jour les jours travaillés.']
+      ['7. Dans l’onglet Agents, indiquez Oui/Non pour le samedi et le dimanche : ces valeurs mettent à jour les jours travaillés.'],['8. Renseignez aussi Permanence début, Permanence fin et Permanence pause (minutes).']
     ];
     const wsM=XLSX.utils.aoa_to_sheet(instructions);setWidths(wsM,[105]);wsM['A1'].s={font:{bold:true,color:{rgb:'FFFFFF'},sz:16},fill:{fgColor:{rgb:'1F4E78'}},alignment:{horizontal:'center'}};XLSX.utils.book_append_sheet(wb,wsM,'Mode d’emploi');
     wb.Workbook={Views:[{RTL:false}]};
@@ -94,7 +97,10 @@
       const aid=String(get(row,'Identifiant agent','Agent ID')).trim(),name=String(get(row,"Nom de l’agent",'Nom agent','Agent')).trim(),agent=maps.byId.get(aid)||maps.byName.get(norm(name));
       if(!agent)return;
       const satRaw=get(row,'Samedi travaillé','Samedi'),sunRaw=get(row,'Dimanche travaillé','Dimanche');
-      if(String(satRaw).trim()!==''||String(sunRaw).trim()!==''){agentSettings.push({agent,saturday:yes(satRaw),sunday:yes(sunRaw)});results.push({kind:'Jours agent',line:index+2,agent,name:agentLabel(agent),from:'',to:'',profile:'',errors:[],warnings:[],detail:`Samedi : ${yes(satRaw)?'travaillé':'repos'} · Dimanche : ${yes(sunRaw)?'travaillé':'repos'}`})}
+       const permStart=timeText(get(row,'Permanence début','Début permanence')),permEnd=timeText(get(row,'Permanence fin','Fin permanence')),permPause=Number(get(row,'Permanence pause (minutes)','Pause permanence')||0);
+       const permErrors=[];if((permStart&&!permEnd)||(!permStart&&permEnd))permErrors.push('Permanence début/fin incomplet');
+       if(permStart&&permEnd){const sm=minutes(permStart),em=minutes(permEnd);if(sm!==null&&em!==null&&em<=sm)permErrors.push('Permanence : fin avant début');if(sm!==null&&em!==null&&permPause>=em-sm)permErrors.push('Permanence : pause trop longue')}
+       if(String(satRaw).trim()!==''||String(sunRaw).trim()!==''||permStart||permEnd||permPause){agentSettings.push({agent,saturday:yes(satRaw),sunday:yes(sunRaw),permanenceStart:permStart,permanenceEnd:permEnd,permanencePause:permPause});results.push({kind:'Jours agent',line:index+2,agent,name:agentLabel(agent),from:'',to:'',profile:'',errors:permErrors,warnings:[],detail:`Samedi : ${yes(satRaw)?'travaillé':'repos'} · Dimanche : ${yes(sunRaw)?'travaillé':'repos'} · Permanence : ${permStart&&permEnd?`${permStart}–${permEnd}`:'non renseignée'}`})}
     });
     hours.forEach((row,index)=>{
       if(Object.values(row).every(v=>String(v).trim()===''))return;
@@ -137,6 +143,7 @@
     for(const item of pending.agentSettings||[]){
       const a=item.agent,current=(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).map(Number).filter(d=>d!==0&&d!==6);
       if(item.saturday)current.push(6);if(item.sunday)current.push(0);a.workdays=[...new Set(current)];
+       if(item.permanenceStart||item.permanenceEnd||Number(item.permanencePause||0)){a.permanenceSchedule={start:item.permanenceStart||'',end:item.permanenceEnd||'',pause:Number(item.permanencePause||0)};a.permanenceStart=a.permanenceSchedule.start;a.permanenceEnd=a.permanenceSchedule.end;a.permanencePause=a.permanenceSchedule.pause}
     }
     const groups=new Map();
     pending.validHours.forEach(x=>{const key=`${x.agent.id}|${x.from}|${x.to}|${x.profile}`;if(!groups.has(key))groups.set(key,{id:null,agentId:x.agent.id,agent:agentLabel(x.agent),shift:x.profile,effectiveFrom:x.from,effectiveTo:x.to,dayProfiles:{},rows:[]});const p=groups.get(key),dayIndex=DAY_KEYS[DAYS.indexOf(x.day)],working=norm(x.type)!=='repos'&&x.start&&x.end;p.dayProfiles[dayIndex]={start:working?x.start:'',end:working?x.end:'',pause:working?x.pause:0,missions:x.mission||'',segments:[]};});
@@ -144,6 +151,7 @@
     groups.forEach(p=>{const idx=(db.weeklyPlans||[]).findIndex(old=>String(old.agentId)===String(p.agentId)&&old.shift===p.shift&&old.effectiveFrom===p.effectiveFrom&&old.effectiveTo===p.effectiveTo);if(idx>=0){p.id=db.weeklyPlans[idx].id||uid();db.weeklyPlans[idx]=p;updated++}else{p.id=uid();db.weeklyPlans.push(p);created++}});
     let rotCreated=0,rotUpdated=0;
     pending.validRot.forEach(x=>{let idx=x.rotationId?(db.rotations||[]).findIndex(r=>String(r.id)===x.rotationId):-1;if(idx<0)idx=(db.rotations||[]).findIndex(r=>String(r.agentId)===String(x.agent.id)&&r.effectiveFrom===x.from);const r={id:idx>=0?db.rotations[idx].id:uid(),no:idx>=0?(db.rotations[idx].no||''):(typeof nextNo==='function'?nextNo('rotation','RLT'):''),agentId:x.agent.id,effectiveFrom:x.from,effectiveTo:x.to,startShift:x.startShift,morningWeeks:x.mw,eveningWeeks:x.ew,morningStart:x.ms,morningEnd:x.me,eveningStart:x.es,eveningEnd:x.ee,pause:x.pause,weekdays:x.weekdays.length?x.weekdays:[1,2,3,4,5],notes:x.notes};if(idx>=0){db.rotations[idx]=r;rotUpdated++}else{db.rotations.push(r);rotCreated++}});
+    if(typeof syncStoredChronotimePastilles==='function')syncStoredChronotimePastilles();
     // Les jours de week-end décochés dans l'onglet Agents sont aussi retirés des roulements existants.
     for(const a of db.agents||[]){const allowed=(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).map(Number);for(const r of (db.rotations||[]).filter(r=>String(r.agentId)===String(a.id))){r.weekdays=(r.weekdays||[1,2,3,4,5]).map(Number).filter(d=>allowed.includes(d))}}
     db.scheduleImports=db.scheduleImports||[];

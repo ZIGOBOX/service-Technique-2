@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.21';
+const APP_VERSION='147.22';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1144,6 +1144,14 @@ function scheduledFor(agentId,date){
  if(!p?.start||!p?.end)return {shift,start:'',end:'',pause:0,missions:'Horaire à définir dans Pilotage des horaires',segments:[],source:'rotation-missing'};
  return {shift,start:p.start,end:p.end,pause:Number(p.pause||0),missions:p.missions||'',segments:p.segments||[],source:'rotation'};
 }
+function theoreticalScheduleFor(agentId,date,dayType='Présence'){
+ const type=normalizeText(dayType||'Présence');
+ if(type.includes('perman')){
+   const p=permanenceScheduleForAgent(agentId);
+   return {shift:'Permanence',start:p.start||'',end:p.end||'',pause:Number(p.pause||0),missions:'Horaire fixe de permanence',source:'permanence'};
+ }
+ return scheduledFor(agentId,date);
+}
 function dayRecord(agentId,date,preferredDayType=''){
   const records=(Array.isArray(db.agentDays)?db.agentDays:[]).filter(r=>String(r.agentId)===String(agentId)&&String(r.date)===String(date));
   if(!records.length)return null;
@@ -1288,7 +1296,11 @@ function syncStoredChronotimePastilles(){
   }
   return changed;
 }
-function dayInfo(agentId,date){const sched=scheduledFor(agentId,date),rec=dayRecord(agentId,date);if(!rec)return {...sched,dayType:sched.shift==='Repos'?'Repos':'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',overtime:0,note:'',status:'Prévu'};return {...sched,...rec,plannedStart:rec.plannedStart??sched.start,plannedEnd:rec.plannedEnd??sched.end}}
+function dayInfo(agentId,date){
+ const rec=dayRecord(agentId,date),type=rec?.dayType||'Présence',sched=theoreticalScheduleFor(agentId,date,type);
+ if(!rec)return {...sched,dayType:sched.shift==='Repos'?'Repos':'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',overtime:0,note:'',status:'Prévu'};
+ return {...sched,...rec,plannedStart:sched.start||rec.plannedStart||'',plannedEnd:sched.end||rec.plannedEnd||'',pause:Number(sched.pause??rec.pause??0),theoreticalSource:sched.source||sched.shift||''};
+}
 function isAbsenceType(t){return t&&t!=='Présence'&&t!=='Formation'}
 function dayCountingRule(dayType){
  const rules=db.settings?.chronoDayRules||{};
@@ -1438,8 +1450,9 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  const old=clicked;
  const initialAgentId=clicked?.agentId||agentId||db.agents[0]?.id;
  const initialDate=clicked?.date||date||todayISO();
- const sched=scheduledFor(initialAgentId,initialDate);
- const x=old||{id:uid(),agentId:initialAgentId,date:initialDate,dayType:'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',pause:sched.pause,overtime:0,status:'Validée',note:'',replacement:'',noReplacementNeeded:false};
+ const initialType=clicked?.dayType||preferredDayType||'Présence';
+ const sched=theoreticalScheduleFor(initialAgentId,initialDate,initialType);
+ const x=old?Object.assign({},old,{plannedStart:sched.start||old.plannedStart||'',plannedEnd:sched.end||old.plannedEnd||'',pause:Number(sched.pause??old.pause??0)}):{id:uid(),agentId:initialAgentId,date:initialDate,dayType:initialType,plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',pause:sched.pause,overtime:0,status:'Validée',note:'',replacement:'',noReplacementNeeded:false};
  const dateFrom=periodRows.length?periodRows.map(r=>r.date).sort()[0]:x.date;
  const dateTo=periodRows.length?periodRows.map(r=>r.date).sort().at(-1):x.date;
  openModal(`${agentName(agentById(x.agentId))} — saisie planning`,`<div id="annualTheoreticalSummary">${agentAnnualScheduleSummary(x.agentId,initialDate)}</div><div class="day-shortcuts"><button type="button" data-set-day="Congé annuel">Congé</button><button type="button" data-set-day="RTT">RTT</button><button type="button" data-set-day="Maladie">Maladie</button><button type="button" data-set-day="Présence">Présence</button></div><div class="theoretical-schedule" id="theoreticalSchedule"></div><div class="form-grid"><label>Agent<select name="agentId">${agentOptions(x.agentId)}</select></label><label>Type de journée<select name="dayType">${dayTypeOptions(x.dayType)}</select></label>${field('Du','dateFrom',dateFrom,'date','required')}${field('Au','dateTo',dateTo,'date','required')}<label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],x.status||'Validée')}</select></label>${field('Horaire théorique — arrivée','plannedStart',x.plannedStart,'time')}${field('Horaire théorique — départ','plannedEnd',x.plannedEnd,'time')}${field('Horaire réel — arrivée','actualStart',x.actualStart,'time')}${field('Horaire réel — départ','actualEnd',x.actualEnd,'time')}${field('Pause (minutes)','pause',x.pause,'number','min="0" step="5"')}${field('Heures supplémentaires (+) / retirées (-)','overtime',x.overtime,'number','step="0.25"')}<label class="full-width replacement-choice"><span>Gestion du remplacement</span><span class="checkbox-row"><input type="checkbox" name="noReplacementNeeded" ${x.noReplacementNeeded?'checked':''}> Aucun remplacement nécessaire pendant cette période</span></label>${field('Remplacement / relais','replacement',x.replacement||'')}${textareaField('Motif / précision','note',x.note)}</div><p class="hint">Aucune notification de remplacement n’est créée le samedi, le dimanche ou un jour férié. Si la case « Aucun remplacement nécessaire » est cochée, aucune notification de remplacement ne sera créée pour toute la période.</p><div class="calculation-preview" id="dayCalc"></div>`,form=>{const o=formDataObj(form);
@@ -1453,7 +1466,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Congé, RTT, formation et autres types doivent toujours pouvoir être enregistrés.
  // Quand la règle vaut « Horaires prévus », on conserve/reprend le Pilotage des horaires.
  if(countingRule.mode==='planned'){
-   const firstSchedule=scheduledFor(o.agentId,from);
+   const firstSchedule=theoreticalScheduleFor(o.agentId,from,o.dayType);
    o.plannedStart=o.plannedStart||firstSchedule.start||'';
    o.plannedEnd=o.plannedEnd||firstSchedule.end||'';
    if(o.dayType==='Présence'&&(!o.plannedStart||!o.plannedEnd)){toast('Aucun horaire théorique trouvé : renseignez arrivée et départ, ou créez les horaires de référence');return}
@@ -1467,7 +1480,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    const weekday=![0,6].includes(parseDate(d).getDay());
    if(!isPeriod||weekday){
      db.agentDays=db.agentDays.filter(r=>!(String(r.agentId)===String(o.agentId)&&r.date===d));
-     const sc=scheduledFor(o.agentId,d), sameStart=d===from;
+     const sc=theoreticalScheduleFor(o.agentId,d,o.dayType), sameStart=d===from;
      const rule=dayCountingRule(o.dayType);
      const pStart=rule.mode==='planned'?((from===to?o.plannedStart:'')||sc.start||o.plannedStart||''):(from===to?(o.plannedStart||''):'');
      const pEnd=rule.mode==='planned'?((from===to?o.plannedEnd:'')||sc.end||o.plannedEnd||''):(from===to?(o.plannedEnd||''):'');
@@ -1479,15 +1492,15 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  closeModal();save();toast(`${added} jour(s) enregistré(s)`)},{onDelete:old?()=>{if(!confirm('Supprimer cette saisie ou toute la période associée ?'))return;if(periodId)db.agentDays=db.agentDays.filter(r=>r.periodId!==periodId);else db.agentDays=db.agentDays.filter(r=>r.id!==old.id);closeModal();save();toast('Saisie supprimée')}:null});
  function refreshTheoretical(force=false){
    const f=$('#modalForm');if(!f)return;
-   const aid=f.elements.agentId.value, d=f.elements.dateFrom.value||todayISO(), sc=scheduledFor(aid,d);
-   const box=$('#theoreticalSchedule'),currentType=f.elements.dayType.value||'Présence';
+   const aid=f.elements.agentId.value, d=f.elements.dateFrom.value||todayISO(), currentType=f.elements.dayType.value||'Présence', sc=theoreticalScheduleFor(aid,d,currentType);
+   const box=$('#theoreticalSchedule');
    const annualBox=$('#annualTheoreticalSummary');if(annualBox)annualBox.innerHTML=agentAnnualScheduleSummary(aid,d);
    const rule=dayCountingRule(currentType);
    if(box){
      if(currentType!=='Présence')box.innerHTML=`<strong>Pastille du calendrier — ${fmtDate(d)}</strong><b>${esc(currentType)}</b><small>Comptabilisation : ${esc(dayCountingLabel(currentType))}</small>${rule.mode==='planned'&&sc.start&&sc.end?`<small>Horaire prévu : ${esc(sc.start)} – ${esc(sc.end)}</small>`:''}`;
      else {const nextPlan=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(aid)&&p.effectiveFrom&&p.effectiveFrom>d).sort((a,b)=>a.effectiveFrom.localeCompare(b.effectiveFrom))[0];box.innerHTML=`<strong>Horaire théorique du ${fmtDate(d)}</strong><b>${sc.start&&sc.end?`${esc(sc.start)} – ${esc(sc.end)}`:'Aucun horaire applicable à cette date'}</b>${sc.pause?`<small>Pause : ${sc.pause} min</small>`:''}${sc.missions?`<small>${esc(sc.missions)}</small>`:''}${!sc.start&&nextPlan?`<small>Prochain planning enregistré à partir du ${fmtDate(nextPlan.effectiveFrom)}.</small>`:''}`;}
    }
-   if(rule.mode==='planned'&&(force||(!f.elements.plannedStart.value&&!f.elements.plannedEnd.value))){
+   if(rule.mode==='planned'&&(force||normalizeText(currentType).includes('perman')||(!f.elements.plannedStart.value&&!f.elements.plannedEnd.value))){
      f.elements.plannedStart.value=sc.start||'';f.elements.plannedEnd.value=sc.end||'';f.elements.pause.value=Number(sc.pause||0);
    }
    updateDayCalc();
