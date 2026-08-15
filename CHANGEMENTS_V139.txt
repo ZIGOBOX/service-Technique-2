@@ -1,0 +1,6 @@
+V139 — 15/08/2026
+
+- Suppression des rendez-vous : suppression immédiate de l'écran puis sauvegarde immédiate vers Supabase.
+- Hors ligne : la suppression reste en attente locale et se synchronise automatiquement au retour du réseau.
+- Bouton Requête Supabase : ajout d'un pictogramme visible (éclair) devant le texte ; sur mobile, le pictogramme reste visible même si le texte est masqué pour gagner de la place.
+- Aucun autre module modifié.

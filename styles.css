@@ -657,3 +657,8 @@ button{user-select:none;-webkit-user-select:none}
 .pdf-viewer-canvas-wrap{height:calc(94vh - 122px);overflow:auto;background:#dfe6ed;padding:10px;display:flex;justify-content:center;align-items:flex-start}
 #pdfViewerCanvas{background:#fff;box-shadow:0 3px 18px rgba(0,0,0,.18);max-width:100%}
 @media(max-width:700px){.top-actions #layoutMode,.top-actions #printCurrent{display:none}.supabase-top-btn{font-size:10px;padding:8px 9px}.pdf-viewer-modal{width:100vw;height:100vh;max-height:none;border-radius:0}.pdf-viewer-canvas-wrap{height:calc(100vh - 122px);padding:6px}}
+
+/* V139 — suppression rendez-vous immédiate + pictogramme Supabase */
+.supabase-top-btn{display:inline-flex!important;align-items:center;gap:6px}
+.supabase-btn-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;font-size:15px;line-height:1;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35)}
+@media(max-width:700px){.supabase-top-btn span:last-child{display:none}.supabase-top-btn{padding:7px 9px}.supabase-btn-icon{width:22px;height:22px}}

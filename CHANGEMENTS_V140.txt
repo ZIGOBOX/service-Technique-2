@@ -1,0 +1,5 @@
+V140
+- Contrôles périodiques : fiche entière accessible et bouton Ouvrir / modifier explicite.
+- Rapports PDF : bouton Ouvrir directement sur chaque contrôle.
+- Secours : recherche des pièces jointes dans les fiches métier si l’index global Supabase est incomplet.
+- Conservation des corrections V139.
