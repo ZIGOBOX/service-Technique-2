@@ -1,0 +1,6 @@
+V147.23 — 15/08/2026
+Contrôles périodiques mis à jour depuis « suivi des contrats bis (1).xlsx » — rubrique CONTRÔLE.
+13 contrôles intégrés/mis à jour avec périodicité, dernière prestation et prestataire connus.
+Les contrôles restent entièrement modifiables et supprimables.
+Champs modifiables : N°, intitulé, famille, bâtiment, périodicité mois, précision, dernier contrôle, prochaine échéance, heure, étage, secteur, local, statut, prestataire, registre, exigence, notes, pièces jointes.
+La fusion avec une base Supabase existante conserve les pièces jointes et le statut existants.
