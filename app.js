@@ -1,8 +1,8 @@
 'use strict';
 
 function appLogoURL(){
-  try{return window.APP_LOGO_DATA_URI||new URL('./assets/logo-service-technique.png?v=82.0',document.baseURI||location.href).href}
-  catch(e){return window.APP_LOGO_DATA_URI||'./assets/logo-service-technique.png?v=82.0'}
+  try{return window.APP_LOGO_DATA_URI||new URL('./assets/logo-service-technique.png?v=138.0',document.baseURI||location.href).href}
+  catch(e){return window.APP_LOGO_DATA_URI||'./assets/logo-service-technique.png?v=138.0'}
 }
 function secureAppLogos(){
   const src=appLogoURL();
@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='137.0';
-const APP_BUILD='15/08/2026 09:31';
+const APP_VERSION='138.0';
+const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -685,6 +685,42 @@ async function openStoragePath(path,downloadName='document'){
  if(error||!data?.signedUrl){console.error(error);return false}
  window.open(data.signedUrl,'_blank','noopener');return true;
 }
+function ensurePdfViewer(){
+ let dlg=document.getElementById('supabasePdfViewer');
+ if(dlg)return dlg;
+ dlg=document.createElement('dialog');dlg.id='supabasePdfViewer';dlg.className='modal pdf-viewer-modal';
+ dlg.innerHTML=`<div class="modal-head"><div><h3 id="pdfViewerTitle">Document PDF</h3><p class="muted" id="pdfViewerStatus">Chargement…</p></div><button type="button" class="icon-btn" id="pdfViewerClose">×</button></div><div class="pdf-viewer-toolbar"><button class="ghost small" id="pdfPrevPage">‹ Page précédente</button><strong id="pdfPageInfo">—</strong><button class="ghost small" id="pdfNextPage">Page suivante ›</button></div><div class="pdf-viewer-canvas-wrap"><canvas id="pdfViewerCanvas"></canvas></div>`;
+ document.body.appendChild(dlg);
+ dlg.querySelector('#pdfViewerClose').onclick=()=>dlg.close();
+ return dlg;
+}
+let __pdfViewerDoc=null,__pdfViewerPage=1,__pdfViewerRendering=false;
+async function renderPdfViewerPage(pageNo){
+ if(!__pdfViewerDoc||__pdfViewerRendering)return;
+ __pdfViewerRendering=true;
+ const dlg=ensurePdfViewer(),status=dlg.querySelector('#pdfViewerStatus'),canvas=dlg.querySelector('#pdfViewerCanvas');
+ try{
+  const page=await __pdfViewerDoc.getPage(pageNo);const base=page.getViewport({scale:1});
+  const maxW=Math.max(280,Math.min(window.innerWidth-36,1000));const scale=Math.max(.7,Math.min(2,maxW/base.width));const vp=page.getViewport({scale});
+  canvas.width=Math.floor(vp.width);canvas.height=Math.floor(vp.height);canvas.style.width='100%';canvas.style.height='auto';
+  await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+  __pdfViewerPage=pageNo;dlg.querySelector('#pdfPageInfo').textContent=`Page ${pageNo} / ${__pdfViewerDoc.numPages}`;
+  dlg.querySelector('#pdfPrevPage').disabled=pageNo<=1;dlg.querySelector('#pdfNextPage').disabled=pageNo>=__pdfViewerDoc.numPages;status.textContent='PDF chargé depuis Supabase';
+ }catch(e){console.error('Lecture PDF',e);status.textContent='Impossible d’afficher cette page.'}
+ finally{__pdfViewerRendering=false}
+}
+async function openPdfInApp(url,name='Document PDF'){
+ const dlg=ensurePdfViewer();dlg.querySelector('#pdfViewerTitle').textContent=name||'Document PDF';dlg.querySelector('#pdfViewerStatus').textContent='Chargement depuis Supabase…';dlg.querySelector('#pdfViewerCanvas').getContext('2d').clearRect(0,0,10,10);
+ dlg.querySelector('#pdfPrevPage').onclick=()=>renderPdfViewerPage(Math.max(1,__pdfViewerPage-1));dlg.querySelector('#pdfNextPage').onclick=()=>renderPdfViewerPage(Math.min(__pdfViewerDoc?.numPages||1,__pdfViewerPage+1));
+ if(!dlg.open)dlg.showModal();
+ try{
+  if(!window.pdfjsLib)throw new Error('Lecteur PDF indisponible');
+  __pdfViewerDoc=await window.pdfjsLib.getDocument({url,withCredentials:false}).promise;__pdfViewerPage=1;await renderPdfViewerPage(1);return true;
+ }catch(e){console.error('Ouverture PDF intégrée',e);dlg.querySelector('#pdfViewerStatus').textContent='Lecture intégrée impossible — ouverture externe…';
+  try{window.location.href='https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(url);return true}catch(_){return false}
+ }
+}
+
 async function downloadAttachment(id){
  let rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
  if(!rec){const map=loadImportOriginalBindings();for(const b of Object.values(map)){if(String(b?.attachment?.id)===String(id)){rec={...b.attachment};db.attachments=db.attachments||[];db.attachments.push(rec);break}}}
@@ -694,7 +730,7 @@ async function downloadAttachment(id){
   // Le bouton Retour du téléphone ramène ensuite directement à l’application.
   if(rec.storagePath&&supabaseClient){
    const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(rec.storagePath,900);
-   if(!error&&data?.signedUrl){const st=$('#importArchiveStatus');if(st){st.textContent='☁️ Ouverture du document depuis le cloud…';st.className='import-archive-status ok'}window.location.assign(data.signedUrl);return}
+   if(!error&&data?.signedUrl){const st=$('#importArchiveStatus');if(st){st.textContent='☁️ Ouverture du document depuis le cloud…';st.className='import-archive-status ok'}const isPdf=/\.pdf(?:$|[?#])/i.test(rec.name||'')||String(rec.type||rec.mimeType||'').toLowerCase().includes('pdf');if(isPdf){const ok=await openPdfInApp(data.signedUrl,rec.name||'Rapport PDF');if(ok)return;}window.location.assign(data.signedUrl);return}
    if(error)console.warn('Ouverture Supabase impossible',error);
   }
  }catch(e){console.error('Ouverture du document',e)}
@@ -1866,7 +1902,7 @@ function bindEvents(){
  const openMobileMenu=()=>{document.body.classList.add('menu-open');$('#openMenu')?.setAttribute('aria-expanded','true')};const closeMobileMenu=()=>{document.body.classList.remove('menu-open');$('#openMenu')?.setAttribute('aria-expanded','false')};if($('#openMenu'))$('#openMenu').onclick=openMobileMenu;if($('#closeMenu'))$('#closeMenu').onclick=closeMobileMenu;if($('#menuBackdrop'))$('#menuBackdrop').onclick=closeMobileMenu;
  $('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b){setView(b.dataset.view);closeMobileMenu()}});$('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').onclick=()=>printView(document.querySelector('.view.active')?.id);
  const gay=$('#globalAcademicYear');if(gay)gay.onchange=e=>setActiveAcademicYear(e.target.value);const pay=$('#prevAcademicYear');if(pay)pay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),-1));const nay=$('#nextAcademicYear');if(nay)nay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),1));
- $('#quickAdd').onclick=$('#quickNoteFab').onclick=openQuickMenu;
+ {const q=$('#quickAdd');if(q)q.onclick=openQuickMenu;const f=$('#quickNoteFab');if(f)f.onclick=openQuickMenu;}
  $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
  $('#prevTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,-7);renderTeamCalendar()};$('#nextTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,7);renderTeamCalendar()};$('#prevTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,-1));renderTeamCalendar()};$('#nextTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,1));renderTeamCalendar()};$('#todayTeamWeek').onclick=()=>{teamWeek=startOfWeek(todayISO());renderTeamCalendar()};$('#teamDateJump').onchange=e=>{teamWeek=startOfWeek(e.target.value);renderTeamCalendar()};$('#prevPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,-7);renderPersonalCalendar()};$('#nextPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,7);renderPersonalCalendar()};$('#todayPersonalWeek').onclick=()=>{personalWeek=startOfWeek(todayISO());renderPersonalCalendar()};
  $('#saveSettings').onclick=saveSettings;const wizardOpen=$('#openAutoReportWizard');if(wizardOpen)wizardOpen.onclick=openAutoReportWizard;const wizardClose=$('#autoReportWizardClose');if(wizardClose)wizardClose.onclick=()=>wizardEl().close();const wizardBack=$('#autoReportWizardBack');if(wizardBack)wizardBack.onclick=()=>{saveWizardStep();autoReportWizardStep=Math.max(0,autoReportWizardStep-1);renderAutoReportWizard()};const wizardNext=$('#autoReportWizardNext');if(wizardNext)wizardNext.onclick=()=>{saveWizardStep();if(autoReportWizardStep===3){wizardEl().close();return}autoReportWizardStep=Math.min(3,autoReportWizardStep+1);renderAutoReportWizard()};document.addEventListener('click',e=>{const p=e.target.closest('[data-wizard-provider]');if(p){autoReportWizardData.provider=p.dataset.wizardProvider;renderAutoReportWizard()}});const sart=$('#sendAutomaticReportTest');if(sart)sart.onclick=sendAutomaticReportTest;function openNotificationCenter(){window.PSTNotificationCenter?.open?.()}

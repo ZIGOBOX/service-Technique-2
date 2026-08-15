@@ -1,0 +1,7 @@
+Pilotage Service Technique V138
+
+Corrections ciblées :
+- Le bouton + du haut est remplacé par « ↻ Requête Supabase ».
+- Les PDF des contrôles périodiques stockés dans Supabase s’ouvrent dans un lecteur PDF intégré (compatible WebView Android).
+- Logos allégés et embarqués pour fiabiliser leur affichage dans Chrome et l’application Android.
+- Aucun autre module fonctionnel modifié.
