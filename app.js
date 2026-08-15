@@ -715,9 +715,14 @@ async function openPdfInApp(url,name='Document PDF'){
  if(!dlg.open)dlg.showModal();
  try{
   if(!window.pdfjsLib)throw new Error('Lecteur PDF indisponible');
-  __pdfViewerDoc=await window.pdfjsLib.getDocument({url,withCredentials:false}).promise;__pdfViewerPage=1;await renderPdfViewerPage(1);return true;
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  // V142 : on télécharge d'abord le PDF signé Supabase en mémoire. Cela évite les blocages CORS/WebView Android.
+  const response=await fetch(url,{cache:'no-store',credentials:'omit'});
+  if(!response.ok)throw new Error('Téléchargement PDF impossible ('+response.status+')');
+  const buf=await response.arrayBuffer();
+  __pdfViewerDoc=await window.pdfjsLib.getDocument({data:buf}).promise;__pdfViewerPage=1;await renderPdfViewerPage(1);return true;
  }catch(e){console.error('Ouverture PDF intégrée',e);dlg.querySelector('#pdfViewerStatus').textContent='Lecture intégrée impossible — ouverture externe…';
-  try{window.location.href='https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(url);return true}catch(_){return false}
+  try{window.open(url,'_blank','noopener');return true}catch(_){try{window.location.assign(url);return true}catch(__){return false}}
  }
 }
 
