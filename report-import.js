@@ -351,13 +351,14 @@
       chronoPending=null;
       if(typeof clearAcademicYearMismatch==='function')clearAcademicYearMismatch();
     }else if(persisted?.offline){
-      status('chronoImportStatus','⚠️ Import Chronotime conservé sur cet appareil — synchronisation automatique dès le retour du réseau.','warning');
+      status('chronoImportStatus','⚠️ Pas de connexion Internet. Import Chronotime conservé sur cet appareil — synchronisation automatique au retour du réseau.','warning');
       document.getElementById('chronoPreview').innerHTML='';
       chronoPending=null;
       if(typeof clearAcademicYearMismatch==='function')clearAcademicYearMismatch();
     }else{
-      status('chronoImportStatus','❌ Import Chronotime non confirmé dans Supabase. Ne fermez pas l’application et réessayez.','error');
-      toast?.('Chronotime non confirmé dans Supabase');
+      const detail=persisted?.error||window.PSTMainState?.cloudDiagnostic?.().lastCloudError||'Erreur Supabase non précisée';
+      status('chronoImportStatus',`❌ Import conservé sur cet appareil. Supabase n’a pas confirmé : ${detail}`,'error');
+      toast?.(`Supabase : ${detail}`);
       return;
     }
   }

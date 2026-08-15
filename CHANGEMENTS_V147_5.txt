@@ -1,0 +1,9 @@
+V147.5 — 15/08/2026
+
+Diagnostic Supabase / Chronotime :
+- corrige le faux message « hors ligne » quand le Wi-Fi fonctionne ;
+- persistNow attend maintenant qu'une autre synchronisation Supabase en cours se termine ;
+- distingue : Internet absent, délai dépassé, droits/RLS, authentification, erreur réseau et Supabase occupé ;
+- affiche le vrai message renvoyé par Supabase quand l'écriture échoue ;
+- conserve l'import local tant que Supabase n'a pas confirmé ;
+- aucun changement OneDrive.

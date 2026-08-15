@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.4';
+const APP_VERSION='147.5';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -261,10 +261,31 @@ function restoreSuppliedData(showMessage=true){
  if(showMessage){renderAll();toast('Toutes les données fournies ont été restaurées')}
 }
 let db=defaultData(); let teamWeek=startOfWeek(todayISO()),personalWeek=startOfWeek(todayISO()),modalHandler=null,modalDeleteHandler=null,currentView='dashboard',modalAuditInitial=null,modalAuditTitle='';
-let supabaseClient=null,currentUser=null,cloudReady=false,cloudSaveTimer=null,cloudRetryTimer=null,cloudBusy=false,cloudPollTimer=null,lastCloudUpdatedAt='',localDirty=false,lastCloudData=null;
+let supabaseClient=null,currentUser=null,cloudReady=false,cloudSaveTimer=null,cloudRetryTimer=null,cloudBusy=false,cloudPollTimer=null,lastCloudUpdatedAt='',localDirty=false,lastCloudData=null,lastCloudError='';
 const OFFLINE_CACHE_KEY='pst_offline_pending_v130';
 const OFFLINE_MIRROR_KEY='pst_offline_mirror_v130';
 function setSaveState(text,state=''){const s=$('#saveState');if(!s)return;s.textContent=text;s.dataset.state=state}
+function classifyCloudError(message=''){
+ const m=String(message||'').toLowerCase();
+ if(!navigator.onLine)return 'internet';
+ if(m.includes('délai')||m.includes('timeout'))return 'timeout';
+ if(m.includes('row-level')||m.includes('rls')||m.includes('permission')||m.includes('not allowed')||m.includes('policy')||m.includes('42501'))return 'permission';
+ if(m.includes('jwt')||m.includes('token')||m.includes('auth')||m.includes('session')||m.includes('401')||m.includes('403'))return 'auth';
+ if(m.includes('network')||m.includes('fetch')||m.includes('failed to fetch'))return 'network';
+ if(m.includes('occupé')||m.includes('busy'))return 'busy';
+ return 'supabase';
+}
+function cloudFailureText(message=''){
+ const kind=classifyCloudError(message);
+ const msg=String(message||'Erreur inconnue');
+ if(kind==='internet')return 'Pas de connexion Internet.';
+ if(kind==='timeout')return `Supabase ne répond pas assez vite : ${msg}`;
+ if(kind==='permission')return `Supabase refuse l’écriture (droits/RLS) : ${msg}`;
+ if(kind==='auth')return `Session Supabase non valide ou expirée : ${msg}`;
+ if(kind==='network')return `Internet fonctionne mais la requête Supabase a échoué : ${msg}`;
+ if(kind==='busy')return `Supabase est occupé par une autre synchronisation : ${msg}`;
+ return `Supabase n’a pas confirmé l’écriture : ${msg}`;
+}
 function withTimeout(promise,ms=9000){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('Délai de connexion dépassé')),ms))])}
 function hasUsefulData(x){return !!(x&&((x.agents&&x.agents.length)||(x.maintenance&&x.maintenance.length)||(x.weeklyPlans&&x.weeklyPlans.length)||(x.notes&&x.notes.length)))}
 function deepClone(x){try{return structuredClone(x)}catch(_){return JSON.parse(JSON.stringify(x))}}
@@ -387,9 +408,18 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
    const stamp=new Date().toISOString();
    const payload={user_id:currentUser.id,data:toSave,updated_at:stamp};
    const {error}=await withTimeout(supabaseClient.from('app_state').upsert(payload,{onConflict:'user_id'}));if(error)throw error;
-   db=toSave;lastCloudData=deepClone(toSave);lastCloudUpdatedAt=stamp;localDirty=false;cloudReady=true;clearOfflinePending();writeMirror();
+   db=toSave;lastCloudData=deepClone(toSave);lastCloudUpdatedAt=stamp;localDirty=false;cloudReady=true;lastCloudError='';clearOfflinePending();writeMirror();
    setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');clearTimeout(cloudRetryTimer);safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}return true;
- }catch(error){console.error('Sauvegarde cloud différée :',error);writeOfflinePending(error?.message||'serveur indisponible');if(!silent)toast('Connexion indisponible — modification gardée sur cet appareil et synchronisée automatiquement au retour du réseau');scheduleCloudRetry();return false}
+  }catch(error){
+    lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue';
+    console.error('Sauvegarde cloud différée :',error);
+    writeOfflinePending(lastCloudError);
+    const detail=cloudFailureText(lastCloudError);
+    setSaveState(detail,'error');
+    if(!silent)toast(detail);
+    scheduleCloudRetry();
+    return false
+  }
  finally{cloudBusy=false}
 }
 function save(render=true){
