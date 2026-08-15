@@ -1,0 +1,9 @@
+V147.2 — 15/08/2026
+
+- Correctif ciblé Chronotime uniquement.
+- Après « Valider l’injection », l’application attend maintenant la confirmation immédiate de Supabase.
+- Le message de réussite n’apparaît qu’après confirmation Supabase.
+- Hors ligne : l’import est conservé localement et sera synchronisé automatiquement au retour du réseau.
+- En cas d’échec de confirmation, l’application l’indique clairement au lieu d’annoncer une injection terminée.
+- Aucun changement OneDrive.
+- Aucun autre module fonctionnel modifié.
