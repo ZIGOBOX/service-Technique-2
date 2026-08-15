@@ -1,0 +1,4 @@
+V147 corrigée — 15/08/2026
+
+- Suppression du message permanent « événements calendrier synchronisés » affiché en bas de l’écran.
+- Aucun autre comportement fonctionnel modifié dans les fichiers fournis.

@@ -1,0 +1,7 @@
+V147.1 — 15/08/2026
+
+- Base : V147 corrigée.
+- Suppression du bandeau permanent « événements calendrier synchronisés ».
+- Correction de la version affichée dans le menu latéral (« sandwich »), l’écran de connexion et À propos : Version 147.1.
+- APP_VERSION alignée sur 147.1.
+- Aucun autre module fonctionnel modifié.
