@@ -1,0 +1,8 @@
+Pilotage Service Technique — V135
+
+Corrections :
+- Contrôle ménage : propositions de salles/locales rétablies à partir du référentiel central, y compris lorsque le nom d'étage diffère (RDC / Rez-de-chaussée).
+- Bâtiment B : ajout du 3e étage en plus du RDC, 1er et 2e étage dans le référentiel ménage.
+- Préparation salle & café : en mode modification, bouton « Supprimer cette préparation » disponible directement dans l'éditeur.
+- Contrôles périodiques : après enregistrement, le contrôle reste visible, les filtres sont réinitialisés et un bouton dédié permet de rouvrir/modifier la fiche de façon fiable.
+- Rendez-vous : enregistrement immédiat via le moteur Supabase/hors-ligne, puis rafraîchissement explicite de « Mon calendrier » et « Planning d'aujourd'hui ».

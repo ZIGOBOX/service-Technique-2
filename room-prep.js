@@ -37,6 +37,7 @@ function updateEditorMode(){
  const title=$('roomPrepEditorTitle');if(title)title.textContent=editingId?'Modifier la préparation':'Nouvelle préparation';
  const b=$('roomPrepSave');if(b&&!b.disabled)b.textContent=editingId?'Enregistrer les modifications':'Enregistrer la préparation';
  const r=$('roomPrepReset');if(r)r.textContent=editingId?'Annuler la modification':'Réinitialiser';
+ const del=$('roomPrepDeleteCurrent');if(del)del.classList.toggle('hidden',!editingId);
 }
 function reset(){editingId='';$('rpDate').value=today();$('rpTime').value='';$('rpRequester').value='';$('rpPeople').value=10;$('rpOwner').value='';$('rpStatus').value='À préparer';$('rpDeadlineTime').value='';$('rpLayout').value='Réunion';$('rpTables').value=0;$('rpChairs').value=0;$('rpPartition').value='Non';$('rpOtherPrep').value='Non';$('rpOtherPrepComment').value='';$('rpOtherPrepCommentWrap').classList.add('hidden');$('rpCoffee').value='Non';$('rpCoffeePeople').value=0;$('rpCoffeeTime').value='';$('rpCoffeeComment').value='';$('rpNotes').value='';$('rpOtherLocation').value='';['rpProjector','rpScreen','rpMic','rpExtension','rpTablecloth','rpBins','rpSignage','rpPMR'].forEach(id=>$(id).checked=false);fillB();toggleCoffeeFields();updateEditorMode();const st=$('roomPrepSaveStatus');if(st)st.textContent=''}
 async function save(){
@@ -147,5 +148,5 @@ reset();render();$('rpBuilding')?.addEventListener('change',()=>fillF());$('rpFl
  const del=e.target.closest('[data-roomprep-delete]');if(del){e.preventDefault();e.stopPropagation();deletePrep(del.dataset.roomprepDelete);return}
  const pr=e.target.closest('[data-roomprep-print]');if(pr){e.preventDefault();e.stopPropagation();printPrep(pr.dataset.roomprepPrint);return}
  const edit=e.target.closest('[data-roomprep-edit]');if(edit){e.preventDefault();editPrep(edit.dataset.roomprepEdit)}
-});$('roomPrepSave')?.addEventListener('click',save);$('roomPrepReset')?.addEventListener('click',reset)}
+});$('roomPrepSave')?.addEventListener('click',save);$('roomPrepReset')?.addEventListener('click',reset);$('roomPrepDeleteCurrent')?.addEventListener('click',()=>{if(editingId)deletePrep(editingId)})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();window.PSTRoomPrep={render,load,pronote,edit:editPrep,print:printPrep,delete:deletePrep};})();

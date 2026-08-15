@@ -23,7 +23,8 @@ const DEF=[
   room('','Vie scolaire','Local'),room('','Foyer','Foyer'),room('','Salle de musique','Salle'),room('','Salle d’étude 1','Salle'),room('','Salle d’étude 2','Salle'),room('','Salle polyvalente','Salle'),
   room('','Sanitaires RDC','Sanitaires'),room('','Circulation RDC','Circulation'),room('','Escalier central','Escalier')]}]},
  {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(211),room('','Sanitaires 1er étage','Sanitaires'),room('','Circulation 1er étage','Circulation'),room('','Escalier central','Escalier')]}]},
- {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(221),room('','Sanitaires 2e étage','Sanitaires'),room('','Circulation 2e étage','Circulation'),room('','Escalier central','Escalier')]}]}
+ {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(221),room('','Sanitaires 2e étage','Sanitaires'),room('','Circulation 2e étage','Circulation'),room('','Escalier central','Escalier')]}]},
+ {name:'3e étage',sectors:[{name:'Secteur principal',rooms:[...std(231),room('','Sanitaires 3e étage','Sanitaires'),room('','Circulation 3e étage','Circulation'),room('','Escalier central','Escalier')]}]}
 ]},
 {id:'H',name:'Bâtiment H',floors:[
  {name:'RDC',sectors:[{name:'Secteur principal',rooms:[...std(301),...common('RDC')]}]},
@@ -54,7 +55,16 @@ let currentFiltered=[];
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function mainDb(){return window.PSTMainState?.get?.()||null}
-function load(){const d=mainDb();return Array.isArray(d?.cleaningRoomsConfig)&&d.cleaningRoomsConfig.length?clone(d.cleaningRoomsConfig):clone(DEF)}
+function migrateRoomConfig(source){
+ const out=clone(Array.isArray(source)&&source.length?source:DEF);
+ const b=out.find(x=>String(x.name||'').toLowerCase().includes('bâtiment b')||String(x.id||'')==='B');
+ if(b&&!b.floors?.some(f=>String(f.name||'').toLowerCase().includes('3e'))){
+   b.floors=b.floors||[];
+   b.floors.push(clone(DEF.find(x=>x.id==='B').floors.find(f=>f.name==='3e étage')));
+ }
+ return out;
+}
+function load(){const d=mainDb();return migrateRoomConfig(Array.isArray(d?.cleaningRoomsConfig)&&d.cleaningRoomsConfig.length?d.cleaningRoomsConfig:DEF)}
 function loadChecks(){const d=mainDb();return Array.isArray(d?.cleaningRoomChecks)?d.cleaningRoomChecks:[]}
 function save(redraw=true){const d=mainDb();if(!d)return false;d.cleaningRoomsConfig=clone(data);window.PSTMainState?.save?.(false);if(redraw){renderSettings();renderBuildings();renderHistory()}return true}
 function saveChecks(arr){const d=mainDb();if(!d)return false;d.cleaningRoomChecks=Array.isArray(arr)?arr:[];window.PSTMainState?.save?.(false);renderHistory();return true}
