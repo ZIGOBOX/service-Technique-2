@@ -716,7 +716,7 @@ async function openPdfInApp(url,name='Document PDF'){
  try{
   if(!window.pdfjsLib)throw new Error('Lecteur PDF indisponible');
   window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  // V142 : on télécharge d'abord le PDF signé Supabase en mémoire. Cela évite les blocages CORS/WebView Android.
+  // V143 : on télécharge d'abord le PDF signé Supabase en mémoire. Cela évite les blocages CORS/WebView Android.
   const response=await fetch(url,{cache:'no-store',credentials:'omit'});
   if(!response.ok)throw new Error('Téléchargement PDF impossible ('+response.status+')');
   const buf=await response.arrayBuffer();
@@ -2195,3 +2195,88 @@ function bindScanNoteV77(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindScanNoteV77);else bindScanNoteV77();
 
 document.addEventListener('change',async e=>{const inp=e.target.closest?.('[data-reattach-import]');if(inp&&inp.files?.[0]){await reattachImportOriginal(inp.dataset.reattachImport,inp.files[0]);inp.value=''}});
+
+
+// V143 — réparation d'un original PDF manquant dans une archive existante.
+async function repairArchiveOriginalPdf(archiveId){
+  const archive=(state.archives||[]).find(a=>String(a.id)===String(archiveId));
+  if(!archive){ toast("Archive introuvable"); return; }
+
+  const input=document.createElement("input");
+  input.type="file";
+  input.accept="application/pdf,.pdf";
+  input.onchange=async()=>{
+    const file=input.files&&input.files[0];
+    if(!file)return;
+    if(file.type && file.type!=="application/pdf" && !/\.pdf$/i.test(file.name||"")){
+      toast("Sélectionne un fichier PDF."); return;
+    }
+    try{
+      toast("Chargement du PDF dans Supabase…");
+      let uploaded=null;
+
+      // Reuse the application's normal cloud uploader when available.
+      if(typeof uploadArchiveOriginal==="function"){
+        uploaded=await uploadArchiveOriginal(file, archive);
+      } else if(typeof uploadFileToSupabase==="function"){
+        uploaded=await uploadFileToSupabase(file, "archives");
+      } else {
+        throw new Error("Fonction d’envoi Supabase indisponible");
+      }
+
+      const path =
+        (uploaded && (uploaded.storagePath||uploaded.path||uploaded.fullPath)) ||
+        (typeof uploaded==="string" ? uploaded : "");
+      if(!path) throw new Error("Supabase n’a retourné aucun chemin de fichier");
+
+      archive.storagePath=path;
+      archive.originalName=file.name||archive.originalName||archive.name||"document.pdf";
+      archive.originalAvailable=true;
+      archive.updatedAt=new Date().toISOString();
+
+      // Persist through the same state/save mechanisms already used by the app.
+      if(typeof saveState==="function") await saveState();
+      else if(typeof persistState==="function") await persistState();
+      else if(typeof saveAll==="function") await saveAll();
+
+      toast("PDF rattaché avec succès");
+      if(typeof render==="function") render();
+      else location.reload();
+    }catch(err){
+      console.error("V143 repairArchiveOriginalPdf",err);
+      toast("Échec du rattachement PDF : "+(err?.message||err));
+    }
+  };
+  input.click();
+}
+
+
+
+// V143 — affiche automatiquement "Rattacher le PDF" sur les cartes dont l'original manque.
+document.addEventListener("click", function(e){
+  const b=e.target.closest("[data-repair-archive]");
+  if(b){ e.preventDefault(); repairArchiveOriginalPdf(b.getAttribute("data-repair-archive")); }
+});
+
+function v143InjectRepairButtons(){
+  document.querySelectorAll("button").forEach(btn=>{
+    if((btn.textContent||"").includes("Relire l’original")){
+      const card=btn.closest(".archive-card,.card,article,li,div");
+      if(!card || !(card.textContent||"").includes("Original indisponible")) return;
+      if(card.querySelector("[data-repair-archive]")) return;
+      // Recover archive id from common data attributes on the button/card.
+      const host=btn.closest("[data-id],[data-archive-id]")||card.querySelector("[data-id],[data-archive-id]");
+      const id=(host&&(host.dataset.archiveId||host.dataset.id)) || btn.dataset.archiveId || btn.dataset.id;
+      if(!id)return;
+      const repair=document.createElement("button");
+      repair.type="button";
+      repair.className=btn.className;
+      repair.setAttribute("data-repair-archive",id);
+      repair.textContent="📎 Rattacher le PDF";
+      btn.insertAdjacentElement("afterend",repair);
+    }
+  });
+}
+new MutationObserver(()=>v143InjectRepairButtons()).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener("DOMContentLoaded",v143InjectRepairButtons);
+
