@@ -90,12 +90,50 @@ const DEF=[
 
 let data=load();
 let currentFiltered=[];
+let roomSettingsDirty=false;
+let roomSaveTimer=null;
+let roomCloudBusy=false;
+
+function roomEditorFocused(){
+  const el=document.activeElement;
+  return !!(el&&el.closest&&el.closest('#rcSettings')&&el.matches('input,select,textarea'));
+}
+function scheduleRoomConfigSave(forceCloud=false){
+  roomSettingsDirty=true;
+  localStorage.setItem(KEY,JSON.stringify(data));
+  try{
+    const main=window.PSTMainState?.get?.();
+    if(main){
+      main.cleaningRoomsConfig=clone(data);
+      main.cleaningRoomsConfigVersion=CONFIG_VERSION;
+      window.PSTMainState?.save?.(false);
+    }
+  }catch(e){console.warn('Pré-synchronisation configuration salles',e)}
+  clearTimeout(roomSaveTimer);
+  roomSaveTimer=setTimeout(async()=>{
+    try{
+      if(forceCloud||!roomEditorFocused()){
+        roomCloudBusy=true;
+        const result=window.PSTMainState?.persistNow?await window.PSTMainState.persistNow():{ok:true};
+        if(result?.ok)roomSettingsDirty=false;
+      }
+    }catch(e){console.warn('Sauvegarde immédiate configuration salles',e)}
+    finally{roomCloudBusy=false}
+  },forceCloud?50:700);
+}
+function duplicateRoomNumber(buildingIndex,floorIndex,sectorIndex,roomIndex,value){
+  const wanted=String(value||'').trim().toLocaleLowerCase('fr-FR');
+  if(!wanted)return false;
+  const rs=data?.[buildingIndex]?.floors?.[floorIndex]?.sectors?.[sectorIndex]?.rooms||[];
+  return rs.some((x,i)=>i!==roomIndex&&String(x.number||'').trim().toLocaleLowerCase('fr-FR')===wanted);
+}
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return Array.isArray(x)&&x.length?x:clone(DEF)}catch(e){return clone(DEF)}}
 function loadChecks(){try{return JSON.parse(localStorage.getItem(CK))||[]}catch(e){return[]}}
 function save(redraw=true){
  localStorage.setItem(KEY,JSON.stringify(data));
+ roomSettingsDirty=true;
  try{
    const main=window.PSTMainState?.get?.();
    if(main){
@@ -104,6 +142,7 @@ function save(redraw=true){
      window.PSTMainState?.save?.(false);
    }
  }catch(e){console.warn('Synchronisation configuration des salles',e)}
+ scheduleRoomConfigSave(false);
  if(redraw){renderSettings();renderBuildings();renderHistory()}
 }
 function saveChecks(arr){localStorage.setItem(CK,JSON.stringify(arr));renderHistory()}
@@ -125,14 +164,44 @@ function renderSettings(){
  // Sans cela, un rafraîchissement Supabase pouvait refermer immédiatement Bâtiment B.
  const previouslyOpen=[...box.querySelectorAll('details.rc-building[open]')].map(d=>Number(d.dataset.buildingIndex)).filter(Number.isFinite);
  box.innerHTML=data.map((b,bi)=>`<details class="rc-building" data-building-index="${bi}" ${(previouslyOpen.length?previouslyOpen.includes(bi):bi===0)?'open':''}><summary><b>${esc(b.name)}</b><span>${b.floors.length} étage(s)</span></summary><div class="rc-build-body">
- <div class="rc-edit-head"><label>Bâtiment<input data-k="bn" data-b="${bi}" value="${esc(b.name)}"></label><button class="ghost small" data-af="${bi}">+ Étage</button></div>
+ <div class="rc-edit-head"><label>Bâtiment<input data-k="bn" data-b="${bi}" value="${esc(b.name)}"></label><div class="inline-actions"><button class="ghost small" data-af="${bi}">+ Étage</button><button class="primary small" type="button" data-save-rooms="${bi}">💾 Enregistrer</button></div></div>
  ${b.floors.map((f,fi)=>`<div class="rc-floor"><div class="rc-edit-head"><label>Étage<input data-k="fn" data-b="${bi}" data-f="${fi}" value="${esc(f.name)}"></label><button class="ghost small" data-as="${bi}:${fi}">+ Secteur</button></div>
  ${f.sectors.map((s,si)=>`<div class="rc-sector"><div class="rc-edit-head"><label>Secteur<input data-k="sn" data-b="${bi}" data-f="${fi}" data-s="${si}" value="${esc(s.name)}"></label><button class="ghost small" data-ar="${bi}:${fi}:${si}">+ Salle / local</button></div>
  <div class="rc-room-table">${s.rooms.map((r,ri)=>`<div class="rc-room-row"><input placeholder="N°" data-k="rn" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}" value="${esc(r.number)}"><input placeholder="Nom" data-k="rname" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}" value="${esc(r.name)}"><select data-k="rt" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}">${['Salle','Salle de classe','Chambre','Sanitaires','Circulation','Escalier','Internat','Foyer','Local','Bureau'].map(t=>`<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select><button class="danger-lite small" data-dr="${bi}:${fi}:${si}:${ri}">Supprimer</button></div>`).join('')}</div></div>`).join('')}</div>`).join('')}</div></details>`).join('');
- box.querySelectorAll('[data-k]').forEach(el=>el.onchange=()=>{let b=+el.dataset.b,f=+el.dataset.f,s=+el.dataset.s,r=+el.dataset.r,k=el.dataset.k;if(k==='bn')data[b].name=el.value;if(k==='fn')data[b].floors[f].name=el.value;if(k==='sn')data[b].floors[f].sectors[s].name=el.value;if(k==='rn')data[b].floors[f].sectors[s].rooms[r].number=el.value;if(k==='rname')data[b].floors[f].sectors[s].rooms[r].name=el.value;if(k==='rt')data[b].floors[f].sectors[s].rooms[r].type=el.value;save(false);renderBuildings()});
- box.querySelectorAll('[data-af]').forEach(x=>x.onclick=()=>{data[+x.dataset.af].floors.push({name:'Nouvel étage',sectors:[{name:'Nouveau secteur',rooms:[]}]});save()});
- box.querySelectorAll('[data-as]').forEach(x=>x.onclick=()=>{let[b,f]=x.dataset.as.split(':').map(Number);data[b].floors[f].sectors.push({name:'Nouveau secteur',rooms:[]});save()});
- box.querySelectorAll('[data-ar]').forEach(x=>x.onclick=()=>{let[b,f,s]=x.dataset.ar.split(':').map(Number);data[b].floors[f].sectors[s].rooms.push(room('','Nouveau local','Salle'));save()});
+ box.querySelectorAll('[data-k]').forEach(el=>{
+   const applyValue=()=>{
+     const b=+el.dataset.b,f=+el.dataset.f,s=+el.dataset.s,r=+el.dataset.r,k=el.dataset.k;
+     if(k==='bn')data[b].name=el.value;
+     if(k==='fn')data[b].floors[f].name=el.value;
+     if(k==='sn')data[b].floors[f].sectors[s].name=el.value;
+     if(k==='rn'){
+       data[b].floors[f].sectors[s].rooms[r].number=el.value;
+       const dup=duplicateRoomNumber(b,f,s,r,el.value);
+       el.classList.toggle('field-warning',dup);
+       el.title=dup?'Attention : ce numéro existe déjà dans ce secteur.':'';
+     }
+     if(k==='rname')data[b].floors[f].sectors[s].rooms[r].name=el.value;
+     if(k==='rt')data[b].floors[f].sectors[s].rooms[r].type=el.value;
+     localStorage.setItem(KEY,JSON.stringify(data));
+     roomSettingsDirty=true;
+     scheduleRoomConfigSave(false);
+     // Met à jour les menus métier sans reconstruire l'éditeur pendant la frappe.
+     renderBuildings();
+   };
+   if(el.tagName==='SELECT'){
+     el.addEventListener('change',()=>{applyValue();scheduleRoomConfigSave(true)});
+   }else{
+     el.addEventListener('input',applyValue);
+     el.addEventListener('change',applyValue);
+     el.addEventListener('blur',()=>scheduleRoomConfigSave(true));
+     el.addEventListener('keydown',e=>{
+       if(e.key==='Enter'){e.preventDefault();el.blur()}
+     });
+   }
+ });
+ box.querySelectorAll('[data-af]').forEach(x=>x.onclick=()=>{data[+x.dataset.af].floors.push({name:'Nouvel étage',sectors:[{name:'Nouveau secteur',rooms:[]}]});save();scheduleRoomConfigSave(true)});
+ box.querySelectorAll('[data-as]').forEach(x=>x.onclick=()=>{let[b,f]=x.dataset.as.split(':').map(Number);data[b].floors[f].sectors.push({name:'Nouveau secteur',rooms:[]});save();scheduleRoomConfigSave(true)});
+ box.querySelectorAll('[data-ar]').forEach(x=>x.onclick=()=>{let[b,f,s]=x.dataset.ar.split(':').map(Number);data[b].floors[f].sectors[s].rooms.push(room('','Nouveau local','Salle'));save();scheduleRoomConfigSave(true)});
  box.querySelectorAll('[data-dr]').forEach(x=>x.onclick=()=>{let[b,f,s,r]=x.dataset.dr.split(':').map(Number);if(confirm('Supprimer cette salle / ce local ?')){data[b].floors[f].sectors[s].rooms.splice(r,1);save()}});
 }
 
@@ -423,7 +492,7 @@ function exportCsv(){
 
 function init(){
  renderSettings();renderBuildings();renderHistory();
- $('rcAddBuilding')?.addEventListener('click',()=>{data.push({id:uid(),name:'Nouveau bâtiment',floors:[{name:'RDC',sectors:[{name:'Secteur principal',rooms:[]}]}]});save()});
+ $('rcAddBuilding')?.addEventListener('click',()=>{data.push({id:uid(),name:'Nouveau bâtiment',floors:[{name:'RDC',sectors:[{name:'Secteur principal',rooms:[]}]}]});save();scheduleRoomConfigSave(true)});
  $('rcBuilding')?.addEventListener('change',renderFloors);$('rcFloor')?.addEventListener('change',renderSectors);$('rcSector')?.addEventListener('change',renderRooms);$('rcMode')?.addEventListener('change',renderRooms);
  $('rcAll')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input[type=checkbox]').forEach(x=>x.checked=true);renderSelectedHistory()});$('rcNone')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input').forEach(x=>x.checked=false);renderSelectedHistory()});$('rcStart')?.addEventListener('click',start);
  ['rcFilterFrom','rcFilterTo','rcFilterBuilding','rcFilterFloor','rcFilterSector','rcFilterResult','rcFilterRoom'].forEach(id=>$(id)?.addEventListener('change',renderHistory));
@@ -438,6 +507,13 @@ function syncRoomsFromMain(){
  try{
    const main=window.PSTMainState?.get?.();
    if(!main)return;
+
+   // Pendant qu'on saisit un numéro/nom/type, un polling Supabase ne doit jamais
+   // remplacer la valeur qui est en cours de frappe.
+   if(roomEditorFocused()||roomSettingsDirty||roomCloudBusy){
+     return;
+   }
+
    if(String(main.cleaningRoomsConfigVersion||'')!==CONFIG_VERSION){
      data=clone(DEF);
      localStorage.setItem(KEY,JSON.stringify(data));

@@ -1,0 +1,19 @@
+V147.13 — 15/08/2026
+
+Chronotime / pastilles automatiques
+- CA et variantes CA-1, CA-2... = Congé annuel ;
+- RTT = RTT ;
+- RH = Repos ;
+- RFE = Jour férié ;
+- les anciens Chronotime déjà injectés sont relus automatiquement au chargement ;
+- agentDays est réparé automatiquement pour afficher les pastilles dans les roulements et calendriers ;
+- chaque futur import Chronotime utilise automatiquement les mêmes correspondances ;
+- couleurs : CA vert, RTT bleu, RH gris, RFE vert/turquoise ;
+- les saisies manuelles différentes ne sont pas écrasées.
+
+Plannings / barre grise horizontale
+- barre horizontale locale sur Pilotage des horaires, Roulements annuels, Congés/RTT/absences et import horaires ;
+- mémorisation automatique de la position pendant les rafraîchissements ;
+- la barre ne doit plus revenir toute seule au début quand on la lâche.
+
+La logique état des agents du tableau de bord reste inchangée.

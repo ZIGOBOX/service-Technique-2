@@ -1,0 +1,14 @@
+V147.14 — 15/08/2026
+
+Paramétrage complet des salles :
+- modification des numéros de salle pendant la frappe (input), plus seulement à la sortie du champ ;
+- modification fiable des noms, types, bâtiments, étages et secteurs ;
+- sauvegarde locale immédiate ;
+- synchronisation Supabase différée pendant la frappe puis forcée à la sortie du champ ;
+- ajout d'un bouton « 💾 Enregistrer » sur chaque bâtiment ;
+- le polling Supabase ne peut plus écraser un numéro/nom/type pendant qu'on le modifie ;
+- détection visuelle d'un numéro en doublon dans un même secteur ;
+- ajout/suppression étage, secteur et local conservés et synchronisés ;
+- configuration des salles utilisée dans les menus métier mise à jour après modification.
+
+Aucune modification Chronotime, tableau de bord ou scanner.

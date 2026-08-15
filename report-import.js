@@ -75,6 +75,16 @@
     const sign=m[1]==='-'?-1:1;return sign*(Number(m[2])*60+Number(m[3]));
   };
   const durationTokens=s=>[...String(s||'').matchAll(/[+-]?\d{1,5}\s*(?::|h)\s*\d{2}/gi)].map(m=>m[0]);
+  function canonicalChronoCode(value){
+    const raw=String(value||'').trim().toUpperCase();
+    if(!raw)return '';
+    const compact=raw.replace(/\s+/g,'');
+    if(/^CA(?:[-_]?\d+)?$/.test(compact))return 'CA';
+    if(/^RTT(?:[-_]?\d+)?$/.test(compact))return 'RTT';
+    if(/^RH(?:[-_]?\d+)?$/.test(compact))return 'RH';
+    if(/^RFE(?:[-_]?\d+)?$/.test(compact))return 'RFE';
+    return raw;
+  }
   const dayTokens=s=>[...String(s||'').matchAll(/(\d+)\s*j\s*(\d{2})/gi)].map(m=>Number(m[1])+Number(m[2])/100);
   function footerSlice(text,startRx,endRx){const m=text.match(startRx);if(!m)return '';const from=(m.index||0)+m[0].length;const rest=text.slice(from);if(!endRx)return rest.slice(0,1400);const e=rest.search(endRx);return (e>=0?rest.slice(0,e):rest.slice(0,1400));}
   function parseAnnualFooter(text,allLines){
@@ -151,7 +161,7 @@
       const normalized=line.replace(/(\d)\s*[Hh]\s*(\d{2})/g,'$1h$2');
       const pairs=[...normalized.matchAll(/\b([LMSJVD])\s*(\d{1,2})\s+(\d{1,2}(?:h|:)\d{2}|[A-ZÀ-Ü][A-ZÀ-Ü0-9._-]{1,9})\b/g)];
       if(!pairs.length||!months.length)continue;let mi=0;
-      for(const p of pairs){const letter=p[1],day=Number(p[2]),value=p[3].replace(':','h').toUpperCase();let found=-1;for(let k=mi;k<months.length;k++){const x=months[k];if(validDate(x.year,x.month,day,letter)){found=k;break}}if(found<0)continue;mi=found+1;const x=months[found],date=`${x.year}-${String(x.month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;const duration=/h/i.test(value)?durationToMinutes(value.toLowerCase()):null;if(duration==null)codes.add(value);if(!seenDates.has(date)){seenDates.add(date);records.push({date,value,duration});}}
+      for(const p of pairs){const letter=p[1],day=Number(p[2]),rawValue=p[3].replace(':','h').toUpperCase(),value=/h/i.test(rawValue)?rawValue:canonicalChronoCode(rawValue);let found=-1;for(let k=mi;k<months.length;k++){const x=months[k];if(validDate(x.year,x.month,day,letter)){found=k;break}}if(found<0)continue;mi=found+1;const x=months[found],date=`${x.year}-${String(x.month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;const duration=/h/i.test(value)?durationToMinutes(value.toLowerCase()):null;if(duration==null)codes.add(value);if(!seenDates.has(date)){seenDates.add(date);records.push({date,value,duration});}}
     }
     const ignored=new Set(['GFI','CHRONO','TIME','LYCEE','TOTAL','REFERENCE','ECART','TPS','NOM','AGENT','SOLDE','HEURE','HEURES','PRESENCE','MAT']);[...codes].forEach(c=>{if(ignored.has(c))codes.delete(c)});
 
@@ -276,7 +286,11 @@
   function renderChronoDayRules(){
     ensureData();const box=document.getElementById('chronoDayRuleSettings');if(!box)return;const mapped=new Set(Object.values(db.settings.chronoCodeMap||{}));const types=knownDayTypes().filter(t=>!mapped.has(t));box.innerHTML=types.length?types.map(type=>ruleEditorHtml(type,'')).join(''):'<div class="empty-state">Tous les motifs sont déjà reliés à un code Chronotime.</div>';bindChronoReference(box)
   }
-  function mappedChronoType(record,localMap={}){if(record?.duration!=null)return 'Présence';return localMap[record?.value]||db.settings.chronoCodeMap?.[record?.value]||''}
+  function mappedChronoType(record,localMap={}){
+    if(record?.duration!=null)return 'Présence';
+    const raw=String(record?.value||'').trim().toUpperCase(),code=canonicalChronoCode(raw);
+    return localMap[raw]||localMap[code]||db.settings.chronoCodeMap?.[raw]||db.settings.chronoCodeMap?.[code]||'';
+  }
   function chronoChanges(p,aid,localMap={}){if(!p||!aid)return[];const out=[];for(const r of p.records||[]){const next=mappedChronoType(r,localMap);if(!next)continue;const old=(db.chronotimeDaily||[]).find(x=>String(x.agentId)===String(aid)&&x.date===r.date&&x.academicYear===p.academicYear);const prev=old?.dayType||'';if(prev&&prev!==next)out.push({date:r.date,oldType:prev,newType:next});}return out}
   function renderChronoChanges(p){const box=document.getElementById('chronoChangePreview');if(!box)return;const aid=document.getElementById('chronoAgentSelect')?.value||'';const local={};document.querySelectorAll('[data-chrono-code]').forEach(el=>{if(el.value)local[el.dataset.chronoCode]=el.value});const changes=chronoChanges(p,aid,local);if(!aid){box.innerHTML='<div class="import-message warning">Choisissez l’agent pour comparer avec son précédent Chronotime.</div>';return}if(!changes.length){box.innerHTML='<div class="import-message ok">✅ Aucune modification de type de journée par rapport au précédent Chronotime.</div>';return}box.innerHTML=`<div class="import-message warning"><strong>⚠ ${changes.length} modification${changes.length>1?'s':''} Chronotime détectée${changes.length>1?'s':''}</strong><br>Le nouveau PDF fera foi après validation.</div><div class="table-wrap chrono-change-table"><table><thead><tr><th>Date</th><th>Ancien type de journée Chronotime</th><th>Nouveau type de journée Chronotime</th></tr></thead><tbody>${changes.map(x=>`<tr><td>${esc(fmtDate(x.date))}</td><td>${esc(x.oldType)}</td><td><strong>${esc(x.newType)}</strong></td></tr>`).join('')}</tbody></table></div>`}
 

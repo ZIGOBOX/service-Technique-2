@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.12';
+const APP_VERSION='147.14';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1166,48 +1166,49 @@ function syncStoredChronotimePastilles(){
   if(!Array.isArray(db.chronotimeDaily)||!db.chronotimeDaily.length)return 0;
   db.agentDays=Array.isArray(db.agentDays)?db.agentDays:[];
   db.settings=db.settings||{};
-  const codeMap=Object.assign(
-    {CA:'Congé annuel',RTT:'RTT',RH:'Repos',RFE:'Jour férié'},
-    db.settings.chronoCodeMap||{}
-  );
+  const codeMap=Object.assign({CA:'Congé annuel',RTT:'RTT',RH:'Repos',RFE:'Jour férié'},db.settings.chronoCodeMap||{});
+  const canonical=value=>{
+    const raw=String(value||'').trim().toUpperCase().replace(/\s+/g,'');
+    if(/^CA(?:[-_]?\d+)?$/.test(raw))return 'CA';
+    if(/^RTT(?:[-_]?\d+)?$/.test(raw))return 'RTT';
+    if(/^RH(?:[-_]?\d+)?$/.test(raw))return 'RH';
+    if(/^RFE(?:[-_]?\d+)?$/.test(raw))return 'RFE';
+    return raw;
+  };
   let changed=0;
   for(const c of db.chronotimeDaily){
     if(!c?.agentId||!c?.date)continue;
-    // Les lignes Chronotime contenant une durée sont des présences/badgeages,
-    // pas des pastilles d'absence.
-    let mapped=String(c.dayType||'').trim();
-    if(!mapped && (c.durationMinutes===null || c.durationMinutes===undefined)){
-      mapped=String(codeMap[c.value]||'').trim();
-    }
-    if(!mapped || mapped==='Présence')continue;
+    if(c.durationMinutes!==null && c.durationMinutes!==undefined)continue;
 
-    const matches=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
-    let day=matches.find(x=>x.source==='chronotime'||/^Import Chronotime/i.test(String(x.note||'')))||matches[0]||null;
+    const raw=String(c.value||'').trim().toUpperCase(),code=canonical(raw);
+    const mapped=String(c.dayType||codeMap[raw]||codeMap[code]||'').trim();
+    if(!mapped||mapped==='Présence')continue;
 
-    // Ne pas écraser une saisie manuelle clairement différente.
+    if(c.dayType!==mapped){c.dayType=mapped;changed++}
+    if(['CA','RTT','RH','RFE'].includes(code)&&c.value!==code){c.value=code;changed++}
+
+    const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
+    let day=rows.find(x=>x.source==='chronotime'||/^Import Chronotime/i.test(String(x.note||'')))||rows[0]||null;
+
+    // Une saisie manuelle explicitement différente reste prioritaire.
     if(day && day.source!=='chronotime' && !/^Import Chronotime/i.test(String(day.note||'')) &&
-       day.dayType && day.dayType!=='Présence' && day.dayType!==mapped){
-      continue;
-    }
+       day.dayType && day.dayType!=='Présence' && day.dayType!==mapped)continue;
 
     if(!day){
-      day={
+      db.agentDays.push({
         id:uid(),agentId:c.agentId,date:c.date,dayType:mapped,
         plannedStart:'',plannedEnd:'',actualStart:'',actualEnd:'',
         pause:0,overtime:0,status:'Validée',replacement:'',
         noReplacementNeeded:['Repos','Jour férié'].includes(mapped),
         note:`Import Chronotime ${c.sourceFile||''}`.trim(),source:'chronotime'
-      };
-      db.agentDays.push(day);
+      });
       changed++;
     }else{
-      const before=[day.dayType,day.source,day.note,day.status,!!day.noReplacementNeeded].join('|');
-      day.dayType=mapped;
-      day.source='chronotime';
-      day.status='Validée';
+      const before=`${day.dayType}|${day.source}|${day.status}|${day.noReplacementNeeded}`;
+      day.dayType=mapped;day.source='chronotime';day.status='Validée';
       day.note=day.note||`Import Chronotime ${c.sourceFile||''}`.trim();
-      if(['Repos','Jour férié'].includes(mapped))day.noReplacementNeeded=true;
-      const after=[day.dayType,day.source,day.note,day.status,!!day.noReplacementNeeded].join('|');
+      day.noReplacementNeeded=['Repos','Jour férié'].includes(mapped);
+      const after=`${day.dayType}|${day.source}|${day.status}|${day.noReplacementNeeded}`;
       if(before!==after)changed++;
     }
   }
@@ -2647,5 +2648,32 @@ document.addEventListener('change',async e=>{const inp=e.target.closest?.('[data
     if(e.target?.closest?.('[data-open-scan],#openScanner,.openScanner'))setTimeout(bind,50);
   });
   setTimeout(bind,500);
+})();
+
+
+
+// V147.13 — Conserver la position des barres horizontales dans tous les plannings.
+(function(){
+  const selectors=[
+    '#absenceMonthBoard','#rotationPreview','#weeklyPlansBoard','#scheduleImportPreview',
+    '#planning .table-wrap','#rotations .table-wrap','#absences .table-wrap'
+  ];
+  const memory=new WeakMap();
+  const bind=el=>{
+    if(!el||el.dataset.pstScrollBound==='1')return;
+    el.dataset.pstScrollBound='1';
+    memory.set(el,el.scrollLeft||0);
+    el.addEventListener('scroll',()=>memory.set(el,el.scrollLeft||0),{passive:true});
+    const obs=new MutationObserver(()=>{
+      const x=memory.get(el);
+      if(x!=null)requestAnimationFrame(()=>{if(Math.abs((el.scrollLeft||0)-x)>1)el.scrollLeft=x});
+    });
+    obs.observe(el,{childList:true,subtree:true});
+  };
+  const bindAll=()=>selectors.forEach(sel=>document.querySelectorAll(sel).forEach(bind));
+  document.addEventListener('DOMContentLoaded',bindAll);
+  window.addEventListener('pst:data-loaded',()=>setTimeout(bindAll,0));
+  document.addEventListener('click',()=>setTimeout(bindAll,0));
+  setInterval(bindAll,2000);
 })();
 
