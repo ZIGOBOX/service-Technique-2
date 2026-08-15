@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.5';
+const APP_VERSION='147.6';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -439,12 +439,12 @@ window.PSTMainState={
    localDirty=true;
    if(!currentUser){setSaveState('Non connecté — non enregistré','error');return {ok:false,offline:false}}
    if(!navigator.onLine){const ok=writeOfflinePending('appareil hors connexion');return {ok:!!ok,offline:true}}
-   setSaveState('Envoi au serveur…','loading');
+   setSaveState('Test et envoi réel vers Supabase…','loading');
    const ok=await cloudSaveNow({silent:false,mergeRemote:true});
    return {ok:!!ok,offline:!ok};
  },
   verifyChronotimeImport:async(importId)=>{
-    if(!supabaseClient||!currentUser||!navigator.onLine)return {ok:false,found:false};
+    if(!supabaseClient||!currentUser)return {ok:false,found:false};
     try{
       const row=await fetchRemote();
       const remote=migrate(row?.data||{});

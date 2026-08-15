@@ -1,0 +1,5 @@
+V147.6 — 15/08/2026
+- Chronotime tente réellement Supabase sans bloquer sur navigator.onLine.
+- Sauvegarde + relecture serveur pour confirmation.
+- En cas d'échec, le diagnostic Supabase réel est conservé/affiché.
+- Aucun changement OneDrive.

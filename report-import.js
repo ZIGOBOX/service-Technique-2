@@ -351,7 +351,7 @@
       chronoPending=null;
       if(typeof clearAcademicYearMismatch==='function')clearAcademicYearMismatch();
     }else if(persisted?.offline){
-      status('chronoImportStatus','⚠️ Pas de connexion Internet. Import Chronotime conservé sur cet appareil — synchronisation automatique au retour du réseau.','warning');
+      status('chronoImportStatus','⚠️ Import Chronotime conservé localement. La tentative réelle vers Supabase n’a pas été confirmée.','warning');
       document.getElementById('chronoPreview').innerHTML='';
       chronoPending=null;
       if(typeof clearAcademicYearMismatch==='function')clearAcademicYearMismatch();
