@@ -1,0 +1,23 @@
+V147.15 — 15/08/2026
+
+CORRECTION DES DEUX DÉFAUTS SIGNALÉS
+
+1. Pastilles Chronotime automatiques
+- CA, CA-1, CA-2... = Congé annuel ;
+- RTT = RTT ;
+- RH = Repos ;
+- RFE = Jour férié ;
+- ces 4 codes GFI ont désormais priorité sur une ancienne mauvaise configuration ;
+- les chronotimeDaily déjà stockés sont réparés automatiquement ;
+- les agentDays Chronotime déjà créés sont remis au bon type ;
+- les futurs imports appliquent les mêmes règles automatiquement ;
+- le roulement annuel sélectionne automatiquement la dernière année scolaire Chronotime disponible.
+  Exemple : en août 2026, un PDF 2026-2027 ouvre 2026-2027 au lieu de rester sur 2025-2026.
+
+2. Barres horizontales des plannings
+- mémorisation par clé stable avant chaque rerendu de l'application ;
+- restauration après chaque rerendu, même lorsque l'élément HTML a été entièrement recréé ;
+- gestion du roulement annuel mois par mois, absences, pilotage horaires et aperçu import ;
+- la barre ne doit plus revenir à gauche au relâchement / lors du polling Supabase.
+
+La logique « état des agents » du tableau de bord n'a pas été modifiée.

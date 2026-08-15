@@ -1,0 +1,10 @@
+V147.16 — 15/08/2026
+
+Année scolaire synchronisée :
+- Roulements annuels utilise maintenant exactement l'année scolaire globale sélectionnée en haut du tableau de bord.
+- L'année du dernier Chronotime n'impose plus son propre choix.
+- Exemple : tableau de bord = 2026-2027 => Roulements annuels = 2026-2027.
+- Si l'année scolaire globale change, le roulement annuel suit automatiquement.
+- Conservation des correctifs V147.15 pour CA / RTT / RH / RFE automatiques et pour les barres horizontales.
+
+Aucune modification de la logique « état des agents » du tableau de bord.

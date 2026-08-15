@@ -51,6 +51,14 @@
     db.reportNonconformities=db.reportNonconformities||[];
     db.settings=db.settings||{};
     db.settings.chronoCodeMap=Object.assign({},DEFAULT_CODE_MAP,db.settings.chronoCodeMap||{});
+    // V147.15 : les codes standards GFI ne peuvent plus être détournés par une ancienne configuration.
+    // Chronotime fait foi pour ces 4 codes.
+    Object.assign(db.settings.chronoCodeMap,{
+      CA:'Congé annuel',
+      RTT:'RTT',
+      RH:'Repos',
+      RFE:'Jour férié'
+    });
     db.settings.chronoDayRules=Object.assign({},DEFAULT_DAY_RULES,db.settings.chronoDayRules||{});
     db.settings.chronoDayDisplay=Object.assign({},DEFAULT_DAY_DISPLAY,db.settings.chronoDayDisplay||{});
     // Migration d'affichage : le temps partiel s'affiche toujours RTP par défaut.
@@ -288,7 +296,10 @@
   }
   function mappedChronoType(record,localMap={}){
     if(record?.duration!=null)return 'Présence';
-    const raw=String(record?.value||'').trim().toUpperCase(),code=canonicalChronoCode(raw);
+    const raw=String(record?.value||'').trim().toUpperCase();
+    const code=canonicalChronoCode(raw);
+    const canonical={CA:'Congé annuel',RTT:'RTT',RH:'Repos',RFE:'Jour férié'};
+    if(canonical[code])return canonical[code];
     return localMap[raw]||localMap[code]||db.settings.chronoCodeMap?.[raw]||db.settings.chronoCodeMap?.[code]||'';
   }
   function chronoChanges(p,aid,localMap={}){if(!p||!aid)return[];const out=[];for(const r of p.records||[]){const next=mappedChronoType(r,localMap);if(!next)continue;const old=(db.chronotimeDaily||[]).find(x=>String(x.agentId)===String(aid)&&x.date===r.date&&x.academicYear===p.academicYear);const prev=old?.dayType||'';if(prev&&prev!==next)out.push({date:r.date,oldType:prev,newType:next});}return out}

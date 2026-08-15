@@ -1,0 +1,34 @@
+V147.17 — 15/08/2026
+
+ANNÉE SCOLAIRE GLOBALE = SOURCE UNIQUE POUR TOUTE L'APPLICATION
+
+La sélection d'année scolaire en haut du tableau de bord pilote désormais :
+- Roulements annuels ;
+- Pilotage des horaires ;
+- Congés / RTT / absences ;
+- Calendriers équipe et personnels ;
+- Événements personnels ;
+- Incidents ;
+- Entretien / nettoyage ;
+- Réunions ;
+- rapports mensuels et bilans agents ;
+- filtres de dates des rapports quotidiens / hebdomadaires ;
+- vacances scolaires ;
+- archives de pilotage ;
+- année par défaut du rapport des contrôles périodiques ;
+- impressions et pieds de page.
+
+Les filtres mois/date hors de l'année sélectionnée sont automatiquement replacés au 1er septembre de l'année scolaire active.
+
+Exemple :
+Année scolaire en haut = 2026-2027
+=> tous les modules concernés travaillent dans la période 01/09/2026 → 31/08/2027.
+
+La sélection est enregistrée dans Supabase via l'état général et reste active à la reconnexion.
+
+Conservation intégrale :
+- pastilles Chronotime automatiques CA / RTT / RH / RFE ;
+- scroll horizontal persistant ;
+- paramétrage des salles ;
+- scanner appareil photo ;
+- logique état des agents du tableau de bord inchangée.
