@@ -1,0 +1,6 @@
+V147.4 — 15/08/2026
+Correctifs ciblés Chronotime :
+- après confirmation Supabase, rafraîchissement forcé du Δ annuel Chronotime et de l'historique ;
+- l'état de synchronisation repasse explicitement à « Synchronisé à HH:MM » après relecture confirmée ;
+- évite que « Envoi au serveur… » reste affiché après une injection confirmée ;
+- aucun changement OneDrive ni autre module.

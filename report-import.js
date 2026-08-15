@@ -340,6 +340,12 @@
         toast?.('Chronotime non retrouvé après relecture Supabase');
         return;
       }
+      try{
+        renderAnnualChronotime?.();
+        renderHistory?.();
+        renderDashboard?.();
+        window.dispatchEvent(new Event('pst:data-loaded'));
+      }catch(e){console.warn('Rafraîchissement Chronotime après confirmation',e)}
       status('chronoImportStatus',`✅ Import Chronotime enregistré, relu et confirmé dans Supabase : ${p.records.length} jours · ${importChanges.length} modification${importChanges.length>1?'s':''} de type de journée · ${absences} codes/absences · ${durations} présences.`, 'ok');
       document.getElementById('chronoPreview').innerHTML='';
       chronoPending=null;

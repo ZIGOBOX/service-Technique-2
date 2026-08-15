@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.3';
+const APP_VERSION='147.4';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -426,6 +426,11 @@ window.PSTMainState={
       if(found){
         lastCloudData=deepClone(remote);
         lastCloudUpdatedAt=row?.updated_at||lastCloudUpdatedAt;
+        localDirty=false;
+        cloudReady=true;
+        clearOfflinePending();
+        writeMirror();
+        setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
         return {ok:true,found:true};
       }
       localDirty=true;
