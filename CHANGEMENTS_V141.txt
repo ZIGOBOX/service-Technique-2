@@ -1,0 +1,7 @@
+V141 — correctif de stabilité
+
+- Base : V139 (fonctionnelle)
+- Restauration complète de tous les rendus supprimés accidentellement en V140
+- Contrôles périodiques : bouton Ouvrir / modifier le contrôle conservé
+- Pièces jointes périodiques : secours ciblé si le PDF n'est plus indexé dans db.attachments
+- Aucun autre module modifié
