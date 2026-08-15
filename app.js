@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.2';
+const APP_VERSION='147.3';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -412,7 +412,30 @@ window.PSTMainState={
    setSaveState('Envoi au serveur…','loading');
    const ok=await cloudSaveNow({silent:false,mergeRemote:true});
    return {ok:!!ok,offline:!ok};
- }
+ },
+  verifyChronotimeImport:async(importId)=>{
+    if(!supabaseClient||!currentUser||!navigator.onLine)return {ok:false,found:false};
+    try{
+      const row=await fetchRemote();
+      const remote=migrate(row?.data||{});
+      const id=String(importId||'');
+      const found=!!(
+        (remote.pdfImports||[]).some(x=>String(x.id||'')===id) ||
+        (remote.chronotimeAnnual||[]).some(x=>String(x.id||'')===id||String(x.sourceId||'')===id)
+      );
+      if(found){
+        lastCloudData=deepClone(remote);
+        lastCloudUpdatedAt=row?.updated_at||lastCloudUpdatedAt;
+        return {ok:true,found:true};
+      }
+      localDirty=true;
+      return {ok:true,found:false};
+    }catch(error){
+      console.error('Vérification Chronotime Supabase',error);
+      localDirty=true;
+      return {ok:false,found:false,error:error?.message||String(error)};
+    }
+  }
 };
 async function pollCloudChanges(){
  if(!supabaseClient||!currentUser||!navigator.onLine||cloudBusy||localDirty)return;

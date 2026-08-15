@@ -1,0 +1,1 @@
+V147.3 — Correctif Chronotime : sauvegarde immédiate, relecture Supabase, vérification de présence du nouvel import avant d'autoriser la synchronisation normale. Aucun changement OneDrive.

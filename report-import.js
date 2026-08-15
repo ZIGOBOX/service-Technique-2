@@ -332,7 +332,15 @@
       : {ok:save(false),offline:!navigator.onLine};
     renderCodeMap();renderHistory();renderDashboard();
     if(persisted?.ok&&!persisted?.offline){
-      status('chronoImportStatus',`✅ Import Chronotime enregistré et confirmé dans Supabase : ${p.records.length} jours · ${importChanges.length} modification${importChanges.length>1?'s':''} de type de journée · ${absences} codes/absences · ${durations} présences.`, 'ok');
+      const verify=window.PSTMainState?.verifyChronotimeImport
+        ? await window.PSTMainState.verifyChronotimeImport(importId)
+        : {ok:false,found:false};
+      if(!verify?.found){
+        status('chronoImportStatus','❌ Supabase a répondu, mais le nouvel import Chronotime n’est pas retrouvé après relecture. Il reste protégé localement : ne rechargez pas la page et réessayez la synchronisation.','error');
+        toast?.('Chronotime non retrouvé après relecture Supabase');
+        return;
+      }
+      status('chronoImportStatus',`✅ Import Chronotime enregistré, relu et confirmé dans Supabase : ${p.records.length} jours · ${importChanges.length} modification${importChanges.length>1?'s':''} de type de journée · ${absences} codes/absences · ${durations} présences.`, 'ok');
       document.getElementById('chronoPreview').innerHTML='';
       chronoPending=null;
       if(typeof clearAcademicYearMismatch==='function')clearAcademicYearMismatch();
