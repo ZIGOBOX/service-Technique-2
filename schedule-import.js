@@ -125,7 +125,7 @@
     pending=data;const errors=data.results.filter(x=>x.errors.length),warnings=data.results.filter(x=>!x.errors.length&&x.warnings.length),ok=data.results.filter(x=>!x.errors.length&&!x.warnings.length);
     $i('scheduleImportSummary').className='import-summary';$i('scheduleImportSummary').innerHTML=`<div class="import-stat ok"><strong>${ok.length}</strong><span>lignes correctes</span></div><div class="import-stat warning"><strong>${warnings.length}</strong><span>avertissements</span></div><div class="import-stat error"><strong>${errors.length}</strong><span>erreurs bloquantes</span></div><div class="import-stat"><strong>${new Set(data.validHours.map(x=>x.agent?.id).filter(Boolean)).size}</strong><span>agents concernés</span></div>`;
     $i('confirmScheduleImport').classList.toggle('hidden',data.validHours.length+data.validRot.length===0);
-    $i('scheduleImportPreview').innerHTML=`<table><thead><tr><th>État</th><th>Type</th><th>Ligne</th><th>Agent</th><th>Période / date</th><th>Profil / cycle</th><th>Détail</th></tr></thead><tbody>${data.results.map(x=>{const cls=x.errors.length?'error':x.warnings.length?'warning':'ok',state=x.errors.length?'Erreur':x.warnings.length?'À vérifier':'OK',detail=[...x.errors,...x.warnings].join(' · ')||x.detail||(x.kind==='Horaire'?`${x.day} ${x.start||'Repos'}${x.end?'–'+x.end:''} ${x.mission||''}`:`${x.mw||0} sem. matin / ${x.ew||0} sem. soir`);return `<tr class="import-row-${cls}"><td><span class="import-badge ${cls}">${state}</span></td><td>${x.kind}</td><td>${x.line}</td><td>${x.name||'—'}</td><td>${x.from||'—'}${x.to?' → '+x.to:''}</td><td>${x.kind==='Horaire'?x.profile:x.startShift}</td><td>${detail}</td></tr>`}).join('')}</tbody></table>`;
+    $i('scheduleImportPreview').innerHTML=`<table><thead><tr><th>État</th><th>Type</th><th>Ligne</th><th>Agent</th><th>Période / date</th><th>Profil / cycle</th><th>Détail</th></tr></thead><tbody>${data.results.map(x=>{const cls=x.errors.length?'error':x.warnings.length?'warning':'ok',state=x.errors.length?'Erreur':x.warnings.length?'À vérifier':'OK',detail=[...x.errors,...x.warnings].join(' · ')||x.detail||(x.kind==='Horaire'?`${x.day} ${x.start||'Repos'}${x.end?'–'+x.end:''} ${x.mission||''}`:`${x.mw||0} sem. matin / ${x.ew||0} sem. soir`);return `<tr class="import-row-${cls}"><td><span class="import-badge ${cls}">${state}</span></td><td>${x.kind}</td><td>${x.line}</td><td>${x.name||'—'}</td><td>${x.from||'—'}${x.to?' → '+x.to:''}</td><td>${x.kind==='Horaire'?x.profile:x.kind==='Roulement'?x.startShift:'Jours travaillés'}</td><td>${detail}</td></tr>`}).join('')}</tbody></table>`;
   };
   const importFile=async file=>{
     if(!window.XLSX){alert('Le composant Excel ne s’est pas chargé. Vérifiez Internet.');return}
@@ -146,14 +146,33 @@
     pending.validRot.forEach(x=>{let idx=x.rotationId?(db.rotations||[]).findIndex(r=>String(r.id)===x.rotationId):-1;if(idx<0)idx=(db.rotations||[]).findIndex(r=>String(r.agentId)===String(x.agent.id)&&r.effectiveFrom===x.from);const r={id:idx>=0?db.rotations[idx].id:uid(),no:idx>=0?(db.rotations[idx].no||''):(typeof nextNo==='function'?nextNo('rotation','RLT'):''),agentId:x.agent.id,effectiveFrom:x.from,effectiveTo:x.to,startShift:x.startShift,morningWeeks:x.mw,eveningWeeks:x.ew,morningStart:x.ms,morningEnd:x.me,eveningStart:x.es,eveningEnd:x.ee,pause:x.pause,weekdays:x.weekdays.length?x.weekdays:[1,2,3,4,5],notes:x.notes};if(idx>=0){db.rotations[idx]=r;rotUpdated++}else{db.rotations.push(r);rotCreated++}});
     // Les jours de week-end décochés dans l'onglet Agents sont aussi retirés des roulements existants.
     for(const a of db.agents||[]){const allowed=(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).map(Number);for(const r of (db.rotations||[]).filter(r=>String(r.agentId)===String(a.id))){r.weekdays=(r.weekdays||[1,2,3,4,5]).map(Number).filter(d=>allowed.includes(d))}}
-    db.scheduleImports=db.scheduleImports||[];db.scheduleImports.push({id:typeof uid==='function'?uid():String(Date.now()),date:new Date().toISOString(),created,updated,rotCreated,rotUpdated,errors:pending.results.filter(x=>x.errors.length).length,warnings:pending.results.filter(x=>x.warnings.length).length});
-    const persisted=window.PSTMainState?.persistNow?await window.PSTMainState.persistNow():{ok:save(),offline:false};
+    db.scheduleImports=db.scheduleImports||[];
+    const importMarker=typeof uid==='function'?uid():String(Date.now());
+    db.scheduleImports.push({id:importMarker,date:new Date().toISOString(),created,updated,rotCreated,rotUpdated,errors:pending.results.filter(x=>x.errors.length).length,warnings:pending.results.filter(x=>x.warnings.length).length});
+
+    // Afficher immédiatement les nouvelles données dans tous les modules.
+    if(typeof safeRenderAll==='function')safeRenderAll();
+
+    const persisted=window.PSTMainState?.persistStateDirect
+      ? await window.PSTMainState.persistStateDirect({
+          label:'Import horaires',
+          verify:remote=>(remote.scheduleImports||[]).some(x=>String(x.id)===String(importMarker))
+        })
+      : (window.PSTMainState?.persistNow?await window.PSTMainState.persistNow():{ok:save(),offline:false});
+
     if(!persisted?.ok){
-      $i('scheduleImportSummary').innerHTML=`<div class="import-stat error"><strong>Non confirmé</strong><span>Les horaires sont affichés localement mais Supabase n’a pas confirmé : ${persisted?.error||'erreur inconnue'}.</span></div>`;
-      if(typeof toast==='function')toast('Import horaires non confirmé dans Supabase');
+      $i('scheduleImportSummary').innerHTML=`<div class="import-stat error"><strong>Import appliqué localement — Supabase non confirmé</strong><span>${persisted?.error||'Erreur Supabase non précisée'}. Les modifications restent protégées sur cet appareil.</span></div>`;
+      if(typeof safeRenderAll==='function')safeRenderAll();
+      if(typeof toast==='function')toast(`Import horaires non confirmé : ${persisted?.error||'erreur Supabase'}`);
       return;
     }
-    pending=null;$i('confirmScheduleImport').classList.add('hidden');$i('scheduleImportSummary').innerHTML=`<div class="import-success"><strong>✅ Import terminé et synchronisé</strong><span>${created} profil(s) créé(s), ${updated} modifié(s), ${rotCreated} roulement(s) créé(s), ${rotUpdated} modifié(s).</span></div>`;$i('scheduleImportPreview').innerHTML='';if(typeof toast==='function')toast('Horaires et roulements confirmés dans Supabase');
+
+    pending=null;
+    $i('confirmScheduleImport').classList.add('hidden');
+    $i('scheduleImportSummary').innerHTML=`<div class="import-success"><strong>✅ Import horaires terminé et synchronisé</strong><span>${created} profil(s) créé(s), ${updated} modifié(s), ${rotCreated} roulement(s) créé(s), ${rotUpdated} modifié(s).</span></div>`;
+    $i('scheduleImportPreview').innerHTML='';
+    if(typeof safeRenderAll==='function')safeRenderAll();
+    if(typeof toast==='function')toast('✅ Horaires et roulements mis à jour');
   };
   const init=()=>{
     const d=$i('downloadScheduleMatrix'),f=$i('scheduleImportFile'),c=$i('confirmScheduleImport');if(!d||!f||!c)return;

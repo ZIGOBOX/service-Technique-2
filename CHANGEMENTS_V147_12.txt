@@ -1,0 +1,17 @@
+V147.12 — 15/08/2026
+
+Correction import / export horaires :
+- le bouton « Valider les lignes correctes » met immédiatement à jour les horaires/roulements dans l'interface ;
+- sauvegarde Supabase dédiée et directe, avec timeout de 15 s ;
+- relecture immédiate de Supabase après écriture ;
+- confirmation par identifiant unique de l'import dans scheduleImports ;
+- affichage de l'erreur Supabase réelle en cas d'échec ;
+- les modifications locales restent protégées si Supabase ne confirme pas ;
+- correction de « undefined » sur les lignes « Jours agent » : affiche maintenant « Jours travaillés » ;
+- message final : « ✅ Import horaires terminé et synchronisé ».
+
+Aucune modification :
+- état des agents du tableau de bord ;
+- Chronotime ;
+- configuration des salles ;
+- scanner/appareil photo.

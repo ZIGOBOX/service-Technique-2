@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.10';
+const APP_VERSION='147.12';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -443,6 +443,61 @@ window.PSTMainState={
    const ok=await cloudSaveNow({silent:false,mergeRemote:true});
    return {ok:!!ok,offline:!ok};
  },
+  persistStateDirect:async({label='Données',verify}={})=>{
+    if(!supabaseClient||!currentUser){
+      return {ok:false,offline:false,error:'Client Supabase ou utilisateur non disponible.'};
+    }
+    const timeoutMs=15000;
+    const withTimeout=(promise,step)=>Promise.race([
+      promise,
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error(`${step} : délai dépassé après 15 s`)),timeoutMs))
+    ]);
+    try{
+      localDirty=true;
+      setSaveState(`${label} : écriture directe Supabase…`,'loading');
+      const payload=migrate(deepClone(db)), nowIso=new Date().toISOString();
+      const write=await withTimeout(
+        supabaseClient.from('app_state')
+          .upsert({user_id:currentUser.id,data:payload,updated_at:nowIso},{onConflict:'user_id'})
+          .select('updated_at').single(),
+        'Écriture Supabase'
+      );
+      if(write?.error)throw write.error;
+
+      setSaveState(`${label} : relecture de contrôle…`,'loading');
+      const read=await withTimeout(
+        supabaseClient.from('app_state').select('data,updated_at').eq('user_id',currentUser.id).single(),
+        'Relecture Supabase'
+      );
+      if(read?.error)throw read.error;
+
+      const remote=migrate(read?.data?.data||{});
+      if(typeof verify==='function' && !verify(remote)){
+        throw new Error(`${label} écrit mais non retrouvé lors de la relecture Supabase.`);
+      }
+
+      db=remote;
+      lastCloudData=deepClone(remote);
+      lastCloudUpdatedAt=read?.data?.updated_at||write?.data?.updated_at||nowIso;
+      lastCloudError='';
+      localDirty=false;
+      cloudReady=true;
+      clearOfflinePending();
+      writeMirror();
+      safeRenderAll();
+      try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}
+      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+      return {ok:true,offline:false};
+    }catch(error){
+      lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue';
+      localDirty=true;
+      writeOfflinePending(lastCloudError);
+      safeRenderAll();
+      setSaveState(`Erreur Supabase : ${lastCloudError}`,'error');
+      console.error(`${label} — sauvegarde directe Supabase`,error);
+      return {ok:false,offline:false,error:lastCloudError};
+    }
+  },
   persistChronotimeDirect:async(importId)=>{
     if(!supabaseClient||!currentUser)return {ok:false,offline:false,error:'Client Supabase ou utilisateur non disponible.'};
     const timeoutMs=15000;
@@ -1103,6 +1158,61 @@ function dayTypeOptions(current=''){
   if(value&&!items.some(x=>String(x)===value))items.unshift(value);
   return selectOptions(items,value||'Présence');
 }
+
+// V147.11 — Reconstruit les pastilles du planning à partir des Chronotime déjà injectés.
+// Cela permet aux anciens CA / RTT / RH / RFE / maladie / formation de réapparaître
+// dans le roulement annuel, sans modifier la logique d'état des agents du tableau de bord.
+function syncStoredChronotimePastilles(){
+  if(!Array.isArray(db.chronotimeDaily)||!db.chronotimeDaily.length)return 0;
+  db.agentDays=Array.isArray(db.agentDays)?db.agentDays:[];
+  db.settings=db.settings||{};
+  const codeMap=Object.assign(
+    {CA:'Congé annuel',RTT:'RTT',RH:'Repos',RFE:'Jour férié'},
+    db.settings.chronoCodeMap||{}
+  );
+  let changed=0;
+  for(const c of db.chronotimeDaily){
+    if(!c?.agentId||!c?.date)continue;
+    // Les lignes Chronotime contenant une durée sont des présences/badgeages,
+    // pas des pastilles d'absence.
+    let mapped=String(c.dayType||'').trim();
+    if(!mapped && (c.durationMinutes===null || c.durationMinutes===undefined)){
+      mapped=String(codeMap[c.value]||'').trim();
+    }
+    if(!mapped || mapped==='Présence')continue;
+
+    const matches=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
+    let day=matches.find(x=>x.source==='chronotime'||/^Import Chronotime/i.test(String(x.note||'')))||matches[0]||null;
+
+    // Ne pas écraser une saisie manuelle clairement différente.
+    if(day && day.source!=='chronotime' && !/^Import Chronotime/i.test(String(day.note||'')) &&
+       day.dayType && day.dayType!=='Présence' && day.dayType!==mapped){
+      continue;
+    }
+
+    if(!day){
+      day={
+        id:uid(),agentId:c.agentId,date:c.date,dayType:mapped,
+        plannedStart:'',plannedEnd:'',actualStart:'',actualEnd:'',
+        pause:0,overtime:0,status:'Validée',replacement:'',
+        noReplacementNeeded:['Repos','Jour férié'].includes(mapped),
+        note:`Import Chronotime ${c.sourceFile||''}`.trim(),source:'chronotime'
+      };
+      db.agentDays.push(day);
+      changed++;
+    }else{
+      const before=[day.dayType,day.source,day.note,day.status,!!day.noReplacementNeeded].join('|');
+      day.dayType=mapped;
+      day.source='chronotime';
+      day.status='Validée';
+      day.note=day.note||`Import Chronotime ${c.sourceFile||''}`.trim();
+      if(['Repos','Jour férié'].includes(mapped))day.noReplacementNeeded=true;
+      const after=[day.dayType,day.source,day.note,day.status,!!day.noReplacementNeeded].join('|');
+      if(before!==after)changed++;
+    }
+  }
+  return changed;
+}
 function dayInfo(agentId,date){const sched=scheduledFor(agentId,date),rec=dayRecord(agentId,date);if(!rec)return {...sched,dayType:sched.shift==='Repos'?'Repos':'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',overtime:0,note:'',status:'Prévu'};return {...sched,...rec,plannedStart:rec.plannedStart??sched.start,plannedEnd:rec.plannedEnd??sched.end}}
 function isAbsenceType(t){return t&&t!=='Présence'&&t!=='Formation'}
 function dayCountingRule(dayType){
@@ -1443,7 +1553,7 @@ function rotationPilotageSummary(agentId,shift,r){
  return `<div class="rotation-hours-detail">${rows.map(x=>`<small><b>${labels[x.wd]}</b> ${esc(x.start)}–${esc(x.end)}</small>`).join('')}</div>`;
 }
 function renderRotations(){const agent=$('#rotationAgent').value;const arr=db.rotations.filter(r=>!agent||r.agentId===agent).sort((a,b)=>a.agentId.localeCompare(b.agentId)||b.effectiveFrom.localeCompare(a.effectiveFrom));$('#rotationsTable').innerHTML=arr.length?arr.map(r=>`<tr><td>${esc(agentName(agentById(r.agentId)))}</td><td>${fmtDate(r.effectiveFrom)}</td><td>${r.morningWeeks} sem. matin / ${r.eveningWeeks} sem. soir</td><td>${rotationPilotageSummary(r.agentId,'Matin',r)}</td><td>${rotationPilotageSummary(r.agentId,'Soir',r)}</td><td>${(r.weekdays||[]).map(d=>['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'][d]).join(', ')}</td><td>${fmtDate(r.effectiveTo)||'En cours'}</td><td>${editButton('rotation',r.id)}</td></tr>`).join(''):emptyRow(8);renderRotationPreview()}
-function renderRotationPreview(){const startYear=Number($('#rotationYear').value)||Number((academicYearFor(todayISO())||'').split('-')[0])||new Date().getFullYear(),month=$('#rotationMonth').value,agentId=$('#rotationAgent').value||db.agents.find(a=>a.status==='Actif')?.id;if(!agentId){$('#rotationPreview').innerHTML='<p>Aucun agent.</p>';return}const months=month?[Number(month)]:[9,10,11,12,1,2,3,4,5,6,7,8];const academicLabel=`${startYear}–${startYear+1}`;$('#rotationPreview').innerHTML=`<div class="rotation-schoolyear-title"><h4>${esc(agentName(agentById(agentId)))} — année scolaire ${academicLabel}</h4><small>1er septembre ${startYear} → 31 août ${startYear+1}</small></div>`+months.map(m=>{const y=m>=9?startYear:startYear+1,first=`${y}-${pad(m)}-01`,last=new Date(y,m,0).getDate();return `<div class="rotation-month"><strong>${parseDate(first).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</strong><div>${Array.from({length:last},(_,i)=>{const d=`${y}-${pad(m)}-${pad(i+1)}`,info=dayInfo(agentId,d),shift=normalizeText(info.shift||'standard'),day=String(info.dayType||'Présence'),cls=/maladie/i.test(day)?'sick':/congé|conge/i.test(day)?'leave':/rtt/i.test(day)?'rtt':/férié|ferie|rfe/i.test(day)?'holiday':day!=='Présence'?'off':shift==='matin'?'morning':shift==='soir'?'evening':'standard',label=day!=='Présence'?day:(info.shift||'Standard');return `<button class="rotation-day ${cls}" data-agent-day="${agentId}" data-date="${d}" title="${fmtDate(d)} — ${label}${info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:''}"><span>${i+1}</span><small>${cls==='morning'?'M':cls==='evening'?'S':cls==='standard'?'STD':cls==='leave'?'CA':cls==='rtt'?'RTT':cls==='sick'?'MAL':cls==='holiday'?'JF':'—'}</small></button>`}).join('')}</div></div>`}).join('')}
+function renderRotationPreview(){syncStoredChronotimePastilles();const startYear=Number($('#rotationYear').value)||Number((academicYearFor(todayISO())||'').split('-')[0])||new Date().getFullYear(),month=$('#rotationMonth').value,agentId=$('#rotationAgent').value||db.agents.find(a=>a.status==='Actif')?.id;if(!agentId){$('#rotationPreview').innerHTML='<p>Aucun agent.</p>';return}const months=month?[Number(month)]:[9,10,11,12,1,2,3,4,5,6,7,8];const academicLabel=`${startYear}–${startYear+1}`;$('#rotationPreview').innerHTML=`<div class="rotation-schoolyear-title"><h4>${esc(agentName(agentById(agentId)))} — année scolaire ${academicLabel}</h4><small>1er septembre ${startYear} → 31 août ${startYear+1}</small></div>`+months.map(m=>{const y=m>=9?startYear:startYear+1,first=`${y}-${pad(m)}-01`,last=new Date(y,m,0).getDate();return `<div class="rotation-month"><strong>${parseDate(first).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</strong><div>${Array.from({length:last},(_,i)=>{const d=`${y}-${pad(m)}-${pad(i+1)}`,info=dayInfo(agentId,d),shift=normalizeText(info.shift||'standard'),day=String(info.dayType||'Présence'),cls=/maladie/i.test(day)?'sick':/congé|conge/i.test(day)?'leave':/rtt/i.test(day)?'rtt':/férié|ferie|rfe/i.test(day)?'holiday':day!=='Présence'?'off':shift==='matin'?'morning':shift==='soir'?'evening':'standard',label=day!=='Présence'?day:(info.shift||'Standard');return `<button class="rotation-day ${cls}" data-agent-day="${agentId}" data-date="${d}" title="${fmtDate(d)} — ${label}${info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:''}"><span>${i+1}</span><small>${cls==='morning'?'M':cls==='evening'?'S':cls==='standard'?'STD':cls==='leave'?'CA':cls==='rtt'?'RTT':cls==='sick'?'MAL':cls==='holiday'?'JF':'—'}</small></button>`}).join('')}</div></div>`}).join('')}
 
 function renderWeeklyPlans(){const box=$('#weeklyPlansBoard');if(!box)return;normalizeWeeklyPlans();const days=['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];box.innerHTML=(db.weeklyPlans||[]).map((p,pi)=>`<article class="weekly-plan-card"><div class="panel-head"><div><h4>${esc(agentName(agentById(p.agentId))||p.agent||'Planning')}</h4>${badge(p.shift||'Standard')}<small>${fmtDate(p.effectiveFrom)} → ${fmtDate(p.effectiveTo)}</small></div><button class="ghost small" data-edit-weekly-plan="${pi}">Modifier</button></div><div class="weekly-day-grid">${days.map((d,i)=>{const x=p.dayProfiles?.[i+1]||{};return `<button class="weekly-day" data-edit-weekly-plan="${pi}"><strong>${d}</strong><span>${x.start&&x.end?`${x.start}–${x.end}`:'Non travaillé'}</span><small>${esc(x.missions||'')}</small></button>`}).join('')}</div></article>`).join('')||'<div class="empty">Aucun horaire de référence. Ajoutez un agent ou un planning.</div>'}
 function openWeeklyPlan(i=null,agentId=''){
@@ -2285,12 +2395,25 @@ function refreshCentralImportValidation(){if(!centralImportAnalysis)return;$('#c
 function bindCentralImportV80(){
  $('#centralImportClose')?.addEventListener('click',()=>$('#centralImportModal').close());
  $('#centralImportBack')?.addEventListener('click',resetCentralImport);
- $('#centralScanChoice')?.addEventListener('click',()=>{$('#centralImportModal').close();openScanNote()});
+ $('#centralScanChoice')?.addEventListener('click',()=>{$('#centralImportModal').close();openScanCameraDirect()});
  $('#centralImportType')?.addEventListener('change',refreshCentralImportValidation);
  $('#centralPdfFile')?.addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;centralImportDuplicateInfo=await inspectImportDuplicate(file);$('#centralImportStart').classList.add('hidden');$('#centralImportAnalysis').classList.remove('hidden');$('#centralImportProgress').textContent='Analyse du PDF en cours…';$('#centralImportConfirm').classList.add('hidden');try{if(!window.PDFImportModule?.centralAnalyze)throw new Error('Moteur PDF indisponible');centralImportAnalysis=await window.PDFImportModule.centralAnalyze(file);const a=centralImportAnalysis;$('#centralImportType').value=a.detectedType;refreshCentralImportValidation();const url=URL.createObjectURL(file);$('#centralImportPreview').innerHTML=`<details open><summary>📄 Aperçu du PDF original</summary><iframe src="${url}" title="Aperçu PDF" style="width:100%;height:360px;border:1px solid #d9e2ec;border-radius:12px;background:#fff"></iframe></details>`;$('#centralImportProgress').textContent='Analyse terminée — vérifiez toutes les informations avant de continuer.';$('#centralImportConfirm').classList.remove('hidden')}catch(err){console.error(err);$('#centralImportProgress').textContent='Impossible d’analyser ce PDF. Vous pouvez le classer manuellement comme document.';centralImportAnalysis={file,detectedType:'other',detectedLabel:'Autre document',chronoConfidence:0,controlConfidence:0};$('#centralImportType').value='other';refreshCentralImportValidation();$('#centralImportConfirm').classList.remove('hidden')}});
  $('#centralImportConfirm')?.addEventListener('click',async()=>{if(!centralImportAnalysis)return;if(!confirmDuplicateImport(centralImportDuplicateInfo))return;const type=$('#centralImportType').value,file=centralImportAnalysis.file;centralImportAnalysis.fileHash=centralImportDuplicateInfo?.fileHash||'';centralImportAnalysis.duplicateConfirmed=true;if(centralImportAnalysis.chrono)centralImportAnalysis.chrono.duplicateConfirmed=true;if(centralImportAnalysis.control)centralImportAnalysis.control.duplicateConfirmed=true;$('#centralImportModal').close();if(['chronotime','periodic','control'].includes(type)){window.PDFImportModule?.routeCentral?.(centralImportAnalysis,type);if(type==='control'||type==='periodic')toast('Étape 2/2 : validez maintenant le rapport dans Contrôles périodiques');return}if(await genericImportedDocument(file,type)){setView('archives');toast('Document importé et archivé')}});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindCentralImportV80);else bindCentralImportV80();
+
+
+// V147.11 : après chargement de la base, analyser aussi les Chronotime historiques.
+window.addEventListener('pst:data-loaded',()=>{
+  try{
+    const n=syncStoredChronotimePastilles();
+    if(n>0){
+      safeRenderAll();
+      // Sauvegarde différée normale : les pastilles reconstruites deviennent persistantes.
+      save(false);
+    }
+  }catch(e){console.warn('Reconstruction pastilles Chronotime',e)}
+});
 
 // ===== V81 — Scanner / OCR avec destination métier configurable =====
 let scannedNoteAttachment=null;
@@ -2458,9 +2581,19 @@ async function saveScannedNote(){
  await save();renderAll();$('#scanNoteModal')?.close();setView(view);toast(`Scan enregistré dans ${$('#scanDestination')?.selectedOptions?.[0]?.textContent||'le module choisi'} et Archivage`);
 }
 
+function openScanCameraDirect(){
+ openScanNote();
+ // Sur téléphone/tablette, capture="environment" demande directement l'appareil photo arrière.
+ // Petit délai pour laisser le dialog s'ouvrir avant le sélecteur natif.
+ setTimeout(()=>{
+   const camera=$('#scanCameraInput')||$('#scanNoteFile');
+   if(camera)camera.click();
+   else toast('Appareil photo indisponible');
+ },80);
+}
 function bindScanNoteV77(){
- const b=$('#scanNoteBtn');if(b)b.onclick=openScanNote;
- const fb=$('#scanNoteFab');if(fb)fb.onclick=openScanNote;
+ const b=$('#scanNoteBtn');if(b)b.onclick=openScanCameraDirect;
+ const fb=$('#scanNoteFab');if(fb)fb.onclick=openScanCameraDirect;
  const c=$('#scanNoteClose');if(c)c.onclick=()=>$('#scanNoteModal').close();
  const r=$('#scanRetry');if(r)r.onclick=scanReset;
  const f=$('#scanNoteFile');if(f)f.onchange=()=>recognizeScannedNote(f.files?.[0]);

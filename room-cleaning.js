@@ -121,7 +121,10 @@ function findRoomRefById(id){
 
 function renderSettings(){
  const box=$('rcSettings');if(!box)return;
- box.innerHTML=data.map((b,bi)=>`<details class="rc-building" ${bi===0?'open':''}><summary><b>${esc(b.name)}</b><span>${b.floors.length} étage(s)</span></summary><div class="rc-build-body">
+ // V147.11 : conserver les bâtiments dépliés lors des resynchronisations/rendus.
+ // Sans cela, un rafraîchissement Supabase pouvait refermer immédiatement Bâtiment B.
+ const previouslyOpen=[...box.querySelectorAll('details.rc-building[open]')].map(d=>Number(d.dataset.buildingIndex)).filter(Number.isFinite);
+ box.innerHTML=data.map((b,bi)=>`<details class="rc-building" data-building-index="${bi}" ${(previouslyOpen.length?previouslyOpen.includes(bi):bi===0)?'open':''}><summary><b>${esc(b.name)}</b><span>${b.floors.length} étage(s)</span></summary><div class="rc-build-body">
  <div class="rc-edit-head"><label>Bâtiment<input data-k="bn" data-b="${bi}" value="${esc(b.name)}"></label><button class="ghost small" data-af="${bi}">+ Étage</button></div>
  ${b.floors.map((f,fi)=>`<div class="rc-floor"><div class="rc-edit-head"><label>Étage<input data-k="fn" data-b="${bi}" data-f="${fi}" value="${esc(f.name)}"></label><button class="ghost small" data-as="${bi}:${fi}">+ Secteur</button></div>
  ${f.sectors.map((s,si)=>`<div class="rc-sector"><div class="rc-edit-head"><label>Secteur<input data-k="sn" data-b="${bi}" data-f="${fi}" data-s="${si}" value="${esc(s.name)}"></label><button class="ghost small" data-ar="${bi}:${fi}:${si}">+ Salle / local</button></div>

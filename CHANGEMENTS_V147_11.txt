@@ -1,0 +1,20 @@
+V147.11 — 15/08/2026
+
+Corrections ciblées :
+1. Paramètres / configuration des salles
+- un bâtiment ouvert (ex. Bâtiment B) reste ouvert même pendant un rafraîchissement Supabase ;
+- correction du symptôme « s'ouvre puis se referme ».
+
+2. Chronotime déjà injectés
+- analyse des données chronotimeDaily déjà présentes dans la base ;
+- reconstruction automatique des pastilles CA, RTT, RH/repos, RFE/jour férié, maladie, formation et autres types déjà mappés ;
+- le roulement annuel reprend ces pastilles avec ses couleurs existantes ;
+- aucune modification de la logique existante « état des agents » du tableau de bord ;
+- les saisies manuelles différentes ne sont pas écrasées.
+
+3. Scanner
+- « Scanner un document » ouvre directement l'appareil photo (caméra arrière sur mobile via capture=environment) ;
+- correction du HTML invalide qui contenait des boutons imbriqués ;
+- après la photo, retour automatique dans l'OCR existant.
+
+Aucun changement OneDrive.
