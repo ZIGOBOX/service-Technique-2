@@ -1,5 +1,6 @@
 
 (()=>{'use strict';
+const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103';
 const $=x=>document.getElementById(x), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const room=(number,name,type='Salle')=>({id:uid(),number,name,type});
 const std=(base)=>Array.from({length:9},(_,i)=>room(String(base+i),'','Salle'));
@@ -23,9 +24,7 @@ const DEF=[
   room('','Vie scolaire','Local'),room('','Foyer','Foyer'),room('','Salle de musique','Salle'),room('','Salle d’étude 1','Salle'),room('','Salle d’étude 2','Salle'),room('','Salle polyvalente','Salle'),
   room('','Sanitaires RDC','Sanitaires'),room('','Circulation RDC','Circulation'),room('','Escalier central','Escalier')]}]},
  {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(211),room('','Sanitaires 1er étage','Sanitaires'),room('','Circulation 1er étage','Circulation'),room('','Escalier central','Escalier')]}]},
- {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(221),room('','Sanitaires 2e étage','Sanitaires'),room('','Circulation 2e étage','Circulation'),room('','Escalier central','Escalier')]}]},
- {name:'3e étage',sectors:[{name:'Secteur principal',rooms:[...std(231),room('','Sanitaires 3e étage','Sanitaires'),room('','Circulation 3e étage','Circulation'),room('','Escalier central','Escalier')]}]},
- {name:'4e étage',sectors:[{name:'Secteur principal',rooms:[...std(241),room('','Sanitaires 4e étage','Sanitaires'),room('','Circulation 4e étage','Circulation'),room('','Escalier central','Escalier')]}]}
+ {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(221),room('','Sanitaires 2e étage','Sanitaires'),room('','Circulation 2e étage','Circulation'),room('','Escalier central','Escalier')]}]}
 ]},
 {id:'H',name:'Bâtiment H',floors:[
  {name:'RDC',sectors:[{name:'Secteur principal',rooms:[...std(301),...common('RDC')]}]},
@@ -55,18 +54,20 @@ let data=load();
 let currentFiltered=[];
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
-function mainDb(){return window.PSTMainState?.get?.()||null}
-function migrateRoomConfig(source){
- const out=clone(Array.isArray(source)&&source.length?source:DEF);
- const b=out.find(x=>String(x.name||'').toLowerCase().includes('bâtiment b')||String(x.id||'')==='B');
- const defB=DEF.find(x=>x.id==='B');
- if(b&&defB){b.floors=b.floors||[];for(const wanted of ['1er étage','2e étage','3e étage','4e étage'])if(!b.floors.some(f=>f.name===wanted)){const src=defB.floors.find(f=>f.name===wanted);if(src)b.floors.push(clone(src))}}
- return out;
+function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return Array.isArray(x)&&x.length?x:clone(DEF)}catch(e){return clone(DEF)}}
+function loadChecks(){try{return JSON.parse(localStorage.getItem(CK))||[]}catch(e){return[]}}
+function save(redraw=true){
+ localStorage.setItem(KEY,JSON.stringify(data));
+ try{
+   const main=window.PSTMainState?.get?.();
+   if(main){
+     main.cleaningRoomsConfig=clone(data);
+     window.PSTMainState?.save?.(false);
+   }
+ }catch(e){console.warn('Synchronisation configuration des salles',e)}
+ if(redraw){renderSettings();renderBuildings();renderHistory()}
 }
-function load(){const d=mainDb();return migrateRoomConfig(Array.isArray(d?.cleaningRoomsConfig)&&d.cleaningRoomsConfig.length?d.cleaningRoomsConfig:DEF)}
-function loadChecks(){const d=mainDb();return Array.isArray(d?.cleaningRoomChecks)?d.cleaningRoomChecks:[]}
-function save(redraw=true){const d=mainDb();if(!d)return false;d.cleaningRoomsConfig=clone(data);window.PSTMainState?.save?.(false);if(redraw){renderSettings();renderBuildings();renderHistory()}return true}
-function saveChecks(arr){const d=mainDb();if(!d)return false;d.cleaningRoomChecks=Array.isArray(arr)?arr:[];window.PSTMainState?.save?.(false);renderHistory();return true}
+function saveChecks(arr){localStorage.setItem(CK,JSON.stringify(arr));renderHistory()}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function label(r){return [r.number?`${r.number}`:'',r.name].filter(Boolean).join(' — ')||r.type}
 function fmtDate(v){try{return new Date(v).toLocaleDateString('fr-FR')}catch{return v||''}}
@@ -85,7 +86,7 @@ function renderSettings(){
  <div class="rc-edit-head"><label>Bâtiment<input data-k="bn" data-b="${bi}" value="${esc(b.name)}"></label><button class="ghost small" data-af="${bi}">+ Étage</button></div>
  ${b.floors.map((f,fi)=>`<div class="rc-floor"><div class="rc-edit-head"><label>Étage<input data-k="fn" data-b="${bi}" data-f="${fi}" value="${esc(f.name)}"></label><button class="ghost small" data-as="${bi}:${fi}">+ Secteur</button></div>
  ${f.sectors.map((s,si)=>`<div class="rc-sector"><div class="rc-edit-head"><label>Secteur<input data-k="sn" data-b="${bi}" data-f="${fi}" data-s="${si}" value="${esc(s.name)}"></label><button class="ghost small" data-ar="${bi}:${fi}:${si}">+ Salle / local</button></div>
- <div class="rc-room-table">${s.rooms.map((r,ri)=>`<div class="rc-room-row"><input placeholder="N°" data-k="rn" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}" value="${esc(r.number)}"><input placeholder="Nom" data-k="rname" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}" value="${esc(r.name)}"><select data-k="rt" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}">${['Salle','Chambre','Sanitaires','Circulation','Escalier','Internat','Foyer','Local','Bureau'].map(t=>`<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select><button class="danger-lite small" data-dr="${bi}:${fi}:${si}:${ri}">Supprimer</button></div>`).join('')}</div></div>`).join('')}</div>`).join('')}</div></details>`).join('');
+ <div class="rc-room-table">${s.rooms.map((r,ri)=>`<div class="rc-room-row"><input placeholder="N°" data-k="rn" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}" value="${esc(r.number)}"><input placeholder="Nom" data-k="rname" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}" value="${esc(r.name)}"><select data-k="rt" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}">${['Salle','Salle de classe','Chambre','Sanitaires','Circulation','Escalier','Internat','Foyer','Local','Bureau'].map(t=>`<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select><button class="danger-lite small" data-dr="${bi}:${fi}:${si}:${ri}">Supprimer</button></div>`).join('')}</div></div>`).join('')}</div>`).join('')}</div></details>`).join('');
  box.querySelectorAll('[data-k]').forEach(el=>el.onchange=()=>{let b=+el.dataset.b,f=+el.dataset.f,s=+el.dataset.s,r=+el.dataset.r,k=el.dataset.k;if(k==='bn')data[b].name=el.value;if(k==='fn')data[b].floors[f].name=el.value;if(k==='sn')data[b].floors[f].sectors[s].name=el.value;if(k==='rn')data[b].floors[f].sectors[s].rooms[r].number=el.value;if(k==='rname')data[b].floors[f].sectors[s].rooms[r].name=el.value;if(k==='rt')data[b].floors[f].sectors[s].rooms[r].type=el.value;save(false);renderBuildings()});
  box.querySelectorAll('[data-af]').forEach(x=>x.onclick=()=>{data[+x.dataset.af].floors.push({name:'Nouvel étage',sectors:[{name:'Nouveau secteur',rooms:[]}]});save()});
  box.querySelectorAll('[data-as]').forEach(x=>x.onclick=()=>{let[b,f]=x.dataset.as.split(':').map(Number);data[b].floors[f].sectors.push({name:'Nouveau secteur',rooms:[]});save()});
@@ -217,7 +218,7 @@ function start(){
  ${rs.map((r,i)=>`<div class="rc-check" data-room-id="${esc(r.id)}"><h4>${esc(label(r))}</h4>
  ${recentHistoryHtml(r)}
  <div class="rc-result">
-   <label>Type de local<select data-room-type>${['Salle','Chambre','Sanitaires','Circulation','Escalier','Internat','Foyer','Local','Bureau'].map(t=>`<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select></label>
+   <label>Type de local<select data-room-type>${['Salle','Salle de classe','Chambre','Sanitaires','Circulation','Escalier','Internat','Foyer','Local','Bureau'].map(t=>`<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select></label>
    <label>Nom / appellation<input data-room-name value="${esc(r.name||'')}"></label>
    <label>Résultat<select data-res><option>Conforme</option><option>À améliorer</option><option>Non conforme</option></select></label>
    <label>Note /10<input data-score type="number" min="0" max="10" step=".5" value="10"></label>
@@ -258,7 +259,7 @@ function saveCheck(rs){
    };
  });
 
- const d=mainDb();if(d){d.cleaningRoomsConfig=clone(data);window.PSTMainState?.save?.(false);}
+ localStorage.setItem(KEY,JSON.stringify(data));
 
  const check={
    id:uid(),
@@ -272,7 +273,7 @@ function saveCheck(rs){
 
  let a=loadChecks();
  a.unshift(check);
- const cloudDb=mainDb();if(cloudDb){cloudDb.cleaningRoomChecks=a;window.PSTMainState?.save?.(false);}
+ localStorage.setItem(CK,JSON.stringify(a));
 
  alert(`Contrôle ménage enregistré : ${rs.length} local(aux). Les modifications de type/nom des locaux deviennent la nouvelle référence.`);
  $('rcForm').classList.add('hidden');
@@ -391,5 +392,19 @@ function init(){
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+function syncRoomsFromMain(){
+ try{
+   const main=window.PSTMainState?.get?.();
+   if(Array.isArray(main?.cleaningRoomsConfig)&&main.cleaningRoomsConfig.length){
+     data=clone(main.cleaningRoomsConfig);
+     localStorage.setItem(KEY,JSON.stringify(data));
+     renderSettings();renderBuildings();renderHistory();
+   }else if(main){
+     main.cleaningRoomsConfig=clone(data);
+     window.PSTMainState?.save?.(false);
+   }
+ }catch(e){console.warn('Chargement configuration salles Supabase',e)}
+}
+window.addEventListener('pst:data-loaded',syncRoomsFromMain);
 window.PSTCleaningRooms={get:()=>clone(data),saveAll:(v)=>{if(Array.isArray(v)){data=clone(v);save()}},reset:()=>{data=clone(DEF);save()},history:loadChecks};
 })();

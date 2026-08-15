@@ -132,7 +132,7 @@
     try{const buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true});preview(validateWorkbook(wb));}
     catch(e){console.error(e);alert(`Impossible de lire le fichier : ${e.message}`)}
   };
-  const applyImport=()=>{
+  const applyImport=async()=>{
     if(!pending)return;
     for(const item of pending.agentSettings||[]){
       const a=item.agent,current=(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).map(Number).filter(d=>d!==0&&d!==6);
@@ -147,7 +147,13 @@
     // Les jours de week-end décochés dans l'onglet Agents sont aussi retirés des roulements existants.
     for(const a of db.agents||[]){const allowed=(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).map(Number);for(const r of (db.rotations||[]).filter(r=>String(r.agentId)===String(a.id))){r.weekdays=(r.weekdays||[1,2,3,4,5]).map(Number).filter(d=>allowed.includes(d))}}
     db.scheduleImports=db.scheduleImports||[];db.scheduleImports.push({id:typeof uid==='function'?uid():String(Date.now()),date:new Date().toISOString(),created,updated,rotCreated,rotUpdated,errors:pending.results.filter(x=>x.errors.length).length,warnings:pending.results.filter(x=>x.warnings.length).length});
-    save();pending=null;$i('confirmScheduleImport').classList.add('hidden');$i('scheduleImportSummary').innerHTML=`<div class="import-success"><strong>Import terminé</strong><span>${created} profil(s) créé(s), ${updated} modifié(s), ${rotCreated} roulement(s) créé(s), ${rotUpdated} modifié(s).</span></div>`;$i('scheduleImportPreview').innerHTML='';if(typeof toast==='function')toast('Horaires et roulements mis à jour');
+    const persisted=window.PSTMainState?.persistNow?await window.PSTMainState.persistNow():{ok:save(),offline:false};
+    if(!persisted?.ok){
+      $i('scheduleImportSummary').innerHTML=`<div class="import-stat error"><strong>Non confirmé</strong><span>Les horaires sont affichés localement mais Supabase n’a pas confirmé : ${persisted?.error||'erreur inconnue'}.</span></div>`;
+      if(typeof toast==='function')toast('Import horaires non confirmé dans Supabase');
+      return;
+    }
+    pending=null;$i('confirmScheduleImport').classList.add('hidden');$i('scheduleImportSummary').innerHTML=`<div class="import-success"><strong>✅ Import terminé et synchronisé</strong><span>${created} profil(s) créé(s), ${updated} modifié(s), ${rotCreated} roulement(s) créé(s), ${rotUpdated} modifié(s).</span></div>`;$i('scheduleImportPreview').innerHTML='';if(typeof toast==='function')toast('Horaires et roulements confirmés dans Supabase');
   };
   const init=()=>{
     const d=$i('downloadScheduleMatrix'),f=$i('scheduleImportFile'),c=$i('confirmScheduleImport');if(!d||!f||!c)return;

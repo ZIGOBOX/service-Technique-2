@@ -1,0 +1,16 @@
+V147.8 — 15/08/2026
+
+Audit des importations :
+- « ✅ Injection Chronotime terminée » après confirmation ;
+- pastilles Chronotime RTT, congé annuel, maladie, repos, jour férié, etc. rafraîchies automatiquement après injection ;
+- logique existante de l'état des agents dans le tableau de bord NON MODIFIÉE ;
+- correction de l'identifiant de confirmation Chronotime ;
+- import horaires/roulements : confirmation Supabase avant message de réussite ;
+- restauration JSON : confirmation Supabase avant succès ;
+- photos et pièces jointes : si un upload échoue, le formulaire n'est pas validé ;
+- anciennes pièces jointes conservées tant que les nouvelles ne sont pas chargées ;
+- scan/OCR : pas de faux enregistrement si l'original n'est pas synchronisé dans Supabase Storage ;
+- ajout du type « Salle de classe » ;
+- configuration des salles synchronisée avec Supabase pour mémoriser durablement un classement, par exemple 241 = Salle de classe.
+
+Aucun changement OneDrive.
