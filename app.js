@@ -716,7 +716,7 @@ async function openPdfInApp(url,name='Document PDF'){
  try{
   if(!window.pdfjsLib)throw new Error('Lecteur PDF indisponible');
   window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  // V143 : on télécharge d'abord le PDF signé Supabase en mémoire. Cela évite les blocages CORS/WebView Android.
+  // V145 : on télécharge d'abord le PDF signé Supabase en mémoire. Cela évite les blocages CORS/WebView Android.
   const response=await fetch(url,{cache:'no-store',credentials:'omit'});
   if(!response.ok)throw new Error('Téléchargement PDF impossible ('+response.status+')');
   const buf=await response.arrayBuffer();
@@ -761,8 +761,25 @@ function noteItemsHTML(items=[]){
 }
 
 function attachmentField(existing=[]){return `<div class="attachment-box"><div class="attachment-actions"><label class="camera-label">📷 Prendre une photo<input type="file" name="cameraPhotos" accept="image/*" capture="environment" multiple></label><label>📎 Ajouter des fichiers<input type="file" name="files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.eml,.msg,.ods,.odt"></label></div><p class="hint">Les photos et fichiers sont synchronisés dans Supabase et deviennent accessibles sur le téléphone et le PC.</p>${existing.length?`<div class="attachment-list">${existing.map(a=>`<div><span>📎 ${esc(a.name)} <small>${humanSize(a.size)}</small></span><label class="inline-check"><input type="checkbox" name="removeAttachment" value="${esc(a.id)}"> Retirer</label></div>`).join('')}</div>`:''}</div>`}
-async function processAttachments(form,record,module){record.attachments=record.attachments||[];const removeIds=[...form.querySelectorAll('[name="removeAttachment"]:checked')].map(x=>x.value);for(const id of removeIds){await removeFileBlob(id);record.attachments=record.attachments.filter(a=>a.id!==id);db.attachments=db.attachments.filter(a=>a.id!==id)}const files=[...(form.elements.files?.files||[]),...(form.elements.cameraPhotos?.files||[])];for(const file of files){try{const meta=await putFile(file,{module,recordId:record.id});record.attachments.push(meta);db.attachments.push(meta)}catch(e){console.error(e);toast(`Impossible d’enregistrer ${file.name}`)}}}
-function attachmentButtons(arr=[]){return arr.length?`<div class="attachment-chips">${arr.map(a=>`<button class="chip" data-download="${esc(a.id)}">📎 ${esc(a.name)}</button>`).join('')}</div>`:''}
+async function processAttachments(form,record,module){
+ record.attachments=record.attachments||[];
+ const removeIds=[...form.querySelectorAll('[name="removeAttachment"]:checked')].map(x=>x.value);
+ for(const id of removeIds){await removeFileBlob(id);record.attachments=record.attachments.filter(a=>a.id!==id);db.attachments=db.attachments.filter(a=>a.id!==id)}
+ const files=[...(form.elements.files?.files||[]),...(form.elements.cameraPhotos?.files||[])];
+ const failed=[];
+ for(const file of files){
+  try{
+   const meta=await putFile(file,{module,recordId:record.id});
+   record.attachments.push(meta);db.attachments.push(meta);
+  }catch(e){
+   console.error('Upload pièce jointe',e);
+   failed.push({name:file.name,error:e?.message||String(e)});
+   toast(`Échec d’envoi Supabase : ${file.name}`);
+  }
+ }
+ return {ok:failed.length===0,failed,uploaded:files.length-failed.length,total:files.length};
+}
+function attachmentButtons(arr=[]){return arr.length?`<div class="attachment-chips">${arr.map(a=>a?.storagePath?`<button class="chip" data-download="${esc(a.id)}">📎 ${esc(a.name)}</button>`:`<span class="chip attachment-missing" title="Le fichier doit être rattaché">⚠️ ${esc(a?.name||'Original indisponible')}</span>`).join('')}</div>`:''}
 
 const BUILTIN_GUIDES=[
  {title:'Guide d’accueil des lycées 2025',category:'Guide / procédure',storagePath:'guides/Guide_Accueil_Lycees_2025.pdf'},
@@ -1067,7 +1084,20 @@ function addMonthsClamped(dateISO,months){
 function periodicIsInactive(x){const s=normalizeText(x?.status);return s==='cloture'||s==='cloturee'||s==='non applicable'||s==='archive'||s==='archivee'}
 function periodicDue(x){if(x.nextDate)return normalizeDateValue(x.nextDate);if(x.lastDate&&Number(x.intervalMonths)>0)return addMonthsClamped(x.lastDate,x.intervalMonths);return ''}
 function periodicComputed(x){const due=periodicDue(x);if(periodicIsInactive(x))return x.status||'Clôturé';if(!due)return x.status||'À planifier';const diff=(parseDate(due)-parseDate(todayISO()))/86400000;if(diff<0)return 'En retard';if(diff<=60)return 'Bientôt';return 'À jour'}
-function openPeriodic(id){const old=id?byId('periodic',id):null;const x=old||{id:uid(),no:nextNo('periodic','CP'),name:'',family:db.lists.periodicFamilies[0],intervalMonths:12,requirement:'',provider:'',register:'Registre de sécurité',building:'Tous bâtiments',lastDate:'',nextDate:'',status:'À planifier',notes:'',attachments:[]};openModal(old?'Modifier le contrôle périodique':'Nouveau contrôle périodique',`<div class="form-grid">${field('Contrôle','name',x.name,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.periodicFamilies,x.family)}</select></label><label>Bâtiment<select name="building"><option>Tous bâtiments</option>${buildingOptions(x.building)}</select></label>${field('Périodicité (mois, 0 = variable)','intervalMonths',x.intervalMonths,'number','min="0"')}${field('Dernier contrôle','lastDate',x.lastDate,'date')}${field('Prochaine échéance','nextDate',periodicDue(x),'date')}${field('Heure prévue','time',x.time,'time')}${field('Étage / niveau','floor',x.floor)}${field('Local / zone','room',x.room)}<label>Statut<select name="status">${selectOptions(['À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable'],x.status)}</select></label>${field('Prestataire / responsable','provider',x.provider)}${field('Registre / dossier','register',x.register)}${textareaField('Exigence / contenu','requirement',x.requirement)}${textareaField('Notes','notes',x.notes)}<p class="form-hint"><strong>Suivi permanent :</strong> ce contrôle reste suivi au-delà de l'année scolaire jusqu'à sa véritable prochaine échéance.</p>${attachmentField(x.attachments)}</div>`,async form=>{const o=formDataObj(form),intervalMonths=Number(o.intervalMonths||0);Object.assign(x,o,{intervalMonths});if(x.lastDate&&intervalMonths>0&&!o.nextDate)x.nextDate=addMonthsClamped(x.lastDate,intervalMonths);await processAttachments(form,x,'periodic');if(!old)db.periodic.push(x);closeModal();save();toast('Contrôle périodique enregistré — suivi jusqu’à la prochaine échéance')},{onDelete:old?()=>deleteRecord('periodic',x.id,'contrôle'):null})}
+function openPeriodic(id){const old=id?byId('periodic',id):null;const x=old||{id:uid(),no:nextNo('periodic','CP'),name:'',family:db.lists.periodicFamilies[0],intervalMonths:12,requirement:'',provider:'',register:'Registre de sécurité',building:'Tous bâtiments',lastDate:'',nextDate:'',status:'À planifier',notes:'',attachments:[]};openModal(old?'Modifier le contrôle périodique':'Nouveau contrôle périodique',`<div class="form-grid">${field('Contrôle','name',x.name,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.periodicFamilies,x.family)}</select></label><label>Bâtiment<select name="building"><option>Tous bâtiments</option>${buildingOptions(x.building)}</select></label>${field('Périodicité (mois, 0 = variable)','intervalMonths',x.intervalMonths,'number','min="0"')}${field('Dernier contrôle','lastDate',x.lastDate,'date')}${field('Prochaine échéance','nextDate',periodicDue(x),'date')}${field('Heure prévue','time',x.time,'time')}${field('Étage / niveau','floor',x.floor)}${field('Local / zone','room',x.room)}<label>Statut<select name="status">${selectOptions(['À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable'],x.status)}</select></label>${field('Prestataire / responsable','provider',x.provider)}${field('Registre / dossier','register',x.register)}${textareaField('Exigence / contenu','requirement',x.requirement)}${textareaField('Notes','notes',x.notes)}<p class="form-hint"><strong>Suivi permanent :</strong> ce contrôle reste suivi au-delà de l'année scolaire jusqu'à sa véritable prochaine échéance.</p>${attachmentField(x.attachments)}</div>`,async form=>{const o=formDataObj(form),intervalMonths=Number(o.intervalMonths||0);Object.assign(x,o,{intervalMonths});if(x.lastDate&&intervalMonths>0&&!o.nextDate)x.nextDate=addMonthsClamped(x.lastDate,intervalMonths);const attachResult=await processAttachments(form,x,'periodic');
+if(!attachResult?.ok){
+ toast('Le contrôle n’est pas enregistré : au moins un fichier n’a pas été chargé dans Supabase.');
+ setSaveState('PDF non chargé — corrigez avant d’enregistrer','error');
+ return;
+}
+if(!old)db.periodic.push(x);
+const persisted=window.PSTMainState?.persistNow?await window.PSTMainState.persistNow():{ok:save(),offline:!navigator.onLine};
+if(!persisted?.ok&&!persisted?.offline){
+ toast('Le PDF est chargé, mais la fiche n’est pas encore confirmée dans Supabase. Ne fermez pas l’application.');
+ return;
+}
+closeModal();
+toast(persisted?.offline?'Contrôle enregistré hors ligne — synchronisation automatique':'Contrôle périodique et fichiers confirmés dans Supabase')},{onDelete:old?()=>deleteRecord('periodic',x.id,'contrôle'):null})}
 function cleaningTasks(type,existing=[]){const oldMap=new Map((existing||[]).map(t=>[t.name,t]));return (GUIDE[type]||GUIDE['Autre']||[]).map(([name,freq])=>{const o=oldMap.get(name)||{name,frequency:freq,status:'Non contrôlé',comment:''};return `<div class="clean-task" data-clean-task><div><strong>${esc(name)}</strong><small>${esc(freq)}</small></div><select name="taskStatus">${selectOptions(db.lists.cleaningStatuses,o.status)}</select><input name="taskComment" value="${esc(o.comment||'')}" placeholder="Commentaire rapide"></div>`}).join('')}
 function openCleaning(id){const old=id?byId('cleaning',id):null;const b=old?.building||db.buildings[0]?.name||'',floor=old?.floor||db.buildings[0]?.floors?.[0]||'',type=old?.roomType||'Salle de classe / devoirs / informatique';const x=old||{id:uid(),no:nextNo('cleaning','MEN'),date:todayISO(),time:new Date().toTimeString().slice(0,5),inspector:db.settings.defaultInspector||'',agentId:'',building:b,floor,roomType:type,room:'Zone entière',overallStatus:'',score:0,comment:'',tasks:[],attachments:[]};openModal(old?'Modifier le contrôle ménage':'Nouveau contrôle ménage',`<div class="form-grid">${field('Date','date',x.date,'date','required')}${field('Heure','time',x.time,'time')}<label>Agent / secteur contrôlé<select name="agentId">${agentOptions(x.agentId,true)}</select></label>${field('Contrôleur','inspector',x.inspector)}<label>Bâtiment<select name="building" id="mBuilding">${buildingOptions(x.building)}</select></label><label>Étage<select name="floor" id="mFloor">${floorOptions(x.building,x.floor)}</select></label><label>Type de local<select name="roomType" id="mRoomType">${selectOptions(db.lists.roomTypes,x.roomType)}</select></label><label>Local / zone<select name="room" id="mRoom">${roomOptions(x.building,x.floor,x.roomType,x.room)}</select></label><label id="mOtherRoomWrap" class="${x.room==='Autre local'?'':'hidden'}">Autre local<input name="otherRoom" id="mOtherRoom" value="${esc(x.otherRoom||'')}"></label>${textareaField('Observation générale','comment',x.comment)}</div><div class="clean-bulk"><span>Tout passer en :</span>${['Conforme','À reprendre','Non conforme','Non applicable'].map(s=>`<button type="button" data-bulk-clean="${s}">${s}</button>`).join('')}</div><div id="cleanTaskEditor" class="clean-task-editor">${cleaningTasks(x.roomType,x.tasks)}</div>${attachmentField(x.attachments)}`,async form=>{const o=formDataObj(form);const rows=$$('[data-clean-task]',form).map((r,i)=>({name:r.querySelector('strong').textContent,frequency:r.querySelector('small').textContent,status:r.querySelector('[name="taskStatus"]').value,comment:r.querySelector('[name="taskComment"]').value}));const rated=rows.filter(r=>!['Non contrôlé','Non applicable'].includes(r.status)),good=rated.filter(r=>r.status==='Conforme').length;if(o.room==='Autre local'&&o.otherRoom)o.room=o.otherRoom;Object.assign(x,o,{room:o.room,tasks:rows,score:rated.length?Math.round(good/rated.length*100):0,overallStatus:rows.some(r=>r.status==='Non conforme')?'Non conforme':rows.some(r=>r.status==='À reprendre')?'À reprendre':rated.length?'Conforme':'Non contrôlé'});await processAttachments(form,x,'cleaning');if(!old)db.cleaning.push(x);closeModal();save();toast('Contrôle ménage enregistré')},{onDelete:old?()=>deleteRecord('cleaning',x.id,'contrôle'):null});const updateOtherRoom=()=>$('#mOtherRoomWrap')?.classList.toggle('hidden',$('#mRoom')?.value!=='Autre local');const updateLocation=()=>{const bb=$('#mBuilding').value,ff=$('#mFloor').value,tt=$('#mRoomType').value,oldRoom=$('#mRoom').value;$('#mRoom').innerHTML=roomOptions(bb,ff,tt,oldRoom);updateOtherRoom()};$('#mBuilding').onchange=()=>{$('#mFloor').innerHTML=floorOptions($('#mBuilding').value);updateLocation()};$('#mFloor').onchange=updateLocation;$('#mRoomType').onchange=()=>{$('#cleanTaskEditor').innerHTML=cleaningTasks($('#mRoomType').value,[]);updateLocation()};$('#mRoom').onchange=updateOtherRoom;updateOtherRoom();$$('[data-bulk-clean]').forEach(btn=>btn.onclick=()=>$$('[name="taskStatus"]',$('#cleanTaskEditor')).forEach(s=>s.value=btn.dataset.bulkClean))}
 function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),time:'',title:'',family:'Électricité',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier l’intervention':'Nouvelle intervention',`<div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Heure prévue','time',x.time,'time')}${field('Objet','title',x.title,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label>${centralLocationFields(x,'maintLoc')}${field('Demandeur','requester',x.requester)}${field('Assigné à / prestataire','assigned',x.assigned)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Description / diagnostic','description',x.description)}${textareaField('Action réalisée / suite','action',x.action)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;await processAttachments(form,x,'maintenance');if(!old)db.maintenance.push(x);closeModal();save();toast('Intervention enregistrée')},{onDelete:old?()=>deleteRecord('maintenance',x.id,'intervention'):null});bindCentralLocation('maintLoc')}
@@ -1468,7 +1498,7 @@ function renderImportArchives(){
  if(type)rows=rows.filter(x=>x.type===type);if(q)rows=rows.filter(x=>normalizeText(`${x.fileName} ${x.subject} ${x.summary} ${x.academicYear} ${x.type}`).includes(q));
  const all=importedArchiveRows(),resolved=all.map(x=>({x,a:resolveArchiveAttachment(x)})),withOriginal=resolved.filter(o=>!!o.a?.storagePath).length,cloudSynced=resolved.filter(o=>o.a?.cloudVerified===true).length,cloudPending=resolved.filter(o=>o.a?.storagePath&&o.a?.cloudVerified!==true).length;
  sum.innerHTML=`<article><span>Imports conservés</span><strong>${all.length}</strong></article><article><span>Originaux cloud</span><strong>${withOriginal}</strong></article><article><span>☁️ Cloud vérifié</span><strong>${cloudSynced}</strong></article><article><span>☁️ À vérifier</span><strong>${cloudPending}</strong></article>`;
- box.innerHTML=rows.length?rows.map(x=>{const att=resolveArchiveAttachment(x);if(att)rememberImportOriginalBinding(x,att);const attachmentId=att?.id||x.attachmentId||'';return `<article class="import-archive-card"><div class="import-archive-icon">${x.type==='Chronotime'?'⏱':x.type==='Note scannée'?'📝':x.type.includes('Contrôle')||x.type.includes('Rapport')?'🛡':'📄'}</div><div class="import-archive-main"><div class="panel-head"><div><strong>${esc(x.fileName||x.subject||'Document importé')}</strong><small>${esc(x.type||'Document')} · ${x.createdAt?new Date(x.createdAt).toLocaleString('fr-FR'):'—'}</small></div>${x.academicYear?badge(x.academicYear):''}</div><p>${esc(x.subject||'')}</p><small>${esc(x.summary||'')}</small><div class="import-cloud-line">${cloudStatusHtml(att)}</div><div class="import-archive-actions">${attachmentId?`<button class="primary small" data-download="${esc(attachmentId)}">📄 Relire l’original</button>`:`<label class="ghost small button-link">📎 Rattacher l’original<input type="file" accept="application/pdf,image/*,.pdf,.png,.jpg,.jpeg,.webp" data-reattach-import="${esc(x.id)}" hidden></label>`}${cloudActionHtml(att)}<button class="ghost small" data-open-import-analysis="${esc(x.id)}">📊 Relire l’analyse</button>${x.recordId?`<button class="ghost small" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Relire la fiche</button>`:''}${x.module?`<button class="ghost small" data-go="${esc(x.module)}">Ouvrir le module</button>`:''}<button class="ghost small danger-mini" data-delete-import="${esc(x.id)}">🗑 Supprimer</button></div></div></article>`}).join(''):'<div class="empty-state">Aucun import ne correspond à ces filtres.</div>';
+ box.innerHTML=rows.length?rows.map(x=>{const att=resolveArchiveAttachment(x);if(att)rememberImportOriginalBinding(x,att);const attachmentId=att?.id||x.attachmentId||'';return `<article class="import-archive-card"><div class="import-archive-icon">${x.type==='Chronotime'?'⏱':x.type==='Note scannée'?'📝':x.type.includes('Contrôle')||x.type.includes('Rapport')?'🛡':'📄'}</div><div class="import-archive-main"><div class="panel-head"><div><strong>${esc(x.fileName||x.subject||'Document importé')}</strong><small>${esc(x.type||'Document')} · ${x.createdAt?new Date(x.createdAt).toLocaleString('fr-FR'):'—'}</small></div>${x.academicYear?badge(x.academicYear):''}</div><p>${esc(x.subject||'')}</p><small>${esc(x.summary||'')}</small><div class="import-cloud-line">${cloudStatusHtml(att)}</div><div class="import-archive-actions">${att?.storagePath?`<button class="primary small" data-download="${esc(attachmentId)}">📄 Relire l’original</button>`:`<label class="primary small button-link">📎 Rattacher le PDF<input type="file" accept="application/pdf,.pdf" data-reattach-import="${esc(x.id)}" hidden></label>`}${cloudActionHtml(att)}<button class="ghost small" data-open-import-analysis="${esc(x.id)}">📊 Relire l’analyse</button>${x.recordId?`<button class="ghost small" data-open-import-record="${esc(x.recordId)}" data-import-module="${esc(x.module||'')}">✎ Relire la fiche</button>`:''}${x.module?`<button class="ghost small" data-go="${esc(x.module)}">Ouvrir le module</button>`:''}<button class="ghost small danger-mini" data-delete-import="${esc(x.id)}">🗑 Supprimer</button></div></div></article>`}).join(''):'<div class="empty-state">Aucun import ne correspond à ces filtres.</div>';
 }
 
 async function reattachImportOriginal(archiveId,file){
@@ -1490,18 +1520,32 @@ async function reattachImportOriginal(archiveId,file){
   rememberImportOriginalBinding(x,meta);
   const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));
   if(src){src.attachmentId=meta.id;src.fileName=file.name||src.fileName}
+  // V145 : réparer aussi la fiche métier du contrôle pour que l’original soit relisible partout.
+  const periodicId=x.recordId||src?.periodicControlId||x.analysisSnapshot?.periodicControlId||'';
+  if(periodicId){
+   const periodic=(db.periodic||[]).find(p=>String(p.id)===String(periodicId));
+   if(periodic){
+    periodic.attachments=periodic.attachments||[];
+    const sameIndex=periodic.attachments.findIndex(a=>String(a.id)===String(x.attachmentId||'') || (!a?.storagePath && normalizeText(a?.name||'')===normalizeText(x.fileName||file.name||'')));
+    if(sameIndex>=0)periodic.attachments[sameIndex]=meta;
+    else if(!periodic.attachments.some(a=>String(a.id)===String(meta.id)))periodic.attachments.push(meta);
+   }
+  }
+  x.attachmentId=meta.id;
   const annual=(db.chronotimeAnnual||[]).find(r=>String(r.sourceId||'')===String(x.sourceId)||String(r.fileName||'')===String(x.fileName));
   if(annual)annual.attachmentId=meta.id;
 
   // Sauvegarder l’état applicatif dans Supabase puis rafraîchir.
-  save(false);
-  renderImportArchives();
-  if(st){st.textContent=`✅ ${file.name} est rattaché et conservé dans Supabase.`;st.className='import-archive-status ok'}
-  toast('Original rattaché — utilisez maintenant « Relire l’original »');
-
-  // Confirmation de synchronisation cloud.
-  if(currentUser&&navigator.onLine){
-   try{await cloudSaveNow({silent:true})}catch(e){console.warn('Confirmation du rattachement cloud impossible',e)}
+  const persisted=window.PSTMainState?.persistNow?await window.PSTMainState.persistNow():{ok:save(false),offline:!navigator.onLine};
+  renderImportArchives();renderPeriodic();
+  if(persisted?.ok){
+   if(st){st.textContent=`✅ ${file.name} est rattaché, sauvegardé et confirmé dans Supabase.`;st.className='import-archive-status ok'}
+   toast('Original rattaché et confirmé — « Relire l’original » est disponible');
+  }else if(persisted?.offline){
+   if(st){st.textContent='⚠️ Fichier chargé mais état applicatif en attente de synchronisation.';st.className='import-archive-status working'}
+   toast('Rattachement en attente de synchronisation');
+  }else{
+   throw new Error('Le fichier est dans Storage mais la fiche n’a pas pu être confirmée dans app_state');
   }
  }catch(e){console.error(e);const st=$('#importArchiveStatus');if(st){st.textContent=`❌ Rattachement impossible : ${e?.message||String(e)}`;st.className='import-archive-status error'}toast(`Impossible de rattacher ce document${e?.message?` : ${e.message}`:''}`)}
 }
@@ -2195,88 +2239,3 @@ function bindScanNoteV77(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindScanNoteV77);else bindScanNoteV77();
 
 document.addEventListener('change',async e=>{const inp=e.target.closest?.('[data-reattach-import]');if(inp&&inp.files?.[0]){await reattachImportOriginal(inp.dataset.reattachImport,inp.files[0]);inp.value=''}});
-
-
-// V143 — réparation d'un original PDF manquant dans une archive existante.
-async function repairArchiveOriginalPdf(archiveId){
-  const archive=(state.archives||[]).find(a=>String(a.id)===String(archiveId));
-  if(!archive){ toast("Archive introuvable"); return; }
-
-  const input=document.createElement("input");
-  input.type="file";
-  input.accept="application/pdf,.pdf";
-  input.onchange=async()=>{
-    const file=input.files&&input.files[0];
-    if(!file)return;
-    if(file.type && file.type!=="application/pdf" && !/\.pdf$/i.test(file.name||"")){
-      toast("Sélectionne un fichier PDF."); return;
-    }
-    try{
-      toast("Chargement du PDF dans Supabase…");
-      let uploaded=null;
-
-      // Reuse the application's normal cloud uploader when available.
-      if(typeof uploadArchiveOriginal==="function"){
-        uploaded=await uploadArchiveOriginal(file, archive);
-      } else if(typeof uploadFileToSupabase==="function"){
-        uploaded=await uploadFileToSupabase(file, "archives");
-      } else {
-        throw new Error("Fonction d’envoi Supabase indisponible");
-      }
-
-      const path =
-        (uploaded && (uploaded.storagePath||uploaded.path||uploaded.fullPath)) ||
-        (typeof uploaded==="string" ? uploaded : "");
-      if(!path) throw new Error("Supabase n’a retourné aucun chemin de fichier");
-
-      archive.storagePath=path;
-      archive.originalName=file.name||archive.originalName||archive.name||"document.pdf";
-      archive.originalAvailable=true;
-      archive.updatedAt=new Date().toISOString();
-
-      // Persist through the same state/save mechanisms already used by the app.
-      if(typeof saveState==="function") await saveState();
-      else if(typeof persistState==="function") await persistState();
-      else if(typeof saveAll==="function") await saveAll();
-
-      toast("PDF rattaché avec succès");
-      if(typeof render==="function") render();
-      else location.reload();
-    }catch(err){
-      console.error("V143 repairArchiveOriginalPdf",err);
-      toast("Échec du rattachement PDF : "+(err?.message||err));
-    }
-  };
-  input.click();
-}
-
-
-
-// V143 — affiche automatiquement "Rattacher le PDF" sur les cartes dont l'original manque.
-document.addEventListener("click", function(e){
-  const b=e.target.closest("[data-repair-archive]");
-  if(b){ e.preventDefault(); repairArchiveOriginalPdf(b.getAttribute("data-repair-archive")); }
-});
-
-function v143InjectRepairButtons(){
-  document.querySelectorAll("button").forEach(btn=>{
-    if((btn.textContent||"").includes("Relire l’original")){
-      const card=btn.closest(".archive-card,.card,article,li,div");
-      if(!card || !(card.textContent||"").includes("Original indisponible")) return;
-      if(card.querySelector("[data-repair-archive]")) return;
-      // Recover archive id from common data attributes on the button/card.
-      const host=btn.closest("[data-id],[data-archive-id]")||card.querySelector("[data-id],[data-archive-id]");
-      const id=(host&&(host.dataset.archiveId||host.dataset.id)) || btn.dataset.archiveId || btn.dataset.id;
-      if(!id)return;
-      const repair=document.createElement("button");
-      repair.type="button";
-      repair.className=btn.className;
-      repair.setAttribute("data-repair-archive",id);
-      repair.textContent="📎 Rattacher le PDF";
-      btn.insertAdjacentElement("afterend",repair);
-    }
-  });
-}
-new MutationObserver(()=>v143InjectRepairButtons()).observe(document.documentElement,{childList:true,subtree:true});
-document.addEventListener("DOMContentLoaded",v143InjectRepairButtons);
-
