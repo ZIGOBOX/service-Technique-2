@@ -1,0 +1,10 @@
+V147.9 — 15/08/2026
+
+Scanner un doc :
+- ajout « 📷 Prendre une photo » : demande l'appareil photo arrière du téléphone/tablette ;
+- ajout « 🖼️ Choisir une photo » : galerie ;
+- ajout « 📄 Choisir un PDF » ;
+- la photo/le fichier est transmis au scanner existant et suit ensuite le même aperçu/enregistrement ;
+- conservation des sécurités V147.8 pour l'envoi des fichiers dans Supabase Storage ;
+- aucune modification de la logique état des agents / tableau de bord ;
+- aucune modification Chronotime autre que celles déjà présentes en V147.8.

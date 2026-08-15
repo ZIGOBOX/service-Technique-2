@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.8';
+const APP_VERSION='147.10';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -2470,3 +2470,49 @@ function bindScanNoteV77(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindScanNoteV77);else bindScanNoteV77();
 
 document.addEventListener('change',async e=>{const inp=e.target.closest?.('[data-reattach-import]');if(inp&&inp.files?.[0]){await reattachImportOriginal(inp.dataset.reattachImport,inp.files[0]);inp.value=''}});
+
+
+// V147.9 — Sources du scanner : appareil photo, galerie ou PDF.
+(function initScannerSources(){
+  const byId=id=>document.getElementById(id);
+  const sourceInput=()=>{
+    const candidates=[
+      document.querySelector('input[type="file"][id*="scan" i]:not(#scanCameraInput):not(#scanGalleryInput):not(#scanPdfInput)'),
+      document.querySelector('input[type="file"][name*="scan" i]')
+    ];
+    return candidates.find(Boolean)||null;
+  };
+  const forwardFile=(file)=>{
+    if(!file)return;
+    const target=sourceInput();
+    if(!target){toast?.('Entrée du scanner introuvable');return}
+    try{
+      const dt=new DataTransfer();
+      dt.items.add(file);
+      target.files=dt.files;
+      target.dispatchEvent(new Event('change',{bubbles:true}));
+    }catch(e){
+      console.error('Transmission fichier scanner',e);
+      toast?.('Impossible de transmettre la photo au scanner');
+    }
+  };
+  const bind=()=>{
+    const camera=byId('scanCameraInput'), gallery=byId('scanGalleryInput'), pdf=byId('scanPdfInput');
+    const cameraBtn=byId('scanTakePhotoBtn'), galleryBtn=byId('scanGalleryBtn'), pdfBtn=byId('scanPdfBtn');
+    if(cameraBtn&&!cameraBtn.dataset.bound){cameraBtn.dataset.bound='1';cameraBtn.addEventListener('click',()=>camera?.click())}
+    if(galleryBtn&&!galleryBtn.dataset.bound){galleryBtn.dataset.bound='1';galleryBtn.addEventListener('click',()=>gallery?.click())}
+    if(pdfBtn&&!pdfBtn.dataset.bound){pdfBtn.dataset.bound='1';pdfBtn.addEventListener('click',()=>pdf?.click())}
+    [camera,gallery,pdf].forEach(input=>{
+      if(input&&!input.dataset.bound){
+        input.dataset.bound='1';
+        input.addEventListener('change',()=>forwardFile(input.files?.[0]));
+      }
+    });
+  };
+  document.addEventListener('DOMContentLoaded',bind);
+  document.addEventListener('click',e=>{
+    if(e.target?.closest?.('[data-open-scan],#openScanner,.openScanner'))setTimeout(bind,50);
+  });
+  setTimeout(bind,500);
+})();
+

@@ -1,0 +1,12 @@
+V147.10 — 15/08/2026
+
+Configuration des locaux intégrée depuis le fichier Excel corrigé fourni par l'utilisateur.
+
+- 197 locaux actifs intégrés.
+- Bâtiments : Bâtiment A, Bâtiment B, Bâtiment H, Bâtiment G, Bâtiment E, Bâtiment F, Algeco, Extension.
+- Bâtiments, étages, secteurs, numéros/codes, noms et types repris tels qu'ils figurent dans le fichier Excel.
+- Au premier chargement de V147.10, l'ancienne configuration des salles est remplacée une seule fois par cette configuration et synchronisée dans Supabase.
+- Les modifications effectuées ensuite dans l'application restent conservées.
+- Aucun changement de la logique état des agents / tableau de bord.
+- Aucun changement Chronotime.
+- Conservation du scanner appareil photo de V147.9.

@@ -1,53 +1,91 @@
 
 (()=>{'use strict';
-const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103';
+const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', CONFIG_VERSION='147.10';
 const $=x=>document.getElementById(x), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const room=(number,name,type='Salle')=>({id:uid(),number,name,type});
 const std=(base)=>Array.from({length:9},(_,i)=>room(String(base+i),'','Salle'));
 const common=(floor,stairs=[])=>[room('',`Sanitaires ${floor}`,'Sanitaires'),room('',`Circulation ${floor}`,'Circulation'),...stairs.map(x=>room(x,x.startsWith('Escalier')?x:`Escalier ${x}`,'Escalier'))];
 const DEF=[
-{id:'A',name:'Bâtiment A',floors:[
- {name:'RDC',sectors:[{name:'Secteur principal',rooms:[...std(101),...common('RDC',['A1','A2','A3'])]}]},
- {name:'1er étage',sectors:[{name:'Salles de classe',rooms:[...std(111),...common('1er étage',['A1','A2','A3'])]}]},
- {name:'2e étage',sectors:[
-  {name:'Internat — moitié étage',rooms:[room('','Internat 2e — local 1','Internat'),room('','Internat 2e — local 2','Internat'),room('','Foyer internat 2e','Foyer'),...common('internat 2e',['A1','A2','A3'])]},
-  {name:'Salles de classe — moitié étage',rooms:[...Array.from({length:5},(_,i)=>room(String(121+i),'','Salle')),...common('classes 2e',['A1','A2','A3'])]}
- ]},
- {name:'3e étage — Internat',sectors:[{name:'Internat',rooms:[
- room('131','Chambre 131','Chambre'),room('132','Chambre 132','Chambre'),room('133','Chambre 133','Chambre'),room('134','Chambre 134','Chambre'),
- room('135','Chambre 135','Chambre'),room('136','Chambre 136','Chambre'),room('137','Chambre 137','Chambre'),room('138','Chambre 138','Chambre'),
- room('','Salle zen','Salle'),room('','Circulation 3e étage','Circulation'),room('','Foyer internat 3e','Foyer')
- ]}]}
+{id:"A",name:"Bâtiment A",floors:[
+{name:"RDC",sectors:[
+{name:"Secteur principal",rooms:[room("101","","Salle"),room("102","","Salle"),room("103","","Salle"),room("104","","Salle"),room("105","","Salle"),room("106","","Salle"),room("107","","Salle"),room("108","","Salle"),room("109","","Salle"),room("","Sanitaires RDC","Sanitaires"),room("","Circulation RDC","Circulation"),room("A1","Escalier A1","Escalier"),room("A2","Escalier A2","Escalier"),room("A3","Escalier A3","Escalier")]},
 ]},
-{id:'B',name:'Bâtiment B',floors:[
- {name:'RDC',sectors:[{name:'Vie scolaire / espaces communs',rooms:[
-  room('','Vie scolaire','Local'),room('','Foyer','Foyer'),room('','Salle de musique','Salle'),room('','Salle d’étude 1','Salle'),room('','Salle d’étude 2','Salle'),room('','Salle polyvalente','Salle'),
-  room('','Sanitaires RDC','Sanitaires'),room('','Circulation RDC','Circulation'),room('','Escalier central','Escalier')]}]},
- {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(211),room('','Sanitaires 1er étage','Sanitaires'),room('','Circulation 1er étage','Circulation'),room('','Escalier central','Escalier')]}]},
- {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(221),room('','Sanitaires 2e étage','Sanitaires'),room('','Circulation 2e étage','Circulation'),room('','Escalier central','Escalier')]}]}
+{name:"1er étage",sectors:[
+{name:"Salles de classe",rooms:[room("111","","Salle"),room("112","","Salle"),room("113","","Salle"),room("114","","Salle"),room("115","","Salle"),room("116","","Salle"),room("117","","Salle"),room("118","","Salle"),room("119","","Salle"),room("","Sanitaires 1er étage","Sanitaires"),room("","Circulation 1er étage","Circulation"),room("A1","Escalier A1","Escalier"),room("A2","Escalier A2","Escalier"),room("A3","Escalier A3","Escalier")]},
 ]},
-{id:'H',name:'Bâtiment H',floors:[
- {name:'RDC',sectors:[{name:'Secteur principal',rooms:[...std(301),...common('RDC')]}]},
- {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(311),...common('1er étage')]}]},
- {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(321),...common('2e étage')]}]}
+{name:"2e étage",sectors:[
+{name:"Internat — moitié étage",rooms:[room("","Internat 2e — local 1","Internat"),room("","Internat 2e — local 2","Internat"),room("","Foyer internat 2e","Foyer"),room("","Circulation internat 2e","Circulation"),room("A1","Escalier A1","Escalier"),room("A2","Escalier A2","Escalier"),room("A3","Escalier A3","Escalier")]},
+{name:"Salles de classe — moitié étage",rooms:[room("121","","Chambre"),room("122","","Chambre"),room("123","","Chambre"),room("124","","Chambre"),room("Maitre","","Chambre"),room("","Circulation classes 2e","Circulation"),room("A1","Escalier A1","Escalier"),room("A2","Escalier A2","Escalier"),room("A3","Escalier A3","Escalier")]},
 ]},
-{id:'G',name:'Bâtiment G',floors:[
- {name:'RDC',sectors:[{name:'Secteur principal',rooms:[...std(401),...common('RDC')]}]},
- {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(411),...common('1er étage')]}]},
- {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(421),...common('2e étage')]}]}
+{name:"3e étage — Internat",sectors:[
+{name:"Internat",rooms:[room("131","Chambre 131","Chambre"),room("132","Chambre 132","Chambre"),room("133","Chambre 133","Chambre"),room("134","Chambre 134","Chambre"),room("135","Chambre 135","Chambre"),room("136","Chambre 136","Chambre"),room("137","Chambre 137","Chambre"),room("138","Chambre 138","Chambre"),room("","Salle zen","Salle"),room("","Circulation 3e étage","Circulation"),room("","Foyer internat 3e","Foyer")]},
 ]},
-{id:'E',name:'Bâtiment E',floors:[
- {name:'RDC',sectors:[{name:'Secteur principal',rooms:[...std(501),...common('RDC')]}]},
- {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(511),...common('1er étage')]}]},
- {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(521),...common('2e étage')]}]}
 ]},
-{id:'F',name:'Bâtiment F',floors:[
- {name:'RDC',sectors:[{name:'Secteur principal',rooms:[...std(601),...common('RDC')]}]},
- {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(611),...common('1er étage')]}]},
- {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(621),...common('2e étage')]}]}
+{id:"B",name:"Bâtiment B",floors:[
+{name:"RDC",sectors:[
+{name:"Vie scolaire / espaces communs",rooms:[room("","Vie scolaire","Local"),room("","Foyer","Foyer"),room("","Salle de musique","Salle"),room("","Salle d’étude 1","Salle"),room("","Salle d’étude 2","Salle"),room("","Salle polyvalente","Salle"),room("","Sanitaires RDC","Sanitaires"),room("","Circulation RDC","Circulation"),room("","Escalier central","Escalier")]},
 ]},
-{id:'ALG',name:'Algeco',floors:[{name:'Locaux',sectors:[{name:'Algeco',rooms:[room('1','Algeco 1','Local'),room('2','Algeco 2','Local'),room('3','Algeco 3','Local'),room('4','Algeco 4','Local'),room('5','Algeco 5','Local'),room('6','Algeco 6','Local')]}]}]},
-{id:'EXT',name:'Extension',floors:[{name:'Locaux',sectors:[{name:'Extension',rooms:[room('','Local extension','Local'),room('','Sanitaires','Sanitaires'),room('','Circulation','Circulation')]}]}]}
+{name:"1er étage",sectors:[
+{name:"Secteur principal",rooms:[room("211","","Salle"),room("212","","Salle"),room("213","","Salle"),room("CDI","","Salle"),room("INFOR CDI","","Salle de classe"),room("","Sanitaires 1er étage","Sanitaires"),room("","Circulation 1er étage","Circulation"),room("","Escalier central","Escalier")]},
+]},
+{name:"2e étage",sectors:[
+{name:"Secteur principal",rooms:[room("221","","Salle"),room("222","","Salle"),room("223","","Salle"),room("224","","Salle"),room("225","","Salle"),room("226","","Salle"),room("LABORATOIRE","","Salle"),room("COLLECTION","","Salle"),room("MENAGE","","Salle"),room("","Sanitaires 2e étage","Sanitaires"),room("","Circulation 2e étage","Circulation"),room("","Escalier central","Escalier")]},
+]},
+{name:"3e étage",sectors:[
+{name:"Secteur principal",rooms:[room("331","","Salle"),room("332","","Salle"),room("333","","Salle"),room("334","","Salle"),room("335","","Salle"),room("336","","Salle"),room("LABORATOIRE","","Salle"),room("COLLECTION","","Salle"),room("","Sanitaires RDC","Sanitaires"),room("","Circulation RDC","Circulation")]},
+]},
+{name:"4e  etage",sectors:[
+{name:"Secteur principal",rooms:[room("411","","Salle"),room("412","","Salle"),room("413","","Salle"),room("414","","Salle"),room("415","","Salle"),room("416","","Salle"),room("LABORATOIRE","","Salle"),room("COLLECTION","","Salle"),room("BUREAU","","Bureau"),room("","Sanitaires 4e étage","Sanitaires"),room("","Circulation 4e étage","Circulation")]},
+]},
+]},
+{id:"H",name:"Bâtiment H",floors:[
+{name:"2e étage",sectors:[
+{name:"Secteur principal",rooms:[room("321","","Salle"),room("322","","Salle"),room("323","","Salle"),room("324","","Salle"),room("325","","Salle"),room("326","","Salle"),room("327","","Salle"),room("328","","Salle"),room("329","","Salle")]},
+]},
+]},
+{id:"G",name:"Bâtiment G",floors:[
+{name:"RDC",sectors:[
+{name:"Secteur principal",rooms:[room("400","","Salle"),room("BUREAU INTENDANCE","","Bureau"),room("ADMINISTRATION","","Bureau")]},
+]},
+{name:"1er étage",sectors:[
+{name:"Secteur principal",rooms:[room("411","","Salle"),room("412","","Salle"),room("413","","Salle")]},
+]},
+{name:"2e étage",sectors:[
+{name:"Secteur principal",rooms:[room("421","","Salle"),room("422","","Salle"),room("423","","Salle"),room("424","","Salle"),room("425","","Salle"),room("426","","Salle"),room("427","","Salle"),room("428","","Salle"),room("429","","Salle"),room("","Sanitaires 2e étage","Sanitaires"),room("","Circulation 2e étage","Circulation")]},
+]},
+]},
+{id:"E",name:"Bâtiment E",floors:[
+{name:"RDC",sectors:[
+{name:"Secteur principal",rooms:[room("501","","Salle"),room("502","","Salle")]},
+]},
+{name:"1er étage",sectors:[
+{name:"Secteur principal",rooms:[room("511","","Salle"),room("512","","Salle"),room("513","","Salle"),room("514","","Salle"),room("515","","Salle"),room("516","","Salle"),room("517","","Salle"),room("518","","Salle"),room("519","","Salle"),room("","Sanitaires 1er étage","Sanitaires"),room("","Circulation 1er étage","Circulation")]},
+]},
+{name:"2e étage",sectors:[
+{name:"Secteur principal",rooms:[room("521","","Salle"),room("522","","Salle"),room("523","","Salle"),room("524","","Salle"),room("525","","Salle"),room("526","","Salle"),room("527","","Salle"),room("528","","Salle"),room("529","","Salle"),room("","Sanitaires 2e étage","Sanitaires"),room("","Circulation 2e étage","Circulation")]},
+]},
+]},
+{id:"F",name:"Bâtiment F",floors:[
+{name:"RDC",sectors:[
+{name:"Secteur principal",rooms:[room("601","","Salle"),room("602","","Salle"),room("603","","Salle"),room("604","","Salle"),room("605","","Salle"),room("606","","Salle"),room("607","","Salle"),room("608","","Salle"),room("609","","Salle"),room("","Sanitaires RDC","Sanitaires"),room("","Circulation RDC","Circulation")]},
+]},
+{name:"1er étage",sectors:[
+{name:"Secteur principal",rooms:[room("611","","Salle"),room("612","","Salle"),room("613","","Salle"),room("614","","Salle"),room("615","","Salle"),room("616","","Salle"),room("617","","Salle"),room("618","","Salle"),room("619","","Salle"),room("","Sanitaires 1er étage","Sanitaires"),room("","Circulation 1er étage","Circulation")]},
+]},
+{name:"2e étage",sectors:[
+{name:"Secteur principal",rooms:[room("621","","Salle"),room("622","","Salle"),room("623","","Salle"),room("624","","Salle"),room("625","","Salle"),room("626","","Salle"),room("627","","Salle"),room("628","","Salle"),room("629","","Salle"),room("","Sanitaires 2e étage","Sanitaires"),room("","Circulation 2e étage","Circulation")]},
+]},
+]},
+{id:"ALG",name:"Algeco",floors:[
+{name:"Locaux",sectors:[
+{name:"Algeco",rooms:[room("1","Algeco 1","Local"),room("2","Algeco 2","Local"),room("3","Algeco 3","Local"),room("4","Algeco 4","Local"),room("5","Algeco 5","Local"),room("6","Algeco 6","Local")]},
+]},
+]},
+{id:"EXT",name:"Extension",floors:[
+{name:"Locaux",sectors:[
+{name:"Extension",rooms:[room("","Local extension","Local"),room("","Sanitaires","Sanitaires"),room("","Circulation","Circulation")]},
+]},
+]},
 ];
 
 let data=load();
@@ -62,6 +100,7 @@ function save(redraw=true){
    const main=window.PSTMainState?.get?.();
    if(main){
      main.cleaningRoomsConfig=clone(data);
+     main.cleaningRoomsConfigVersion=CONFIG_VERSION;
      window.PSTMainState?.save?.(false);
    }
  }catch(e){console.warn('Synchronisation configuration des salles',e)}
@@ -395,12 +434,23 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 function syncRoomsFromMain(){
  try{
    const main=window.PSTMainState?.get?.();
-   if(Array.isArray(main?.cleaningRoomsConfig)&&main.cleaningRoomsConfig.length){
+   if(!main)return;
+   if(String(main.cleaningRoomsConfigVersion||'')!==CONFIG_VERSION){
+     data=clone(DEF);
+     localStorage.setItem(KEY,JSON.stringify(data));
+     main.cleaningRoomsConfig=clone(data);
+     main.cleaningRoomsConfigVersion=CONFIG_VERSION;
+     window.PSTMainState?.save?.(false);
+     renderSettings();renderBuildings();renderHistory();
+     return;
+   }
+   if(Array.isArray(main.cleaningRoomsConfig)&&main.cleaningRoomsConfig.length){
      data=clone(main.cleaningRoomsConfig);
      localStorage.setItem(KEY,JSON.stringify(data));
      renderSettings();renderBuildings();renderHistory();
-   }else if(main){
+   }else{
      main.cleaningRoomsConfig=clone(data);
+     main.cleaningRoomsConfigVersion=CONFIG_VERSION;
      window.PSTMainState?.save?.(false);
    }
  }catch(e){console.warn('Chargement configuration salles Supabase',e)}
