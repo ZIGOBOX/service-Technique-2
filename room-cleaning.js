@@ -24,7 +24,8 @@ const DEF=[
   room('','Sanitaires RDC','Sanitaires'),room('','Circulation RDC','Circulation'),room('','Escalier central','Escalier')]}]},
  {name:'1er étage',sectors:[{name:'Secteur principal',rooms:[...std(211),room('','Sanitaires 1er étage','Sanitaires'),room('','Circulation 1er étage','Circulation'),room('','Escalier central','Escalier')]}]},
  {name:'2e étage',sectors:[{name:'Secteur principal',rooms:[...std(221),room('','Sanitaires 2e étage','Sanitaires'),room('','Circulation 2e étage','Circulation'),room('','Escalier central','Escalier')]}]},
- {name:'3e étage',sectors:[{name:'Secteur principal',rooms:[...std(231),room('','Sanitaires 3e étage','Sanitaires'),room('','Circulation 3e étage','Circulation'),room('','Escalier central','Escalier')]}]}
+ {name:'3e étage',sectors:[{name:'Secteur principal',rooms:[...std(231),room('','Sanitaires 3e étage','Sanitaires'),room('','Circulation 3e étage','Circulation'),room('','Escalier central','Escalier')]}]},
+ {name:'4e étage',sectors:[{name:'Secteur principal',rooms:[...std(241),room('','Sanitaires 4e étage','Sanitaires'),room('','Circulation 4e étage','Circulation'),room('','Escalier central','Escalier')]}]}
 ]},
 {id:'H',name:'Bâtiment H',floors:[
  {name:'RDC',sectors:[{name:'Secteur principal',rooms:[...std(301),...common('RDC')]}]},
@@ -58,10 +59,8 @@ function mainDb(){return window.PSTMainState?.get?.()||null}
 function migrateRoomConfig(source){
  const out=clone(Array.isArray(source)&&source.length?source:DEF);
  const b=out.find(x=>String(x.name||'').toLowerCase().includes('bâtiment b')||String(x.id||'')==='B');
- if(b&&!b.floors?.some(f=>String(f.name||'').toLowerCase().includes('3e'))){
-   b.floors=b.floors||[];
-   b.floors.push(clone(DEF.find(x=>x.id==='B').floors.find(f=>f.name==='3e étage')));
- }
+ const defB=DEF.find(x=>x.id==='B');
+ if(b&&defB){b.floors=b.floors||[];for(const wanted of ['1er étage','2e étage','3e étage','4e étage'])if(!b.floors.some(f=>f.name===wanted)){const src=defB.floors.find(f=>f.name===wanted);if(src)b.floors.push(clone(src))}}
  return out;
 }
 function load(){const d=mainDb();return migrateRoomConfig(Array.isArray(d?.cleaningRoomsConfig)&&d.cleaningRoomsConfig.length?d.cleaningRoomsConfig:DEF)}

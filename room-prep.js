@@ -75,15 +75,18 @@ async function deletePrep(id){
  const d=mainDb();
  const v=d&&Array.isArray(d.roomPreps)?d.roomPreps.find(x=>String(x.id)===String(id)):null;if(!v||v.deletedAt)return;
  if(!confirm(`Supprimer la demande ${v.room||'salle / café'} du ${fmtDate(v.date)} ?`))return;
- // IMPORTANT : on conserve une pierre tombale synchronisable au lieu de retirer l'objet.
- // Cela empêche une ancienne copie PC/Android/Supabase de recréer la fiche après fusion.
- const stamp=new Date().toISOString();
- v.deletedAt=stamp;v.updatedAt=stamp;v.deletedByDevice=true;
- render();try{window.dispatchEvent(new Event('pst:data-saved'))}catch(_){}
- const result=await persistRoomPrep();
- if(String(editingId)===String(id))reset();
- if(result?.ok)notify(result.offline?'Préparation supprimée hors ligne — synchronisation automatique au retour d’Internet.':'Préparation supprimée et synchronisée.',result.offline?'offline':'ok');
- else notify('Suppression en attente : synchronisation serveur non confirmée.','error');
+ const stamp=new Date().toISOString();v.deletedAt=stamp;v.updatedAt=stamp;v.deletedByDevice=true;
+ const wasEditing=String(editingId)===String(id);
+ if(wasEditing)reset();else render();
+ notify(navigator.onLine?'Suppression en cours…':'Suppression enregistrée hors ligne — en attente de synchronisation.','loading');
+ try{
+   const timeout=new Promise(resolve=>setTimeout(()=>resolve({ok:true,offline:true,pending:true}),8000));
+   const result=await Promise.race([persistRoomPrep(),timeout]);
+   render();try{window.dispatchEvent(new Event('pst:data-saved'))}catch(_){}
+   if(result?.pending)notify('Préparation supprimée. Synchronisation serveur en cours…','offline');
+   else if(result?.ok)notify(result.offline?'Préparation supprimée hors ligne — synchronisation automatique au retour d’Internet.':'Préparation supprimée et synchronisée.',result.offline?'offline':'ok');
+   else notify('Préparation supprimée sur cet appareil — synchronisation à confirmer.','error');
+ }catch(e){console.error(e);notify('Préparation supprimée sur cet appareil — synchronisation à confirmer.','error')}
 }
 function printPrep(id){
  const v=load().find(x=>String(x.id)===String(id));if(!v)return;
