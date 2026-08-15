@@ -327,14 +327,12 @@
     db.pdfImports.push({id:uid(),kind:'chronotime',createdAt:new Date().toISOString(),fileName:p.file.name,fileSize:p.file.size,fileHash:chronoDup.fileHash||'',attachmentId:attachment?.id||'',subject:agentName(agentById(aid)),academicYear:p.academicYear,summary:`${p.records.length}/${p.expectedDays||p.records.length} jours · infos ${p.infoCoverage||0}% · ${absences} absences · ${Object.entries(p.codeCounts||{}).map(([k,v])=>`${k} ${v}`).join(' · ')} · présence ${minutesToDuration(p.totals.presence)} · réf. ${minutesToDuration(p.totals.reference)} · Δ ${minutesToDuration(p.totals.delta)}${p.missingInfo?.length?` · manquant : ${p.missingInfo.join(', ')}`:''}`});
     db.importArchives=db.importArchives||[];const lastChrono=db.pdfImports[db.pdfImports.length-1];const chronoArchive={id:uid(),sourceId:lastChrono.id,createdAt:lastChrono.createdAt,type:'Chronotime',fileName:lastChrono.fileName,fileHash:lastChrono.fileHash||'',attachmentId:lastChrono.attachmentId,subject:lastChrono.subject,academicYear:lastChrono.academicYear,summary:lastChrono.summary,module:'pdfimports',analysisSnapshot:{type:'Chronotime',fileName:lastChrono.fileName,subject:lastChrono.subject,academicYear:p.academicYear,period:`${p.start||''} → ${p.end||''}`,daysRead:p.records.length,daysExpected:p.expectedDays||p.records.length,durationDays:p.durationDays||0,presence:minutesToDuration(p.totals.presence).replace(/^\+/,''),reference:minutesToDuration(p.totals.reference).replace(/^\+/,''),delta:minutesToDuration(p.totals.delta),ca:p.codeCounts?.CA||0,rtt:p.codeCounts?.RTT||0,rh:p.codeCounts?.RH||0,rfe:p.codeCounts?.RFE||0,confidence:p.confidence||0,informationCoverage:p.infoCoverage||0,calendarCoverage:p.coverage||0,missingInfo:[...(p.missingInfo||[])],codeCounts:{...(p.codeCounts||{})},monthly:p.monthly||{},totalSources:p.totalSources||{},typeChanges:importChanges.map(x=>({...x})),records:p.records.map(r=>({date:r.date,value:r.value,duration:r.duration}))}};db.importArchives.push(chronoArchive);if(attachment)window.PSTImportOriginals?.remember?.(chronoArchive,attachment);
     status('chronoImportStatus','Enregistrement Chronotime dans Supabase…','working');
-    const persisted=window.PSTMainState?.persistNow
-      ? await window.PSTMainState.persistNow()
-      : {ok:save(false),offline:!navigator.onLine};
+    const persisted=window.PSTMainState?.persistChronotimeDirect
+      ? await window.PSTMainState.persistChronotimeDirect(importId)
+      : (window.PSTMainState?.persistNow ? await window.PSTMainState.persistNow() : {ok:save(false),offline:false});
     renderCodeMap();renderHistory();renderDashboard();
     if(persisted?.ok&&!persisted?.offline){
-      const verify=window.PSTMainState?.verifyChronotimeImport
-        ? await window.PSTMainState.verifyChronotimeImport(importId)
-        : {ok:false,found:false};
+      const verify={ok:true,found:persisted?.found===true};
       if(!verify?.found){
         status('chronoImportStatus','❌ Supabase a répondu, mais le nouvel import Chronotime n’est pas retrouvé après relecture. Il reste protégé localement : ne rechargez pas la page et réessayez la synchronisation.','error');
         toast?.('Chronotime non retrouvé après relecture Supabase');

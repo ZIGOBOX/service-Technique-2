@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.6';
+const APP_VERSION='147.7';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -443,6 +443,33 @@ window.PSTMainState={
    const ok=await cloudSaveNow({silent:false,mergeRemote:true});
    return {ok:!!ok,offline:!ok};
  },
+  persistChronotimeDirect:async(importId)=>{
+    if(!supabaseClient||!currentUser)return {ok:false,offline:false,error:'Client Supabase ou utilisateur non disponible.'};
+    const timeoutMs=15000;
+    const withTimeout=(promise,label)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(`${label} : délai dépassé après 15 s`)),timeoutMs))]);
+    try{
+      localDirty=true;
+      setSaveState('Chronotime : écriture directe Supabase…','loading');
+      const payload=migrate(deepClone(db)), nowIso=new Date().toISOString();
+      const write=await withTimeout(supabaseClient.from('app_state').upsert({user_id:currentUser.id,data:payload,updated_at:nowIso},{onConflict:'user_id'}).select('updated_at').single(),'Écriture Supabase');
+      if(write?.error)throw write.error;
+      setSaveState('Chronotime : relecture de contrôle…','loading');
+      const read=await withTimeout(supabaseClient.from('app_state').select('data,updated_at').eq('user_id',currentUser.id).single(),'Relecture Supabase');
+      if(read?.error)throw read.error;
+      const remote=migrate(read?.data?.data||{}), id=String(importId||'');
+      const found=(remote.pdfImports||[]).some(x=>String(x.id||'')===id)||(remote.chronotimeAnnual||[]).some(x=>String(x.id||'')===id||String(x.sourceId||'')===id);
+      if(!found)throw new Error('Écriture réussie mais nouvel import absent lors de la relecture Supabase.');
+      lastCloudData=deepClone(remote); lastCloudUpdatedAt=read?.data?.updated_at||nowIso; lastCloudError=''; localDirty=false; cloudReady=true;
+      clearOfflinePending(); writeMirror();
+      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+      return {ok:true,offline:false,found:true};
+    }catch(error){
+      lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue'; localDirty=true; writeOfflinePending(lastCloudError);
+      setSaveState(`Erreur Supabase : ${lastCloudError}`,'error');
+      console.error('Chronotime direct Supabase',error);
+      return {ok:false,offline:false,error:lastCloudError};
+    }
+  },
   verifyChronotimeImport:async(importId)=>{
     if(!supabaseClient||!currentUser)return {ok:false,found:false};
     try{

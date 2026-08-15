@@ -1,0 +1,7 @@
+V147.7 — 15/08/2026
+- Chronotime utilise une écriture Supabase directe dédiée.
+- Timeout explicite 15 s pour écriture et relecture.
+- Relecture immédiate et contrôle de l'ID importé.
+- Affichage de l'erreur Supabase réelle.
+- Blocage d'un doublon rapproché du même import.
+- Aucun changement OneDrive.
