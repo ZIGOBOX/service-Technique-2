@@ -1,0 +1,7 @@
+V147.21 — 15/08/2026
+- Ajout du bouton « Permanence » directement sur chaque carte agent.
+- Position : à côté de « Horaires annuels » et « Roulement ».
+- Clic => fenêtre dédiée Début / Fin / Pause.
+- Enregistrement sur l'agent.
+- Recalcul immédiat des permanences Chronotime déjà importées.
+- Les champs restent également disponibles dans Modifier l'agent.

@@ -1,0 +1,13 @@
+V147.20 — 15/08/2026
+
+Correction visibilité horaire de permanence :
+- les champs sont maintenant intégrés DIRECTEMENT dans le vrai formulaire « Modifier l'agent » ;
+- Début permanence ;
+- Fin permanence ;
+- Pause permanence (minutes) ;
+- sauvegarde dans la fiche agent et Supabase via la sauvegarde générale ;
+- recalcul immédiat des permanences Chronotime déjà importées après modification ;
+- affichage de l'horaire de permanence sur la carte agent pour contrôle ;
+- suppression de l'ancien mécanisme V147.19 qui tentait d'ajouter les champs après ouverture du formulaire et ne trouvait pas le formulaire réel.
+
+La détection automatique Chronotime pendant les vacances scolaires reste active.

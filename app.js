@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.19';
+const APP_VERSION='147.21';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1337,17 +1337,49 @@ function dayHours(info){
 function agentState(agent,date=todayISO()){const info=dayInfo(agent.id,date);if(isAbsenceType(info.dayType)||info.dayType==='Repos')return {label:info.dayType,kind:'absent',info};if(info.dayType==='Formation')return {label:'Formation',kind:'info',info};if(!info.plannedStart||!info.plannedEnd)return {label:'Non planifié',kind:'info',info};return {label:`${info.plannedStart}–${info.plannedEnd}`,kind:'present',info}}
 
 /* ---------- Formulaires agents / planning ---------- */
+
+function openAgentPermanence(agentId){
+ const agent=byId('agents',agentId);if(!agent)return;
+ const p=permanenceScheduleForAgent(agentId);
+ openModal(`Horaire de permanence — ${agentName(agent)}`,`<div class="form-grid">
+   <div class="span2 permanence-info"><strong>🟠 Horaire unique de permanence</strong><p class="hint">Cet horaire sera utilisé automatiquement pour les journées travaillées détectées par Chronotime pendant les vacances scolaires.</p></div>
+   ${field('Début','permanenceStart',p.start||'','time','required')}
+   ${field('Fin','permanenceEnd',p.end||'','time','required')}
+   ${field('Pause (minutes)','permanencePause',p.pause||0,'number','min="0" step="5"')}
+ </div>`,async form=>{
+   agent.permanenceSchedule={
+     start:String(form.elements.permanenceStart.value||'').trim(),
+     end:String(form.elements.permanenceEnd.value||'').trim(),
+     pause:Number(form.elements.permanencePause.value||0)
+   };
+   agent.permanenceStart=agent.permanenceSchedule.start;
+   agent.permanenceEnd=agent.permanenceSchedule.end;
+   agent.permanencePause=agent.permanenceSchedule.pause;
+   syncStoredChronotimePastilles();
+   closeModal();save();safeRenderAll();
+   toast(`✅ Permanence ${agent.permanenceSchedule.start}–${agent.permanenceSchedule.end} enregistrée`);
+ });
+}
+
 function openAgent(id){
  const old=id?byId('agents',id):null;
  const x=old||{id:uid(),no:nextNo('agent','AGT'),firstName:'',lastName:'',role:db.lists.roles[0],weeklyHours:35,email:'',phone:'',assignment:'',status:'Actif',arrivalDate:'',workdays:[1,2,3,4,5],notes:'',attachments:[]};
  x.attachments=x.attachments||[];x.workdays=Array.isArray(x.workdays)&&x.workdays.length?x.workdays.map(Number):[1,2,3,4,5];
  const dayLabels=[['Lundi',1],['Mardi',2],['Mercredi',3],['Jeudi',4],['Vendredi',5],['Samedi',6],['Dimanche',0]];
- openModal(old?'Modifier l’agent':'Nouvel agent',`<div class="form-grid">${field('Prénom','firstName',x.firstName,'text','required')}${field('Nom','lastName',x.lastName)}<label>Fonction<select name="role">${selectOptions(db.lists.roles,x.role)}</select></label>${field('Temps hebdomadaire (h)','weeklyHours',x.weeklyHours,'number','min="0" step="0.25"')}${field('Téléphone','phone',x.phone,'tel')}${field('E-mail','email',x.email,'email')}${field('Affectation principale','assignment',x.assignment)}<label>Statut<select name="status">${selectOptions(['Actif','Inactif'],x.status)}</select></label>${field('Date d’arrivée','arrivalDate',x.arrivalDate,'date')}<fieldset class="span2"><legend>Jours travaillés habituels</legend><p class="hint">Par défaut : lundi à vendredi. Décoche un jour pour qu'il apparaisse automatiquement en Repos.</p>${dayLabels.map(([label,d])=>`<label class="inline-check"><input type="checkbox" name="agentWorkday" value="${d}" ${x.workdays.includes(d)?'checked':''}>${label}</label>`).join('')}</fieldset>${textareaField('Notes','notes',x.notes)}${attachmentField(x.attachments)}</div>`,async form=>{
+ openModal(old?'Modifier l’agent':'Nouvel agent',`<div class="form-grid">${field('Prénom','firstName',x.firstName,'text','required')}${field('Nom','lastName',x.lastName)}<label>Fonction<select name="role">${selectOptions(db.lists.roles,x.role)}</select></label>${field('Temps hebdomadaire (h)','weeklyHours',x.weeklyHours,'number','min="0" step="0.25"')}${field('Téléphone','phone',x.phone,'tel')}${field('E-mail','email',x.email,'email')}${field('Affectation principale','assignment',x.assignment)}<label>Statut<select name="status">${selectOptions(['Actif','Inactif'],x.status)}</select></label>${field('Date d’arrivée','arrivalDate',x.arrivalDate,'date')}<fieldset class="span2 permanence-config"><legend>🟠 Horaire de permanence</legend><p class="hint">Horaire fixe utilisé automatiquement lorsque Chronotime détecte une journée travaillée pendant les vacances scolaires.</p><div class="form-grid">${field('Début permanence','permanenceStart',x.permanenceSchedule?.start||x.permanenceStart||'','time')}${field('Fin permanence','permanenceEnd',x.permanenceSchedule?.end||x.permanenceEnd||'','time')}${field('Pause permanence (min)','permanencePause',x.permanenceSchedule?.pause??x.permanencePause??0,'number','min="0" step="5"')}</div></fieldset><fieldset class="span2"><legend>Jours travaillés habituels</legend><p class="hint">Par défaut : lundi à vendredi. Décoche un jour pour qu'il apparaisse automatiquement en Repos.</p>${dayLabels.map(([label,d])=>`<label class="inline-check"><input type="checkbox" name="agentWorkday" value="${d}" ${x.workdays.includes(d)?'checked':''}>${label}</label>`).join('')}</fieldset>${textareaField('Notes','notes',x.notes)}${attachmentField(x.attachments)}</div>`,async form=>{
    Object.assign(x,formDataObj(form),{weeklyHours:Number(form.elements.weeklyHours.value||0),workdays:[...form.querySelectorAll('[name="agentWorkday"]:checked')].map(e=>Number(e.value))});
+   x.permanenceSchedule={
+     start:String(form.elements.permanenceStart?.value||'').trim(),
+     end:String(form.elements.permanenceEnd?.value||'').trim(),
+     pause:Number(form.elements.permanencePause?.value||0)
+   };
+   x.permanenceStart=x.permanenceSchedule.start;
+   x.permanenceEnd=x.permanenceSchedule.end;
+   x.permanencePause=x.permanenceSchedule.pause;
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(!old){db.agents.push(x);db.rotations.push({id:uid(),no:nextNo('rotation','RLT'),agentId:x.id,effectiveFrom:startOfWeek(todayISO()),effectiveTo:'',startShift:'Matin',morningWeeks:2,eveningWeeks:2,morningStart:'06:00',morningEnd:'13:30',eveningStart:'13:00',eveningEnd:'20:30',pause:30,weekdays:[...x.workdays],notes:''})}
    else{for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
-   closeModal();save();toast('Agent enregistré');
+   syncStoredChronotimePastilles();closeModal();save();toast('Agent enregistré — horaire de permanence mis à jour');
  },{onDelete:old?()=>deleteRecord('agents',x.id,'agent'):null})
 }
 function applyWeekendRestToAll(){
@@ -1618,7 +1650,7 @@ function calendarDayVisual(info){
 function renderAbsenceBoard(){const month=$('#absenceMonth').value||monthISO(),[y,m]=month.split('-').map(Number),count=new Date(y,m,0).getDate(),agents=db.agents.filter(a=>a.status==='Actif'),gridWidth=150+(count*42);let html=`<div class="month-grid" style="grid-template-columns:150px repeat(${count},42px);min-width:${gridWidth}px"><div class="month-corner">Agent</div>`+Array.from({length:count},(_,i)=>{const d=`${month}-${pad(i+1)}`;return `<div class="month-day-head ${[0,6].includes(parseDate(d).getDay())?'weekend':''}">${i+1}</div>`}).join('');for(const a of agents){html+=`<div class="month-agent">${esc(agentName(a))}</div>`;for(let i=1;i<=count;i++){const d=`${month}-${pad(i)}`,info=dayInfo(a.id,d),v=calendarDayVisual(info),hours=info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:'';html+=`<button class="month-cell day-state ${v.cls}" ${v.color?`style="background:${esc(v.color)}!important"`:``} data-agent-day="${a.id}" data-date="${d}" data-day-type="${esc(info.dayType||'Présence')}" title="${fmtDate(d)} — ${esc(v.label)}${esc(hours)}"><span>${v.code}</span></button>`}}html+='</div>';$('#absenceMonthBoard').innerHTML=html}
 
 /* ---------- Rendu : modules ---------- */
-function renderAgents(){const q=($('#agentSearch').value||'').toLowerCase(),status=$('#agentStatus').value;const arr=db.agents.filter(a=>(!status||a.status===status)&&(!q||agentName(a).toLowerCase().includes(q)||String(a.assignment).toLowerCase().includes(q)));$('#agentCards').innerHTML=cardList(arr.map(a=>{const state=agentState(a),month=$('#planningMonth').value||monthISO(),rows=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)),absence=rows.filter(x=>isAbsenceType(x.dayType)).length,ot=rows.reduce((s,x)=>s+Number(x.overtime||0),0);return `<article class="agent-card"><div class="agent-avatar">${esc((a.firstName||'?')[0])}</div><div class="agent-main"><div class="panel-head"><h3>${esc(agentName(a))}</h3>${badge(a.status)}</div><p>${esc(a.role)} · ${esc(a.assignment||'Sans affectation')}</p><div class="agent-stats"><span>${badge(state.label)}</span><span>${esc(a.weeklyHours)} h/semaine</span><span>${absence} absence(s) ce mois</span><span>${ot>=0?'+':''}${ot} h supp.</span></div><div class="card-actions"><button type="button" data-edit-type="agent" data-edit-id="${a.id}">Modifier</button><button data-new-weekly-agent="${a.id}">Horaires annuels</button><button data-new-rotation-agent="${a.id}">Roulement</button><button data-agent-day="${a.id}" data-date="${todayISO()}">Signaler un écart</button></div></div></article>`}),'Aucun agent trouvé.')}
+function renderAgents(){const q=($('#agentSearch').value||'').toLowerCase(),status=$('#agentStatus').value;const arr=db.agents.filter(a=>(!status||a.status===status)&&(!q||agentName(a).toLowerCase().includes(q)||String(a.assignment).toLowerCase().includes(q)));$('#agentCards').innerHTML=cardList(arr.map(a=>{const state=agentState(a),month=$('#planningMonth').value||monthISO(),rows=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)),absence=rows.filter(x=>isAbsenceType(x.dayType)).length,ot=rows.reduce((s,x)=>s+Number(x.overtime||0),0);return `<article class="agent-card"><div class="agent-avatar">${esc((a.firstName||'?')[0])}</div><div class="agent-main"><div class="panel-head"><h3>${esc(agentName(a))}</h3>${badge(a.status)}</div><p>${esc(a.role)} · ${esc(a.assignment||'Sans affectation')}</p><div class="agent-stats"><span>${badge(state.label)}</span><span>${esc(a.weeklyHours)} h/semaine</span>${(()=>{const p=permanenceScheduleForAgent(a.id);return p.start&&p.end?`<span class="perm-summary">🟠 Permanence ${esc(p.start)}–${esc(p.end)}</span>`:''})()}<span>${absence} absence(s) ce mois</span><span>${ot>=0?'+':''}${ot} h supp.</span></div><div class="card-actions"><button type="button" data-edit-type="agent" data-edit-id="${a.id}">Modifier</button><button data-new-weekly-agent="${a.id}">Horaires annuels</button><button data-permanence-agent="${a.id}" class="permanence-button">Permanence</button><button data-new-rotation-agent="${a.id}">Roulement</button><button data-agent-day="${a.id}" data-date="${todayISO()}">Signaler un écart</button></div></div></article>`}),'Aucun agent trouvé.')}
 function rotationPilotageSummary(agentId,shift,r){
  const labels=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],days=(r.weekdays||[1,2,3,4,5]).map(Number),rows=[];
  for(const wd of days){const p=exactWeeklyProfile(agentId,shift,wd,r.effectiveFrom);if(p?.start&&p?.end)rows.push({wd,start:p.start,end:p.end})}
@@ -2530,7 +2562,7 @@ $('#archiveNow').onclick=()=>{const made=createWeeklyArchive(false);save();toast
  else if(source==='roomprep'){setView('room-prep');setTimeout(()=>window.PSTRoomPrep?.edit?.(id),60)}
  else if(source==='waste')setView('waste');
  return
-}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date,null,ad.dataset.dayType||'');return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
+}const perm=e.target.closest('[data-permanence-agent]');if(perm){openAgentPermanence(perm.dataset.permanenceAgent);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date,null,ad.dataset.dayType||'');return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
 }
 
 
@@ -2863,32 +2895,4 @@ window.addEventListener('pst:academic-year-changed',()=>{
 
 
 
-function ensurePermanenceAgentFields(){
-  const forms=document.querySelectorAll('#agents form,.agent-form,#agentForm');
-  forms.forEach(form=>{
-    if(form.querySelector('[data-permanence-fields]'))return;
-    const agentId=form.dataset.agentId||form.querySelector('[name="id"]')?.value||'';
-    if(!agentId)return;
-    const agent=(db.agents||[]).find(x=>String(x.id)===String(agentId));
-    if(!agent)return;
-    const p=permanenceScheduleForAgent(agentId);
-    const wrap=document.createElement('div');
-    wrap.dataset.permanenceFields='1';
-    wrap.className='permanence-agent-fields';
-    wrap.innerHTML=`<strong>Horaire de permanence</strong>
-      <label>Début <input type="time" data-perm="start" value="${esc(p.start)}"></label>
-      <label>Fin <input type="time" data-perm="end" value="${esc(p.end)}"></label>
-      <label>Pause (min) <input type="number" min="0" step="5" data-perm="pause" value="${p.pause||0}"></label>
-      <small>Utilisé automatiquement lorsqu'une présence Chronotime tombe pendant les vacances scolaires.</small>`;
-    form.appendChild(wrap);
-    wrap.querySelectorAll('[data-perm]').forEach(el=>el.addEventListener('change',()=>{
-      agent.permanenceSchedule=agent.permanenceSchedule||{};
-      agent.permanenceSchedule[el.dataset.perm]=el.dataset.perm==='pause'?Number(el.value||0):el.value;
-      syncStoredChronotimePastilles();
-      save(false);safeRenderAll();
-    }));
-  });
-}
-document.addEventListener('click',()=>setTimeout(ensurePermanenceAgentFields,50));
-window.addEventListener('pst:data-loaded',()=>setTimeout(ensurePermanenceAgentFields,50));
 
