@@ -1,0 +1,23 @@
+V147.19 — 15/08/2026
+
+JOURS DE PERMANENCE / CHRONOTIME
+
+Règle automatique :
+- l'année scolaire globale reste la référence ;
+- les vacances scolaires sont prises dans la zone scolaire configurée ;
+- une ligne Chronotime avec une durée de présence pendant une journée de vacances devient automatiquement « Permanence » ;
+- CA / RTT / RH / RFE restent prioritaires et conservent leurs pastilles ;
+- une présence Chronotime hors vacances reste une présence normale.
+
+Horaire de permanence :
+- chaque agent peut avoir un seul horaire fixe de permanence : début, fin et pause ;
+- cet horaire est réutilisé automatiquement pour toutes ses permanences ;
+- exemple : agent configuré 06:00-12:00 => toutes ses permanences sont planifiées 06:00-12:00 ;
+- la durée Chronotime sert à identifier que la journée est travaillée ; le planning utilise l'horaire de permanence configuré.
+
+Affichage :
+- nouveau type/pastille « Permanence » ;
+- couleur dédiée orange ;
+- synchronisation automatique des Chronotime déjà stockés et des futurs imports.
+
+Conservation des correctifs précédents : année scolaire globale, exports, CA/RTT/RH/RFE, scroll, salles, scanner et Supabase.

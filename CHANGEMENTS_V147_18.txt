@@ -1,0 +1,17 @@
+V147.18 — 15/08/2026
+
+EXPORTS SYNCHRONISÉS AVEC L'ANNÉE SCOLAIRE GLOBALE
+
+- Les exports Excel/CSV utilisent l'année scolaire sélectionnée en haut du tableau de bord.
+- Les lignes datées hors de la période scolaire active sont exclues des exports concernés.
+- Les exports de roulements, horaires, absences, interventions, incidents, nettoyage, demandes, travaux, réunions, documents et événements suivent la même année scolaire globale.
+- Les rapports PDF / impressions reprennent l'année scolaire globale dans leur contexte.
+- Les exports de sauvegarde/archives comportent également l'année scolaire active dans les métadonnées lorsque possible.
+- L'année des contrôles périodiques exportés est alignée sur le début de l'année scolaire active.
+- Conservation de toutes les corrections V147.17.
+
+Exemple :
+Année scolaire en haut = 2026-2027
+=> exports concernés = données comprises entre 01/09/2026 et 31/08/2027.
+
+Aucune modification de la logique état des agents du tableau de bord.

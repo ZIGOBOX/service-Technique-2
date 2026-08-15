@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.17';
+const APP_VERSION='147.19';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1164,6 +1164,64 @@ function dayTypeOptions(current=''){
 // V147.11 — Reconstruit les pastilles du planning à partir des Chronotime déjà injectés.
 // Cela permet aux anciens CA / RTT / RH / RFE / maladie / formation de réapparaître
 // dans le roulement annuel, sans modifier la logique d'état des agents du tableau de bord.
+
+// V147.19 — Permanences pendant les vacances scolaires.
+// Chronotime fait foi : une durée de présence pendant une date de vacances = permanence.
+function permanenceScheduleForAgent(agentId){
+  const agent=(db.agents||[]).find(x=>String(x.id)===String(agentId))||{};
+  const p=agent.permanenceSchedule||{};
+  return {
+    start:String(p.start||agent.permanenceStart||'').trim(),
+    end:String(p.end||agent.permanenceEnd||'').trim(),
+    pause:Number(p.pause??agent.permanencePause??0)||0
+  };
+}
+function dateIsSchoolVacation(date){
+  if(!date)return false;
+  const active=activeAcademicYear();
+  const range=academicYearRange(active);
+  if(date<range.start||date>range.end)return false;
+  return (db.vacations||[]).some(v=>{
+    if(!v?.start||!v?.end)return false;
+    const zoneOk=!v.zone||v.zone==='Toutes'||v.zone===(db.settings?.vacationZone||$('#vacationZone')?.value||'Zone A');
+    return zoneOk&&date>=v.start&&date<=v.end;
+  });
+}
+function upsertChronotimePermanence(c){
+  if(!c?.agentId||!c?.date||!dateIsSchoolVacation(c.date))return 0;
+  if(c.durationMinutes===null||c.durationMinutes===undefined)return 0;
+  db.agentDays=Array.isArray(db.agentDays)?db.agentDays:[];
+  const sched=permanenceScheduleForAgent(c.agentId);
+  const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
+  let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
+
+  // Une saisie manuelle d'absence reste prioritaire.
+  if(day&&day.source!=='chronotime'&&!/Chronotime/i.test(String(day.note||''))&&day.dayType&&day.dayType!=='Présence'&&day.dayType!=='Permanence')return 0;
+
+  const values={
+    dayType:'Permanence',
+    plannedStart:sched.start,
+    plannedEnd:sched.end,
+    pause:sched.pause,
+    status:'Validée',
+    source:'chronotime',
+    chronotimeType:'Permanence',
+    note:`Permanence détectée par Chronotime pendant les vacances scolaires${c.sourceFile?' — '+c.sourceFile:''}`,
+    noReplacementNeeded:false
+  };
+  if(!day){
+    db.agentDays.push(Object.assign({
+      id:uid(),agentId:c.agentId,date:c.date,
+      actualStart:'',actualEnd:'',overtime:0,replacement:''
+    },values));
+    return 1;
+  }
+  const before=JSON.stringify([day.dayType,day.plannedStart,day.plannedEnd,day.pause,day.source]);
+  Object.assign(day,values);
+  const after=JSON.stringify([day.dayType,day.plannedStart,day.plannedEnd,day.pause,day.source]);
+  return before===after?0:1;
+}
+
 function syncStoredChronotimePastilles(){
   if(!Array.isArray(db.chronotimeDaily)||!db.chronotimeDaily.length)return 0;
   db.agentDays=Array.isArray(db.agentDays)?db.agentDays:[];
@@ -1184,8 +1242,12 @@ function syncStoredChronotimePastilles(){
 
   for(const c of db.chronotimeDaily){
     if(!c?.agentId||!c?.date)continue;
-    // Une durée est une présence ; seules les lignes codées créent une pastille.
-    if(c.durationMinutes!==null && c.durationMinutes!==undefined)continue;
+    // Une durée pendant les vacances scolaires = journée de permanence.
+    // Hors vacances, elle reste une présence normale et ne crée pas de pastille spéciale.
+    if(c.durationMinutes!==null && c.durationMinutes!==undefined){
+      changed+=upsertChronotimePermanence(c);
+      continue;
+    }
 
     const code=canonicalCode(c.value);
     // Pour les codes standards, le code GFI a priorité absolue sur un ancien dayType erroné.
@@ -1966,7 +2028,7 @@ function renderArchives(){renderImportArchives();const year=$('#archiveYear')?.v
 
 function archiveSection(title,rows,cols){if(!rows?.length)return `<section class="archive-readable-section"><h4>${esc(title)}</h4><div class="empty-state compact">Aucune donnée sur cette période.</div></section>`;return `<section class="archive-readable-section"><h4>${esc(title)} <span class="muted">(${rows.length})</span></h4><div class="archive-readable-list">${rows.map(r=>`<article class="archive-readable-item">${cols.map(c=>{const val=typeof c.value==='function'?c.value(r):r[c.value];return val!==undefined&&val!==null&&val!==''?`<div><small>${esc(c.label)}</small><strong>${esc(String(val))}</strong></div>`:''}).join('')}</article>`).join('')}</div></section>`}
 function openArchiveDetail(id){const a=db.archives.find(x=>x.id===id);if(!a)return;const d=a.data||{};$('#detailTitle').textContent=`Archive ${a.kind==='weekly'?a.key:a.academicYear}`;const sections=[archiveSection('Journées agents',d.agentDays,[{label:'Date',value:r=>fmtDate(r.date)},{label:'Agent',value:r=>agentName(r.agentId)},{label:'Type',value:'dayType'},{label:'Prévu',value:r=>r.startPlanned||r.plannedStart||''},{label:'Fin',value:r=>r.endPlanned||r.plannedEnd||''}]),archiveSection('Maintenance',d.maintenance,[{label:'N°',value:'no'},{label:'Date',value:r=>fmtDate(r.date)},{label:'Objet',value:'title'},{label:'Lieu',value:r=>[r.building,r.room].filter(Boolean).join(' · ')},{label:'Statut',value:'status'}]),archiveSection('Contrôles ménage',d.cleaning,[{label:'Date',value:r=>fmtDate(r.date)},{label:'Lieu',value:r=>[r.building,r.room].filter(Boolean).join(' · ')},{label:'Résultat',value:r=>r.result||r.status||''},{label:'Agent',value:r=>agentName(r.agentId)}]),archiveSection('Réunions',d.meetings,[{label:'Date',value:r=>fmtDate(r.date)},{label:'Objet',value:'title'},{label:'Lieu',value:'location'},{label:'Statut',value:'status'}]),archiveSection('Notes',d.notes,[{label:'Date',value:r=>fmtDate(r.date||r.dueDate)},{label:'Titre',value:r=>r.title||r.subject||''},{label:'Priorité',value:'priority'},{label:'Statut',value:'status'}]),archiveSection('Demandes',d.requests,[{label:'Date',value:r=>fmtDate(r.date)},{label:'Objet',value:r=>r.title||r.subject||''},{label:'Statut',value:'status'}]),archiveSection('Chantiers / travaux',d.works,[{label:'Date',value:r=>fmtDate(r.date||r.dueDate)},{label:'Objet',value:r=>r.title||r.subject||''},{label:'Statut',value:'status'}])].join('');$('#detailBody').innerHTML=`<div class="archive-readable-head"><p><strong>Période :</strong> ${fmtDate(a.start)} au ${fmtDate(a.end)}</p><div class="summary-grid">${Object.entries(a.summary||{}).map(([k,v])=>`<article><span>${esc(k)}</span><strong>${esc(v)}</strong></article>`).join('')}</div><div class="archive-detail-actions"><button class="ghost" onclick="window.print()">🖨 Imprimer</button></div></div>${sections}<details class="archive-tech-details"><summary>Données techniques de sauvegarde</summary><pre class="archive-json">${esc(JSON.stringify(a.data,null,2))}</pre></details>`;$('#detailModal').showModal()}
-function exportArchives(){downloadText(`archives-pilotage-${todayISO()}.json`,JSON.stringify(db.archives,null,2),'application/json')}
+function exportArchives(){const exportAcademicYear=activeAcademicYear();downloadText(`archives-pilotage-${todayISO()}.json`,JSON.stringify(db.archives,null,2),'application/json')}
 
 function collectUrgentDashboardActions(){
  const sources=[
@@ -2242,6 +2304,26 @@ function triggerDownloadBlob(name,blob){
 function downloadText(name,text,type='text/plain;charset=utf-8'){
  const blob=new Blob(['\ufeff',text],{type});return triggerDownloadBlob(name,blob);
 }
+
+function exportAcademicRange(){
+  return academicYearRange(activeAcademicYear());
+}
+function exportDateOfRecord(x){
+  return normalizeDateValue(
+    x?.date || x?.start || x?.dateFrom || x?.dueDate || x?.createdAt ||
+    x?.injectedAt || x?.reportDate || x?.effectiveFrom || x?.updatedAt || ''
+  );
+}
+function exportRecordInActiveAcademicYear(x){
+  const r=exportAcademicRange();
+  const d=exportDateOfRecord(x);
+  if(!d)return true;
+  return d>=r.start&&d<=r.end;
+}
+function exportRowsForAcademicYear(rows){
+  return (Array.isArray(rows)?rows:[]).filter(exportRecordInActiveAcademicYear);
+}
+
 function exportStyledExcel(module){
  const titles={agents:'Agents',agentDays:'Horaires, congés et absences',rotations:'Roulements',weeklyPlans:'Horaires hebdomadaires',cleaning:'Contrôles ménage',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers et GPA',meetings:'Réunions',issues:'Sécurité et qualité',periodic:'Contrôles périodiques',notes:'Bloc-notes',vacations:'Vacances',documents:'Documentation'};
  const map={agents:[['Prénom','firstName'],['Nom','lastName'],['Fonction','role'],['Heures / semaine','weeklyHours'],['Affectation','assignment'],['Statut','status']],agentDays:[['Date','date'],['Agent','agentId'],['Journée','dayType'],['Début prévu','plannedStart'],['Fin prévue','plannedEnd'],['Début réel','actualStart'],['Fin réelle','actualEnd'],['Pause','pause'],['Heures +/-','overtime'],['Statut','status'],['Note','note']],rotations:[['Agent','agentId'],['Date d’effet','effectiveFrom'],['Commence par','startShift'],['Semaines matin','morningWeeks'],['Semaines soir','eveningWeeks'],['Fin','effectiveTo'],['Notes','notes']],cleaning:[['N°','no'],['Date','date'],['Bâtiment','building'],['Étage','floor'],['Zone','roomType'],['Local','room'],['Agent','agentId'],['Score','score'],['Résultat','overallStatus'],['Commentaire','comment']],maintenance:[['N°','no'],['Date','date'],['Titre','title'],['Domaine','family'],['Priorité','priority'],['Statut','status'],['Lieu','room'],['Affecté à','assigned'],['Échéance','dueDate'],['Action','action']],requests:[['N°','no'],['Date','date'],['Type','type'],['Titre','title'],['Priorité','priority'],['Statut','status'],['Lieu','room'],['Demandeur','requester'],['Échéance','dueDate']],works:[['N°','no'],['Date','date'],['Type','type'],['Titre','title'],['Entreprise','company'],['Bâtiment','building'],['Statut','status'],['Échéance','dueDate'],['Fin GPA','gpaEnd']],meetings:[['N°','no'],['Date','date'],['Heure','time'],['Type','type'],['Titre','title'],['Lieu','location'],['Participants','participants'],['Statut','status']],issues:[['N°','no'],['Date','date'],['Catégorie','category'],['Agent','agentId'],['Titre','title'],['Priorité','priority'],['Statut','status'],['Échéance','dueDate'],['Action','action']],periodic:[['N°','no'],['Contrôle','name'],['Famille','family'],['Périodicité (mois)','intervalMonths'],['Bâtiment','building'],['Dernier contrôle','lastDate'],['Prochaine date','nextDate'],['Statut','status'],['Prestataire','provider']],notes:[['N°','no'],['Date','date'],['Catégorie','category'],['Titre','title'],['Priorité','priority'],['Statut','status'],['Échéance','dueDate'],['Texte','text']],vacations:[['Période','name'],['Zone','zone'],['Début','start'],['Fin','end'],['Statut','status'],['Notes','notes']],documents:[['N°','no'],['Date','date'],['Titre','title'],['Catégorie','category'],['Module','linkedModule'],['Description','description']]};
@@ -2249,7 +2331,7 @@ function exportStyledExcel(module){
  if(module==='weeklyPlans'){defs=[['Agent','agent'],['Profil','shift'],['Lundi','d1'],['Mardi','d2'],['Mercredi','d3'],['Jeudi','d4'],['Vendredi','d5']];rows=(db.weeklyPlans||[]).map(p=>{const r={agent:agentName(agentById(p.agentId))||p.agent,shift:p.shift};for(let d=1;d<=5;d++){const x=p.dayProfiles?.[d]||{};r['d'+d]=x.start&&x.end?`${x.start}-${x.end} — ${x.missions||''}`:'Repos'}return r})}
  const value=(r,k)=>k==='agentId'?agentName(agentById(r[k])):(r[k]??'');
  const aoa=[[titles[module]||module],[`Pilotage Service Technique — export du ${new Date().toLocaleString('fr-FR')}`],[],defs.map(d=>d[0]),...rows.map(r=>defs.map(d=>value(r,d[1])))];
- const filename=`${(titles[module]||module).replace(/\s+/g,'_')}_${todayISO()}.xlsx`;
+ const filename=`${(titles[module]||module).replace(/\s+/g,'_')}_${todayISO()}.xlsx_${activeAcademicYear()}`;
  if(window.XLSX){
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(aoa);
   ws['!cols']=defs.map((d,i)=>({wch:Math.min(45,Math.max(12,d[0].length+4,...rows.slice(0,100).map(r=>String(value(r,d[1])??'').length+2)))}));
@@ -2345,7 +2427,7 @@ function dashboardShortcut(target){
 function dispatchEdit(type,id){({agent:()=>openAgent(id),rotation:()=>openRotation(id),personal:()=>openPersonalEvent(id),issue:()=>openIssue(id),periodic:()=>openPeriodic(id),cleaning:()=>openCleaning(id),maintenance:()=>openMaintenance(id),request:()=>openRequest(id),work:()=>openWork(id),meeting:()=>openMeeting(id),note:()=>openNote(id),vacation:()=>openVacation(id),document:()=>openDocument(id),space:()=>openSpace(id),reportNonconformity:()=>setView('pdfimports')}[type]||(()=>{}))()}
 
 /* ---------- Sauvegarde / restauration ---------- */
-function exportBackup(){const payload={exportedAt:new Date().toISOString(),data:db,note:'Les fichiers joints sont stockés dans Supabase Storage. La sauvegarde JSON contient leurs références.'};downloadText(`Pilotage_Service_Technique_sauvegarde_${todayISO()}.json`,JSON.stringify(payload,null,2),'application/json')}
+function exportBackup(){const exportAcademicYear=activeAcademicYear();const payload={exportedAt:new Date().toISOString(),data:db,note:'Les fichiers joints sont stockés dans Supabase Storage. La sauvegarde JSON contient leurs références.'};downloadText(`Pilotage_Service_Technique_sauvegarde_${todayISO()}.json`,JSON.stringify(payload,null,2),'application/json')}
 async function importBackup(file){try{
  const obj=JSON.parse(await file.text()),previous=deepClone(db);db=migrate(obj.data||obj);
  const persisted=window.PSTMainState?.persistNow?await window.PSTMainState.persistNow():{ok:save(),offline:false};
@@ -2778,4 +2860,35 @@ window.addEventListener('pst:academic-year-changed',()=>{
    renderGlobalAcademicYear();
  }catch(e){console.warn('Synchronisation globale année scolaire',e)}
 });
+
+
+
+function ensurePermanenceAgentFields(){
+  const forms=document.querySelectorAll('#agents form,.agent-form,#agentForm');
+  forms.forEach(form=>{
+    if(form.querySelector('[data-permanence-fields]'))return;
+    const agentId=form.dataset.agentId||form.querySelector('[name="id"]')?.value||'';
+    if(!agentId)return;
+    const agent=(db.agents||[]).find(x=>String(x.id)===String(agentId));
+    if(!agent)return;
+    const p=permanenceScheduleForAgent(agentId);
+    const wrap=document.createElement('div');
+    wrap.dataset.permanenceFields='1';
+    wrap.className='permanence-agent-fields';
+    wrap.innerHTML=`<strong>Horaire de permanence</strong>
+      <label>Début <input type="time" data-perm="start" value="${esc(p.start)}"></label>
+      <label>Fin <input type="time" data-perm="end" value="${esc(p.end)}"></label>
+      <label>Pause (min) <input type="number" min="0" step="5" data-perm="pause" value="${p.pause||0}"></label>
+      <small>Utilisé automatiquement lorsqu'une présence Chronotime tombe pendant les vacances scolaires.</small>`;
+    form.appendChild(wrap);
+    wrap.querySelectorAll('[data-perm]').forEach(el=>el.addEventListener('change',()=>{
+      agent.permanenceSchedule=agent.permanenceSchedule||{};
+      agent.permanenceSchedule[el.dataset.perm]=el.dataset.perm==='pause'?Number(el.value||0):el.value;
+      syncStoredChronotimePastilles();
+      save(false);safeRenderAll();
+    }));
+  });
+}
+document.addEventListener('click',()=>setTimeout(ensurePermanenceAgentFields,50));
+window.addEventListener('pst:data-loaded',()=>setTimeout(ensurePermanenceAgentFields,50));
 
