@@ -615,12 +615,10 @@ async function verifyStoragePathExists(path){
  if(!navigator.onLine)return {ok:false,reason:'Hors ligne'};
  if(!supabaseClient||!currentUser)return {ok:false,reason:'Cloud non connecté'};
  try{
-  const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(path,90);
-  if(error||!data?.signedUrl)return {ok:false,reason:error?.message||'Lien cloud indisponible'};
-  const response=await fetch(data.signedUrl,{method:'GET',headers:{Range:'bytes=0-0'},cache:'no-store'});
-  try{await response.body?.cancel?.()}catch(_){ }
-  if(response.ok||response.status===206)return {ok:true};
-  return {ok:false,reason:`Cloud HTTP ${response.status}`};
+  // V146 : vérification via le SDK Supabase, sans requête HTTP Range depuis la WebView.
+  const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).download(path);
+  if(error||!data)return {ok:false,reason:error?.message||'Document cloud indisponible'};
+  return {ok:true,size:data.size||0};
  }catch(e){return {ok:false,reason:e?.message||String(e)}}
 }
 async function putFile(file,meta={}){
@@ -628,11 +626,12 @@ async function putFile(file,meta={}){
  if(!supabaseClient||!currentUser)throw new Error('Connexion Supabase requise.');
  const id=uid(),base={id,name:file.name,type:file.type||'application/octet-stream',size:file.size,createdAt:new Date().toISOString(),...meta};
  const path=`${currentUser.id}/${meta.module||'documents'}/${meta.recordId||'general'}/${id}-${safeFileName(file.name)}`;
- const {error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
+ const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
  if(error)throw error;
- const check=await verifyStoragePathExists(path);
- if(!check.ok){try{await supabaseClient.storage.from(STORAGE_BUCKET).remove([path])}catch(_){ }throw new Error(check.reason||'Le fichier cloud n’a pas pu être vérifié.');}
- return {...base,storagePath:path,storageMode:'supabase',cloudVerified:true,cloudVerifiedAt:new Date().toISOString(),cloudError:''};
+ // V146 : un upload Supabase réussi est la confirmation d'archivage.
+ // On ne supprime plus le fichier à cause d'une seconde vérification WebView susceptible d'échouer à tort.
+ const confirmedPath=data?.path||path;
+ return {...base,storagePath:confirmedPath,storageMode:'supabase',cloudVerified:true,cloudVerifiedAt:new Date().toISOString(),cloudError:'',uploadConfirmed:true};
 }
 async function verifyAttachmentCloud(id,{silent=false}={}){
  const rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
@@ -709,6 +708,36 @@ async function renderPdfViewerPage(pageNo){
  }catch(e){console.error('Lecture PDF',e);status.textContent='Impossible d’afficher cette page.'}
  finally{__pdfViewerRendering=false}
 }
+async function openPdfFromSupabasePath(path,name='Document PDF'){
+ const dlg=ensurePdfViewer();
+ dlg.querySelector('#pdfViewerTitle').textContent=name||'Document PDF';
+ dlg.querySelector('#pdfViewerStatus').textContent='Chargement direct depuis Supabase…';
+ dlg.querySelector('#pdfViewerCanvas').getContext('2d').clearRect(0,0,10,10);
+ dlg.querySelector('#pdfPrevPage').onclick=()=>renderPdfViewerPage(Math.max(1,__pdfViewerPage-1));
+ dlg.querySelector('#pdfNextPage').onclick=()=>renderPdfViewerPage(Math.min(__pdfViewerDoc?.numPages||1,__pdfViewerPage+1));
+ if(!dlg.open)dlg.showModal();
+ try{
+  if(!window.pdfjsLib)throw new Error('Lecteur PDF indisponible');
+  if(!supabaseClient||!path)throw new Error('Chemin Supabase indisponible');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).download(path);
+  if(error||!data)throw error||new Error('Téléchargement Supabase impossible');
+  const buf=await data.arrayBuffer();
+  __pdfViewerDoc=await window.pdfjsLib.getDocument({data:buf}).promise;
+  __pdfViewerPage=1;
+  await renderPdfViewerPage(1);
+  return true;
+ }catch(e){
+  console.error('Ouverture PDF Supabase directe',e);
+  dlg.querySelector('#pdfViewerStatus').textContent='Lecture intégrée impossible — ouverture externe…';
+  try{
+   const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(path,900);
+   if(!error&&data?.signedUrl){window.location.assign(data.signedUrl);return true}
+  }catch(_){}
+  return false;
+ }
+}
+
 async function openPdfInApp(url,name='Document PDF'){
  const dlg=ensurePdfViewer();dlg.querySelector('#pdfViewerTitle').textContent=name||'Document PDF';dlg.querySelector('#pdfViewerStatus').textContent='Chargement depuis Supabase…';dlg.querySelector('#pdfViewerCanvas').getContext('2d').clearRect(0,0,10,10);
  dlg.querySelector('#pdfPrevPage').onclick=()=>renderPdfViewerPage(Math.max(1,__pdfViewerPage-1));dlg.querySelector('#pdfNextPage').onclick=()=>renderPdfViewerPage(Math.min(__pdfViewerDoc?.numPages||1,__pdfViewerPage+1));
@@ -716,7 +745,7 @@ async function openPdfInApp(url,name='Document PDF'){
  try{
   if(!window.pdfjsLib)throw new Error('Lecteur PDF indisponible');
   window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  // V145 : on télécharge d'abord le PDF signé Supabase en mémoire. Cela évite les blocages CORS/WebView Android.
+  // V146 : on télécharge d'abord le PDF signé Supabase en mémoire. Cela évite les blocages CORS/WebView Android.
   const response=await fetch(url,{cache:'no-store',credentials:'omit'});
   if(!response.ok)throw new Error('Téléchargement PDF impossible ('+response.status+')');
   const buf=await response.arrayBuffer();
@@ -742,7 +771,7 @@ async function downloadAttachment(id){
   // Le bouton Retour du téléphone ramène ensuite directement à l’application.
   if(rec.storagePath&&supabaseClient){
    const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUrl(rec.storagePath,900);
-   if(!error&&data?.signedUrl){const st=$('#importArchiveStatus');if(st){st.textContent='☁️ Ouverture du document depuis le cloud…';st.className='import-archive-status ok'}const isPdf=/\.pdf(?:$|[?#])/i.test(rec.name||'')||String(rec.type||rec.mimeType||'').toLowerCase().includes('pdf');if(isPdf){const ok=await openPdfInApp(data.signedUrl,rec.name||'Rapport PDF');if(ok)return;}window.location.assign(data.signedUrl);return}
+   if(!error&&data?.signedUrl){const st=$('#importArchiveStatus');if(st){st.textContent='☁️ Ouverture du document depuis le cloud…';st.className='import-archive-status ok'}const isPdf=/\.pdf(?:$|[?#])/i.test(rec.name||'')||String(rec.type||rec.mimeType||'').toLowerCase().includes('pdf');if(isPdf){const ok=await openPdfFromSupabasePath(rec.storagePath,rec.name||'Rapport PDF');if(ok)return;}window.location.assign(data.signedUrl);return}
    if(error)console.warn('Ouverture Supabase impossible',error);
   }
  }catch(e){console.error('Ouverture du document',e)}
@@ -1520,7 +1549,7 @@ async function reattachImportOriginal(archiveId,file){
   rememberImportOriginalBinding(x,meta);
   const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));
   if(src){src.attachmentId=meta.id;src.fileName=file.name||src.fileName}
-  // V145 : réparer aussi la fiche métier du contrôle pour que l’original soit relisible partout.
+  // V146 : réparer aussi la fiche métier du contrôle pour que l’original soit relisible partout.
   const periodicId=x.recordId||src?.periodicControlId||x.analysisSnapshot?.periodicControlId||'';
   if(periodicId){
    const periodic=(db.periodic||[]).find(p=>String(p.id)===String(periodicId));
