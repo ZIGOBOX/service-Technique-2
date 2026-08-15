@@ -615,23 +615,116 @@ async function verifyStoragePathExists(path){
  if(!navigator.onLine)return {ok:false,reason:'Hors ligne'};
  if(!supabaseClient||!currentUser)return {ok:false,reason:'Cloud non connecté'};
  try{
-  // V146 : vérification via le SDK Supabase, sans requête HTTP Range depuis la WebView.
+  // V147 : vérification via le SDK Supabase, sans requête HTTP Range depuis la WebView.
   const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).download(path);
   if(error||!data)return {ok:false,reason:error?.message||'Document cloud indisponible'};
   return {ok:true,size:data.size||0};
  }catch(e){return {ok:false,reason:e?.message||String(e)}}
 }
+async function loadTusClient(){
+ if(window.tus?.Upload)return window.tus;
+ const urls=[
+  'https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js',
+  'https://unpkg.com/tus-js-client@4/dist/tus.min.js'
+ ];
+ let lastErr=null;
+ for(const url of urls){
+  try{
+   await new Promise((resolve,reject)=>{
+    const existing=[...document.scripts].find(x=>x.src===url);
+    if(existing){
+      if(window.tus?.Upload)return resolve();
+      existing.addEventListener('load',resolve,{once:true});
+      existing.addEventListener('error',reject,{once:true});
+      return;
+    }
+    const sc=document.createElement('script');
+    sc.src=url;sc.async=true;
+    sc.onload=resolve;
+    sc.onerror=()=>reject(new Error('Chargement TUS impossible'));
+    document.head.appendChild(sc);
+   });
+   if(window.tus?.Upload)return window.tus;
+  }catch(e){lastErr=e}
+ }
+ throw lastErr||new Error('Client d’envoi résumable indisponible');
+}
+
+async function uploadViaTus(file,path){
+ const cfg=window.SUPABASE_CONFIG||{};
+ const {data:{session}}=await supabaseClient.auth.getSession();
+ if(!session?.access_token)throw new Error('Session Supabase expirée');
+ const projectId=String(cfg.url||'').replace(/^https?:\/\//,'').split('.')[0];
+ if(!projectId)throw new Error('Identifiant Supabase introuvable');
+ const tus=await loadTusClient();
+ const endpoint=`https://${projectId}.storage.supabase.co/storage/v1/upload/resumable`;
+ return await new Promise(async(resolve,reject)=>{
+  try{
+   const upload=new tus.Upload(file,{
+    endpoint,
+    retryDelays:[0,1500,3000,5000,10000],
+    headers:{authorization:`Bearer ${session.access_token}`,'x-upsert':'false'},
+    uploadDataDuringCreation:true,
+    removeFingerprintOnSuccess:true,
+    metadata:{
+      bucketName:STORAGE_BUCKET,
+      objectName:path,
+      contentType:file.type||'application/octet-stream',
+      cacheControl:'3600'
+    },
+    chunkSize:6*1024*1024,
+    onError:error=>reject(error),
+    onSuccess:()=>resolve({path})
+   });
+   try{
+    const prev=await upload.findPreviousUploads();
+    if(prev?.length)upload.resumeFromPreviousUpload(prev[0]);
+   }catch(_){}
+   upload.start();
+  }catch(e){reject(e)}
+ });
+}
+
 async function putFile(file,meta={}){
  if(!navigator.onLine)throw new Error('Connexion Internet requise : aucun fichier n’est conservé localement.');
  if(!supabaseClient||!currentUser)throw new Error('Connexion Supabase requise.');
  const id=uid(),base={id,name:file.name,type:file.type||'application/octet-stream',size:file.size,createdAt:new Date().toISOString(),...meta};
  const path=`${currentUser.id}/${meta.module||'documents'}/${meta.recordId||'general'}/${id}-${safeFileName(file.name)}`;
- const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
- if(error)throw error;
- // V146 : un upload Supabase réussi est la confirmation d'archivage.
- // On ne supprime plus le fichier à cause d'une seconde vérification WebView susceptible d'échouer à tort.
- const confirmedPath=data?.path||path;
- return {...base,storagePath:confirmedPath,storageMode:'supabase',cloudVerified:true,cloudVerifiedAt:new Date().toISOString(),cloudError:'',uploadConfirmed:true};
+ const contentType=file.type||'application/octet-stream';
+ let lastError=null;
+
+ // Méthode 1 : upload standard avec ArrayBuffer (plus fiable sur certaines WebView Android).
+ try{
+  const body=await file.arrayBuffer();
+  const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).upload(path,body,{upsert:false,contentType});
+  if(!error){
+   const confirmedPath=data?.path||path;
+   return {...base,storagePath:confirmedPath,storageMode:'supabase',cloudVerified:true,cloudVerifiedAt:new Date().toISOString(),cloudError:'',uploadConfirmed:true,uploadMethod:'arraybuffer'};
+  }
+  lastError=error;
+ }catch(e){lastError=e}
+
+ // Méthode 2 : URL d’upload signée Supabase.
+ try{
+  const {data:signed,error:signedError}=await supabaseClient.storage.from(STORAGE_BUCKET).createSignedUploadUrl(path,{upsert:false});
+  if(signedError)throw signedError;
+  if(!signed?.token)throw new Error('Jeton d’upload Supabase absent');
+  const body=await file.arrayBuffer();
+  const {data,error}=await supabaseClient.storage.from(STORAGE_BUCKET).uploadToSignedUrl(path,signed.token,body,{contentType,upsert:false});
+  if(error)throw error;
+  const confirmedPath=data?.path||path;
+  return {...base,storagePath:confirmedPath,storageMode:'supabase',cloudVerified:true,cloudVerifiedAt:new Date().toISOString(),cloudError:'',uploadConfirmed:true,uploadMethod:'signed'};
+ }catch(e){lastError=e}
+
+ // Méthode 3 : upload résumable TUS via le hostname Storage direct.
+ try{
+  const data=await uploadViaTus(file,path);
+  const confirmedPath=data?.path||path;
+  return {...base,storagePath:confirmedPath,storageMode:'supabase',cloudVerified:true,cloudVerifiedAt:new Date().toISOString(),cloudError:'',uploadConfirmed:true,uploadMethod:'tus'};
+ }catch(e){lastError=e}
+
+ const msg=lastError?.message||String(lastError||'Erreur inconnue');
+ throw new Error(`Envoi Supabase impossible après 3 méthodes : ${msg}`);
 }
 async function verifyAttachmentCloud(id,{silent=false}={}){
  const rec=(db.attachments||[]).find(a=>String(a.id)===String(id));
@@ -745,7 +838,7 @@ async function openPdfInApp(url,name='Document PDF'){
  try{
   if(!window.pdfjsLib)throw new Error('Lecteur PDF indisponible');
   window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  // V146 : on télécharge d'abord le PDF signé Supabase en mémoire. Cela évite les blocages CORS/WebView Android.
+  // V147 : on télécharge d'abord le PDF signé Supabase en mémoire. Cela évite les blocages CORS/WebView Android.
   const response=await fetch(url,{cache:'no-store',credentials:'omit'});
   if(!response.ok)throw new Error('Téléchargement PDF impossible ('+response.status+')');
   const buf=await response.arrayBuffer();
@@ -1549,7 +1642,7 @@ async function reattachImportOriginal(archiveId,file){
   rememberImportOriginalBinding(x,meta);
   const src=(db.pdfImports||[]).find(r=>String(r.id)===String(x.sourceId));
   if(src){src.attachmentId=meta.id;src.fileName=file.name||src.fileName}
-  // V146 : réparer aussi la fiche métier du contrôle pour que l’original soit relisible partout.
+  // V147 : réparer aussi la fiche métier du contrôle pour que l’original soit relisible partout.
   const periodicId=x.recordId||src?.periodicControlId||x.analysisSnapshot?.periodicControlId||'';
   if(periodicId){
    const periodic=(db.periodic||[]).find(p=>String(p.id)===String(periodicId));
