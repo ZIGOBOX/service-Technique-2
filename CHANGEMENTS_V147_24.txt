@@ -1,0 +1,13 @@
+V147.24 — OneDrive documentaire
+
+- Le bouton + / Importer-Scanner reste le point d’entrée unique.
+- Après analyse d’un PDF non-Chronotime, l’application propose un classement OneDrive.
+- L’utilisateur peut ouvrir OneDrive, créer le dossier au fur et à mesure, enregistrer le PDF puis coller son lien.
+- Supabase conserve le classement, la rubrique, l’année scolaire, le nom du fichier et le lien OneDrive.
+- Pour un contrôle périodique, le lien est rattaché au contrôle choisi et apparaît directement sur sa carte.
+- Pour un document général, le lien apparaît dans Documents.
+- Si un lien OneDrive est fourni pour un document général, le PDF original n’est pas dupliqué dans Supabase Storage.
+- Si aucun lien OneDrive n’est fourni, le fonctionnement Supabase existant reste disponible comme secours.
+- Chronotime conserve son circuit actuel sans imposer OneDrive.
+
+Cette version ne nécessite pas encore Microsoft Graph : aucun tenant/client secret à configurer. L’enregistrement du fichier dans OneDrive reste volontaire et manuel ; l’application mémorise ensuite son lien classé.
