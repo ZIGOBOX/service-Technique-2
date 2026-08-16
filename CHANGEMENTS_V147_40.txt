@@ -1,0 +1,29 @@
+V147.40 — 16/08/2026
+
+CORRECTION RÉELLE DES MODIFICATIONS DE FORMULAIRES
+
+Problème traité :
+- une fiche existante pouvait être modifiée à l'écran mais la vérification Supabase contrôlait seulement que son ID existait ;
+- elle ne contrôlait pas que le nouveau statut / contenu avait réellement remplacé l'ancienne valeur.
+
+Nouvelle règle pour tous les principaux formulaires :
+1. les valeurs du formulaire remplacent explicitement l'enregistrement correspondant dans la collection DB par son ID ;
+2. l'état complet modifié est envoyé à Supabase ;
+3. Supabase est relu ;
+4. l'application compare les champs relus aux champs qui viennent d'être enregistrés ;
+5. le formulaire ne se ferme que si les nouvelles valeurs correspondent réellement ;
+6. le tableau concerné est rafraîchi explicitement après confirmation.
+
+Maintenance :
+- passage À faire → Terminée / Clôturée vérifié sur la valeur STATUS elle-même ;
+- après confirmation, le tableau Maintenance est redessiné immédiatement ;
+- le message confirme le statut réellement enregistré.
+
+Même contrôle appliqué à :
+Demandes, Chantiers/GPA, Réunions, Notes, Sécurité/qualité,
+Contrôles périodiques, Ménage, Vacances, Agenda personnel, Documents,
+Agents, Permanence, Roulements, Exceptions, Horaires théoriques,
+Planning agent et Locaux.
+
+Les pièces jointes sont exclues uniquement de la comparaison JSON lourde,
+mais leur mécanisme Supabase Storage reste inchangé.
