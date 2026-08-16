@@ -1,0 +1,19 @@
+V147.45 — Rapports de contrôle intégrés en lecture
+
+- 7 rapports PDF fournis intégrés directement au ZIP dans /reports.
+- Ils apparaissent automatiquement dans la bibliothèque « Rapports de contrôle ».
+- Bouton « 📖 Lire le PDF » : ouverture directe du document intégré, sans rattachement OneDrive/Supabase nécessaire.
+- Classement par famille : Électricité, Gaz, Équipements sportifs, Autres contrôles (ancrages/EPI), VMC/Ventilation, Cuisine/Cuisson.
+- Métadonnées conservées : organisme, date, référence du rapport, sous-type, résumé et nombre d'observations lorsqu'il est déterminable.
+- Aucun plan d'action / intervention n'est créé automatiquement à partir de ces rapports préchargés : ils sont intégrés en lecture et restent disponibles pour analyse manuelle/import ultérieur.
+- Déduplication sûre : suppression uniquement des doublons certains ayant la même empreinte SHA-256 ; les deux rapports électriques APAVE du 07/07/2025 restent distincts car l'un est le RVRE ERP et l'autre la vérification périodique des installations électriques.
+- Les archives associées sont également dédupliquées par empreinte.
+
+Rapports intégrés :
+1. APAVE — RVRE installations électriques et éclairages — 07/07/2025 — réf. 135054046-001-1 — 0 non-conformité.
+2. APAVE — Vérification périodique installations électriques — 07/07/2025 — réf. 135054046-001-1 — 23 observations.
+3. APAVE — Installations thermiques / gaz — 05/09/2025 — réf. 135046511-001-1 — 1 observation.
+4. APAVE — Équipements sportifs — 05/12/2025 — réf. A513283837-004-1 — 26 observations.
+5. APAVE — Dispositifs d'ancrage pour EPI — 02/02/2026 — réf. A513283836-004-1 — 5 observations.
+6. Bureau Veritas — CTA et VMC sanitaires — 20/03/2026 — réf. 28016576/155.1.1.RAP.
+7. Bureau Veritas — Hottes de cuisines — 20/03/2026 — réf. 28016576/152.1.1.RAP.

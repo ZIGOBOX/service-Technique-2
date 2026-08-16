@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.44';
+const APP_VERSION='147.45';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -238,18 +238,73 @@ function mergeContractControls14723(d){
 
 function defaultSpaces(buildings){const out=[];for(const b of buildings){for(const f of b.floors){out.push({id:uid(),building:b.name,floor:f,type:b.name==='Gymnase'?'Salle de sport / gymnase':b.name==='Cour'?'Cour / extérieurs':'Circulations / halls / escaliers',name:'Zone entière'});if(!['Cour','Gymnase'].includes(b.name)){out.push({id:uid(),building:b.name,floor:f,type:'Sanitaires / vestiaires',name:'Sanitaires'});if(/^Bâtiment/.test(b.name)||b.name==='Extension')out.push({id:uid(),building:b.name,floor:f,type:'Salle de classe / devoirs / informatique',name:'Salles de classe'})}}}return out}
 function clone(x){return structuredClone(x)}
+
+const BUNDLED_CONTROL_REPORTS=[{"key":"apave-135054046-001-1-rvre","title":"RVRE — Installations électriques et éclairages","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"RVRE ERP — aucune non-conformité identifiée dans le périmètre de la vérification.","observations":0,"subtype":"RVRE ERP","sha256":"fbcc7667636c65c9a134f6421ab4056fd9fcaedb586bd58f9aa34410dd89759a","size":1344942,"path":"reports/2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf","file":"2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf"},{"key":"apave-135054046-001-1-rvp","title":"Vérification périodique des installations électriques","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"Vérification périodique des installations électriques — 23 observations signalées dans le rapport.","observations":23,"subtype":"Vérification périodique","sha256":"cda549f71a666baaf27efddd3fa653b5a7725910497e2c81403eadc7438fcc01","size":3680309,"path":"reports/2025-07-07_APAVE_Verification_Installations_Electriques.pdf","file":"2025-07-07_APAVE_Verification_Installations_Electriques.pdf"},{"key":"apave-135046511-001-1-gaz","title":"Installations thermiques / réseau gaz","org":"APAVE","family":"Gaz","date":"2025-09-05","ref":"135046511-001-1","summary":"Vérification des installations thermiques fluide / réseau gaz — 1 observation.","observations":1,"subtype":"Thermique / Gaz","sha256":"f5ffc7006ae754c35ce9dbd4a82611eeb6d2e64878f6583e31112cf051588906","size":1497083,"path":"reports/2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf","file":"2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf"},{"key":"apave-a513283837-004-1-sport","title":"Vérification périodique des équipements sportifs","org":"APAVE","family":"Équipements sportifs","date":"2025-12-05","ref":"A513283837-004-1","summary":"Vérification visuelle et manuelle des équipements sportifs — 26 observations.","observations":26,"subtype":"Équipements sportifs","sha256":"423aa2fd3840deafbd2daab0dae3df00f449f40a1b9f3f314f1b44bbdc249f9e","size":4445518,"path":"reports/2025-12-05_APAVE_Equipements_Sportifs.pdf","file":"2025-12-05_APAVE_Equipements_Sportifs.pdf"},{"key":"apave-a513283836-004-1-ancrage","title":"Vérification des dispositifs d’ancrage pour EPI","org":"APAVE","family":"Autres contrôles","date":"2026-02-02","ref":"A513283836-004-1","summary":"Vérification générale périodique des dispositifs d’ancrage pour EPI — 5 observations.","observations":5,"subtype":"Ancrages / EPI","sha256":"fcf149dfb1e45c0e1dab938b86dbee07fcf9839d3b8180734abb92155c2f3e50","size":135938,"path":"reports/2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf","file":"2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf"},{"key":"bv-28016576-155-1-1-cta-vmc","title":"Contrôle des CTA et VMC sanitaires","org":"Bureau Veritas","family":"VMC / Ventilation","date":"2026-03-20","ref":"28016576/155.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — CTA et VMC sanitaires — écarts et non-conformités présents dans le rapport.","observations":null,"subtype":"CTA / VMC sanitaires","sha256":"aadb4258da54a155ca98194d8602d3bef1ff46a26236911f82388766f39fdb96","size":5246665,"path":"reports/2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf","file":"2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf"},{"key":"bv-28016576-152-1-1-hottes","title":"Contrôle des hottes de cuisines","org":"Bureau Veritas","family":"Cuisine / Cuisson","date":"2026-03-20","ref":"28016576/152.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — hottes de cuisines — observations présentes dans le rapport.","observations":null,"subtype":"Hottes de cuisines","sha256":"144566b4d982b7a241b3400b91f0ce4396b13f1026dbfeabd91b4aa024c3b912","size":3374751,"path":"reports/2026-03-20_BureauVeritas_Hottes_Cuisines.pdf","file":"2026-03-20_BureauVeritas_Hottes_Cuisines.pdf"}];
+
 function defaultData(){const buildings=clone(initialBuildings);const agents=[['Mme','Tarrio','Agent d’accueil'],['Mme','Delorme','Agent d’accueil / lingerie'],['Complément','accueil','Agent d’accueil'],['Mme','Berthoux','Agent de restauration'],['Mme','Bozio','Agent d’accueil']].map((n,i)=>({id:uid(),no:`AGT-${String(i+1).padStart(3,'0')}`,firstName:n[0],lastName:n[1],role:n[2],weeklyHours:35,email:'',phone:'',assignment:'',status:'Actif',arrivalDate:'',workdays:[1,2,3,4,5],notes:''}));const monday=startOfWeek(todayISO());const maintenance=IMPORTED_INTERVENTIONS.map((x,i)=>({id:uid(),no:`MAI-2026-${String(i+1).padStart(4,'0')}`,date:todayISO(),title:x[0],family:x[1],priority:x[2],status:x[3],building:x[5]||'',floor:'',room:x[5]||'',requester:'Direction',assigned:'',dueDate:'',cost:'',description:x[4]||'',action:'',attachments:[],importBatch:'excel-2026-08'}));return {version:31,settings:{initialSeedCompleted:true,seedVersion:31,cleaningAlertDays:30,cleaningNotificationsEnabled:true,cleaningNotifyNever:true,cleaningNotifyOverdue:true,cleaningNotifyPlanned:true,meetingAlertDays:3,
 autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:'2026-2027',defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:[],rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],notificationDismissals:{},importOriginalBindings:{}}}
 function nextSeedNo(rows){return `MAI-2026-${String((rows?.length||0)+1).padStart(4,'0')}`}
+
+function normalizedReportFileKey(name=''){
+ return normalizeText(String(name||''))
+   .replace(/\bcopy\b|\bcopie\b/g,' ')
+   .replace(/\s+/g,' ').trim();
+}
+function mergeBundledControlReports(d){
+ if(!Array.isArray(d.pdfImports))d.pdfImports=[];
+ if(!Array.isArray(d.importArchives))d.importArchives=[];
+ // 1) Supprimer seulement les doublons certains déjà présents : même empreinte SHA-256.
+ const seenHash=new Set();
+ d.pdfImports=d.pdfImports.filter(x=>{
+   const h=String(x.fileHash||'').trim().toLowerCase();
+   if(!h)return true;
+   if(seenHash.has(h))return false;
+   seenHash.add(h);return true;
+ });
+ // 2) Ajouter / enrichir les rapports fournis. Deux documents partageant un même n° de rapport
+ // mais un objet différent (ex. RVRE et vérification périodique électrique) restent distincts.
+ for(const b of BUNDLED_CONTROL_REPORTS){
+   const existing=d.pdfImports.find(x=>
+      String(x.bundledKey||'')===b.key ||
+      (x.fileHash&&String(x.fileHash).toLowerCase()===String(b.sha256).toLowerCase()) ||
+      normalizedReportFileKey(x.fileName)===normalizedReportFileKey(b.file)
+   );
+   const base={kind:'control',importType:'report',bundled:true,bundledKey:b.key,bundledPath:b.path,
+      fileName:b.file,fileSize:b.size,fileHash:b.sha256,subject:b.org,controlFamily:b.family,
+      reportDate:b.date,reportReference:b.ref,reportSubtype:b.subtype,academicYear:academicYearFor(b.date),
+      summary:b.summary,observationCount:b.observations,readOnlyBundled:true};
+   let rec=existing;
+   if(rec){Object.assign(rec,base,{id:rec.id||`bundled-${b.key}`,createdAt:rec.createdAt||`${b.date}T12:00:00.000Z`});}
+   else{rec={id:`bundled-${b.key}`,createdAt:`${b.date}T12:00:00.000Z`,...base};d.pdfImports.push(rec);}
+   const ar=d.importArchives.find(x=>String(x.sourceId||'')===String(rec.id)||String(x.bundledKey||'')===b.key);
+   const archiveData={sourceId:rec.id,bundled:true,bundledKey:b.key,bundledPath:b.path,type:'Rapport de contrôle',
+      createdAt:rec.createdAt,fileHash:b.sha256,fileName:b.file,subject:b.org,academicYear:rec.academicYear,
+      summary:b.summary,module:'periodic',analysisSnapshot:{type:'Rapport de contrôle',fileName:b.file,subject:b.org,
+      organization:b.org,controlFamily:b.family,reportDate:b.date,reportReference:b.ref,reportSubtype:b.subtype,
+      observationCount:b.observations,summary:b.summary,bundled:true}};
+   if(ar)Object.assign(ar,archiveData);
+   else d.importArchives.push({id:`archive-bundled-${b.key}`,...archiveData});
+ }
+ // 3) Dédupliquer les archives correspondantes par empreinte, sans toucher aux autres archives métier.
+ const ah=new Set();
+ d.importArchives=d.importArchives.filter(x=>{
+   const h=String(x.fileHash||'').trim().toLowerCase();
+   if(!h)return true;
+   const k=`${x.type||''}|${h}`;
+   if(ah.has(k))return false;ah.add(k);return true;
+ });
+}
+
 function migrate(raw){
  const base=defaultData();
- if(!raw||typeof raw!=='object')return base;
+ if(!raw||typeof raw!=='object'){mergeBundledControlReports(base);return base;}
  const d={...base,...raw,settings:{...base.settings,...(raw.settings||{}),counters:{...base.settings.counters,...(raw.settings?.counters||{})}},lists:{...base.lists,...(raw.lists||{})}};
  for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
    if(!Array.isArray(d[k]))d[k]=base[k];
  }
  mergeContractControls14723(d);
  if(!Array.isArray(d.cleaningRoomChecks))d.cleaningRoomChecks=[];
+ mergeBundledControlReports(d);
  if(!d.notificationDismissals||typeof d.notificationDismissals!=='object'||Array.isArray(d.notificationDismissals))d.notificationDismissals={};
  if(!d.importOriginalBindings||typeof d.importOriginalBindings!=='object'||Array.isArray(d.importOriginalBindings))d.importOriginalBindings={};
  if(d.cleaningRoomsConfig!==null&&!Array.isArray(d.cleaningRoomsConfig))d.cleaningRoomsConfig=null;
@@ -811,6 +866,7 @@ function restoreImportOriginalBinding(x){if(!x)return null;const map=loadImportO
 function resolveArchiveAttachment(x){if(!x)return null;let rec=(db.attachments||[]).find(a=>String(a.id)===String(x.attachmentId));if(rec)return rec;return restoreImportOriginalBinding(x)}
 function registerImportOriginal(archive,attachment){if(!archive||!attachment)return false;archive.attachmentId=attachment.id||archive.attachmentId||'';archive.fileName=attachment.name||archive.fileName||'';archive.originalStoredAt=archive.originalStoredAt||new Date().toISOString();archive.originalStorageMode=attachment.storageMode||archive.originalStorageMode||'';rememberImportOriginalBinding(archive,attachment);return true}
 window.PSTImportOriginals={remember:registerImportOriginal,resolve:resolveArchiveAttachment,restore:restoreImportOriginalBinding};
+window.PSTBundledReports={open:path=>{try{window.open(new URL(path,window.location.href).href,'_blank','noopener');return true}catch(e){console.error(e);return false}}};
 
 // V89 — Détection de doublons pour TOUS les imports.
 async function importFileFingerprint(file){
@@ -2420,7 +2476,7 @@ function importedArchiveRows(){
  const seen=new Set(explicit.map(x=>x.sourceId||x.id));
  for(const x of (db.pdfImports||[])){
   if(seen.has(x.id))continue;
-  explicit.push({id:`pdf-${x.id}`,sourceId:x.id,createdAt:x.createdAt||'',type:x.kind==='chronotime'?'Chronotime':'Rapport de contrôle',fileName:x.fileName||'PDF',attachmentId:x.attachmentId||'',subject:x.subject||'',academicYear:x.academicYear||'',summary:x.summary||'',module:x.kind==='chronotime'?'pdfimports':'periodic'});
+  explicit.push({id:`pdf-${x.id}`,sourceId:x.id,createdAt:x.createdAt||'',type:x.kind==='chronotime'?'Chronotime':'Rapport de contrôle',fileName:x.fileName||'PDF',attachmentId:x.attachmentId||'',bundledPath:x.bundledPath||'',bundledKey:x.bundledKey||'',subject:x.subject||'',academicYear:x.academicYear||'',summary:x.summary||'',module:x.kind==='chronotime'?'pdfimports':'periodic'});
  }
  for(const n of (db.notes||[]).filter(n=>n.source==='scan'||n.importedScan)){
   if(seen.has(n.id))continue;
