@@ -1,0 +1,10 @@
+V147.34 — 16/08/2026
+
+TABLEAU DE BORD — HORAIRES THÉORIQUES SUR LE CALENDRIER DES AGENTS
+
+- Chaque carte agent du calendrier hebdomadaire affiche maintenant explicitement « Théorique : HH:MM–HH:MM ».
+- La source est indiquée : Permanence, Roulement/Matin/Soir, Standard ou Repos.
+- L'horaire est recalculé pour la date exacte de chaque colonne du calendrier.
+- L'ordre métier reste : Permanence > Roulement > Standard > Repos.
+- Les absences/RTT/congés gardent leur pastille, tout en conservant la référence de l'horaire théorique de la journée.
+- Les périodes historiques Standard sont donc visibles sur les semaines correspondantes du tableau de bord.

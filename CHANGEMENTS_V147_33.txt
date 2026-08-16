@@ -1,0 +1,13 @@
+V147.33 — 16/08/2026
+
+SUPPRESSION DES PÉRIODES D'HORAIRES STANDARD
+
+- Dans la fenêtre « saisie planning » d'un agent, chaque période Standard affiche maintenant :
+  « 🗑️ Supprimer cette période ».
+- La suppression concerne uniquement la période sélectionnée.
+- Les autres périodes historiques restent intactes.
+- L'historique est automatiquement recollé autour de la période supprimée.
+- Le tableau de bord, le calendrier et le Pilotage des horaires sont recalculés immédiatement.
+- Le raccourci Standard de la fiche agent est recalculé après suppression.
+- Une confirmation indique l'agent et les dates avant suppression.
+- Les roulements réels et les horaires de permanence ne sont pas supprimés par ce bouton.

@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.32';
+const APP_VERSION='147.34';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1612,8 +1612,64 @@ function agentAnnualScheduleSummary(agentId,focusDate=''){
    const active=(!p.effectiveFrom||p.effectiveFrom<=today)&&(!p.effectiveTo||p.effectiveTo>=today);
    const future=!active&&p.effectiveFrom&&p.effectiveFrom>today;
    const rows=[1,2,3,4,5,6,0].map(d=>{const x=p.dayProfiles?.[d]||{};return `<div class="annual-theoretical-day"><span>${dayNames[d]}</span><b>${x.start&&x.end?`${esc(x.start)} – ${esc(x.end)}`:'Repos / non travaillé'}</b>${x.pause?`<small>Pause ${Number(x.pause)} min</small>`:''}${x.missions?`<small>${esc(x.missions)}</small>`:''}</div>`}).join('');
-   return `<section class="annual-theoretical-period ${active?'is-active':future?'is-future':''}"><div class="annual-theoretical-period-head"><span>${badge(p.shift||'Standard')}</span><strong>${fmtDate(p.effectiveFrom)||'—'} → ${fmtDate(p.effectiveTo)||'—'}</strong><small>${active?'Applicable à la date sélectionnée':future?'Prochain planning enregistré':'Planning archivé / hors période'}</small></div><div class="annual-theoretical-grid">${rows}</div></section>`;
+   return `<section class="annual-theoretical-period ${active?'is-active':future?'is-future':''}"><div class="annual-theoretical-period-head"><span>${badge(p.shift||'Standard')}</span><strong>${fmtDate(p.effectiveFrom)||'—'} → ${fmtDate(p.effectiveTo)||'—'}</strong><small>${active?'Applicable à la date sélectionnée':future?'Prochain planning enregistré':'Planning archivé / hors période'}</small>${p.shift==='Standard'?`<button type="button" class="danger small delete-standard-period" data-delete-standard-period="${esc(p.id)}">🗑️ Supprimer cette période</button>`:''}</div><div class="annual-theoretical-grid">${rows}</div></section>`;
  }).join('')}</div>`;
+}
+
+
+function deleteStandardSchedulePeriod(planId){
+ const plan=(db.weeklyPlans||[]).find(p=>String(p.id)===String(planId));
+ if(!plan||plan.shift!=='Standard'){toast('Période Standard introuvable');return false}
+ const ag=agentById(plan.agentId);
+ const label=`${fmtDate(plan.effectiveFrom)||'—'} → ${fmtDate(plan.effectiveTo)||'—'}`;
+ if(!confirm(`Supprimer uniquement cette période Standard ?\n\n${agentName(ag)}\n${label}\n\nLes autres périodes et les anciens horaires resteront conservés.`))return false;
+
+ const deletedEnd=plan.effectiveTo||'';
+ db.weeklyPlans=(db.weeklyPlans||[]).filter(p=>String(p.id)!==String(planId));
+
+ // Recoller proprement l'historique Standard autour de la période supprimée.
+ const standards=(db.weeklyPlans||[])
+   .filter(p=>String(p.agentId)===String(plan.agentId)&&p.shift==='Standard')
+   .sort((x,y)=>(x.effectiveFrom||'').localeCompare(y.effectiveFrom||''));
+
+ for(let i=0;i<standards.length;i++){
+   const cur=standards[i],next=standards[i+1];
+   if(next?.effectiveFrom){
+     cur.effectiveTo=addDays(next.effectiveFrom,-1);
+   }
+ }
+ const previous=standards.filter(p=>(p.effectiveFrom||'')<(plan.effectiveFrom||'')).at(-1);
+ const next=standards.find(p=>(p.effectiveFrom||'')>(plan.effectiveFrom||''));
+ if(previous&&!next&&deletedEnd)previous.effectiveTo=deletedEnd;
+
+ // Recalculer le raccourci Standard de la fiche agent sans recréer la période supprimée.
+ if(ag){
+   const ref=todayISO();
+   const active=standards.filter(p=>(!p.effectiveFrom||p.effectiveFrom<=ref)&&(!p.effectiveTo||p.effectiveTo>=ref))
+     .sort((x,y)=>(y.effectiveFrom||'').localeCompare(x.effectiveFrom||''))[0]||standards.at(-1)||null;
+   const profile=active ? Object.values(active.dayProfiles||{}).find(x=>x?.start&&x?.end) : null;
+   if(profile){
+     ag.standardSchedule={start:profile.start||'',end:profile.end||'',pause:Number(profile.pause||0),missions:profile.missions||'',effectiveFrom:active.effectiveFrom||''};
+     ag.standardStart=profile.start||'';ag.standardEnd=profile.end||'';ag.standardPause=Number(profile.pause||0);ag.standardMissions=profile.missions||'';
+   }else{
+     ag.standardSchedule={start:'',end:'',pause:0,missions:'',effectiveFrom:''};
+     ag.standardStart='';ag.standardEnd='';ag.standardPause=0;ag.standardMissions='';
+   }
+ }
+
+ save(true);
+ safeRenderAll();
+
+ const annualBox=$('#annualTheoreticalSummary');
+ const form=$('#modalForm');
+ if(annualBox&&form?.elements?.agentId){
+   annualBox.innerHTML=agentAnnualScheduleSummary(form.elements.agentId.value,form.elements.dateFrom?.value||todayISO());
+ }
+ if(typeof refreshTheoretical==='function'){
+   try{refreshTheoretical(true)}catch(_){}
+ }
+ toast('✅ Période Standard supprimée — historique recalculé');
+ return true;
 }
 
 function openAgentDay(agentId,date,id,preferredDayType=''){
@@ -1750,10 +1806,14 @@ function renderTeamCalendar(){
       const info=dayInfo(a.id,date),h=dayHours(info);
       const absent=isAbsenceType(info.dayType);
       const cls=absent?'absence':info.dayType==='Formation'?'training':info.dayType==='Repos'?'rest':info.shift==='Soir'?'evening':info.shift==='Matin'?'morning':'neutral';
-      const detail=info.dayType==='Présence'&&info.plannedStart&&info.plannedEnd?`${esc(info.plannedStart)}–${esc(info.plannedEnd)}`:esc(info.dayType==='Repos'?'Repos':info.dayType);
-      const mission=info.dayType==='Présence'&&info.missions?`<small class="agent-missions">${esc(info.missions)}</small>`:(info.note?`<small class="agent-missions">${esc(info.note)}</small>`:'');
+      const theoretical=resolvedTheoreticalSchedule(a.id,date,info.dayType||'Présence');
+      const theoreticalText=theoretical.start&&theoretical.end?`${esc(theoretical.start)}–${esc(theoretical.end)}`:(theoretical.shift==='Repos'?'Repos / non travaillé':'Horaire non défini');
+      const sourceLabel=theoretical.shift==='Permanence'?'Permanence':theoretical.source==='rotation'?(theoretical.shift||'Roulement'):theoretical.shift==='Standard'?'Standard':theoretical.shift==='Repos'?'Repos':'';
+      const detail=info.dayType==='Présence'?theoreticalText:esc(info.dayType==='Repos'?'Repos':info.dayType);
+      const theoreticalLine=info.dayType==='Présence'?`<small class="agent-theoretical"><b>Théorique :</b> ${theoreticalText}${sourceLabel?` · ${esc(sourceLabel)}`:''}</small>`:`<small class="agent-theoretical muted"><b>Théorique :</b> ${theoreticalText}${sourceLabel?` · ${esc(sourceLabel)}`:''}</small>`;
+      const mission=info.dayType==='Présence'&&theoretical.missions?`<small class="agent-missions">${esc(theoretical.missions)}</small>`:(info.note?`<small class="agent-missions">${esc(info.note)}</small>`:'');
       const delta=Math.abs(h.delta)>0.001?`<em class="agent-delta ${h.delta>0?'positive':'negative'}">${h.delta>0?'+':''}${h.delta.toFixed(2)} h</em>`:'';
-      return `<button class="team-agent-entry ${cls}" data-agent-day="${a.id}" data-date="${date}" title="Modifier ${esc(agentName(a))} le ${fmtDate(date)}"><span class="agent-entry-avatar">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><span class="agent-entry-main"><strong>${esc(agentName(a))}</strong><small class="agent-hours">${detail||'Horaire non défini'}</small>${mission}</span>${delta}<span class="agent-entry-arrow">›</span></button>`;
+      return `<button class="team-agent-entry ${cls}" data-agent-day="${a.id}" data-date="${date}" title="Modifier ${esc(agentName(a))} le ${fmtDate(date)}"><span class="agent-entry-avatar">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><span class="agent-entry-main"><strong>${esc(agentName(a))}</strong>${theoreticalLine}${mission}</span>${delta}<span class="agent-entry-arrow">›</span></button>`;
     }).join('');
     const present=agents.filter(a=>{const i=dayInfo(a.id,date);return i.dayType==='Présence'}).length;
     return `<section class="team-day-card ${date===todayISO()?'today':''}"><header class="team-day-header"><div><strong>${dateObj.toLocaleDateString('fr-FR',{weekday:'long'})}</strong><span>${dateObj.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}</span></div><small>${present}/${agents.length} prévu${present>1?'s':''}</small></header><div class="team-day-agents">${rows}</div></section>`;
@@ -2758,6 +2818,8 @@ $('#archiveNow').onclick=()=>{const made=createWeeklyArchive(false);save();toast
  $$('[data-report-print]').forEach(b=>b.onclick=()=>printReport(b.dataset.reportPrint));$$('[data-report-email]').forEach(b=>b.onclick=()=>prepareEmail(b.dataset.reportEmail));$('#printFullRegister').onclick=()=>printReport('full');$$('[data-print]').forEach(b=>b.onclick=()=>printView(b.dataset.print)); const pc=$('#printCollectivePlanning');if(pc)pc.onclick=generateCollectivePlanningPDF;const pi=$('#printIndividualPlanning');if(pi)pi.onclick=generateIndividualPlanningPDF;
  document.addEventListener('click',e=>{const b=e.target.closest('[data-edit-weekly-plan]');if(b)openWeeklyPlan(Number(b.dataset.editWeeklyPlan))});
  document.addEventListener('click',e=>{const b=e.target.closest('[data-new-weekly-agent]');if(b)openWeeklyPlan(null,b.dataset.newWeeklyAgent)});
+ document.addEventListener('click',e=>{const b=e.target.closest('[data-delete-standard-period]');if(b){e.preventDefault();e.stopPropagation();deleteStandardSchedulePeriod(b.dataset.deleteStandardPeriod)}});
+
  const filterIds=['personalMonth','personalType','personalStatus','agentSearch','agentStatus','rotationAgent','rotationYear','rotationMonth','planningMonth','planningAgent','planningSignal','absenceMonth','absenceAgent','absenceType','absenceStatus','vacationZone','vacationStatus','issueMonth','issueAgent','issueCategory','issueStatus','periodicFamily','periodicStatus','periodicBuilding','cleanMonth','cleanBuilding','cleanRoomType','cleanStatus','cleaningGuideType','maintenanceStatus','maintenancePriority','maintenanceFamily','requestStatus','requestType','workStatus','workType','meetingMonth','meetingType','noteCategory','notePriority','noteStatus','noteSearch','documentCategory','documentSearch','archiveYear','archiveSearch','importArchiveType','importArchiveSearch'];for(const id of filterIds){const e=document.getElementById(id);if(e)e.addEventListener(e.tagName==='INPUT'&&e.type==='text'?'input':'change',()=>{if(id==='cleaningGuideType')renderCleaningGuide();else if(id.startsWith('personal'))renderPersonal();else if(id.startsWith('agent'))renderAgents();else if(id.startsWith('rotation'))renderRotations();else if(id.startsWith('planning'))renderPlanning();else if(id.startsWith('absence'))renderAbsences();else if(id.startsWith('vacation'))renderVacations();else if(id.startsWith('issue'))renderIssues();else if(id.startsWith('periodic'))renderPeriodic();else if(id.startsWith('clean'))renderCleaning();else if(id.startsWith('maintenance'))renderMaintenance();else if(id.startsWith('request'))renderRequests();else if(id.startsWith('work'))renderWorks();else if(id.startsWith('meeting'))renderMeetings();else if(id.startsWith('note'))renderNotes();else if(id.startsWith('document'))renderDocuments();else if(id.startsWith('archive')||id.startsWith('importArchive'))renderArchives()})}
  document.addEventListener('keydown',e=>{const go=e.target.closest?.('#dashboard [data-go]');if(go&&(e.key==='Enter'||e.key===' ')){e.preventDefault();dashboardShortcut(go.dataset.go)}});
  document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){if(go.closest('#dashboard'))dashboardShortcut(go.dataset.go);else setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ae=e.target.closest('[data-agenda-source]');if(ae){
