@@ -1,0 +1,15 @@
+V147.27 — 16/08/2026
+
+Circuit OneDrive manuel sécurisé, sans autorisation Microsoft Graph :
+- après analyse, bouton « Préparer le PDF + ouvrir OneDrive » ;
+- OneDrive s’ouvre directement dans « Pilotage Service Technique » ;
+- après chargement du PDF, l’utilisateur fait Partager → Copier le lien ;
+- retour dans l’application : bouton « 📋 Coller le lien copié » ;
+- bouton « ✅ J’ai enregistré dans OneDrive » valide et classe immédiatement le lien ;
+- validation du lien OneDrive/SharePoint ;
+- refus du lien du dossier racine : il faut bien le lien du fichier ;
+- pour un contrôle périodique, le contrôle concerné est obligatoire ;
+- le lien est enregistré dans Supabase via l’état de l’application et rattaché à la bonne fiche ;
+- le bouton Continuer réutilise le lien déjà classé et évite les doublons.
+
+Chronotime conserve son circuit spécifique.

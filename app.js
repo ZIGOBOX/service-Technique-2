@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.26';
+const APP_VERSION='147.27';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -2677,9 +2677,13 @@ function centralOneDrivePanel(){
  if(type==='chronotime'){box.innerHTML='<div class="import-message"><strong>Chronotime</strong><p>Traitement Chronotime conservé tel quel. Aucun classement OneDrive imposé ici.</p></div>';return}
  const cls=oneDriveClassificationFor(type,centralImportAnalysis);
  const periodicOptions=(db.periodic||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.no)} — ${esc(x.name)}</option>`).join('');
- box.innerHTML=`<section class="onedrive-classifier"><h4>☁️ Classement OneDrive</h4><p class="hint"><strong>Étape 1 :</strong> choisissez la rubrique. <strong>Étape 2 :</strong> cliquez sur « Enregistrer le PDF dans OneDrive » : le PDF sera d’abord téléchargé sur l’appareil puis OneDrive s’ouvrira. Dans OneDrive, choisissez le dossier et importez ce PDF. <strong>Étape 3 :</strong> copiez le lien du fichier OneDrive et collez-le ici.</p><div class="form-grid"><label>Rubrique détectée<input id="centralOneDriveCategory" value="${esc(cls.category)}"></label>${cls.module==='periodic'?`<label>Contrôle concerné<select id="centralOneDriveRecord"><option value="">À choisir…</option>${periodicOptions}</select></label>`:''}<label class="span2">Lien du fichier OneDrive<input id="centralOneDriveUrl" type="url" placeholder="https://…sharepoint.com/… ou lien OneDrive"></label></div><div class="card-actions"><button type="button" class="primary" id="centralSavePdfOneDrive">☁️ Enregistrer le PDF dans OneDrive</button><button type="button" class="ghost" id="centralOpenOneDrive">Ouvrir Pilotage Service Technique</button></div><div id="centralOneDriveSaveHelp" class="import-message hidden"></div></section>`;
+ const already=(db.oneDriveLinks||[]).find(x=>String(x.id)===String(centralImportAnalysis?.oneDriveLinkId||''));
+ box.innerHTML=`<section class="onedrive-classifier"><h4>☁️ Classement OneDrive</h4><p class="hint"><strong>1.</strong> Préparez le PDF et ouvrez OneDrive. <strong>2.</strong> Chargez-le dans le dossier voulu. <strong>3.</strong> Dans OneDrive faites Partager → Copier le lien. <strong>4.</strong> Revenez ici et cliquez sur « J’ai enregistré dans OneDrive ».</p><div class="form-grid"><label>Rubrique détectée<input id="centralOneDriveCategory" value="${esc(already?.category||cls.category)}"></label>${cls.module==='periodic'?`<label>Contrôle concerné<select id="centralOneDriveRecord"><option value="">À choisir…</option>${periodicOptions}</select></label>`:''}<label class="span2">Lien OneDrive du fichier<input id="centralOneDriveUrl" type="url" value="${esc(already?.url||'')}" placeholder="Collez ici le lien copié depuis OneDrive"></label></div><div class="card-actions"><button type="button" class="primary" id="centralSavePdfOneDrive">☁️ Préparer le PDF + ouvrir OneDrive</button><button type="button" class="ghost" id="centralOpenOneDrive">Ouvrir Pilotage Service Technique</button><button type="button" class="ghost" id="centralPasteOneDriveLink">📋 Coller le lien copié</button><button type="button" class="primary onedrive-done" id="centralConfirmOneDriveSaved">✅ J’ai enregistré dans OneDrive</button></div><div id="centralOneDriveSaveHelp" class="import-message ${already?'':'hidden'}">${already?`<strong>✅ Lien OneDrive déjà classé</strong><p>${esc(already.fileName||already.title||'Document')} est rattaché à ${esc(already.category||cls.category)}.</p>`:''}</div></section>`;
+ const record=$('#centralOneDriveRecord');if(record&&already?.recordId)record.value=String(already.recordId);
  $('#centralSavePdfOneDrive')?.addEventListener('click',()=>downloadCentralPdfForOneDrive());
  $('#centralOpenOneDrive')?.addEventListener('click',()=>window.open(ONEDRIVE_PILOTAGE_ROOT,'_blank','noopener'));
+ $('#centralPasteOneDriveLink')?.addEventListener('click',()=>pasteOneDriveLinkFromClipboard());
+ $('#centralConfirmOneDriveSaved')?.addEventListener('click',()=>confirmCentralOneDriveSaved());
 }
 function downloadCentralPdfForOneDrive(){
  const file=centralImportAnalysis?.file;if(!file)return toast('Aucun PDF à enregistrer');
@@ -2689,13 +2693,50 @@ function downloadCentralPdfForOneDrive(){
    setTimeout(()=>window.open(ONEDRIVE_PILOTAGE_ROOT,'_blank','noopener'),250);
  }catch(e){console.error(e);toast('Impossible de préparer le PDF pour OneDrive')}
 }
+async function pasteOneDriveLinkFromClipboard(){
+ const input=$('#centralOneDriveUrl');if(!input)return;
+ try{
+   if(!navigator.clipboard?.readText)throw new Error('Lecture du presse-papiers indisponible');
+   const text=String(await navigator.clipboard.readText()||'').trim();
+   if(!text)throw new Error('Presse-papiers vide');
+   input.value=text;input.dispatchEvent(new Event('input',{bubbles:true}));
+   toast('Lien OneDrive collé');
+ }catch(e){
+   input.focus();toast('Collez le lien OneDrive dans le champ puis validez');
+ }
+}
+function validateOneDriveDocumentUrl(url){
+ const u=String(url||'').trim();if(!/^https:\/\//i.test(u))return 'Le lien doit commencer par https://';
+ if(!/(sharepoint\.com|1drv\.ms|onedrive\.live\.com)/i.test(u))return 'Ce lien ne ressemble pas à un lien OneDrive / SharePoint';
+ if(u===ONEDRIVE_PILOTAGE_ROOT)return 'Copiez le lien du fichier, pas le lien du dossier racine';
+ return '';
+}
+function confirmCentralOneDriveSaved(){
+ if(!centralImportAnalysis)return toast('Aucun document analysé');
+ const type=$('#centralImportType')?.value||centralImportAnalysis.detectedType||'other';
+ const file=centralImportAnalysis.file;
+ const url=String($('#centralOneDriveUrl')?.value||'').trim();
+ const err=validateOneDriveDocumentUrl(url);if(err){toast(err);$('#centralOneDriveUrl')?.focus();return false}
+ const cls=oneDriveClassificationFor(type,centralImportAnalysis),recordId=$('#centralOneDriveRecord')?.value||'';
+ if(cls.module==='periodic'&&!recordId){toast('Choisissez le contrôle périodique concerné');$('#centralOneDriveRecord')?.focus();return false}
+ const existing=(db.oneDriveLinks||[]).find(x=>String(x.id)===String(centralImportAnalysis.oneDriveLinkId||''));
+ const meta={module:cls.module,recordId,category:String($('#centralOneDriveCategory')?.value||cls.category).trim(),title:file?.name?.replace(/\.pdf$/i,'')||'',fileName:file?.name||'',url,detectedType:type,source:'import-central'};
+ let saved;
+ if(existing){Object.assign(existing,meta,{updatedAt:new Date().toISOString(),academicYear:activeAcademicYear()});saved=existing}
+ else saved=saveOneDriveIndex(meta);
+ centralImportAnalysis.oneDriveLinkId=saved.id;
+ save(false);
+ const help=$('#centralOneDriveSaveHelp');if(help){help.classList.remove('hidden');help.innerHTML=`<strong>✅ Lien OneDrive enregistré et classé</strong><p>${esc(saved.fileName||'Document')} → ${esc(saved.category||'Documents')}${saved.module==='periodic'?'. Il sera rattaché au contrôle sélectionné.':'.'}</p>`}
+ toast('✅ Lien OneDrive classé dans l’application');
+ return saved;
+}
 function captureCentralOneDriveLink(type,file){
  if(type==='chronotime')return null;
+ const existing=(db.oneDriveLinks||[]).find(x=>String(x.id)===String(centralImportAnalysis?.oneDriveLinkId||''));
+ if(existing)return existing;
  const url=String($('#centralOneDriveUrl')?.value||'').trim();if(!url)return null;
- if(!/^https:\/\//i.test(url)){toast('Le lien OneDrive doit commencer par https://');return false}
- const cls=oneDriveClassificationFor(type,centralImportAnalysis),recordId=$('#centralOneDriveRecord')?.value||'';
- if(cls.module==='periodic'&&!recordId){toast('Choisissez le contrôle périodique concerné');return false}
- return saveOneDriveIndex({module:cls.module,recordId,category:String($('#centralOneDriveCategory')?.value||cls.category).trim(),title:file?.name?.replace(/\.pdf$/i,'')||'',fileName:file?.name||'',url,detectedType:type,source:'import-central'});
+ const err=validateOneDriveDocumentUrl(url);if(err){toast(err);return false}
+ return confirmCentralOneDriveSaved()||false;
 }
 
 // ===== V80 — Import centralisé + archivage des originaux =====
