@@ -1,0 +1,16 @@
+V147.41 — 16/08/2026
+
+CORRECTION FERMETURE DES FORMULAIRES
+- La vérification Supabase n'est plus basée sur une égalité JSON trop stricte.
+- La relecture compare maintenant uniquement les champs réellement enregistrés.
+- Les champs supplémentaires ajoutés par migration ou normalisation n'empêchent plus la validation.
+- Si Supabase confirme les nouvelles valeurs, le formulaire se ferme normalement.
+- Si Supabase ne confirme pas, le formulaire reste ouvert et affiche l'erreur.
+
+AUDIT
+- Vérification de 18 formulaires métier : tous possèdent une persistance vérifiée et une fermeture après succès.
+
+NETTOYAGE DU ZIP
+- Suppression des anciens fichiers CHANGEMENTS_*.txt devenus inutiles.
+- Conservation uniquement de ce fichier de version.
+- Aucun fichier de données, Excel, JavaScript ou configuration métier n'a été supprimé.

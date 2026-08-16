@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.40';
+const APP_VERSION='147.41';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1775,7 +1775,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    label:'Planning agent',
    verify:remote=>expectedDays.every(exp=>{
      const got=(remote.agentDays||[]).find(r=>String(r.id)===String(exp.id));
-     return !!got&&recordComparableSnapshot(got)===recordComparableSnapshot(exp);
+     return recordMatchesExpected(exp,got);
    })
  });
  if(!persisted?.ok){toast('⚠️ Planning agent non confirmé — le formulaire reste ouvert');return;}
@@ -1863,7 +1863,23 @@ function recordComparableSnapshot(record){
    if(skip.has(k)||typeof v==='function'||v===undefined)continue;
    out[k]=v;
  }
- return JSON.stringify(out);
+ return out;
+}
+function samePersistedValue(expected,actual){
+ if(expected===undefined)return true;
+ if(expected===null)return actual===null||actual===undefined||actual==='';
+ if(typeof expected==='number')return Number(actual)===expected;
+ if(typeof expected==='boolean')return Boolean(actual)===expected;
+ if(Array.isArray(expected)||typeof expected==='object'){
+   try{return JSON.stringify(actual??null)===JSON.stringify(expected)}
+   catch(_){return false}
+ }
+ return String(actual??'')===String(expected);
+}
+function recordMatchesExpected(expectedRecord,actualRecord){
+ if(!actualRecord)return false;
+ const expected=recordComparableSnapshot(expectedRecord);
+ return Object.entries(expected).every(([k,v])=>samePersistedValue(v,actualRecord[k]));
 }
 function upsertDbRecord(collection,record){
  if(!collection||!record?.id)return false;
@@ -1907,7 +1923,7 @@ async function commitFormRecordVerified(label,collection,record){
          const found=Array.isArray(remote?.[collection])
            ? remote[collection].find(x=>String(x.id)===String(record.id))
            : null;
-         return !!found && recordComparableSnapshot(found)===expected;
+         return recordMatchesExpected(expected,found);
        }
      });
      if(!result?.ok)throw new Error(result?.error||`${label} non confirmé par Supabase`);
@@ -1915,7 +1931,7 @@ async function commitFormRecordVerified(label,collection,record){
      const confirmed=Array.isArray(db?.[collection])
        ? db[collection].find(x=>String(x.id)===String(record.id))
        : null;
-     if(!confirmed || recordComparableSnapshot(confirmed)!==expected){
+     if(!recordMatchesExpected(expected,confirmed)){
        throw new Error(`${label} relu mais les modifications ne correspondent pas`);
      }
      refreshCollectionView(collection);
