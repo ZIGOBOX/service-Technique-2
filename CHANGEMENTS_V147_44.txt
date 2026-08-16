@@ -1,0 +1,8 @@
+V147.44 — Compteur interventions actives
+
+- Le grand compteur « Interventions » du tableau de bord exclut désormais toutes les interventions considérées fermées par l'application.
+- Les statuts Terminée et Clôturée ne sont donc plus comptés.
+- Les autres statuts de fermeture déjà reconnus par la fonction métier isClosedStatus (ex. Archivée / Annulée selon configuration) restent également exclus.
+- Le sous-compteur affiche uniquement le nombre « À faire ».
+- Les interventions terminées/clôturées restent enregistrées dans la base et consultables dans Maintenance ; elles sont seulement retirées du compteur du tableau de bord.
+- La largeur automatique des colonnes sur toutes les impressions de V147.43 est conservée.

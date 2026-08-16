@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.41';
+const APP_VERSION='147.44';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -2572,8 +2572,19 @@ function renderDashboard(){
  const present=activeAgents.filter(a=>{const info=dayInfo(a.id,today);return !isAbsenceType(info.dayType)&&normalizeText(info.dayType)!=='repos'}).length;
  const urgentActions=collectUrgentDashboardActions();
  const lateActions=collectLateDashboardActions(today);
- const openMaint=(db.maintenance||[]).filter(x=>!isClosedStatus(x.status));
- const todoMaint=openMaint.filter(x=>['a qualifier','a faire','planifie','planifiee'].includes(normalizeText(x.status)));
+ const allMaint=db.maintenance||[];
+ const closedMaint=allMaint.filter(x=>isClosedStatus(x.status));
+ const openMaint=allMaint.filter(x=>!isClosedStatus(x.status));
+ // "À faire" = statut À faire uniquement. Les statuts À qualifier / Planifiée restent dans "ouvertes".
+ const todoMaint=allMaint.filter(x=>normalizeText(x.status)==='a faire');
+ const maintCounts={
+   total:allMaint.length,
+   todo:todoMaint.length,
+   open:openMaint.length,
+   closed:closedMaint.length,
+   byStatus:allMaint.reduce((acc,x)=>{const k=String(x.status||'Sans statut').trim()||'Sans statut';acc[k]=(acc[k]||0)+1;return acc},{})
+ };
+ window.PSTMaintenanceCounts=maintCounts;
  const recentClean=(db.cleaning||[]).filter(x=>normalizeDateValue(x.date)>=addDays(today,-30));
  const comp=recentClean.length?Math.round(recentClean.filter(x=>normalizeText(x.overallStatus)==='conforme').length/recentClean.length*100):null;
  const weak=recentClean.reduce((sum,x)=>sum+(x.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).length,0);
@@ -2581,7 +2592,7 @@ function renderDashboard(){
  const notes=(db.notes||[]).filter(x=>!isClosedStatus(x.status)),notesDue=notes.filter(x=>{const due=recordDueDate(x);return due&&due<=soon7}).length;
  $('#kpiAgents').textContent=activeAgents.length;$('#kpiPresent').textContent=`${present} présents aujourd’hui`;
  $('#kpiUrgentActions').textContent=urgentActions.length;$('#kpiLate').textContent=`${lateActions.length} en retard`;
- $('#kpiMaintenance').textContent=openMaint.length;$('#kpiMaintenanceTodo').textContent=`${todoMaint.length} à faire`;
+ $('#kpiMaintenance').textContent=maintCounts.open;$('#kpiMaintenanceTodo').textContent=`${maintCounts.todo} à faire`;
  $('#kpiCompliance').textContent=comp==null?'—':`${comp} %`;$('#kpiCleaningWeak').textContent=`${weak} point${weak>1?'s':''} faible${weak>1?'s':''}`;
  $('#kpiPeriodicLate').textContent=pLate.length;$('#kpiPeriodicSoon').textContent=`${pSoon.length} bientôt`;
  $('#kpiNotes').textContent=notes.length;$('#kpiNotesDue').textContent=`${notesDue} échéance${notesDue>1?'s':''} proche${notesDue>1?'s':''}`;
@@ -2665,6 +2676,15 @@ function reportPrintCSS(orientation='landscape'){
  .panel{border:1px solid #d5e2eb;border-radius:9px;padding:9px;margin:0 0 10px;background:#fff;box-shadow:none;break-inside:auto}.panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:6px}.panel-head>p{max-width:55%}
  .summary-grid,.mini-kpis,.team-summary,.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0}.summary-grid article,.mini-kpis article,.team-summary article,.kpi{border:1px solid #dbe5ed;border-radius:7px;padding:6px;background:#f8fbfd;break-inside:avoid}.summary-grid strong,.mini-kpis strong,.team-summary strong,.kpi strong{display:block;font-size:14px;color:#075ca8}
  .report-table-wrap,.table-wrap{width:100%;overflow:visible!important;margin:6px 0 12px}.report-table,table{border-collapse:collapse;width:100%;table-layout:auto}.report-table thead,table thead{display:table-header-group}.report-table tr,table tr{break-inside:avoid;page-break-inside:avoid}.report-table th,.report-table td,th,td{border:1px solid #b7c5d2;padding:4px 5px;vertical-align:top;overflow-wrap:anywhere}.report-table th,th{background:#dceef9;color:#153c5a;font-weight:700;text-align:left}.report-table tbody tr:nth-child(even) td,tbody tr:nth-child(even) td{background:#f7fafc}.report-table.cols-7,.report-table.cols-8,.report-table.cols-9,.report-table.cols-10{font-size:8.2px}
+ /* V147.42 — largeur des colonnes calculée selon le contenu, avec limites A4. */
+ .report-table,table{table-layout:auto!important}
+ .report-table th,.report-table td,th,td{width:auto!important;max-width:58mm;white-space:normal;overflow-wrap:anywhere;word-break:normal}
+ .report-table th:first-child,.report-table td:first-child,table th:first-child,table td:first-child{white-space:nowrap;width:1%;max-width:30mm}
+ .report-table th:has(.badge),.report-table td:has(.badge){white-space:nowrap;width:1%}
+
+ .print-maintenance-table .print-col-action{display:none!important}
+ .pst-auto-sized-print-table th,.pst-auto-sized-print-table td{white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;max-width:none!important}
+
  .badge{display:inline-block;padding:2px 5px;border-radius:6px;background:#e8edf2;white-space:nowrap}.good{background:#dff6e8!important}.bad{background:#ffe0e0!important}.warn{background:#fff0c9!important}.info{background:#dff0ff!important}.empty-cell{text-align:center;color:#64748b;font-style:italic}
  /* Calendrier Congés / RTT / absences */
  .month-board{width:100%;overflow:visible!important;margin:4px 0 10px}.month-grid{display:grid!important;align-items:stretch;width:100%!important;min-width:0!important;gap:0;border-left:1px solid #cbd5e1;border-top:1px solid #cbd5e1}.month-corner,.month-day-head,.month-agent,.month-cell.day-state{border-right:1px solid #cbd5e1!important;border-bottom:1px solid #cbd5e1!important;min-width:0!important;max-width:none!important;width:auto!important;margin:0!important;border-radius:0!important;display:flex!important;align-items:center;justify-content:center;min-height:24px!important;padding:2px!important}.month-corner,.month-agent{justify-content:flex-start!important;text-align:left!important;padding-left:4px!important;background:#f3f7fa!important;font-weight:700;font-size:7.5px;position:static!important}.month-day-head{background:#dceef9!important;font-weight:700;font-size:7px;position:static!important}.month-day-head.weekend{background:#edf2f6!important}.month-cell.day-state{font-size:7px;font-weight:700}.month-cell.day-state span{font-size:7px!important}.month-cell.day-state.standard{background:#dbeafe!important;color:#275a9b!important}.month-cell.day-state.morning{background:#dcfce7!important;color:#166534!important}.month-cell.day-state.evening{background:#ffedd5!important;color:#9a3412!important}.month-cell.day-state.leave{background:#bbf7d0!important;color:#166534!important}.month-cell.day-state.rtt{background:#93c5fd!important;color:#1e3a8a!important}.month-cell.day-state.sick{background:#fecaca!important;color:#991b1b!important}.month-cell.day-state.holiday{background:#fef08a!important;color:#854d0e!important}.month-cell.day-state.off{background:#eef1f4!important;color:#6b7280!important}.month-cell.day-state.other{background:#ede9fe!important;color:#5b21b6!important}
@@ -2679,8 +2699,72 @@ function reportPrintCSS(orientation='landscape'){
  @media print{.filters,.section-actions,.panel-actions,.file-label,.fab,.no-print,input,select,textarea,button:not(.print-data-cell){display:none!important}.panel{box-shadow:none!important}}
  `;
 }
+
+function autoSizePrintTables(w){
+ try{
+  const doc=w.document;
+  [...doc.querySelectorAll('table')].forEach(table=>{
+   const rows=[...table.rows];
+   if(!rows.length)return;
+   const colCount=Math.max(...rows.map(r=>r.cells.length||0));
+   if(!colCount)return;
+
+   // Colonnes réellement imprimées.
+   const visibleCols=[];
+   for(let c=0;c<colCount;c++){
+    const cells=rows.map(r=>r.cells[c]).filter(Boolean);
+    if(cells.some(cell=>w.getComputedStyle(cell).display!=='none'))visibleCols.push(c);
+   }
+   if(!visibleCols.length)return;
+
+   const scores=visibleCols.map(c=>{
+    const cells=rows.slice(0,80).map(r=>r.cells[c]).filter(Boolean);
+    const lengths=cells.map(cell=>{
+      const text=(cell.innerText||cell.textContent||'').replace(/\s+/g,' ').trim();
+      // longueur utile plafonnée : évite qu'une description très longue écrase toutes les colonnes.
+      return Math.min(60,Math.max(2,text.length));
+    });
+    const max=Math.max(2,...lengths);
+    const avg=lengths.length?lengths.reduce((s,n)=>s+n,0)/lengths.length:2;
+    return Math.max(3,Math.min(32,avg*.65+max*.35));
+   });
+   const minPct=visibleCols.length>=9?5:visibleCols.length>=7?6:7;
+   let widths=scores.map(s=>Math.max(minPct,s));
+   const sum=widths.reduce((s,n)=>s+n,0);
+   widths=widths.map(n=>n/sum*100);
+
+   // Rééquilibrage : aucune colonne ne peut monopoliser la page.
+   const maxPct=visibleCols.length>=9?26:visibleCols.length>=7?30:38;
+   let excess=0;
+   widths=widths.map(n=>{if(n>maxPct){excess+=n-maxPct;return maxPct}return n});
+   if(excess>0){
+    const receivers=widths.map((n,i)=>n<maxPct?i:-1).filter(i=>i>=0);
+    const capacity=receivers.reduce((s,i)=>s+(maxPct-widths[i]),0);
+    if(capacity>0)receivers.forEach(i=>{widths[i]+=excess*((maxPct-widths[i])/capacity)});
+   }
+
+   table.style.tableLayout='fixed';
+   table.style.width='100%';
+   let cg=table.querySelector(':scope > colgroup.pst-auto-print-cols');
+   if(!cg){
+    cg=doc.createElement('colgroup');cg.className='pst-auto-print-cols';
+    table.insertBefore(cg,table.firstChild);
+   }
+   cg.innerHTML='';
+   for(let c=0;c<colCount;c++){
+    const col=doc.createElement('col');
+    const vi=visibleCols.indexOf(c);
+    if(vi>=0)col.style.width=`${widths[vi].toFixed(2)}%`;
+    else col.style.width='0';
+    cg.appendChild(col);
+   }
+   table.classList.add('pst-auto-sized-print-table');
+  });
+ }catch(error){console.warn('Largeur automatique impression',error)}
+}
+
 function waitAndPrint(w){
- const run=()=>{try{w.focus();w.print()}catch(e){console.error(e)}};
+ const run=()=>{try{autoSizePrintTables(w);w.focus();setTimeout(()=>w.print(),80)}catch(e){console.error(e)}};
  const imgs=[...w.document.images];let pending=imgs.filter(x=>!x.complete).length;
  if(!pending){setTimeout(run,250);return}
  imgs.forEach(img=>{if(!img.complete){img.onload=img.onerror=()=>{pending--;if(pending<=0)setTimeout(run,180)}}});
@@ -2694,6 +2778,14 @@ function printReport(type){
 }
 function printableViewHTML(view){
  const clone=view.cloneNode(true);
+ if(view.id==='maintenance'){
+   const table=clone.querySelector('table');
+   if(table){
+     table.classList.add('print-maintenance-table');
+     const widths=['no','date','location','family','subject','priority','assigned','due','status','action'];
+     table.querySelectorAll('tr').forEach(row=>[...row.cells].forEach((cell,i)=>cell.classList.add(`print-col-${widths[i]||i}`)));
+   }
+ }
  // Les cases de calendriers sont des <button> à l'écran : en impression on les convertit
  // en cellules statiques afin qu'elles ne disparaissent jamais avec les contrôles interactifs.
  clone.querySelectorAll('.month-cell.day-state,.rotation-day').forEach(btn=>{
@@ -2905,6 +2997,15 @@ document.addEventListener('scroll',e=>{
   pstPlanningScrollMemory[pstScrollKey(el,i)]=el.scrollLeft||0;
 },true);
 
+
+
+function auditMaintenanceCounts(){
+ const rows=db.maintenance||[];
+ const byStatus=rows.reduce((acc,x)=>{const k=String(x.status||'Sans statut').trim()||'Sans statut';acc[k]=(acc[k]||0)+1;return acc},{});
+ const result={afficheTableauDeBord:rows.filter(x=>!isClosedStatus(x.status)).length,totalBase:rows.length,aFaire:rows.filter(x=>normalizeText(x.status)==='a faire').length,exclusTerminesClotures:rows.filter(x=>isClosedStatus(x.status)).length,byStatus};
+ console.table(byStatus);console.log('Maintenance',result);return result;
+}
+window.PSTMaintenanceAudit={run:auditMaintenanceCounts};
 
 function auditFormPersistence(){
  const collections=['personalEvents','agents','rotations','weeklyPlans','agentDays','vacations','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','documents'];
