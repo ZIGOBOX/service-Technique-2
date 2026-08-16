@@ -1,0 +1,16 @@
+V147.31 — 16/08/2026
+
+CORRECTION GLOBALE DES HORAIRES THÉORIQUES — TOUS LES AGENTS
+
+Ordre appliqué partout :
+1. Permanence
+2. Roulement actif à la date consultée
+3. Standard historique actif à la date consultée
+4. Repos / aucun horaire
+
+- Recherche du Standard dans la période exacte qui contient la date consultée.
+- Les anciennes lignes Chronotime « Présence » ne masquent plus l'horaire théorique.
+- Si le jour est non travaillé dans une période Standard, affichage « Repos / non travaillé ».
+- La fenêtre de saisie planning affiche désormais la vraie source de l'horaire théorique.
+- Correction appliquée à Mme Tarrio et à tous les autres agents.
+- La traçabilité V147.30 par date d'effet est conservée.
