@@ -1,0 +1,10 @@
+V147.28 — 16/08/2026
+
+ONEDRIVE — LIEN OBLIGATOIRE AVANT VALIDATION
+
+- Pour tous les documents hors Chronotime, impossible de poursuivre sans lien OneDrive.
+- Le bouton « J’ai enregistré dans OneDrive » reste désactivé tant que le lien n’est pas valide.
+- Pour un contrôle périodique, il faut également choisir le contrôle concerné.
+- Après validation et classement du lien, le bouton « Continuer vers la validation » est déverrouillé.
+- Un contrôle de sécurité supplémentaire empêche la validation si le lien n’a pas réellement été enregistré dans l’index de l’application.
+- Chronotime conserve son circuit spécifique actuel et n’est pas bloqué par cette obligation OneDrive.

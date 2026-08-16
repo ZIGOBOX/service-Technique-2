@@ -1,0 +1,13 @@
+V147.30 — 16/08/2026
+
+TRACABILITÉ RÉELLE DES HORAIRES STANDARD
+
+- Chaque modification d'horaire Standard demande une Date d'effet.
+- Une nouvelle période Standard est créée au lieu d'écraser l'ancienne.
+- La période précédente est automatiquement clôturée la veille de la nouvelle date d'effet.
+- Les périodes futures existantes restent conservées.
+- Le tableau de bord, les calculs et les affichages passés retrouvent l'horaire applicable à la date consultée.
+- Dans Modifier l'agent : ajout d'un historique des périodes Standard.
+- Priorité métier inchangée : Permanence > Roulement > Standard.
+- La fiche agent conserve un raccourci vers l'horaire Standard courant, mais weeklyPlans devient l'historique de référence.
+- Aucun horaire précis de Mme Tarrio n'a été inventé : ses valeurs doivent être saisies avec la date d'effet souhaitée.

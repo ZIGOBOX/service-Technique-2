@@ -1,0 +1,19 @@
+V147.29 — 16/08/2026
+
+CORRECTION HORAIRE STANDARD THÉORIQUE PAR FICHE AGENT
+
+- Ajout dans « Modifier l’agent » d’un bloc « Horaire standard théorique » :
+  * Début standard
+  * Fin standard
+  * Pause standard
+  * Mission standard
+
+- Ces données sont enregistrées sur la fiche agent et dans Supabase.
+- Elles créent / mettent à jour automatiquement le profil Standard de l’année scolaire active dans Pilotage des horaires.
+- Si l’agent n’a pas de roulement, le tableau de bord reprend automatiquement cet horaire Standard.
+- Si un roulement existe, le roulement reste prioritaire.
+- Si le jour est une Permanence, la Permanence reste prioritaire sur tout le reste.
+- Priorité conservée : Permanence > Roulement > Standard.
+- Les anciennes lignes Chronotime « Présence » ne masquent plus l’horaire théorique Standard.
+- Les nouveaux agents ne reçoivent plus automatiquement un faux roulement : le roulement doit être créé explicitement.
+- La carte agent affiche le Standard lorsque l’agent n’a pas de roulement actif.

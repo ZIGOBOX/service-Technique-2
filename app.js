@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.27';
+const APP_VERSION='147.30';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1167,12 +1167,92 @@ function weeklyPlanFor(agentId,shift,date=''){
 function anyWeeklyPlanFor(agentId,date=''){normalizeWeeklyPlans();return (db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(agentId)&&(!date||((!p.effectiveFrom||p.effectiveFrom<=date)&&(!p.effectiveTo||p.effectiveTo>=date)))).sort((a,b)=>(b.effectiveFrom||'').localeCompare(a.effectiveFrom||''))[0]||null}
 function weeklyProfile(agentId,shift,weekday,date=''){const p=weeklyPlanFor(agentId,shift,date);return p?.dayProfiles?.[weekday]||null}
 function exactWeeklyProfile(agentId,shift,weekday,date=''){normalizeWeeklyPlans();const p=(db.weeklyPlans||[]).filter(x=>String(x.agentId)===String(agentId)&&x.shift===shift&&(!date||((!x.effectiveFrom||x.effectiveFrom<=date)&&(!x.effectiveTo||x.effectiveTo>=date)))).sort((a,b)=>(b.effectiveFrom||'').localeCompare(a.effectiveFrom||''))[0];return p?.dayProfiles?.[weekday]||null}
+
+function standardScheduleForAgent(agentId,date=todayISO()){
+ const agent=agentById(agentId)||{};
+ const wd=parseDate(date).getDay();
+
+ // Source principale : périodes Standard historisées dans weeklyPlans.
+ const p=exactWeeklyProfile(agentId,'Standard',wd,date);
+ if(p?.start&&p?.end)return {
+   start:p.start,end:p.end,pause:Number(p.pause||0),missions:p.missions||'',
+   source:'standard-plan'
+ };
+
+ // Compatibilité anciennes fiches agents : utilisé seulement si aucune période Standard n'existe.
+ const direct=agent.standardSchedule||{};
+ return {
+   start:String(direct.start||agent.standardStart||'').trim(),
+   end:String(direct.end||agent.standardEnd||'').trim(),
+   pause:Number(direct.pause??agent.standardPause??0)||0,
+   missions:String(direct.missions||agent.standardMissions||'').trim(),
+   source:'standard-agent-legacy'
+ };
+}
+function syncAgentStandardPlan(agent,effectiveFrom=''){
+ if(!agent?.id)return;
+ const s=agent.standardSchedule||{};
+ const start=String(s.start||'').trim(),end=String(s.end||'').trim();
+ if(!start||!end)return;
+
+ const range=academicYearRange(activeAcademicYear());
+ const from=normalizeDateValue(effectiveFrom||s.effectiveFrom||range.start)||range.start;
+ const workdays=(Array.isArray(agent.workdays)&&agent.workdays.length?agent.workdays:[1,2,3,4,5]).map(Number);
+
+ db.weeklyPlans=Array.isArray(db.weeklyPlans)?db.weeklyPlans:[];
+ const standards=db.weeklyPlans
+   .filter(x=>String(x.agentId)===String(agent.id)&&x.shift==='Standard')
+   .sort((x,y)=>(x.effectiveFrom||'').localeCompare(y.effectiveFrom||''));
+
+ // Fermer uniquement la période Standard immédiatement précédente.
+ const prev=standards.filter(x=>(x.effectiveFrom||'')<from).sort((x,y)=>(y.effectiveFrom||'').localeCompare(x.effectiveFrom||''))[0];
+ if(prev){
+   const prevEnd=addDays(from,-1);
+   if(!prev.effectiveTo || prev.effectiveTo>=from)prev.effectiveTo=prevEnd;
+ }
+
+ // Si une période commence déjà exactement à cette date, on la met à jour.
+ let p=standards.find(x=>x.effectiveFrom===from);
+ if(!p){
+   // Déterminer la fin : veille de la prochaine période, sinon fin d'année scolaire.
+   const next=standards.filter(x=>(x.effectiveFrom||'')>from).sort((x,y)=>(x.effectiveFrom||'').localeCompare(y.effectiveFrom||''))[0];
+   p={
+     id:uid(),agentId:agent.id,agent:agentName(agent),shift:'Standard',
+     effectiveFrom:from,
+     effectiveTo:next?.effectiveFrom?addDays(next.effectiveFrom,-1):range.end,
+     dayProfiles:{},rows:[],historyCreatedAt:new Date().toISOString()
+   };
+   db.weeklyPlans.push(p);
+ }else{
+   p.historyUpdatedAt=new Date().toISOString();
+ }
+
+ p.agent=agentName(agent);
+ p.dayProfiles=p.dayProfiles||{};
+ for(const wd of [1,2,3,4,5,6,0]){
+   p.dayProfiles[wd]=workdays.includes(wd)
+     ? {start,end,pause:Number(s.pause||0),missions:s.missions||'',segments:[]}
+     : {start:'',end:'',pause:0,missions:'',segments:[]};
+ }
+
+ // Garder la fiche agent comme raccourci vers la valeur courante, sans supprimer l'historique.
+ agent.standardSchedule={
+   start,end,pause:Number(s.pause||0),missions:s.missions||'',effectiveFrom:from
+ };
+ agent.standardStart=start;agent.standardEnd=end;agent.standardPause=Number(s.pause||0);agent.standardMissions=s.missions||'';
+}
+
 function scheduledFor(agentId,date){
  const wd=parseDate(date).getDay();
  // Le calendrier personnel de l'agent est prioritaire : samedi/dimanche sont en repos par défaut.
  if(!agentWorkdays(agentId).includes(wd))return {shift:'Repos',start:'',end:'',pause:0,missions:''};
  const r=activeRotation(agentId,date);
- if(!r){const p=weeklyProfile(agentId,'Standard',wd,date)||weeklyProfile(agentId,'Matin',wd,date)||anyWeeklyPlanFor(agentId,date)?.dayProfiles?.[wd];return p&&p.start?{shift:'Planning de référence',start:p.start,end:p.end,pause:Number(p.pause||0),missions:p.missions||'',segments:p.segments||[]}:{shift:'Non planifié',start:'',end:'',pause:0,missions:''}}
+ if(!r){
+   const p=standardScheduleForAgent(agentId,date);
+   return p&&p.start&&p.end
+     ? {shift:'Standard',start:p.start,end:p.end,pause:Number(p.pause||0),missions:p.missions||'',segments:p.segments||[],source:p.source||'standard'}
+     : {shift:'Non planifié',start:'',end:'',pause:0,missions:''};
+ }
  if(!(r.weekdays||[1,2,3,4,5]).map(Number).includes(wd))return {shift:'Repos',start:'',end:'',pause:0,missions:''};
  const ex=rotationException(agentId,date);if(ex){if(ex.shift==='Repos')return {shift:'Repos',start:'',end:'',pause:0,missions:ex.note||''};return {shift:ex.shift||'Horaire modifié',start:ex.start||'',end:ex.end||'',pause:Number(ex.pause||0),missions:ex.note||''}}
  const anchor=startOfWeek(r.effectiveFrom),diff=Math.floor((parseDate(startOfWeek(date))-parseDate(anchor))/604800000),mw=Math.max(1,Number(r.morningWeeks)||1),ew=Math.max(1,Number(r.eveningWeeks)||1),cycle=mw+ew;let pos=((diff%cycle)+cycle)%cycle;if(r.startShift==='Soir')pos=(pos+mw)%cycle;const shift=pos<mw?'Matin':'Soir';
@@ -1415,9 +1495,28 @@ function openAgent(id){
  const old=id?byId('agents',id):null;
  const x=old||{id:uid(),no:nextNo('agent','AGT'),firstName:'',lastName:'',role:db.lists.roles[0],weeklyHours:35,email:'',phone:'',assignment:'',status:'Actif',arrivalDate:'',workdays:[1,2,3,4,5],notes:'',attachments:[]};
  x.attachments=x.attachments||[];x.workdays=Array.isArray(x.workdays)&&x.workdays.length?x.workdays.map(Number):[1,2,3,4,5];
+ const range=academicYearRange(activeAcademicYear());
+ const refDate=todayISO()>=range.start&&todayISO()<=range.end?todayISO():range.start;
+ const stdExisting=standardScheduleForAgent(x.id,refDate);
+ const stdPlans=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(x.id)&&p.shift==='Standard').sort((p,q)=>(p.effectiveFrom||'').localeCompare(q.effectiveFrom||''));
+ const currentPlan=stdPlans.filter(p=>(!p.effectiveFrom||p.effectiveFrom<=refDate)&&(!p.effectiveTo||p.effectiveTo>=refDate)).sort((p,q)=>(q.effectiveFrom||'').localeCompare(p.effectiveFrom||''))[0];
+ x.standardSchedule={start:stdExisting.start||'',end:stdExisting.end||'',pause:Number(stdExisting.pause||0),missions:stdExisting.missions||'',effectiveFrom:currentPlan?.effectiveFrom||range.start};
+ const standardHistoryHtml=stdPlans.length?`<div class="standard-history-list">${stdPlans.map(p=>{const wd=Object.values(p.dayProfiles||{}).find(v=>v?.start&&v?.end)||{};return `<div class="standard-history-row"><strong>${fmtDate(p.effectiveFrom)||'—'} → ${fmtDate(p.effectiveTo)||'—'}</strong><span>${wd.start&&wd.end?`${esc(wd.start)}–${esc(wd.end)}`:'Repos'}</span>${wd.pause?`<small>Pause ${Number(wd.pause)} min</small>`:''}</div>`}).join('')}</div>`:'<p class="hint">Aucun historique Standard enregistré.</p>';
  const dayLabels=[['Lundi',1],['Mardi',2],['Mercredi',3],['Jeudi',4],['Vendredi',5],['Samedi',6],['Dimanche',0]];
- openModal(old?'Modifier l’agent':'Nouvel agent',`<div class="form-grid">${field('Prénom','firstName',x.firstName,'text','required')}${field('Nom','lastName',x.lastName)}<label>Fonction<select name="role">${selectOptions(db.lists.roles,x.role)}</select></label>${field('Temps hebdomadaire (h)','weeklyHours',x.weeklyHours,'number','min="0" step="0.25"')}${field('Téléphone','phone',x.phone,'tel')}${field('E-mail','email',x.email,'email')}${field('Affectation principale','assignment',x.assignment)}<label>Statut<select name="status">${selectOptions(['Actif','Inactif'],x.status)}</select></label>${field('Date d’arrivée','arrivalDate',x.arrivalDate,'date')}<fieldset class="span2 permanence-config"><legend>🟠 Horaire de permanence</legend><p class="hint">Horaire fixe utilisé automatiquement lorsque Chronotime détecte une journée travaillée pendant les vacances scolaires.</p><div class="form-grid">${field('Début permanence','permanenceStart',x.permanenceSchedule?.start||x.permanenceStart||'','time')}${field('Fin permanence','permanenceEnd',x.permanenceSchedule?.end||x.permanenceEnd||'','time')}${field('Pause permanence (min)','permanencePause',x.permanenceSchedule?.pause??x.permanencePause??0,'number','min="0" step="5"')}</div></fieldset><fieldset class="span2"><legend>Jours travaillés habituels</legend><p class="hint">Par défaut : lundi à vendredi. Décoche un jour pour qu'il apparaisse automatiquement en Repos.</p>${dayLabels.map(([label,d])=>`<label class="inline-check"><input type="checkbox" name="agentWorkday" value="${d}" ${x.workdays.includes(d)?'checked':''}>${label}</label>`).join('')}</fieldset>${textareaField('Notes','notes',x.notes)}${attachmentField(x.attachments)}</div>`,async form=>{
+ openModal(old?'Modifier l’agent':'Nouvel agent',`<div class="form-grid">${field('Prénom','firstName',x.firstName,'text','required')}${field('Nom','lastName',x.lastName)}<label>Fonction<select name="role">${selectOptions(db.lists.roles,x.role)}</select></label>${field('Temps hebdomadaire (h)','weeklyHours',x.weeklyHours,'number','min="0" step="0.25"')}${field('Téléphone','phone',x.phone,'tel')}${field('E-mail','email',x.email,'email')}${field('Affectation principale','assignment',x.assignment)}<label>Statut<select name="status">${selectOptions(['Actif','Inactif'],x.status)}</select></label>${field('Date d’arrivée','arrivalDate',x.arrivalDate,'date')}<fieldset class="span2 standard-config"><legend>🔵 Horaire standard théorique</legend><p class="hint">Utilisé quand l’agent n’est ni en permanence ni en roulement. Toute modification crée une nouvelle période et conserve l’ancien horaire.</p><div class="form-grid">${field('Date d’effet','standardEffectiveFrom',x.standardSchedule?.effectiveFrom||range.start,'date','required')}${field('Début standard','standardStart',x.standardSchedule?.start||'','time')}${field('Fin standard','standardEnd',x.standardSchedule?.end||'','time')}${field('Pause standard (min)','standardPause',x.standardSchedule?.pause??0,'number','min="0" step="5"')}${field('Mission standard','standardMissions',x.standardSchedule?.missions||'')}</div><details class="standard-history"><summary>Historique des horaires Standard (${stdPlans.length})</summary>${standardHistoryHtml}</details></fieldset><fieldset class="span2 permanence-config"><legend>🟠 Horaire de permanence</legend><p class="hint">Horaire fixe utilisé automatiquement lorsque Chronotime détecte une journée travaillée pendant les vacances scolaires.</p><div class="form-grid">${field('Début permanence','permanenceStart',x.permanenceSchedule?.start||x.permanenceStart||'','time')}${field('Fin permanence','permanenceEnd',x.permanenceSchedule?.end||x.permanenceEnd||'','time')}${field('Pause permanence (min)','permanencePause',x.permanenceSchedule?.pause??x.permanencePause??0,'number','min="0" step="5"')}</div></fieldset><fieldset class="span2"><legend>Jours travaillés habituels</legend><p class="hint">Par défaut : lundi à vendredi. Décoche un jour pour qu'il apparaisse automatiquement en Repos.</p>${dayLabels.map(([label,d])=>`<label class="inline-check"><input type="checkbox" name="agentWorkday" value="${d}" ${x.workdays.includes(d)?'checked':''}>${label}</label>`).join('')}</fieldset>${textareaField('Notes','notes',x.notes)}${attachmentField(x.attachments)}</div>`,async form=>{
    Object.assign(x,formDataObj(form),{weeklyHours:Number(form.elements.weeklyHours.value||0),workdays:[...form.querySelectorAll('[name="agentWorkday"]:checked')].map(e=>Number(e.value))});
+   x.standardSchedule={
+     start:String(form.elements.standardStart?.value||'').trim(),
+     end:String(form.elements.standardEnd?.value||'').trim(),
+     pause:Number(form.elements.standardPause?.value||0),
+     missions:String(form.elements.standardMissions?.value||'').trim(),
+     effectiveFrom:normalizeDateValue(form.elements.standardEffectiveFrom?.value||'')||range.start
+   };
+   x.standardStart=x.standardSchedule.start;
+   x.standardEnd=x.standardSchedule.end;
+   x.standardPause=x.standardSchedule.pause;
+   x.standardMissions=x.standardSchedule.missions;
+   if((x.standardSchedule.start&&!x.standardSchedule.end)||(!x.standardSchedule.start&&x.standardSchedule.end)){toast('Horaire standard : renseignez le début et la fin');return}
    x.permanenceSchedule={
      start:String(form.elements.permanenceStart?.value||'').trim(),
      end:String(form.elements.permanenceEnd?.value||'').trim(),
@@ -1427,9 +1526,11 @@ function openAgent(id){
    x.permanenceEnd=x.permanenceSchedule.end;
    x.permanencePause=x.permanenceSchedule.pause;
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
-   if(!old){db.agents.push(x);db.rotations.push({id:uid(),no:nextNo('rotation','RLT'),agentId:x.id,effectiveFrom:startOfWeek(todayISO()),effectiveTo:'',startShift:'Matin',morningWeeks:2,eveningWeeks:2,morningStart:'06:00',morningEnd:'13:30',eveningStart:'13:00',eveningEnd:'20:30',pause:30,weekdays:[...x.workdays],notes:''})}
+   if(!old){db.agents.push(x)}
    else{for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
-   syncStoredChronotimePastilles();closeModal();save();toast('Agent enregistré — horaire de permanence mis à jour');
+   syncAgentStandardPlan(x,x.standardSchedule.effectiveFrom);
+   syncStoredChronotimePastilles();
+   closeModal();save();safeRenderAll();toast(`Agent enregistré — horaire Standard applicable à partir du ${fmtDate(x.standardSchedule.effectiveFrom)}`);
  },{onDelete:old?()=>deleteRecord('agents',x.id,'agent'):null})
 }
 function applyWeekendRestToAll(){
@@ -1701,7 +1802,7 @@ function calendarDayVisual(info){
 function renderAbsenceBoard(){const month=$('#absenceMonth').value||monthISO(),[y,m]=month.split('-').map(Number),count=new Date(y,m,0).getDate(),agents=db.agents.filter(a=>a.status==='Actif'),gridWidth=150+(count*42);let html=`<div class="month-grid" style="grid-template-columns:150px repeat(${count},42px);min-width:${gridWidth}px"><div class="month-corner">Agent</div>`+Array.from({length:count},(_,i)=>{const d=`${month}-${pad(i+1)}`;return `<div class="month-day-head ${[0,6].includes(parseDate(d).getDay())?'weekend':''}">${i+1}</div>`}).join('');for(const a of agents){html+=`<div class="month-agent">${esc(agentName(a))}</div>`;for(let i=1;i<=count;i++){const d=`${month}-${pad(i)}`,info=dayInfo(a.id,d),v=calendarDayVisual(info),hours=info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:'';html+=`<button class="month-cell day-state ${v.cls}" ${v.color?`style="background:${esc(v.color)}!important"`:``} data-agent-day="${a.id}" data-date="${d}" data-day-type="${esc(info.dayType||'Présence')}" title="${fmtDate(d)} — ${esc(v.label)}${esc(hours)}"><span>${v.code}</span></button>`}}html+='</div>';$('#absenceMonthBoard').innerHTML=html}
 
 /* ---------- Rendu : modules ---------- */
-function renderAgents(){const q=($('#agentSearch').value||'').toLowerCase(),status=$('#agentStatus').value;const arr=db.agents.filter(a=>(!status||a.status===status)&&(!q||agentName(a).toLowerCase().includes(q)||String(a.assignment).toLowerCase().includes(q)));$('#agentCards').innerHTML=cardList(arr.map(a=>{const state=agentState(a),month=$('#planningMonth').value||monthISO(),rows=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)),absence=rows.filter(x=>isAbsenceType(x.dayType)).length,ot=rows.reduce((s,x)=>s+Number(x.overtime||0),0);return `<article class="agent-card"><div class="agent-avatar">${esc((a.firstName||'?')[0])}</div><div class="agent-main"><div class="panel-head"><h3>${esc(agentName(a))}</h3>${badge(a.status)}</div><p>${esc(a.role)} · ${esc(a.assignment||'Sans affectation')}</p><div class="agent-stats"><span>${badge(state.label)}</span><span>${esc(a.weeklyHours)} h/semaine</span>${(()=>{const p=permanenceScheduleForAgent(a.id);return p.start&&p.end?`<span class="perm-summary">🟠 Permanence ${esc(p.start)}–${esc(p.end)}</span>`:''})()}<span>${absence} absence(s) ce mois</span><span>${ot>=0?'+':''}${ot} h supp.</span></div><div class="card-actions"><button type="button" data-edit-type="agent" data-edit-id="${a.id}">Modifier</button><button data-new-weekly-agent="${a.id}">Horaires annuels</button><button data-permanence-agent="${a.id}" class="permanence-button">Permanence</button><button data-new-rotation-agent="${a.id}">Roulement</button><button data-agent-day="${a.id}" data-date="${todayISO()}">Signaler un écart</button></div></div></article>`}),'Aucun agent trouvé.')}
+function renderAgents(){const q=($('#agentSearch').value||'').toLowerCase(),status=$('#agentStatus').value;const arr=db.agents.filter(a=>(!status||a.status===status)&&(!q||agentName(a).toLowerCase().includes(q)||String(a.assignment).toLowerCase().includes(q)));$('#agentCards').innerHTML=cardList(arr.map(a=>{const state=agentState(a),month=$('#planningMonth').value||monthISO(),rows=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)),absence=rows.filter(x=>isAbsenceType(x.dayType)).length,ot=rows.reduce((s,x)=>s+Number(x.overtime||0),0);return `<article class="agent-card"><div class="agent-avatar">${esc((a.firstName||'?')[0])}</div><div class="agent-main"><div class="panel-head"><h3>${esc(agentName(a))}</h3>${badge(a.status)}</div><p>${esc(a.role)} · ${esc(a.assignment||'Sans affectation')}</p><div class="agent-stats"><span>${badge(state.label)}</span><span>${esc(a.weeklyHours)} h/semaine</span>${(()=>{const p=permanenceScheduleForAgent(a.id);return p.start&&p.end?`<span class="perm-summary">🟠 Permanence ${esc(p.start)}–${esc(p.end)}</span>`:''})()}${(()=>{if(activeRotation(a.id,todayISO()))return '';const s=standardScheduleForAgent(a.id,todayISO());return s.start&&s.end?`<span class="std-summary">🔵 Standard ${esc(s.start)}–${esc(s.end)}</span>`:''})()}<span>${absence} absence(s) ce mois</span><span>${ot>=0?'+':''}${ot} h supp.</span></div><div class="card-actions"><button type="button" data-edit-type="agent" data-edit-id="${a.id}">Modifier</button><button data-new-weekly-agent="${a.id}">Horaires annuels</button><button data-permanence-agent="${a.id}" class="permanence-button">Permanence</button><button data-new-rotation-agent="${a.id}">Roulement</button><button data-agent-day="${a.id}" data-date="${todayISO()}">Signaler un écart</button></div></div></article>`}),'Aucun agent trouvé.')}
 function rotationPilotageSummary(agentId,shift,r){
  const labels=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],days=(r.weekdays||[1,2,3,4,5]).map(Number),rows=[];
  for(const wd of days){const p=exactWeeklyProfile(agentId,shift,wd,r.effectiveFrom);if(p?.start&&p?.end)rows.push({wd,start:p.start,end:p.end})}
@@ -2678,13 +2779,40 @@ function centralOneDrivePanel(){
  const cls=oneDriveClassificationFor(type,centralImportAnalysis);
  const periodicOptions=(db.periodic||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.no)} — ${esc(x.name)}</option>`).join('');
  const already=(db.oneDriveLinks||[]).find(x=>String(x.id)===String(centralImportAnalysis?.oneDriveLinkId||''));
- box.innerHTML=`<section class="onedrive-classifier"><h4>☁️ Classement OneDrive</h4><p class="hint"><strong>1.</strong> Préparez le PDF et ouvrez OneDrive. <strong>2.</strong> Chargez-le dans le dossier voulu. <strong>3.</strong> Dans OneDrive faites Partager → Copier le lien. <strong>4.</strong> Revenez ici et cliquez sur « J’ai enregistré dans OneDrive ».</p><div class="form-grid"><label>Rubrique détectée<input id="centralOneDriveCategory" value="${esc(already?.category||cls.category)}"></label>${cls.module==='periodic'?`<label>Contrôle concerné<select id="centralOneDriveRecord"><option value="">À choisir…</option>${periodicOptions}</select></label>`:''}<label class="span2">Lien OneDrive du fichier<input id="centralOneDriveUrl" type="url" value="${esc(already?.url||'')}" placeholder="Collez ici le lien copié depuis OneDrive"></label></div><div class="card-actions"><button type="button" class="primary" id="centralSavePdfOneDrive">☁️ Préparer le PDF + ouvrir OneDrive</button><button type="button" class="ghost" id="centralOpenOneDrive">Ouvrir Pilotage Service Technique</button><button type="button" class="ghost" id="centralPasteOneDriveLink">📋 Coller le lien copié</button><button type="button" class="primary onedrive-done" id="centralConfirmOneDriveSaved">✅ J’ai enregistré dans OneDrive</button></div><div id="centralOneDriveSaveHelp" class="import-message ${already?'':'hidden'}">${already?`<strong>✅ Lien OneDrive déjà classé</strong><p>${esc(already.fileName||already.title||'Document')} est rattaché à ${esc(already.category||cls.category)}.</p>`:''}</div></section>`;
+ box.innerHTML=`<section class="onedrive-classifier"><h4>☁️ Classement OneDrive</h4><p class="hint"><strong>1.</strong> Préparez le PDF et ouvrez OneDrive. <strong>2.</strong> Chargez-le dans le dossier voulu. <strong>3.</strong> Dans OneDrive faites Partager → Copier le lien. <strong>4.</strong> Revenez ici et cliquez sur « J’ai enregistré dans OneDrive ».</p><div class="form-grid"><label>Rubrique détectée<input id="centralOneDriveCategory" value="${esc(already?.category||cls.category)}"></label>${cls.module==='periodic'?`<label>Contrôle concerné<select id="centralOneDriveRecord"><option value="">À choisir…</option>${periodicOptions}</select></label>`:''}<label class="span2">Lien OneDrive du fichier<input id="centralOneDriveUrl" type="url" value="${esc(already?.url||'')}" placeholder="Collez ici le lien copié depuis OneDrive"></label></div><div class="card-actions"><button type="button" class="primary" id="centralSavePdfOneDrive">☁️ Préparer le PDF + ouvrir OneDrive</button><button type="button" class="ghost" id="centralOpenOneDrive">Ouvrir Pilotage Service Technique</button><button type="button" class="ghost" id="centralPasteOneDriveLink">📋 Coller le lien copié</button><button type="button" class="primary onedrive-done" id="centralConfirmOneDriveSaved" disabled>✅ J’ai enregistré dans OneDrive</button></div><div id="centralOneDriveSaveHelp" class="import-message ${already?'':'hidden'}">${already?`<strong>✅ Lien OneDrive déjà classé</strong><p>${esc(already.fileName||already.title||'Document')} est rattaché à ${esc(already.category||cls.category)}.</p>`:''}</div></section>`;
  const record=$('#centralOneDriveRecord');if(record&&already?.recordId)record.value=String(already.recordId);
  $('#centralSavePdfOneDrive')?.addEventListener('click',()=>downloadCentralPdfForOneDrive());
  $('#centralOpenOneDrive')?.addEventListener('click',()=>window.open(ONEDRIVE_PILOTAGE_ROOT,'_blank','noopener'));
  $('#centralPasteOneDriveLink')?.addEventListener('click',()=>pasteOneDriveLinkFromClipboard());
  $('#centralConfirmOneDriveSaved')?.addEventListener('click',()=>confirmCentralOneDriveSaved());
+ $('#centralOneDriveUrl')?.addEventListener('input',updateCentralOneDriveValidationState);
+ $('#centralOneDriveRecord')?.addEventListener('change',updateCentralOneDriveValidationState);
+ updateCentralOneDriveValidationState();
 }
+
+function updateCentralOneDriveValidationState(){
+ const type=$('#centralImportType')?.value||centralImportAnalysis?.detectedType||'other';
+ const url=String($('#centralOneDriveUrl')?.value||'').trim();
+ const urlOk=type==='chronotime'||!validateOneDriveDocumentUrl(url);
+ const recordOk=type==='chronotime'||!['periodic','control'].includes(type)||!!$('#centralOneDriveRecord')?.value;
+ const saved=type==='chronotime'||!!(db.oneDriveLinks||[]).find(x=>String(x.id)===String(centralImportAnalysis?.oneDriveLinkId||''));
+ const oneDriveBtn=$('#centralConfirmOneDriveSaved');
+ if(oneDriveBtn){
+   oneDriveBtn.disabled=type!=='chronotime'&&!(urlOk&&recordOk);
+   oneDriveBtn.title=oneDriveBtn.disabled?'Collez d’abord un lien OneDrive valide'+(recordOk?'':' et choisissez le contrôle concerné'):'Lien valide — vous pouvez confirmer';
+ }
+ const finalBtn=$('#centralImportConfirm');
+ if(finalBtn){
+   finalBtn.disabled=type!=='chronotime'&&!saved;
+   finalBtn.title=finalBtn.disabled?'Le lien OneDrive doit être enregistré avant de continuer':'';
+ }
+ const input=$('#centralOneDriveUrl');
+ if(input){
+   input.setAttribute('required','required');
+   input.setAttribute('aria-invalid',url&& !urlOk?'true':'false');
+ }
+}
+
 function downloadCentralPdfForOneDrive(){
  const file=centralImportAnalysis?.file;if(!file)return toast('Aucun PDF à enregistrer');
  try{
@@ -2700,6 +2828,7 @@ async function pasteOneDriveLinkFromClipboard(){
    const text=String(await navigator.clipboard.readText()||'').trim();
    if(!text)throw new Error('Presse-papiers vide');
    input.value=text;input.dispatchEvent(new Event('input',{bubbles:true}));
+   updateCentralOneDriveValidationState();
    toast('Lien OneDrive collé');
  }catch(e){
    input.focus();toast('Collez le lien OneDrive dans le champ puis validez');
@@ -2727,6 +2856,7 @@ function confirmCentralOneDriveSaved(){
  centralImportAnalysis.oneDriveLinkId=saved.id;
  save(false);
  const help=$('#centralOneDriveSaveHelp');if(help){help.classList.remove('hidden');help.innerHTML=`<strong>✅ Lien OneDrive enregistré et classé</strong><p>${esc(saved.fileName||'Document')} → ${esc(saved.category||'Documents')}${saved.module==='periodic'?'. Il sera rattaché au contrôle sélectionné.':'.'}</p>`}
+ updateCentralOneDriveValidationState();
  toast('✅ Lien OneDrive classé dans l’application');
  return saved;
 }
@@ -2734,14 +2864,15 @@ function captureCentralOneDriveLink(type,file){
  if(type==='chronotime')return null;
  const existing=(db.oneDriveLinks||[]).find(x=>String(x.id)===String(centralImportAnalysis?.oneDriveLinkId||''));
  if(existing)return existing;
- const url=String($('#centralOneDriveUrl')?.value||'').trim();if(!url)return null;
+ const url=String($('#centralOneDriveUrl')?.value||'').trim();
+ if(!url){toast('Lien OneDrive obligatoire avant validation');$('#centralOneDriveUrl')?.focus();updateCentralOneDriveValidationState();return false;}
  const err=validateOneDriveDocumentUrl(url);if(err){toast(err);return false}
  return confirmCentralOneDriveSaved()||false;
 }
 
 // ===== V80 — Import centralisé + archivage des originaux =====
 let centralImportAnalysis=null,centralImportDuplicateInfo=null;
-function resetCentralImport(){centralImportAnalysis=null;centralImportDuplicateInfo=null;const f=$('#centralPdfFile');if(f)f.value='';$('#centralImportStart')?.classList.remove('hidden');$('#centralImportAnalysis')?.classList.add('hidden');$('#centralImportConfirm')?.classList.add('hidden');if($('#centralImportMeta'))$('#centralImportMeta').innerHTML='';if($('#centralImportPreview'))$('#centralImportPreview').innerHTML='';}
+function resetCentralImport(){centralImportAnalysis=null;centralImportDuplicateInfo=null;const f=$('#centralPdfFile');if(f)f.value='';$('#centralImportStart')?.classList.remove('hidden');$('#centralImportAnalysis')?.classList.add('hidden');$('#centralImportConfirm')?.classList.add('hidden');if($('#centralImportMeta'))$('#centralImportMeta').innerHTML='';if($('#centralImportPreview'))$('#centralImportPreview').innerHTML='';const c=$('#centralImportConfirm');if(c){c.disabled=false;c.title=''}}
 function openCentralImportHub(){const d=$('#centralImportModal');if(!d)return toast('Import central indisponible');resetCentralImport();d.showModal()}
 async function genericImportedDocument(file,type){
  const labels={administrative:'Document administratif',other:'Autre document'},label=labels[type]||'Autre document';
@@ -2770,8 +2901,8 @@ function bindCentralImportV80(){
  $('#centralImportBack')?.addEventListener('click',resetCentralImport);
  $('#centralScanChoice')?.addEventListener('click',()=>{$('#centralImportModal').close();openScanCameraDirect()});
  $('#centralImportType')?.addEventListener('change',refreshCentralImportValidation);
- $('#centralPdfFile')?.addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;centralImportDuplicateInfo=await inspectImportDuplicate(file);$('#centralImportStart').classList.add('hidden');$('#centralImportAnalysis').classList.remove('hidden');$('#centralImportProgress').textContent='Analyse du PDF en cours…';$('#centralImportConfirm').classList.add('hidden');try{if(!window.PDFImportModule?.centralAnalyze)throw new Error('Moteur PDF indisponible');centralImportAnalysis=await window.PDFImportModule.centralAnalyze(file);const a=centralImportAnalysis;$('#centralImportType').value=a.detectedType;refreshCentralImportValidation();const url=URL.createObjectURL(file);$('#centralImportPreview').innerHTML=`<details open><summary>📄 Aperçu du PDF original</summary><iframe src="${url}" title="Aperçu PDF" style="width:100%;height:360px;border:1px solid #d9e2ec;border-radius:12px;background:#fff"></iframe></details>`;$('#centralImportProgress').textContent='Analyse terminée — vérifiez toutes les informations avant de continuer.';$('#centralImportConfirm').classList.remove('hidden')}catch(err){console.error(err);$('#centralImportProgress').textContent='Impossible d’analyser ce PDF. Vous pouvez le classer manuellement comme document.';centralImportAnalysis={file,detectedType:'other',detectedLabel:'Autre document',chronoConfidence:0,controlConfidence:0};$('#centralImportType').value='other';refreshCentralImportValidation();$('#centralImportConfirm').classList.remove('hidden')}});
- $('#centralImportConfirm')?.addEventListener('click',async()=>{if(!centralImportAnalysis)return;if(!confirmDuplicateImport(centralImportDuplicateInfo))return;const type=$('#centralImportType').value,file=centralImportAnalysis.file;const oneDriveSaved=captureCentralOneDriveLink(type,file);if(oneDriveSaved===false)return;centralImportAnalysis.oneDriveLinkId=oneDriveSaved?.id||'';centralImportAnalysis.fileHash=centralImportDuplicateInfo?.fileHash||'';centralImportAnalysis.duplicateConfirmed=true;if(centralImportAnalysis.chrono)centralImportAnalysis.chrono.duplicateConfirmed=true;if(centralImportAnalysis.control)centralImportAnalysis.control.duplicateConfirmed=true;$('#centralImportModal').close();if(['chronotime','periodic','control'].includes(type)){window.PDFImportModule?.routeCentral?.(centralImportAnalysis,type);if(type==='control'||type==='periodic')toast('Étape 2/2 : validez maintenant le rapport dans Contrôles périodiques');return}if(await genericImportedDocument(file,type)){setView('archives');toast('Document importé et archivé')}});
+ $('#centralPdfFile')?.addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;centralImportDuplicateInfo=await inspectImportDuplicate(file);$('#centralImportStart').classList.add('hidden');$('#centralImportAnalysis').classList.remove('hidden');$('#centralImportProgress').textContent='Analyse du PDF en cours…';$('#centralImportConfirm').classList.add('hidden');try{if(!window.PDFImportModule?.centralAnalyze)throw new Error('Moteur PDF indisponible');centralImportAnalysis=await window.PDFImportModule.centralAnalyze(file);const a=centralImportAnalysis;$('#centralImportType').value=a.detectedType;refreshCentralImportValidation();const url=URL.createObjectURL(file);$('#centralImportPreview').innerHTML=`<details open><summary>📄 Aperçu du PDF original</summary><iframe src="${url}" title="Aperçu PDF" style="width:100%;height:360px;border:1px solid #d9e2ec;border-radius:12px;background:#fff"></iframe></details>`;$('#centralImportProgress').textContent='Analyse terminée — vérifiez toutes les informations avant de continuer.';$('#centralImportConfirm').classList.remove('hidden');updateCentralOneDriveValidationState()}catch(err){console.error(err);$('#centralImportProgress').textContent='Impossible d’analyser ce PDF. Vous pouvez le classer manuellement comme document.';centralImportAnalysis={file,detectedType:'other',detectedLabel:'Autre document',chronoConfidence:0,controlConfidence:0};$('#centralImportType').value='other';refreshCentralImportValidation();$('#centralImportConfirm').classList.remove('hidden');updateCentralOneDriveValidationState()}});
+ $('#centralImportConfirm')?.addEventListener('click',async()=>{if(!centralImportAnalysis)return;if(!confirmDuplicateImport(centralImportDuplicateInfo))return;const type=$('#centralImportType').value,file=centralImportAnalysis.file;if(type!=='chronotime'&&!centralImportAnalysis.oneDriveLinkId){toast('Lien OneDrive obligatoire : enregistrez d’abord le lien du fichier');updateCentralOneDriveValidationState();$('#centralOneDriveUrl')?.focus();return}const oneDriveSaved=captureCentralOneDriveLink(type,file);if(oneDriveSaved===false)return;centralImportAnalysis.oneDriveLinkId=oneDriveSaved?.id||'';centralImportAnalysis.fileHash=centralImportDuplicateInfo?.fileHash||'';centralImportAnalysis.duplicateConfirmed=true;if(centralImportAnalysis.chrono)centralImportAnalysis.chrono.duplicateConfirmed=true;if(centralImportAnalysis.control)centralImportAnalysis.control.duplicateConfirmed=true;$('#centralImportModal').close();if(['chronotime','periodic','control'].includes(type)){window.PDFImportModule?.routeCentral?.(centralImportAnalysis,type);if(type==='control'||type==='periodic')toast('Étape 2/2 : validez maintenant le rapport dans Contrôles périodiques');return}if(await genericImportedDocument(file,type)){setView('archives');toast('Document importé et archivé')}});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindCentralImportV80);else bindCentralImportV80();
 
