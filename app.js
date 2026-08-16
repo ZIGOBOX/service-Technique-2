@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.24';
+const APP_VERSION='147.26';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -2651,6 +2651,7 @@ document.addEventListener('DOMContentLoaded',()=>initAuth().catch(console.error)
 window.addEventListener('load',()=>initAuth().catch(console.error),{once:true});
 
 
+const ONEDRIVE_PILOTAGE_ROOT='https://crrhonealpes-my.sharepoint.com/my?id=%2Fpersonal%2Fadelin%5Fvignal%5Fauvergnerhonealpes%5Ffr%2FDocuments%2FPilotage%20Service%20Technique&viewid=152cef09%2D9d18%2D493a%2D887f%2D4a1eefbc049f';
 // ===== V147.24 — OneDrive = coffre documentaire ; Supabase = index + liens =====
 function oneDriveLinksFor(module,recordId=''){
  return (db.oneDriveLinks||[]).filter(x=>x.module===module&&(!recordId||String(x.recordId||'')===String(recordId)));
@@ -2676,8 +2677,17 @@ function centralOneDrivePanel(){
  if(type==='chronotime'){box.innerHTML='<div class="import-message"><strong>Chronotime</strong><p>Traitement Chronotime conservé tel quel. Aucun classement OneDrive imposé ici.</p></div>';return}
  const cls=oneDriveClassificationFor(type,centralImportAnalysis);
  const periodicOptions=(db.periodic||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.no)} — ${esc(x.name)}</option>`).join('');
- box.innerHTML=`<section class="onedrive-classifier"><h4>☁️ Classement OneDrive</h4><p class="hint">1. Enregistrez le PDF dans OneDrive. 2. Copiez son lien de partage. 3. Collez le lien ici. Supabase conservera seulement le classement et le lien.</p><div class="form-grid"><label>Rubrique détectée<input id="centralOneDriveCategory" value="${esc(cls.category)}"></label>${cls.module==='periodic'?`<label>Contrôle concerné<select id="centralOneDriveRecord"><option value="">À choisir…</option>${periodicOptions}</select></label>`:''}<label class="span2">Lien du fichier OneDrive<input id="centralOneDriveUrl" type="url" placeholder="https://…sharepoint.com/… ou lien OneDrive"></label></div><div class="card-actions"><button type="button" class="ghost" id="centralOpenOneDrive">☁️ Ouvrir OneDrive</button><small>Le dossier peut être créé au fur et à mesure.</small></div></section>`;
- $('#centralOpenOneDrive')?.addEventListener('click',()=>window.open('https://www.office.com/launch/onedrive','_blank','noopener'));
+ box.innerHTML=`<section class="onedrive-classifier"><h4>☁️ Classement OneDrive</h4><p class="hint"><strong>Étape 1 :</strong> choisissez la rubrique. <strong>Étape 2 :</strong> cliquez sur « Enregistrer le PDF dans OneDrive » : le PDF sera d’abord téléchargé sur l’appareil puis OneDrive s’ouvrira. Dans OneDrive, choisissez le dossier et importez ce PDF. <strong>Étape 3 :</strong> copiez le lien du fichier OneDrive et collez-le ici.</p><div class="form-grid"><label>Rubrique détectée<input id="centralOneDriveCategory" value="${esc(cls.category)}"></label>${cls.module==='periodic'?`<label>Contrôle concerné<select id="centralOneDriveRecord"><option value="">À choisir…</option>${periodicOptions}</select></label>`:''}<label class="span2">Lien du fichier OneDrive<input id="centralOneDriveUrl" type="url" placeholder="https://…sharepoint.com/… ou lien OneDrive"></label></div><div class="card-actions"><button type="button" class="primary" id="centralSavePdfOneDrive">☁️ Enregistrer le PDF dans OneDrive</button><button type="button" class="ghost" id="centralOpenOneDrive">Ouvrir Pilotage Service Technique</button></div><div id="centralOneDriveSaveHelp" class="import-message hidden"></div></section>`;
+ $('#centralSavePdfOneDrive')?.addEventListener('click',()=>downloadCentralPdfForOneDrive());
+ $('#centralOpenOneDrive')?.addEventListener('click',()=>window.open(ONEDRIVE_PILOTAGE_ROOT,'_blank','noopener'));
+}
+function downloadCentralPdfForOneDrive(){
+ const file=centralImportAnalysis?.file;if(!file)return toast('Aucun PDF à enregistrer');
+ try{
+   const url=URL.createObjectURL(file),link=document.createElement('a');link.href=url;link.download=file.name||'document.pdf';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+   const help=$('#centralOneDriveSaveHelp');if(help){help.classList.remove('hidden');help.innerHTML=`<strong>PDF préparé : ${esc(file.name||'document.pdf')}</strong><p>Le navigateur vient de télécharger le PDF. Le dossier racine « Pilotage Service Technique » va s’ouvrir directement : allez dans le sous-dossier voulu puis utilisez <b>Ajouter / Charger → Fichiers</b> et sélectionnez ce PDF. Ensuite copiez son lien et revenez le coller dans l’application.</p>`}
+   setTimeout(()=>window.open(ONEDRIVE_PILOTAGE_ROOT,'_blank','noopener'),250);
+ }catch(e){console.error(e);toast('Impossible de préparer le PDF pour OneDrive')}
 }
 function captureCentralOneDriveLink(type,file){
  if(type==='chronotime')return null;

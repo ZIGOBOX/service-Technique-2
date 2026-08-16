@@ -1,0 +1,7 @@
+V147.26 — Dossier racine OneDrive
+
+- Le bouton OneDrive ouvre désormais directement le dossier : Documents / Pilotage Service Technique.
+- Le bouton « Enregistrer le PDF dans OneDrive » prépare le PDF puis ouvre directement ce même dossier racine.
+- Le bouton secondaire devient « Ouvrir Pilotage Service Technique ».
+- Les sous-dossiers restent créés au fur et à mesure selon les besoins.
+- Le classement du lien dans l’application reste inchangé.

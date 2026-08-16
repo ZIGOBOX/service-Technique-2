@@ -1,0 +1,11 @@
+V147.25 — Enregistrement OneDrive guidé
+
+Correction du bouton OneDrive après analyse d’un PDF :
+- le bouton principal devient « Enregistrer le PDF dans OneDrive » ;
+- au clic, l’application prépare/télécharge réellement le PDF sélectionné sur l’appareil ;
+- OneDrive s’ouvre ensuite ;
+- l’écran explique de choisir le dossier voulu dans OneDrive puis Ajouter/Charger → Fichiers et de sélectionner le PDF téléchargé ;
+- après l’envoi, l’utilisateur copie le lien OneDrive et le colle dans l’application pour le classer dans la bonne fiche.
+
+Important : un navigateur ne peut pas déposer automatiquement un fichier dans un dossier OneDrive choisi sans authentification Microsoft Graph. Cette version évite donc de faire croire que « Ouvrir OneDrive » enregistre le PDF : elle prépare le fichier et guide explicitement l’enregistrement.
+Chronotime conserve son circuit spécifique.
