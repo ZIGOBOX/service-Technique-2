@@ -1,0 +1,12 @@
+V147.32 — 16/08/2026
+
+CORRECTION ENREGISTREMENT / APPLICATION DES HORAIRES THÉORIQUES
+
+- « Nouveaux horaires théoriques » applique désormais immédiatement les horaires enregistrés.
+- Mise à jour immédiate du tableau de bord, du calendrier des agents et du Pilotage des horaires.
+- Les horaires historiques fournis avec l'application sont reconnus comme STANDARD et non comme faux profil Matin.
+- Migration des anciens roulements automatiques fictifs créés par les premières versions.
+- Les vrais roulements saisis par l'utilisateur sont conservés.
+- Les nouveaux agents ne reçoivent pas de roulement automatique.
+- Priorité inchangée : Permanence > vrai Roulement > Standard > Repos.
+- Les nouvelles périodes Standard restent historisées par date d'effet.

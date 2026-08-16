@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.31';
+const APP_VERSION='147.32';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -239,7 +239,7 @@ function mergeContractControls14723(d){
 function defaultSpaces(buildings){const out=[];for(const b of buildings){for(const f of b.floors){out.push({id:uid(),building:b.name,floor:f,type:b.name==='Gymnase'?'Salle de sport / gymnase':b.name==='Cour'?'Cour / extérieurs':'Circulations / halls / escaliers',name:'Zone entière'});if(!['Cour','Gymnase'].includes(b.name)){out.push({id:uid(),building:b.name,floor:f,type:'Sanitaires / vestiaires',name:'Sanitaires'});if(/^Bâtiment/.test(b.name)||b.name==='Extension')out.push({id:uid(),building:b.name,floor:f,type:'Salle de classe / devoirs / informatique',name:'Salles de classe'})}}}return out}
 function clone(x){return structuredClone(x)}
 function defaultData(){const buildings=clone(initialBuildings);const agents=[['Mme','Tarrio','Agent d’accueil'],['Mme','Delorme','Agent d’accueil / lingerie'],['Complément','accueil','Agent d’accueil'],['Mme','Berthoux','Agent de restauration'],['Mme','Bozio','Agent d’accueil']].map((n,i)=>({id:uid(),no:`AGT-${String(i+1).padStart(3,'0')}`,firstName:n[0],lastName:n[1],role:n[2],weeklyHours:35,email:'',phone:'',assignment:'',status:'Actif',arrivalDate:'',workdays:[1,2,3,4,5],notes:''}));const monday=startOfWeek(todayISO());const maintenance=IMPORTED_INTERVENTIONS.map((x,i)=>({id:uid(),no:`MAI-2026-${String(i+1).padStart(4,'0')}`,date:todayISO(),title:x[0],family:x[1],priority:x[2],status:x[3],building:x[5]||'',floor:'',room:x[5]||'',requester:'Direction',assigned:'',dueDate:'',cost:'',description:x[4]||'',action:'',attachments:[],importBatch:'excel-2026-08'}));return {version:31,settings:{initialSeedCompleted:true,seedVersion:31,cleaningAlertDays:30,cleaningNotificationsEnabled:true,cleaningNotifyNever:true,cleaningNotifyOverdue:true,cleaningNotifyPlanned:true,meetingAlertDays:3,
-autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:'2026-2027',defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:agents.map((a,i)=>({id:uid(),no:`RLT-${String(i+1).padStart(3,'0')}`,agentId:a.id,effectiveFrom:monday,effectiveTo:'',startShift:i%2?'Soir':'Matin',morningWeeks:2,eveningWeeks:2,morningStart:'06:00',morningEnd:'13:30',eveningStart:'13:00',eveningEnd:'20:30',pause:30,weekdays:[1,2,3,4,5],notes:''})),rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],notificationDismissals:{},importOriginalBindings:{}}}
+autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:'2026-2027',defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:[],rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],notificationDismissals:{},importOriginalBindings:{}}}
 function nextSeedNo(rows){return `MAI-2026-${String((rows?.length||0)+1).padStart(4,'0')}`}
 function migrate(raw){
  const base=defaultData();
@@ -253,6 +253,23 @@ function migrate(raw){
  if(!d.notificationDismissals||typeof d.notificationDismissals!=='object'||Array.isArray(d.notificationDismissals))d.notificationDismissals={};
  if(!d.importOriginalBindings||typeof d.importOriginalBindings!=='object'||Array.isArray(d.importOriginalBindings))d.importOriginalBindings={};
  if(d.cleaningRoomsConfig!==null&&!Array.isArray(d.cleaningRoomsConfig))d.cleaningRoomsConfig=null;
+ // V147.32 — correction des anciens roulements automatiques fictifs.
+ // Un vrai roulement saisi par l'utilisateur n'est jamais supprimé.
+ if(Number(raw.version||0)<=31 && Array.isArray(d.rotations)){
+   d.rotations=d.rotations.filter(r=>{
+     const fake=/^RLT-\d{3}$/.test(String(r.no||'')) &&
+       Number(r.morningWeeks)===2 && Number(r.eveningWeeks)===2 &&
+       r.morningStart==='06:00' && r.morningEnd==='13:30' &&
+       r.eveningStart==='13:00' && r.eveningEnd==='20:30' &&
+       Number(r.pause)===30 && !String(r.notes||'').trim();
+     return !fake;
+   });
+ }
+ for(const p of d.weeklyPlans||[]){
+   const agent=d.agents.find(x=>String(x.id)===String(p.agentId));
+   const supplied=IMPORTED_WEEKLY_PLANS.some(sp=>normalizeText(sp.agent||'')===normalizeText(p.agent||agentName(agent)||'')&&Array.isArray(p.rows)&&p.rows.length);
+   if(supplied&&(!p.shift||p.shift==='Matin'))p.shift='Standard';
+ }
  // Jours travaillés : par défaut lundi à vendredi. Les anciens agents sont migrés automatiquement.
  for(const a of d.agents){
    if(!Array.isArray(a.workdays)||!a.workdays.length)a.workdays=[1,2,3,4,5];
@@ -263,7 +280,7 @@ function migrate(raw){
    (raw.shifts||[]).forEach(s=>d.agentDays.push({id:s.id||uid(),agentId:s.agentId,date:s.date,dayType:'Présence',plannedStart:s.plannedStart,plannedEnd:s.plannedEnd,actualStart:s.actualStart,actualEnd:s.actualEnd,pause:s.pause,overtime:s.overtime||0,note:s.notes||''}));
    for(const a of raw.absences||[]){let day=a.dateFrom;while(day&&day<=a.dateTo){if(![0,6].includes(parseDate(day).getDay()))d.agentDays.push({id:uid(),agentId:a.agentId,date:day,dayType:a.type||'Autre absence',plannedStart:'',plannedEnd:'',actualStart:'',actualEnd:'',pause:0,overtime:0,note:a.notes||'',status:a.status||'Validée'});day=addDays(day,1)}}
  }
- d.version=30;
+ d.version=32;
  return d;
 }
 function restoreSuppliedData(showMessage=true){
@@ -1135,7 +1152,9 @@ function normalizeWeeklyPlans(){
  for(const p of db.weeklyPlans||[]){
   if(!p.id)p.id=uid();
   if(!p.agentId)p.agentId=names.get(String(p.agent||'').toLowerCase())||'';
-  if(!p.shift)p.shift='Matin';
+  if(!p.shift)p.shift='Standard';
+  const supplied=IMPORTED_WEEKLY_PLANS.some(sp=>normalizeText(sp.agent||'')===normalizeText(p.agent||agentName(agentById(p.agentId))||'')&&Array.isArray(p.rows)&&p.rows.length);
+  if(supplied&&p.shift==='Matin')p.shift='Standard';
   if(!p.effectiveFrom)p.effectiveFrom='2026-09-01';
   if(!p.effectiveTo)p.effectiveTo='2027-08-31';
   if(!p.dayProfiles)p.dayProfiles=deriveDayProfiles(p.rows||[]);
@@ -1863,8 +1882,30 @@ function openWeeklyPlan(i=null,agentId=''){
    const o=formDataObj(form);if(!o.agentId){toast('Choisissez un agent');return}if(!o.effectiveFrom||!o.effectiveTo){toast('Renseignez la période de validité');return}if(o.effectiveTo<o.effectiveFrom){toast('La date de fin doit être après la date de début');return}
    p.agentId=o.agentId;p.agent=agentName(agentById(o.agentId));p.shift=o.shift;p.effectiveFrom=o.effectiveFrom;p.effectiveTo=o.effectiveTo;p.dayProfiles={};
    for(const [label,key] of days){const st=o[`start_${key}`]||'',en=o[`end_${key}`]||'';if((st&&!en)||(!st&&en)){toast(`${label} : renseignez le début et la fin, ou laissez les deux vides`);return}p.dayProfiles[key]={start:st,end:en,pause:Number(o[`pause_${key}`]||0),missions:o[`missions_${key}`]||'',segments:[]}}
-   p.rows=[];if(!old)db.weeklyPlans.push(p);
-   const a=agentById(o.agentId);if(a){const working=new Set();for(const plan of (db.weeklyPlans||[]).filter(q=>String(q.agentId)===String(o.agentId))){for(const [,key] of days){if(plan.dayProfiles?.[key]?.start&&plan.dayProfiles?.[key]?.end)working.add(key)}}a.workdays=working.size?[...working]:[1,2,3,4,5]}closeModal();save();toast('Horaires théoriques enregistrés et appliqués au tableau de bord');
+   p.rows=[];
+   if(!old){
+     if(p.shift==='Standard'){
+       const prev=(db.weeklyPlans||[]).filter(q=>String(q.agentId)===String(o.agentId)&&q.shift==='Standard'&&(q.effectiveFrom||'')<p.effectiveFrom).sort((x,y)=>(y.effectiveFrom||'').localeCompare(x.effectiveFrom||''))[0];
+       if(prev&&(!prev.effectiveTo||prev.effectiveTo>=p.effectiveFrom))prev.effectiveTo=addDays(p.effectiveFrom,-1);
+       const next=(db.weeklyPlans||[]).filter(q=>String(q.agentId)===String(o.agentId)&&q.shift==='Standard'&&(q.effectiveFrom||'')>p.effectiveFrom).sort((x,y)=>(x.effectiveFrom||'').localeCompare(y.effectiveFrom||''))[0];
+       if(next&&p.effectiveTo>=next.effectiveFrom)p.effectiveTo=addDays(next.effectiveFrom,-1);
+     }
+     db.weeklyPlans.push(p);
+   }
+   const ag=agentById(o.agentId);
+   if(ag){
+     const working=new Set();
+     for(const plan of (db.weeklyPlans||[]).filter(q=>String(q.agentId)===String(o.agentId))){
+       for(const [,key] of days)if(plan.dayProfiles?.[key]?.start&&plan.dayProfiles?.[key]?.end)working.add(key);
+     }
+     ag.workdays=working.size?[...working]:[1,2,3,4,5];
+     if(p.shift==='Standard'){
+       const first=days.map(([,key])=>p.dayProfiles?.[key]).find(x=>x?.start&&x?.end)||{};
+       ag.standardSchedule={start:first.start||'',end:first.end||'',pause:Number(first.pause||0),missions:first.missions||'',effectiveFrom:p.effectiveFrom};
+       ag.standardStart=first.start||'';ag.standardEnd=first.end||'';ag.standardPause=Number(first.pause||0);ag.standardMissions=first.missions||'';
+     }
+   }
+   closeModal();save(true);safeRenderAll();toast('✅ Horaires théoriques enregistrés et appliqués partout');
  },{onDelete:old?()=>{if(confirm('Supprimer ce profil horaire ?')){db.weeklyPlans.splice(i,1);closeModal();save()}}:null});
 }
 function renderPlanning(){renderWeeklyPlans();const month=$('#planningMonth').value||monthISO(),agent=$('#planningAgent').value,signal=$('#planningSignal').value;const start=`${month}-01`,end=localISO(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0));const rows=[];for(const a of db.agents.filter(x=>x.status==='Actif'&&(!agent||x.id===agent))){let d=start;while(d<=end){if(![0,6].includes(parseDate(d).getDay())){const info=dayInfo(a.id,d),h=dayHours(info);let sig=isAbsenceType(info.dayType)?'Absence':h.delta>0.01?'Heures supplémentaires':h.delta<-0.01?'Heures manquantes':'Conforme';if(!signal||sig===signal)rows.push({a,d,info,h,sig})}d=addDays(d,1)}}const sums=rows.reduce((s,r)=>{s.p+=r.h.planned;s.a+=r.h.total;s.o+=Number(r.info.overtime||0);return s},{p:0,a:0,o:0});$('#planningSummary').innerHTML=`<article><span>Prévu</span><strong>${fmtHours(sums.p)}</strong></article><article><span>Réalisé</span><strong>${fmtHours(sums.a)}</strong></article><article><span>Écart</span><strong>${sums.a-sums.p>=0?'+':''}${fmtHours(sums.a-sums.p)}</strong></article><article><span>Heures ajoutées</span><strong>${fmtHours(sums.o)}</strong></article>`;$('#planningTable').innerHTML=rows.length?rows.map(r=>`<tr><td>${fmtDate(r.d)}</td><td>${esc(agentName(r.a))}</td><td>${r.info.dayType==='Présence'?`${r.info.plannedStart||'—'}–${r.info.plannedEnd||'—'} (${fmtHours(r.h.planned)})`:badge(r.info.dayType)}</td><td>${r.info.actualStart?`${r.info.actualStart}–${r.info.actualEnd} (${fmtHours(r.h.total)})`:'—'}</td><td>${r.h.delta>=0?'+':''}${fmtHours(r.h.delta)}</td><td>${badge(r.sig)}</td><td><button class="icon-btn" data-agent-day="${r.a.id}" data-date="${r.d}">✎</button></td></tr>`).join(''):emptyRow(7)}
