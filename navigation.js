@@ -11,6 +11,10 @@
     const open=q('#openMenu'); if(open) open.setAttribute('aria-expanded','true');
   }
   function switchView(id){
+    if(typeof window.PSTSetView==='function'){
+      window.PSTSetView(id);
+      return true;
+    }
     const target=document.getElementById(id);
     if(!target) return false;
     qa('.view').forEach(v=>v.classList.toggle('active',v===target));
@@ -24,6 +28,7 @@
     if(title && activeBtn) title.textContent=activeBtn.textContent.trim();
     closeMenu();
     window.scrollTo(0,0);
+    document.dispatchEvent(new CustomEvent('pst:view-changed',{detail:{view:id}}));
     return true;
   }
   function initNavigation(){

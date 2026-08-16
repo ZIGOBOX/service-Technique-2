@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.37';
+const APP_VERSION='147.39';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -652,7 +652,8 @@ function safeRenderAll(){
    reports:['Rapports',renderReportPreview]
  };
  const errors=[];
- const active=(typeof currentView!=='undefined'&&currentView)||document.querySelector('.view.active')?.id||'dashboard';
+ const active=document.querySelector('.view.active')?.id||((typeof currentView!=='undefined'&&currentView)?currentView:'dashboard');
+ if(typeof currentView!=='undefined')currentView=active;
  const jobs=[...common];
  if(byView[active])jobs.push(byView[active]);
  for(const [name,fn] of jobs){
@@ -660,6 +661,7 @@ function safeRenderAll(){
  }
  if(errors.length)setSaveState(`Enregistré — affichage partiel (${errors.join(', ')})`,'local');
  restorePlanningScroll();
+ try{enhanceTableFilters(document.querySelector('.view.active')||document)}catch(error){console.warn('Filtres colonnes',error)}
  return errors;
 }
 let authInitPromise=null;
@@ -1170,6 +1172,16 @@ async function deleteRecord(type,id,label='élément'){
 /* ---------- Navigation ---------- */
 const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage','room-prep':'Préparation salle & café',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',settings:'Paramètres'};
 function setView(view){if(!document.getElementById(view))return;currentView=view;$$('.view').forEach(v=>v.classList.toggle('active',v.id===view));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if($('#pageTitle'))$('#pageTitle').textContent=VIEW_TITLES[view]||view;document.body.classList.remove('menu-open');window.PSTNavigation?.closeMenu?.();window.scrollTo({top:0,behavior:'auto'});renderAll()}
+window.PSTSetView=setView;
+
+document.addEventListener('pst:view-changed',e=>{
+ const view=e?.detail?.view;
+ if(view&&document.getElementById(view)){
+   currentView=view;
+   safeRenderAll();
+ }
+});
+
 function applyLayout(mode=db.settings.defaultLayout||'auto'){document.body.dataset.layout=mode;$('#layoutMode').value=mode}
 
 /* ---------- Calcul du roulement et du jour agent ---------- */
@@ -1818,7 +1830,6 @@ async function persistFormRecordVerified(label='Donnée',collection='',id=''){
        verify:remote=>!collection||!id||(Array.isArray(remote?.[collection])&&remote[collection].some(x=>String(x.id)===String(id)))
      });
      if(result?.ok){
-       safeRenderAll();
        return {ok:true,offline:false};
      }
      throw new Error(result?.error||`${label} non confirmé par Supabase`);
@@ -2066,7 +2077,7 @@ function renderIssues(){const m=$('#issueMonth').value,agent=$('#issueAgent').va
 function renderPeriodic(){const fam=$('#periodicFamily').value,status=$('#periodicStatus').value,bld=$('#periodicBuilding').value;const arr=db.periodic.filter(x=>(!fam||x.family===fam)&&(!status||periodicComputed(x)===status||x.status===status)&&(!bld||x.building===bld||x.building==='Tous bâtiments')).sort((a,b)=>(periodicDue(a)||'9999').localeCompare(periodicDue(b)||'9999'));$('#periodicCards').innerHTML=cardList(arr.map(x=>{const state=periodicComputed(x),ncs=(db.reportNonconformities||[]).filter(n=>String(n.periodicControlId||'')===String(x.id));const open=ncs.filter(n=>!['FAIT','Levée'].includes(n.status)),done=ncs.filter(n=>['FAIT','Levée'].includes(n.status)),plans=(db.issues||[]).filter(i=>ncs.some(n=>String(n.id)===String(i.sourceNonconformityId||''))),openPlans=plans.filter(i=>!isClosedStatus(i.status));const nc=ncs.length?`<section class="periodic-nc-block ${open.length?'has-open':'all-done'}"><div class="periodic-nc-summary"><strong>${open.length?'🔴 CONTRÔLE NON CONFORME':'🟢 OBSERVATIONS LEVÉES'}</strong><span>${ncs.length} observations · 🔴 ${open.length} à traiter · 🟢 ${done.length} FAIT/levées · 📋 ${openPlans.length} plan(s) d’action ouvert(s)</span></div>${open.length?`<h4>Non-conformités à traiter</h4>${open.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p>${n.action?`<p><b>Préconisation :</b> ${esc(n.action)}</p>`:''}</div><select data-nc-status="${esc(n.id)}"><option selected>À traiter</option><option>FAIT</option><option>Levée</option></select></article>`).join('')}`:''}${done.length?`<details><summary>🟢 ${done.length} FAIT / levées</summary>${done.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')} — ${esc(n.status)}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p></div><select data-nc-status="${esc(n.id)}"><option>À traiter</option><option ${n.status==='FAIT'?'selected':''}>FAIT</option><option ${n.status==='Levée'?'selected':''}>Levée</option></select></article>`).join('')}</details>`:''}</section>`:'';return `<article class="periodic-card ${state==='En retard'?'late':''}"><div class="panel-head"><span>${esc(x.no)}</span>${badge(state)}</div><h3>${esc(x.name)}</h3><p>${esc(x.family)} · ${esc(x.building)}</p>${x.periodicityText?`<p class="muted"><strong>Périodicité :</strong> ${esc(x.periodicityText)}</p>`:''}<dl><dt>Dernier</dt><dd>${fmtDate(x.lastDate)||'Non renseigné'}</dd><dt>Échéance</dt><dd>${fmtDate(periodicDue(x))||'À définir'}</dd><dt>Responsable</dt><dd>${esc(x.provider||'À définir')}</dd></dl>${nc}${attachmentButtons(x.attachments)}${oneDriveLinkButtons('periodic',x.id)}<button type="button" class="ghost" data-edit-type="periodic" data-edit-id="${x.id}">✎ Ouvrir / modifier le contrôle</button></article>`}),'Aucun contrôle trouvé.');}
 function renderCleaningGuide(){const type=$('#cleaningGuideType').value||db.lists.roomTypes.find(x=>GUIDE[x])||Object.keys(GUIDE)[0];$('#cleaningGuideType').value=type;const rows=GUIDE[type]||[];$('#cleaningGuideTable').innerHTML=`<table><thead><tr><th>Opération</th><th>Fréquence préconisée</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table>`}
 function renderCleaning(){const month=$('#cleanMonth').value,bld=$('#cleanBuilding').value,type=$('#cleanRoomType').value,status=$('#cleanStatus').value;const arr=db.cleaning.filter(x=>dateMonthMatch(x.date,month)&&(!bld||x.building===bld)&&(!type||x.roomType===type)&&(!status||x.overallStatus===status)).sort((a,b)=>b.date.localeCompare(a.date));const all=arr.length,ok=arr.filter(x=>x.overallStatus==='Conforme').length,weak=arr.reduce((s,x)=>s+(x.tasks||[]).filter(t=>['À reprendre','Non conforme'].includes(t.status)).length,0),avg=all?Math.round(arr.reduce((s,x)=>s+Number(x.score||0),0)/all):0;$('#cleaningSummary').innerHTML=`<article><span>Contrôles</span><strong>${all}</strong></article><article><span>Conformes</span><strong>${ok}</strong></article><article><span>Score moyen</span><strong>${avg||'—'}${all?' %':''}</strong></article><article><span>Points faibles</span><strong>${weak}</strong></article>`;$('#cleaningTable').innerHTML=arr.length?arr.map(x=>{const weakTasks=(x.tasks||[]).filter(t=>['À reprendre','Non conforme'].includes(t.status));return `<tr><td>${fmtDate(x.date)} ${esc(x.time||'')}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.roomType)}</td><td>${esc(agentName(agentById(x.agentId)))}</td><td>${x.score||0} %</td><td>${badge(x.overallStatus)}</td><td>${esc(weakTasks.slice(0,3).map(t=>t.name).join(', ')||'—')}</td><td>${editButton('cleaning',x.id)}</td></tr>`}).join(''):emptyRow(8);renderCleaningGuide()}
-function renderMaintenance(){const st=$('#maintenanceStatus').value,p=$('#maintenancePriority').value,f=$('#maintenanceFamily').value;const terminal=['Terminée','Clôturée','Annulée','Archivée'];const arr=db.maintenance.filter(x=>(st?x.status===st:!terminal.includes(x.status))&&(!p||x.priority===p)&&(!f||x.family===f)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#maintenanceTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.family)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${badge(x.priority)}</td><td>${esc(x.assigned||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('maintenance',x.id)}</td></tr>`).join(''):emptyRow(10)}
+function renderMaintenance(){const st=$('#maintenanceStatus').value,p=$('#maintenancePriority').value,f=$('#maintenanceFamily').value;const arr=db.maintenance.filter(x=>(!st||x.status===st)&&(!p||x.priority===p)&&(!f||x.family===f)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#maintenanceTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.family)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${badge(x.priority)}</td><td>${esc(x.assigned||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('maintenance',x.id)}</td></tr>`).join(''):emptyRow(10)}
 function renderRequests(){const st=$('#requestStatus').value,t=$('#requestType').value;const arr=db.requests.filter(x=>(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#requestsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc(x.requester)}</td><td>${esc(x.type)}</td><td>${esc([x.building,x.room].filter(Boolean).join(' · '))}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('request',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderWorks(){const st=$('#workStatus').value,t=$('#workType').value;const arr=db.works.filter(x=>(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderMeetings(){const m=$('#meetingMonth').value,t=$('#meetingType').value;const arr=db.meetings.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));$('#meetingsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.time||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${esc(x.participants||'—')}</td><td>${badge(x.status)}</td><td>${editButton('meeting',x.id)}</td></tr>`).join(''):emptyRow(8)}
@@ -2803,6 +2814,120 @@ function auditFormPersistence(){
  return state;
 }
 window.PSTFormAudit={run:auditFormPersistence};
+
+
+const PST_TABLE_FILTERS={};
+function normalizeTableFilterValue(v){
+ return normalizeText(String(v??'')).replace(/\s+/g,' ').trim();
+}
+function tableFilterKey(table,index){
+ return table.id||table.closest('.view')?.id||`table-${index}`;
+}
+function enhanceTableFilters(root=document){
+ const host=root?.classList?.contains('view')?root:document.querySelector('.view.active');
+ if(host && host.querySelector('.table-wrap table') && !host.querySelector('.pst-clear-table-filters')){
+   const actions=host.querySelector('.filters')||host.querySelector('.section-actions');
+   if(actions){
+     const b=document.createElement('button');
+     b.type='button';b.className='ghost small pst-clear-table-filters';
+     b.textContent='Effacer filtres colonnes';
+     b.addEventListener('click',clearCurrentTableFilters);
+     actions.appendChild(b);
+   }
+ }
+
+ const tables=[...root.querySelectorAll('.table-wrap table')];
+ tables.forEach((table,tableIndex)=>{
+   const thead=table.tHead;
+   const tbody=table.tBodies?.[0];
+   if(!thead||!tbody)return;
+
+   const headerRow=[...thead.rows].find(r=>!r.classList.contains('pst-column-filters'));
+   if(!headerRow)return;
+   const colCount=headerRow.cells.length;
+   if(!colCount)return;
+
+   let filterRow=thead.querySelector('tr.pst-column-filters');
+   if(!filterRow){
+     filterRow=document.createElement('tr');
+     filterRow.className='pst-column-filters';
+     const key=tableFilterKey(table,tableIndex);
+     const saved=PST_TABLE_FILTERS[key]||{};
+
+     [...headerRow.cells].forEach((th,col)=>{
+       const cell=document.createElement('th');
+       const title=String(th.textContent||'').trim();
+       // La dernière colonne "action" est généralement vide : pas besoin de filtre.
+       if(title||col<colCount-1){
+         const input=document.createElement('input');
+         input.type='search';
+         input.className='pst-column-filter-input';
+         input.dataset.filterCol=String(col);
+         input.placeholder=title?`Filtrer ${title}`:'Filtrer';
+         input.setAttribute('aria-label',input.placeholder);
+         input.autocomplete='off';
+         input.value=saved[col]||'';
+         input.addEventListener('input',()=>applyTableColumnFilters(table));
+         cell.appendChild(input);
+       }
+       filterRow.appendChild(cell);
+     });
+     thead.appendChild(filterRow);
+   }
+   applyTableColumnFilters(table);
+ });
+}
+function applyTableColumnFilters(table){
+ const tbody=table.tBodies?.[0];
+ const thead=table.tHead;
+ if(!tbody||!thead)return;
+ const inputs=[...thead.querySelectorAll('.pst-column-filter-input')];
+ const tableIndex=[...document.querySelectorAll('.table-wrap table')].indexOf(table);
+ const key=tableFilterKey(table,tableIndex);
+ const state={};
+ inputs.forEach(i=>state[i.dataset.filterCol]=i.value||'');
+ PST_TABLE_FILTERS[key]=state;
+
+ let visible=0,total=0;
+ [...tbody.rows].forEach(row=>{
+   // Ne pas casser les lignes "Aucun résultat" avec colspan.
+   if(row.cells.length<=1 && row.cells[0]?.colSpan>1){
+     row.style.display='';
+     return;
+   }
+   total++;
+   const ok=inputs.every(input=>{
+     const wanted=normalizeTableFilterValue(input.value);
+     if(!wanted)return true;
+     const col=Number(input.dataset.filterCol);
+     const cell=row.cells[col];
+     const actual=normalizeTableFilterValue(cell?.innerText||cell?.textContent||'');
+     return actual.includes(wanted);
+   });
+   row.style.display=ok?'':'none';
+   if(ok)visible++;
+ });
+
+ // Compteur discret ajouté à proximité du tableau.
+ let counter=table.parentElement?.querySelector(':scope > .pst-filter-result-count');
+ if(!counter && table.parentElement){
+   counter=document.createElement('div');
+   counter.className='pst-filter-result-count';
+   table.parentElement.insertBefore(counter,table);
+ }
+ if(counter)counter.textContent=inputs.some(i=>i.value.trim())?`${visible} / ${total} ligne${total>1?'s':''}`:'';
+}
+function clearCurrentTableFilters(){
+ const view=document.querySelector('.view.active');
+ if(!view)return;
+ view.querySelectorAll('.pst-column-filter-input').forEach(i=>i.value='');
+ view.querySelectorAll('.table-wrap table').forEach(t=>applyTableColumnFilters(t));
+}
+window.PSTTableFilters={
+ enhance:enhanceTableFilters,
+ clear:clearCurrentTableFilters,
+ state:PST_TABLE_FILTERS
+};
 
 function renderAll(){return safeRenderAll()}
 

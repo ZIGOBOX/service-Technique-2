@@ -1,0 +1,24 @@
+V147.38 — 16/08/2026
+
+CORRECTION GLOBALE FORMULAIRES → TABLEAUX
+
+Cause principale trouvée :
+- depuis l'optimisation de fluidité, le menu mobile pouvait changer l'écran visible sans mettre à jour la variable currentView de l'application ;
+- après Enregistrer, Supabase pouvait donc confirmer correctement la modification, mais l'application rafraîchissait un autre écran (souvent le tableau de bord) au lieu du tableau affiché.
+
+Corrections :
+- navigation.js délègue maintenant les changements de page à setView() de l'application ;
+- safeRenderAll() utilise d'abord la vraie page visible dans le DOM ;
+- synchronisation de secours par événement pst:view-changed ;
+- tous les formulaires métier principaux ont été audités : ils possèdent une persistance vérifiée avant fermeture ;
+- le tableau Maintenance affiche réellement « Tous les statuts » lorsque ce filtre est sélectionné ;
+- une intervention passée en Terminée / Clôturée reste donc visible dans le tableau avec son nouveau statut au lieu de disparaître comme si elle n'avait pas été enregistrée ;
+- suppression d'un rafraîchissement en double après confirmation Supabase.
+
+Formulaires audités :
+Agent, permanence, roulement, exception de roulement, planning agent,
+agenda, sécurité/qualité, contrôles périodiques, ménage, maintenance,
+demandes direction, chantiers/GPA, réunions, notes, vacances,
+documents, locaux et horaires théoriques.
+
+Les imports spécialisés conservent leur persistance dédiée.

@@ -1,0 +1,16 @@
+V147.39 — 16/08/2026
+
+FILTRES MANUELS SUR TOUTES LES COLONNES DE L'APPLICATION
+
+- Ajout automatique d'une ligne de filtre sous les titres de colonnes de tous les tableaux.
+- Le filtre est manuel et indépendant pour chaque colonne.
+- Recherche partielle insensible aux majuscules/minuscules et aux accents.
+- Plusieurs filtres de colonnes peuvent être combinés.
+- Un compteur affiche le nombre de lignes visibles quand un filtre est actif.
+- Bouton « Effacer filtres colonnes » ajouté sur les écrans contenant un tableau.
+- Les filtres restent mémorisés pendant la session quand le tableau est rafraîchi.
+- Les colonnes d'action vides ne reçoivent pas de filtre inutile.
+- Fonction générique : Maintenance, Demandes, Chantiers, Réunions, Agents si tableau,
+  Roulements, Planning, Absences, Vacances, Sécurité, Contrôles périodiques,
+  Ménage, Archives et tout autre tableau utilisant la structure standard de l'application.
+- Aucun enregistrement métier n'est modifié par le filtrage.
