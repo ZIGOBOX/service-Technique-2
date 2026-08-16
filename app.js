@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.34';
+const APP_VERSION='147.36';
 const APP_BUILD='15/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -478,6 +478,7 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
  finally{cloudBusy=false}
 }
 function save(render=true){
+ clearTheoreticalScheduleCache();
  localDirty=true;
  if(!currentUser){setSaveState('Non connecté — non enregistré','error');if(render)safeRenderAll();return false}
  if(!navigator.onLine){writeOfflinePending('appareil hors connexion');if(render)safeRenderAll();return true}
@@ -614,21 +615,49 @@ async function pollCloudChanges(){
  try{
    const data=await fetchRemote();if(!data?.data)return;
    const remoteStamp=data.updated_at||'';
-   if(remoteStamp&&remoteStamp!==lastCloudUpdatedAt){db=migrate(data.data);lastCloudData=deepClone(db);lastCloudUpdatedAt=remoteStamp;writeMirror();safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud')}
+   if(remoteStamp&&remoteStamp!==lastCloudUpdatedAt){clearTheoreticalScheduleCache();db=migrate(data.data);lastCloudData=deepClone(db);lastCloudUpdatedAt=remoteStamp;writeMirror();safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud')}
  }catch(error){console.warn('Vérification cloud différée',error);scheduleCloudRetry()}
 }
-function startCloudPolling(){clearInterval(cloudPollTimer);cloudPollTimer=setInterval(pollCloudChanges,3000)}
+function startCloudPolling(){clearInterval(cloudPollTimer);cloudPollTimer=setInterval(pollCloudChanges,8000)}
 function safeRenderAll(){
+ clearTheoreticalScheduleCache();
  capturePlanningScroll();
- const renderers=[
-  ['Sélecteurs',hydrateSelects],['Marque',renderBrand],['Tableau de bord',renderDashboard],['Notifications',renderNotifications],['Agenda',renderPersonal],
-  ['Agents',renderAgents],['Roulements',renderRotations],['Horaires',renderPlanning],['Absences',renderAbsences],
-  ['Vacances',renderVacations],['Sécurité',renderIssues],['Contrôles périodiques',renderPeriodic],['Ménage',renderCleaning],
-  ['Maintenance',renderMaintenance],['Demandes',renderRequests],['Chantiers',renderWorks],['Réunions',renderMeetings],
-  ['Notes',renderNotes],['Documents',renderDocuments],['Archives',renderArchives],['Outlook',renderOutlook],['Paramètres',renderSettings],['Rapports',renderReportPreview]
+
+ // V147.36 : ne plus recalculer les 20+ écrans cachés à chaque sauvegarde.
+ // L'écran actif est rendu immédiatement ; les autres seront recalculés à leur ouverture.
+ const common=[
+   ['Sélecteurs',hydrateSelects],
+   ['Marque',renderBrand],
+   ['Notifications',renderNotifications]
  ];
+ const byView={
+   dashboard:['Tableau de bord',renderDashboard],
+   personal:['Agenda',renderPersonal],
+   agents:['Agents',renderAgents],
+   rotations:['Roulements',renderRotations],
+   planning:['Horaires',renderPlanning],
+   absences:['Absences',renderAbsences],
+   vacations:['Vacances',renderVacations],
+   issues:['Sécurité',renderIssues],
+   periodic:['Contrôles périodiques',renderPeriodic],
+   cleaning:['Ménage',renderCleaning],
+   maintenance:['Maintenance',renderMaintenance],
+   requests:['Demandes',renderRequests],
+   works:['Chantiers',renderWorks],
+   meetings:['Réunions',renderMeetings],
+   notes:['Notes',renderNotes],
+   documents:['Documents',renderDocuments],
+   archives:['Archives',renderArchives],
+   settings:['Paramètres',renderSettings],
+   reports:['Rapports',renderReportPreview]
+ };
  const errors=[];
- for(const [name,fn] of renderers){try{fn()}catch(error){console.error(`Erreur d’affichage — ${name}`,error);errors.push(name)}}
+ const active=(typeof currentView!=='undefined'&&currentView)||document.querySelector('.view.active')?.id||'dashboard';
+ const jobs=[...common];
+ if(byView[active])jobs.push(byView[active]);
+ for(const [name,fn] of jobs){
+   try{fn()}catch(error){console.error(`Erreur d’affichage — ${name}`,error);errors.push(name)}
+ }
  if(errors.length)setSaveState(`Enregistré — affichage partiel (${errors.join(', ')})`,'local');
  restorePlanningScroll();
  return errors;
@@ -1293,9 +1322,19 @@ function scheduledFor(agentId,date){
  return {shift,start:p.start,end:p.end,pause:Number(p.pause||0),missions:p.missions||'',segments:p.segments||[],source:'rotation'};
 }
 function resolvedTheoreticalSchedule(agentId,date,dayType='Présence'){
- // Ordre unique pour tous les agents : Permanence > Roulement > Standard > Repos/aucun.
- return theoreticalScheduleFor(agentId,date,dayType);
+ // Ordre unique : Permanence > Roulement > Standard > Repos/aucun.
+ return cachedTheoreticalSchedule(agentId,date,dayType);
 }
+let theoreticalScheduleCache=new Map();
+function clearTheoreticalScheduleCache(){theoreticalScheduleCache.clear()}
+function cachedTheoreticalSchedule(agentId,date,dayType='Présence'){
+ const key=`${agentId}|${date}|${dayType}`;
+ if(theoreticalScheduleCache.has(key))return theoreticalScheduleCache.get(key);
+ const value=theoreticalScheduleFor(agentId,date,dayType);
+ theoreticalScheduleCache.set(key,value);
+ return value;
+}
+
 function theoreticalScheduleFor(agentId,date,dayType='Présence'){
  const type=normalizeText(dayType||'Présence');
  if(type.includes('perman')){
@@ -1802,20 +1841,22 @@ function renderTeamCalendar(){
   if(!agents.length){$('#teamWeekCalendar').innerHTML='<div class="empty">Ajoutez un agent pour afficher le planning de la semaine.</div>';return}
   const html=days.map(date=>{
     const dateObj=parseDate(date);
+    let present=0;
     const rows=agents.map(a=>{
       const info=dayInfo(a.id,date),h=dayHours(info);
+      if(info.dayType==='Présence')present++;
       const absent=isAbsenceType(info.dayType);
       const cls=absent?'absence':info.dayType==='Formation'?'training':info.dayType==='Repos'?'rest':info.shift==='Soir'?'evening':info.shift==='Matin'?'morning':'neutral';
-      const theoretical=resolvedTheoreticalSchedule(a.id,date,info.dayType||'Présence');
-      const theoreticalText=theoretical.start&&theoretical.end?`${esc(theoretical.start)}–${esc(theoretical.end)}`:(theoretical.shift==='Repos'?'Repos / non travaillé':'Horaire non défini');
+
+      // dayInfo contient déjà l'horaire théorique résolu : pas de deuxième calcul.
+      const theoretical=info;
+      const theoreticalText=theoretical.plannedStart&&theoretical.plannedEnd?`${esc(theoretical.plannedStart)}–${esc(theoretical.plannedEnd)}`:(theoretical.shift==='Repos'?'Repos / non travaillé':'Horaire non défini');
       const sourceLabel=theoretical.shift==='Permanence'?'Permanence':theoretical.source==='rotation'?(theoretical.shift||'Roulement'):theoretical.shift==='Standard'?'Standard':theoretical.shift==='Repos'?'Repos':'';
-      const detail=info.dayType==='Présence'?theoreticalText:esc(info.dayType==='Repos'?'Repos':info.dayType);
       const theoreticalLine=info.dayType==='Présence'?`<small class="agent-theoretical"><b>Théorique :</b> ${theoreticalText}${sourceLabel?` · ${esc(sourceLabel)}`:''}</small>`:`<small class="agent-theoretical muted"><b>Théorique :</b> ${theoreticalText}${sourceLabel?` · ${esc(sourceLabel)}`:''}</small>`;
       const mission=info.dayType==='Présence'&&theoretical.missions?`<small class="agent-missions">${esc(theoretical.missions)}</small>`:(info.note?`<small class="agent-missions">${esc(info.note)}</small>`:'');
       const delta=Math.abs(h.delta)>0.001?`<em class="agent-delta ${h.delta>0?'positive':'negative'}">${h.delta>0?'+':''}${h.delta.toFixed(2)} h</em>`:'';
       return `<button class="team-agent-entry ${cls}" data-agent-day="${a.id}" data-date="${date}" title="Modifier ${esc(agentName(a))} le ${fmtDate(date)}"><span class="agent-entry-avatar">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><span class="agent-entry-main"><strong>${esc(agentName(a))}</strong>${theoreticalLine}${mission}</span>${delta}<span class="agent-entry-arrow">›</span></button>`;
     }).join('');
-    const present=agents.filter(a=>{const i=dayInfo(a.id,date);return i.dayType==='Présence'}).length;
     return `<section class="team-day-card ${date===todayISO()?'today':''}"><header class="team-day-header"><div><strong>${dateObj.toLocaleDateString('fr-FR',{weekday:'long'})}</strong><span>${dateObj.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}</span></div><small>${present}/${agents.length} prévu${present>1?'s':''}</small></header><div class="team-day-agents">${rows}</div></section>`;
   }).join('');
   $('#teamWeekCalendar').innerHTML=`<div class="team-week-cards">${html}</div>`;
@@ -1930,7 +1971,7 @@ function latestChronotimeAcademicStartYear(){
  const y=Number(String(raw).split('-')[0]);
  return Number.isFinite(y)&&y>2000?y:null;
 }
-function renderRotationPreview(){syncRotationYearWithDashboard();syncStoredChronotimePastilles();const startYear=dashboardAcademicStartYear(),month=$('#rotationMonth').value,agentId=$('#rotationAgent').value||db.agents.find(a=>a.status==='Actif')?.id;if(!agentId){$('#rotationPreview').innerHTML='<p>Aucun agent.</p>';return}const months=month?[Number(month)]:[9,10,11,12,1,2,3,4,5,6,7,8];const academicLabel=`${startYear}–${startYear+1}`;$('#rotationPreview').innerHTML=`<div class="rotation-schoolyear-title"><h4>${esc(agentName(agentById(agentId)))} — année scolaire ${academicLabel}</h4><small>1er septembre ${startYear} → 31 août ${startYear+1}</small></div>`+months.map(m=>{const y=m>=9?startYear:startYear+1,first=`${y}-${pad(m)}-01`,last=new Date(y,m,0).getDate();return `<div class="rotation-month"><strong>${parseDate(first).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</strong><div>${Array.from({length:last},(_,i)=>{const d=`${y}-${pad(m)}-${pad(i+1)}`,info=dayInfo(agentId,d),shift=normalizeText(info.shift||'standard'),day=String(info.dayType||'Présence'),cls=/maladie/i.test(day)?'sick':/congé|conge/i.test(day)?'leave':/rtt/i.test(day)?'rtt':/férié|ferie|rfe/i.test(day)?'holiday':day!=='Présence'?'off':shift==='matin'?'morning':shift==='soir'?'evening':'standard',label=day!=='Présence'?day:(info.shift||'Standard');return `<button class="rotation-day ${cls}" data-agent-day="${agentId}" data-date="${d}" title="${fmtDate(d)} — ${label}${info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:''}"><span>${i+1}</span><small>${cls==='morning'?'M':cls==='evening'?'S':cls==='standard'?'STD':cls==='leave'?'CA':cls==='rtt'?'RTT':cls==='sick'?'MAL':cls==='holiday'?'JF':'—'}</small></button>`}).join('')}</div></div>`}).join('')}
+function renderRotationPreview(){syncRotationYearWithDashboard();const startYear=dashboardAcademicStartYear(),month=$('#rotationMonth').value,agentId=$('#rotationAgent').value||db.agents.find(a=>a.status==='Actif')?.id;if(!agentId){$('#rotationPreview').innerHTML='<p>Aucun agent.</p>';return}const months=month?[Number(month)]:[9,10,11,12,1,2,3,4,5,6,7,8];const academicLabel=`${startYear}–${startYear+1}`;$('#rotationPreview').innerHTML=`<div class="rotation-schoolyear-title"><h4>${esc(agentName(agentById(agentId)))} — année scolaire ${academicLabel}</h4><small>1er septembre ${startYear} → 31 août ${startYear+1}</small></div>`+months.map(m=>{const y=m>=9?startYear:startYear+1,first=`${y}-${pad(m)}-01`,last=new Date(y,m,0).getDate();return `<div class="rotation-month"><strong>${parseDate(first).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</strong><div>${Array.from({length:last},(_,i)=>{const d=`${y}-${pad(m)}-${pad(i+1)}`,info=dayInfo(agentId,d),shift=normalizeText(info.shift||'standard'),day=String(info.dayType||'Présence'),cls=/maladie/i.test(day)?'sick':/congé|conge/i.test(day)?'leave':/rtt/i.test(day)?'rtt':/férié|ferie|rfe/i.test(day)?'holiday':day!=='Présence'?'off':shift==='matin'?'morning':shift==='soir'?'evening':'standard',label=day!=='Présence'?day:(info.shift||'Standard');return `<button class="rotation-day ${cls}" data-agent-day="${agentId}" data-date="${d}" title="${fmtDate(d)} — ${label}${info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:''}"><span>${i+1}</span><small>${cls==='morning'?'M':cls==='evening'?'S':cls==='standard'?'STD':cls==='leave'?'CA':cls==='rtt'?'RTT':cls==='sick'?'MAL':cls==='holiday'?'JF':'—'}</small></button>`}).join('')}</div></div>`}).join('')}
 
 function renderWeeklyPlans(){const box=$('#weeklyPlansBoard');if(!box)return;normalizeWeeklyPlans();const days=['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];box.innerHTML=(db.weeklyPlans||[]).map((p,pi)=>`<article class="weekly-plan-card"><div class="panel-head"><div><h4>${esc(agentName(agentById(p.agentId))||p.agent||'Planning')}</h4>${badge(p.shift||'Standard')}<small>${fmtDate(p.effectiveFrom)} → ${fmtDate(p.effectiveTo)}</small></div><button class="ghost small" data-edit-weekly-plan="${pi}">Modifier</button></div><div class="weekly-day-grid">${days.map((d,i)=>{const x=p.dayProfiles?.[i+1]||{};return `<button class="weekly-day" data-edit-weekly-plan="${pi}"><strong>${d}</strong><span>${x.start&&x.end?`${x.start}–${x.end}`:'Non travaillé'}</span><small>${esc(x.missions||'')}</small></button>`}).join('')}</div></article>`).join('')||'<div class="empty">Aucun horaire de référence. Ajoutez un agent ou un planning.</div>'}
 function openWeeklyPlan(i=null,agentId=''){
@@ -2805,8 +2846,8 @@ function bindEvents(){
   }finally{btn.disabled=false}
  });
  $('#modalCancel').onclick=closeModal;$('#modalClose').onclick=closeModal;$('#modalDelete').onclick=()=>modalDeleteHandler?.();$('#detailClose').onclick=()=>$('#detailModal').close();$('#emailClose').onclick=()=>$('#emailModal').close();
- const openMobileMenu=()=>{document.body.classList.add('menu-open');$('#openMenu')?.setAttribute('aria-expanded','true')};const closeMobileMenu=()=>{document.body.classList.remove('menu-open');$('#openMenu')?.setAttribute('aria-expanded','false')};if($('#openMenu'))$('#openMenu').onclick=openMobileMenu;if($('#closeMenu'))$('#closeMenu').onclick=closeMobileMenu;if($('#menuBackdrop'))$('#menuBackdrop').onclick=closeMobileMenu;
- $('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b){setView(b.dataset.view);closeMobileMenu()}});$('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').onclick=()=>printView(document.querySelector('.view.active')?.id);
+ // Navigation mobile gérée uniquement par navigation.js pour éviter les doubles événements.
+ $('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b){setView(b.dataset.view)}});$('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').onclick=()=>printView(document.querySelector('.view.active')?.id);
  const gay=$('#globalAcademicYear');if(gay)gay.onchange=e=>setActiveAcademicYear(e.target.value);const pay=$('#prevAcademicYear');if(pay)pay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),-1));const nay=$('#nextAcademicYear');if(nay)nay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),1));
  {const q=$('#quickAdd');if(q)q.onclick=openQuickMenu;const f=$('#quickNoteFab');if(f)f.onclick=openQuickMenu;}
  $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();

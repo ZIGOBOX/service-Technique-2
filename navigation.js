@@ -28,8 +28,16 @@
   }
   function initNavigation(){
     const open=q('#openMenu'), close=q('#closeMenu'), backdrop=q('#menuBackdrop'), nav=q('#nav');
-    if(open){ open.type='button'; open.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openMenu();}); }
-    if(close){ close.type='button'; close.addEventListener('click',e=>{e.preventDefault();closeMenu();}); }
+    if(open){
+      open.type='button';
+      open.style.touchAction='manipulation';
+      open.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();openMenu();},{passive:false});
+    }
+    if(close){
+      close.type='button';
+      close.style.touchAction='manipulation';
+      close.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();closeMenu();},{passive:false});
+    }
     if(backdrop) backdrop.addEventListener('click',closeMenu);
     if(nav){
       nav.addEventListener('click',e=>{
@@ -46,7 +54,8 @@
       const go=e.target.closest('[data-go]');
       if(go && go.dataset.go){e.preventDefault();switchView(go.dataset.go);}
     },true);
-    if(!switchView('dashboard')) switchView('dashboard');
+    const alreadyActive=q('.view.active');
+    if(!alreadyActive) switchView('dashboard');
     document.documentElement.classList.add('navigation-ready');
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initNavigation,{once:true});

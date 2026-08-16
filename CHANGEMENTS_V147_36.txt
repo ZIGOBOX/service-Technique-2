@@ -1,0 +1,23 @@
+V147.36 — 16/08/2026
+
+AUDIT ET OPTIMISATION DE FLUIDITÉ GLOBALE
+
+Points corrigés :
+- une sauvegarde ne redessine plus tous les écrans cachés de l'application ;
+- seul l'écran actif + les composants communs sont recalculés ;
+- cache temporaire des horaires théoriques agent/date pendant les rendus ;
+- calendrier du tableau de bord : suppression de plusieurs calculs en double par agent et par jour ;
+- le compteur de présents réutilise le calcul déjà fait pour la carte ;
+- Roulements annuels ne reconstruit plus tous les Chronotime à chaque simple affichage ;
+- vérification Supabase espacée de 3 s à 8 s pour réduire les requêtes et réveils JavaScript ;
+- longues cartes compatibles avec content-visibility pour réduire le coût d'affichage mobile ;
+- les vues cachées sont explicitement retirées du rendu visuel.
+
+Fonctions conservées :
+- burger rapide V147.35 ;
+- horaires théoriques sur le calendrier ;
+- priorité Permanence > Roulement > Standard > Repos ;
+- traçabilité des horaires ;
+- Supabase, Chronotime, OneDrive, imports, contrôles et autres modules.
+
+Aucune donnée métier supprimée.

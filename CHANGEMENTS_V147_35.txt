@@ -1,0 +1,9 @@
+V147.35 — Burger mobile / fluidité
+
+- Suppression des doubles gestionnaires du bouton burger.
+- navigation.js devient l'unique gestionnaire du menu mobile.
+- Ouverture au pointerdown pour une réaction immédiate sur Android.
+- Animation du panneau via transform GPU, courte et légère.
+- Backdrop simplifié.
+- Le menu ne relance plus inutilement l'initialisation du tableau de bord.
+- Fonctions horaires V147.34 conservées.
