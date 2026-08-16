@@ -1,0 +1,31 @@
+V147.37 — 16/08/2026
+
+SÉCURISATION DE L'ENREGISTREMENT DES FORMULAIRES
+
+- Ajout d'une persistance vérifiée : écriture Supabase + relecture de contrôle.
+- Le formulaire ne doit plus se fermer silencieusement si Supabase ne confirme pas.
+- Hors ligne : conservation locale avec synchronisation ultérieure.
+- Rafraîchissement de l'écran actif après confirmation.
+- Intervention / maintenance et les principaux formulaires métier passent par cette vérification.
+- Audit interne disponible via PSTFormAudit.run().
+
+Formulaires ciblés :
+maintenance, demandes, chantiers/GPA, réunions, notes, sécurité/qualité,
+contrôles périodiques, ménage, vacances, agenda personnel, documents,
+agents, roulements et exceptions.
+
+Les imports spécialisés gardent leurs circuits dédiés.
+
+Compléments de vérification :
+- horaires théoriques ;
+- planning / jour agent ;
+- horaire de permanence ;
+- locaux / salles ;
+- contrôle périodique ;
+- sécurité / qualité ;
+- agenda personnel ;
+- documents ;
+- agents ;
+- roulements et exceptions.
+
+Tous ces formulaires attendent maintenant la confirmation de persistance avant fermeture.
