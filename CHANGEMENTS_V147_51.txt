@@ -1,0 +1,6 @@
+Pilotage Service Technique V147.51
+
+- Mobile : sélecteur Année scolaire centré sous le titre.
+- Logo placé en face de « Pilotage Service Technique ».
+- Encadré bleu conservé compact et responsive.
+- Aucun autre module fonctionnel modifié.
