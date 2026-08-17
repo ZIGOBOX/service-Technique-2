@@ -1,0 +1,9 @@
+V147.48 — Nouveau bandeau du tableau de bord
+- Encadré bleu entièrement modernisé.
+- Titre « Pilotage Service Technique » conservé en entier.
+- Logo mis en valeur dans un médaillon blanc.
+- Sélecteur d’année scolaire modernisé.
+- Citation du jour intégrée au bandeau.
+- Dégradé bleu, relief, formes décoratives et meilleure hiérarchie visuelle.
+- Responsive téléphone / tablette / ordinateur.
+- Aucune modification du fonctionnement des données du tableau de bord.
