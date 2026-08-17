@@ -1,0 +1,8 @@
+V147.52 — bandeau mobile rééquilibré
+
+- Logo réellement aligné en face du titre.
+- Sélecteur « Année scolaire » centré et symétrique.
+- Citation mieux alignée et plus légère.
+- Bandeau bleu plus compact et mieux proportionné.
+- Barre de défilement grise des actions rapides masquée sur mobile.
+- Aucun module fonctionnel modifié.

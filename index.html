@@ -281,13 +281,55 @@
   #dashboard .dashboard-academic-year{max-width:305px!important;}
 }
 </style>
+
+<style id="v14752-mobile-hero-clean">
+/* V147.52 — composition propre du bandeau, surtout sur téléphone */
+#dashboard .welcome-banner{grid-template-rows:auto auto auto}
+#dashboard .welcome-copy{grid-column:1;grid-row:1}
+#dashboard .welcome-logo{grid-column:2;grid-row:1 / span 3}
+#dashboard .dashboard-academic-year{grid-column:1;grid-row:2}
+#dashboard .daily-motivation{grid-column:1;grid-row:3}
+@media(max-width:560px){
+  #dashboard .welcome-banner{
+    display:grid!important;grid-template-columns:minmax(0,1fr) 68px!important;grid-template-rows:auto auto auto!important;
+    column-gap:10px!important;row-gap:10px!important;padding:14px 14px 15px!important;border-radius:22px!important;
+  }
+  #dashboard .welcome-copy{grid-column:1!important;grid-row:1!important;display:block!important;align-self:center!important;}
+  #dashboard .welcome-copy .eyebrow{margin:0 0 7px!important;font-size:.57rem!important;padding:4px 8px!important;white-space:nowrap!important;}
+  #dashboard #welcomeTitle{margin:0!important;max-width:none!important;font-size:1.38rem!important;line-height:1.06!important;}
+  #dashboard .welcome-logo{
+    grid-column:2!important;grid-row:1!important;position:static!important;justify-self:end!important;align-self:center!important;
+    width:62px!important;height:62px!important;padding:4px!important;margin:0!important;
+  }
+  #dashboard .dashboard-academic-year{
+    grid-column:1 / -1!important;grid-row:2!important;width:100%!important;max-width:320px!important;justify-self:center!important;
+    margin:0!important;grid-template-columns:38px minmax(0,1fr) 38px!important;gap:6px!important;padding:7px!important;border-radius:14px!important;
+  }
+  #dashboard .dashboard-academic-year label{display:grid!important;grid-template-rows:auto 38px!important;gap:4px!important;width:100%!important;text-align:center!important;font-size:.78rem!important;line-height:1!important;}
+  #dashboard .dashboard-academic-year .year-step{height:38px!important;min-height:38px!important;align-self:end!important;}
+  #dashboard .dashboard-academic-year select{height:38px!important;min-height:38px!important;font-size:.92rem!important;text-align:center!important;text-align-last:center!important;padding:0 22px 0 8px!important;}
+  #dashboard .daily-motivation{
+    grid-column:1 / -1!important;grid-row:3!important;max-width:none!important;margin:0!important;padding:2px 0 2px 10px!important;
+    font-size:.75rem!important;line-height:1.28!important;border-left:2px solid #49d7ff!important;
+  }
+  #dashboard .quick-actions{overflow-x:auto!important;scrollbar-width:none!important;-ms-overflow-style:none!important;}
+  #dashboard .quick-actions::-webkit-scrollbar{display:none!important;}
+}
+@media(max-width:390px){
+  #dashboard .welcome-banner{grid-template-columns:minmax(0,1fr) 58px!important;padding:12px!important;row-gap:9px!important;}
+  #dashboard .welcome-logo{width:54px!important;height:54px!important;}
+  #dashboard #welcomeTitle{font-size:1.28rem!important;}
+  #dashboard .dashboard-academic-year{max-width:292px!important;grid-template-columns:34px minmax(0,1fr) 34px!important;padding:6px!important;}
+  #dashboard .daily-motivation{font-size:.71rem!important;}
+}
+</style>
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
     <form class="auth-card" id="authForm" novalidate>
       <img src="./assets/logo-service-technique.png" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.51 — 17/08/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.52 — 17/08/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -327,7 +369,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.51 — 17/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.52 — 17/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -346,8 +388,10 @@
 
     <section class="view active" id="dashboard">
       <div class="welcome-banner">
-        <div class="welcome-copy"><span class="eyebrow">PILOTAGE EN TEMPS RÉEL</span><h3 id="welcomeTitle">Pilotage Service Technique</h3><div class="academic-year-control dashboard-academic-year" id="globalAcademicYearWrap"><button type="button" class="ghost year-step" id="prevAcademicYear" aria-label="Année scolaire précédente">‹</button><label>Année scolaire<select id="globalAcademicYear" aria-label="Année scolaire active"></select></label><button type="button" class="ghost year-step" id="nextAcademicYear" aria-label="Année scolaire suivante">›</button></div><p id="dailyMotivation" class="daily-motivation">Petit à petit, l’oiseau fait son nid.</p></div>
+        <div class="welcome-copy"><span class="eyebrow">PILOTAGE EN TEMPS RÉEL</span><h3 id="welcomeTitle">Pilotage Service Technique</h3></div>
         <img src="./assets/logo-service-technique.png" alt="" class="welcome-logo" data-app-logo="1">
+        <div class="academic-year-control dashboard-academic-year" id="globalAcademicYearWrap"><button type="button" class="ghost year-step" id="prevAcademicYear" aria-label="Année scolaire précédente">‹</button><label>Année scolaire<select id="globalAcademicYear" aria-label="Année scolaire active"></select></label><button type="button" class="ghost year-step" id="nextAcademicYear" aria-label="Année scolaire suivante">›</button></div>
+        <p id="dailyMotivation" class="daily-motivation">Petit à petit, l’oiseau fait son nid.</p>
       </div>
 
       <div class="quick-actions" id="dashboardQuickActions">
@@ -803,7 +847,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.51 — 17/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.52 — 17/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
