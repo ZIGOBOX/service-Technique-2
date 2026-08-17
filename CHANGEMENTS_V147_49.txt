@@ -1,0 +1,9 @@
+V147.49 — Bandeau bleu mobile plus compact
+
+- Réduction nette de la hauteur de l'encadré bleu sur téléphone.
+- Titre « Pilotage Service Technique » conservé entièrement, mais plus compact.
+- Logo réduit sur mobile.
+- Sélecteur d'année scolaire réduit et rapproché du titre.
+- Citation plus compacte pour éviter un grand espace vertical.
+- Affichage tablette et ordinateur conservé.
+- Toutes les fonctions de la V147.48 sont conservées.
