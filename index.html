@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#075ca8">
-  <title>Pilotage Service Technique V147.49</title>
+  <title>Pilotage Service Technique V147.50</title>
   <link rel="icon" href="./assets/logo-service-technique.png">
   <link rel="stylesheet" href="./styles.css?v=147.49">
 
@@ -220,7 +220,7 @@
 
 
 <style id="v14748-dashboard-hero-redesign">
-/* V147.49 — encadré bleu du tableau de bord, responsive */
+/* V147.50 — encadré bleu du tableau de bord, responsive */
 #dashboard .welcome-banner{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:28px;align-items:center;padding:30px 34px;border-radius:30px;background:linear-gradient(125deg,#082d68 0%,#075eb5 54%,#08aee6 100%);color:#fff;box-shadow:0 18px 42px rgba(8,73,132,.22);isolation:isolate}
 #dashboard .welcome-banner:before{content:"";position:absolute;inset:-35% 30% -70% -10%;z-index:-1;border-radius:50%;border:1px solid rgba(83,211,255,.28);transform:rotate(-14deg)}
 #dashboard .welcome-banner:after{content:"";position:absolute;width:240px;height:240px;right:-75px;bottom:-95px;z-index:-1;border-radius:50%;background:rgba(0,214,255,.12)}
@@ -237,16 +237,26 @@
 #dashboard .quick-actions{margin-top:18px}
 @media(max-width:900px){#dashboard .welcome-banner{grid-template-columns:minmax(0,1fr) 116px;gap:14px;padding:24px 20px;border-radius:26px}#dashboard .welcome-logo{width:108px;height:108px;padding:7px;align-self:start}#dashboard #welcomeTitle{font-size:clamp(2rem,8.6vw,2.7rem);margin:13px 0 18px}#dashboard .dashboard-academic-year{grid-column:1/-1;width:100%;grid-template-columns:48px minmax(0,1fr) 48px;padding:11px}.daily-motivation{grid-column:1/-1}}
 @media(max-width:560px){
-#dashboard .welcome-banner{grid-template-columns:minmax(0,1fr) 70px;padding:16px 14px 17px;gap:8px;border-radius:22px}
-#dashboard .welcome-logo{width:66px;height:66px;padding:4px}
-#dashboard .welcome-copy .eyebrow{font-size:.62rem;padding:5px 9px;letter-spacing:.07em}
-#dashboard #welcomeTitle{font-size:clamp(1.55rem,7.8vw,2rem);line-height:1.02;max-width:235px;margin:10px 0 12px}
-#dashboard .dashboard-academic-year{grid-template-columns:38px minmax(0,1fr) 38px;gap:7px;padding:9px;border-radius:15px;max-width:360px}
-#dashboard .dashboard-academic-year label{gap:4px;font-size:.86rem}
-#dashboard .dashboard-academic-year .year-step{height:42px;border-radius:12px;font-size:1.25rem}
-#dashboard .dashboard-academic-year select{min-height:42px;border-radius:12px;font-size:.94rem;padding:0 8px}
-#dashboard .daily-motivation{padding-left:12px;margin-top:12px!important;font-size:.91rem!important;line-height:1.34;max-width:330px}
-#dashboard .quick-actions{margin-top:14px}
+/* V147.50 : vrai mode compact téléphone. */
+#dashboard .welcome-banner{grid-template-columns:minmax(0,1fr) 58px;padding:12px 12px 13px;gap:8px;border-radius:20px;min-height:0!important}
+#dashboard .welcome-copy{display:flex;flex-direction:column;min-width:0}
+#dashboard .welcome-logo{width:54px;height:54px;padding:3px;margin-top:2px;align-self:start}
+#dashboard .welcome-copy .eyebrow{font-size:.56rem;padding:4px 8px;letter-spacing:.055em;line-height:1.1;white-space:nowrap;width:max-content;max-width:100%}
+#dashboard #welcomeTitle{font-size:1.38rem;line-height:1.05;max-width:185px;margin:8px 0 9px;letter-spacing:-.025em}
+#dashboard .dashboard-academic-year{width:100%;max-width:300px;grid-template-columns:32px minmax(0,1fr) 32px;gap:5px;padding:6px;border-radius:12px;box-shadow:0 6px 14px rgba(0,32,76,.12)}
+#dashboard .dashboard-academic-year label{gap:2px;font-size:.72rem;line-height:1.05}
+#dashboard .dashboard-academic-year .year-step{height:34px;border-radius:9px;font-size:1.05rem;padding:0}
+#dashboard .dashboard-academic-year select{min-height:34px;height:34px;border-radius:9px;font-size:.82rem;padding:0 5px}
+#dashboard .daily-motivation{padding-left:9px;margin:8px 0 0!important;font-size:.76rem!important;line-height:1.23;max-width:295px;border-left-width:2px}
+#dashboard .quick-actions{margin-top:10px}
+}
+@media(max-width:390px){
+#dashboard .welcome-banner{grid-template-columns:minmax(0,1fr) 50px;padding:10px 10px 11px}
+#dashboard .welcome-logo{width:48px;height:48px}
+#dashboard #welcomeTitle{font-size:1.26rem;max-width:165px;margin:7px 0 8px}
+#dashboard .dashboard-academic-year{max-width:278px;grid-template-columns:30px minmax(0,1fr) 30px;padding:5px}
+#dashboard .dashboard-academic-year .year-step,#dashboard .dashboard-academic-year select{height:32px;min-height:32px}
+#dashboard .daily-motivation{font-size:.72rem!important;max-width:270px}
 }
 </style>
 
@@ -256,7 +266,7 @@
     <form class="auth-card" id="authForm" novalidate>
       <img src="./assets/logo-service-technique.png" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.49 — 15/08/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.50 — 15/08/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -296,7 +306,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.49 — 15/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.50 — 15/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -772,7 +782,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.49 — 15/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.50 — 15/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 

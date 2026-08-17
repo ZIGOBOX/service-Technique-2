@@ -1,0 +1,7 @@
+V147.50 — correction réelle de la taille du bandeau mobile
+
+- Encadré bleu nettement moins haut sur téléphone.
+- Titre, logo, sélecteur d’année et citation compactés.
+- Ajout d’un réglage spécifique pour les écrans <= 390 px.
+- Aucun module métier modifié.
+- Base V147.49 conservée.
