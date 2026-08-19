@@ -1,6 +1,6 @@
 
 (()=>{'use strict';
-const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', SELKEY='pst_cleaning_room_selection_v147_53', CONFIG_VERSION='147.10';
+const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', SELKEY='pst_cleaning_room_selection_v147_53', CONFIG_VERSION='147.62';
 const $=x=>document.getElementById(x), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const room=(number,name,type='Salle')=>({id:uid(),number,name,type});
 const std=(base)=>Array.from({length:9},(_,i)=>room(String(base+i),'','Salle'));
@@ -86,6 +86,17 @@ const DEF=[
 {name:"Extension",rooms:[room("","Local extension","Local"),room("","Sanitaires","Sanitaires"),room("","Circulation","Circulation")]},
 ]},
 ]},
+{id:"DP",name:"Demi-pension",floors:[
+{name:"RDC",sectors:[{name:"Secteur principal",rooms:[room("","Zone entière","Local"),room("","Sanitaires RDC","Sanitaires"),room("","Circulation RDC","Circulation")] }]},
+{name:"1er étage",sectors:[{name:"Secteur principal",rooms:[room("","Zone entière","Local"),room("","Sanitaires 1er étage","Sanitaires"),room("","Circulation 1er étage","Circulation")] }]},
+]},
+{id:"GYM",name:"Gymnase",floors:[
+{name:"RDC",sectors:[{name:"Secteur principal",rooms:[room("","Zone entière","Salle de sport"),room("","Sanitaires / vestiaires","Sanitaires"),room("","Circulation RDC","Circulation")] }]},
+{name:"1er étage",sectors:[{name:"Secteur principal",rooms:[room("","Zone entière","Salle de sport"),room("","Sanitaires / vestiaires","Sanitaires"),room("","Circulation 1er étage","Circulation")] }]},
+]},
+{id:"COUR",name:"Cour",floors:[
+{name:"Extérieur",sectors:[{name:"Secteur principal",rooms:[room("","Zone entière","Extérieur")] }]},
+]},
 ];
 
 let data=load();
@@ -129,26 +140,77 @@ function duplicateRoomNumber(buildingIndex,floorIndex,sectorIndex,roomIndex,valu
 }
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
-function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return Array.isArray(x)&&x.length?x:clone(DEF)}catch(e){return clone(DEF)}}
+function buildingKey(v){
+ const n=normalizeTextSimple(v).replace(/^batiment\s+/,'').trim();
+ const aliases={'a':'a','b':'b','h':'h','g':'g','e':'e','f':'f','alg':'algeco','algeco':'algeco','ext':'extension','extension':'extension','dp':'demi-pension','demi pension':'demi-pension','demi-pension':'demi-pension','gym':'gymnase','gymnase':'gymnase','cour':'cour'};
+ return aliases[n]||n;
+}
+function mergeMissingBuildings(cfg){
+ const out=Array.isArray(cfg)&&cfg.length?cfg:clone(DEF);
+ const have=new Set(out.map(b=>buildingKey(b?.name||b?.id)));
+ for(const d of DEF){if(!have.has(buildingKey(d.name))){out.push(clone(d));have.add(buildingKey(d.name));}}
+ return out;
+}
+function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return mergeMissingBuildings(x)}catch(e){return clone(DEF)}}
 function historyResultFromMain(x){
  const result=x?.overallStatus==='À reprendre'?'À améliorer':(x?.overallStatus||'Non contrôlé');
  const score=Math.max(0,Math.min(10,Number(x?.score||0)/10));
  return {result,score,note:x?.comment||''};
 }
+function sameBuildingName(a,b){
+ const na=buildingKey(a),nb=buildingKey(b);
+ if(!na||!nb)return true;
+ return na===nb;
+}
+function floorToken(v){
+ const n=normalizeTextSimple(v).replace(/[^a-z0-9]+/g,' ');
+ if(!n)return '';
+ if(n==='rdc'||n.includes('rez de chaussee'))return 'rdc';
+ if(n.includes('1er')||n.includes('1e ')||n.includes('premier'))return '1';
+ if(n.includes('2e')||n.includes('2eme')||n.includes('deuxieme'))return '2';
+ if(n.includes('3e')||n.includes('3eme')||n.includes('troisieme'))return '3';
+ if(n.includes('4e')||n.includes('4eme')||n.includes('quatrieme'))return '4';
+ if(n==='locaux'||n==='local')return 'locaux';
+ return n.trim();
+}
+function sameFloorName(a,b,building=''){
+ const aa=floorToken(a),bb=floorToken(b),bn=normalizeTextSimple(building);
+ if(!aa||!bb)return true;
+ if(aa===bb)return true;
+ // Le référentiel historique de l'Extension est volontairement regroupé sous « Locaux »
+ // alors que le formulaire principal utilise Rez-de-chaussée / 1er étage.
+ // Tous les contrôles Extension doivent donc rester retrouvables dans cet historique.
+ if(bn.includes('extension')&&(aa==='locaux'||bb==='locaux'))return true;
+ // Les annexes historiques peuvent être regroupées en un niveau générique « Locaux ».
+ if((bn.includes('demi-pension')||bn.includes('gymnase'))&&(aa==='locaux'||bb==='locaux'))return true;
+ // Même tolérance pour les bâtiments génériques de type Algeco / locaux annexes.
+ if(bn.includes('algeco')&&(aa==='locaux'||bb==='locaux'))return true;
+ return false;
+}
+function sameSectorName(a,b,building=''){
+ const aa=normalizeTextSimple(a),bb=normalizeTextSimple(b),bn=normalizeTextSimple(building);
+ if(!aa||!bb)return true;
+ if(aa===bb)return true;
+ // Secteurs génériques : ne jamais masquer un contrôle uniquement à cause d'un libellé différent.
+ if(['secteur principal','extension','locaux'].includes(aa)&&['secteur principal','extension','locaux'].includes(bb))return true;
+ if(bn.includes('extension')&&(aa==='extension'||bb==='extension'))return true;
+ return false;
+}
 function centralRoomRefsForMainControl(x){
- const bn=normalizeTextSimple(x?.building),fn=normalizeTextSimple(x?.floor),sn=normalizeTextSimple(x?.sector);
- const out=[];
+ const bn=x?.building||'',fn=x?.floor||'',sn=x?.sector||'';
+ const buildingRefs=[];
  for(const b of data){
-  if(bn&&normalizeTextSimple(b.name)!==bn)continue;
-  for(const f of b.floors||[]){
-   if(fn&&normalizeTextSimple(f.name)!==fn)continue;
-   for(const sec of f.sectors||[]){
-    if(sn&&normalizeTextSimple(sec.name)!==sn)continue;
-    for(const r of sec.rooms||[])out.push({b,f,sec,r});
-   }
-  }
+  if(bn&&!sameBuildingName(b.name,bn))continue;
+  for(const f of b.floors||[])for(const sec of f.sectors||[])for(const r of sec.rooms||[])buildingRefs.push({b,f,sec,r});
  }
- return out;
+ if(!buildingRefs.length)return [];
+ // D'abord le rattachement le plus précis possible.
+ let refs=buildingRefs.filter(v=>sameFloorName(v.f.name,fn,v.b.name)&&sameSectorName(v.sec.name,sn,v.b.name));
+ if(refs.length)return refs;
+ refs=buildingRefs.filter(v=>sameFloorName(v.f.name,fn,v.b.name));
+ // IMPORTANT : si les référentiels ont divergé, on préfère rattacher le contrôle au bâtiment
+ // plutôt que de le perdre complètement de l'historique.
+ return refs.length?refs:buildingRefs;
 }
 function isWholeAreaMainControl(x){
  const rn=normalizeTextSimple(x?.room);
@@ -374,9 +436,9 @@ function allHistoryForRoom(roomObj){
  const out=[],ctx=currentHistoryContext();
  for(const check of loadChecks()){
    // Évite de mélanger les « Sanitaires », « Circulation », etc. de bâtiments/étages différents.
-   if(ctx.building&&check.building&&String(check.building)!==String(ctx.building))continue;
-   if(ctx.floor&&check.floor&&String(check.floor)!==String(ctx.floor))continue;
-   if(ctx.sector&&check.sector&&String(check.sector)!==String(ctx.sector))continue;
+   if(ctx.building&&check.building&&!sameBuildingName(check.building,ctx.building))continue;
+   if(ctx.floor&&check.floor&&!sameFloorName(check.floor,ctx.floor,ctx.building||check.building))continue;
+   if(ctx.sector&&check.sector&&!sameSectorName(check.sector,ctx.sector,ctx.building||check.building))continue;
    for(const item of (check.items||[])){
      if(sameRoom(item.room,roomObj)){
        out.push({
@@ -627,17 +689,20 @@ function exportCsv(){
 
 function normalizeTextSimple(v){return String(v||'').trim().toLocaleLowerCase('fr-FR').normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
 function findCentralRoomForMainControl(x){
- const bn=normalizeTextSimple(x?.building),fn=normalizeTextSimple(x?.floor),rn=normalizeTextSimple(x?.room);
+ const bn=x?.building||'',fn=x?.floor||'',rn=normalizeTextSimple(x?.room),rt=normalizeTextSimple(x?.roomType);
  let candidates=[];
  for(const b of data){
-  if(bn&&normalizeTextSimple(b.name)!==bn)continue;
+  if(bn&&!sameBuildingName(b.name,bn))continue;
   for(const f of b.floors||[])for(const sec of f.sectors||[])for(const r of sec.rooms||[]){
-   const lab=normalizeTextSimple(label(r)),num=normalizeTextSimple(r.number),name=normalizeTextSimple(r.name);
+   const lab=normalizeTextSimple(label(r)),num=normalizeTextSimple(r.number),name=normalizeTextSimple(r.name),type=normalizeTextSimple(r.type);
    if(rn&&(lab===rn||num===rn||name===rn||lab.includes(rn)||rn.includes(lab)))candidates.push({b,f,sec,r});
+   else if(rn.includes('sanitaire')&&type.includes('sanitaire'))candidates.push({b,f,sec,r});
+   else if(rn.includes('circulation')&&type.includes('circulation'))candidates.push({b,f,sec,r});
+   else if(rt&&type&&(rt.includes(type)||type.includes(rt)))candidates.push({b,f,sec,r});
   }
  }
  if(!candidates.length)return null;
- const floorMatch=candidates.find(c=>fn&&normalizeTextSimple(c.f.name)===fn);
+ const floorMatch=candidates.find(c=>sameFloorName(c.f.name,fn,c.b.name));
  return floorMatch||candidates[0];
 }
 async function recordMainControl(x){
