@@ -1,6 +1,6 @@
 
 (()=>{'use strict';
-const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', CONFIG_VERSION='147.10';
+const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', SELKEY='pst_cleaning_room_selection_v147_53', CONFIG_VERSION='147.10';
 const $=x=>document.getElementById(x), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const room=(number,name,type='Salle')=>({id:uid(),number,name,type});
 const std=(base)=>Array.from({length:9},(_,i)=>room(String(base+i),'','Salle'));
@@ -229,11 +229,25 @@ function renderSectors(){
  renderRooms();
 }
 function rooms(){let b=+$('rcBuilding').value,f=+$('rcFloor').value,s=+$('rcSector').value;return data[b]?.floors[f]?.sectors[s]?.rooms||[]}
+function selectionContextKey(){
+ const b=$('rcBuilding')?.value??'0',f=$('rcFloor')?.value??'0',s=$('rcSector')?.value??'0',m=$('rcMode')?.value||'sector';
+ return `${b}:${f}:${s}:${m}`;
+}
+function loadRoomSelection(){try{return JSON.parse(localStorage.getItem(SELKEY)||'{}')||{}}catch(e){return {}}}
+function saveRoomSelection(){
+ const state=loadRoomSelection(), key=selectionContextKey();
+ state[key]=[...document.querySelectorAll('#rcRooms input[name="rcr"]:checked')].map(x=>String(x.value));
+ localStorage.setItem(SELKEY,JSON.stringify(state));
+}
 function renderRooms(){
  let box=$('rcRooms');if(!box)return;let mode=$('rcMode')?.value||'sector';
- const list=rooms();
- box.innerHTML=list.map((r,i)=>`<label class="rc-room"><input name="rcr" type="${mode==='single'?'radio':'checkbox'}" value="${i}" ${mode==='sector'?'checked':''}><span><b>${esc(label(r))}</b><small>${esc(r.type)}</small></span></label>`).join('')||'<div class="empty">Aucun local dans ce secteur.</div>';
- box.querySelectorAll('input[name="rcr"]').forEach(inp=>inp.addEventListener('change',renderSelectedHistory));
+ const list=rooms(), state=loadRoomSelection(), key=selectionContextKey();
+ const saved=Array.isArray(state[key])?state[key]:null;
+ box.innerHTML=list.map((r,i)=>{
+   const checked=saved?saved.includes(String(i)):(mode==='sector');
+   return `<label class="rc-room"><input name="rcr" type="${mode==='single'?'radio':'checkbox'}" value="${i}" ${checked?'checked':''}><span><b>${esc(label(r))}</b><small>${esc(r.type)}</small></span></label>`;
+ }).join('')||'<div class="empty">Aucun local dans ce secteur.</div>';
+ box.querySelectorAll('input[name="rcr"]').forEach(inp=>inp.addEventListener('change',()=>{saveRoomSelection();renderSelectedHistory()}));
  renderSelectedHistory();
  const form=$('rcForm');if(form){form.classList.add('hidden');form.innerHTML=''}
 }
@@ -494,7 +508,7 @@ function init(){
  renderSettings();renderBuildings();renderHistory();
  $('rcAddBuilding')?.addEventListener('click',()=>{data.push({id:uid(),name:'Nouveau bâtiment',floors:[{name:'RDC',sectors:[{name:'Secteur principal',rooms:[]}]}]});save();scheduleRoomConfigSave(true)});
  $('rcBuilding')?.addEventListener('change',renderFloors);$('rcFloor')?.addEventListener('change',renderSectors);$('rcSector')?.addEventListener('change',renderRooms);$('rcMode')?.addEventListener('change',renderRooms);
- $('rcAll')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input[type=checkbox]').forEach(x=>x.checked=true);renderSelectedHistory()});$('rcNone')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input').forEach(x=>x.checked=false);renderSelectedHistory()});$('rcStart')?.addEventListener('click',start);
+ $('rcAll')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input[type=checkbox]').forEach(x=>x.checked=true);saveRoomSelection();renderSelectedHistory()});$('rcNone')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input').forEach(x=>x.checked=false);saveRoomSelection();renderSelectedHistory()});$('rcStart')?.addEventListener('click',start);
  ['rcFilterFrom','rcFilterTo','rcFilterBuilding','rcFilterFloor','rcFilterSector','rcFilterResult','rcFilterRoom'].forEach(id=>$(id)?.addEventListener('change',renderHistory));
  $('rcApplyFilters')?.addEventListener('click',renderHistory);
  $('rcResetFilters')?.addEventListener('click',()=>{['rcFilterFrom','rcFilterTo','rcFilterBuilding','rcFilterFloor','rcFilterSector','rcFilterResult','rcFilterRoom'].forEach(id=>{if($(id))$(id).value=''});renderHistory()});
