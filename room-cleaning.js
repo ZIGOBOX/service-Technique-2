@@ -133,12 +133,45 @@ function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return Array.isA
 function loadChecks(){
  try{
   const main=window.PSTMainState?.get?.();
-  const cloud=Array.isArray(main?.cleaningRoomChecks)?main.cleaningRoomChecks:[];
+  const cloud=Array.isArray(main?.cleaningRoomChecks)?clone(main.cleaningRoomChecks):[];
   const local=JSON.parse(localStorage.getItem(CK)||'[]')||[];
-  if(cloud.length){localStorage.setItem(CK,JSON.stringify(cloud));return cloud}
-  if(local.length&&main){main.cleaningRoomChecks=clone(local);window.PSTMainState?.save?.(false)}
-  return local;
- }catch(e){return[]}
+
+  // V147.56 : l'historique par salle ne dépend plus uniquement du miroir
+  // cleaningRoomChecks. On reconstruit aussi les contrôles depuis la collection
+  // principale `cleaning`, ce qui garantit qu'un contrôle saisi avec le formulaire
+  // « Nouveau contrôle ménage » apparaît dans l'historique des locaux.
+  const merged=[];
+  const seen=new Set();
+  const add=c=>{
+   if(!c)return;
+   const k=String(c.sourceMainId||c.id||'');
+   if(k&&seen.has(k))return;
+   if(k)seen.add(k);
+   merged.push(c);
+  };
+  cloud.forEach(add);
+  local.forEach(add);
+
+  const mains=Array.isArray(main?.cleaning)?main.cleaning:[];
+  for(const x of mains){
+   if(!x?.id||seen.has(String(x.id)))continue;
+   const found=findCentralRoomForMainControl(x);
+   const result=x.overallStatus==='À reprendre'?'À améliorer':(x.overallStatus||'Non contrôlé');
+   const score=Math.max(0,Math.min(10,Number(x.score||0)/10));
+   const roomObj=found?clone(found.r):{id:'',number:'',name:x.room||'Zone entière',type:x.roomType||'Local'};
+   add({
+    id:'main-'+x.id,sourceMainId:x.id,
+    date:x.date&&x.time?`${x.date}T${x.time}:00`:x.date||new Date().toISOString(),
+    building:found?.b?.name||x.building||'',floor:found?.f?.name||x.floor||'',sector:found?.sec?.name||x.sector||'',mode:'single',
+    items:[{room:roomObj,result,score,note:x.comment||''}]
+   });
+  }
+
+  // Conserver le miroir local et dans l'état principal pour les prochains affichages.
+  localStorage.setItem(CK,JSON.stringify(merged));
+  if(main){main.cleaningRoomChecks=clone(merged);window.PSTMainState?.save?.(false)}
+  return merged;
+ }catch(e){console.warn('Chargement historique ménage',e);return[]}
 }
 function save(redraw=true){
  localStorage.setItem(KEY,JSON.stringify(data));
@@ -547,7 +580,9 @@ function findCentralRoomForMainControl(x){
 async function recordMainControl(x){
  if(!x?.id)return false;
  let arr=loadChecks();
- if(arr.some(c=>String(c.sourceMainId||'')===String(x.id)))return true;
+ // Le formulaire principal peut avoir déjà été reconstruit par loadChecks().
+ // Dans ce cas, on remplace son entrée plutôt que de sortir sans rafraîchir.
+ arr=arr.filter(c=>String(c.sourceMainId||'')!==String(x.id));
  const found=findCentralRoomForMainControl(x);
  const result=x.overallStatus==='À reprendre'?'À améliorer':(x.overallStatus||'Non contrôlé');
  const score=Math.max(0,Math.min(10,Number(x.score||0)/10));
