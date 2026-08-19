@@ -381,7 +381,7 @@ function allHistoryForRoom(roomObj){
      if(sameRoom(item.room,roomObj)){
        out.push({
          date:check.date,building:check.building,floor:check.floor,sector:check.sector,
-         result:item.result,score:item.score,note:item.note||'',room:item.room
+         result:item.result,score:item.score,note:item.note||'',room:item.room,checkId:check.id,sourceMainId:check.sourceMainId||''
        });
      }
    }
@@ -409,6 +409,7 @@ function selectedHistoryHtml(roomObj){
        <span class="${x.result==='Non conforme'?'bad':x.result==='À améliorer'?'warn':'good'}">${esc(x.result||'—')}</span>
        <strong>${Number(x.score||0).toFixed(1)}/10</strong>
        ${x.note?`<p>${esc(x.note)}</p>`:''}
+       <div class="rc-history-actions"><button type="button" class="ghost small" data-view-history="${esc(x.checkId||'')}">👁 Relire</button><button type="button" class="danger-lite small" data-delete-history="${esc(x.checkId||'')}">🗑 Supprimer</button></div>
      </div>`).join('')}
    </div>
    ${recent.length&&all.length>recent.length?`<small class="rc-older-note">${all.length-recent.length} contrôle(s) plus ancien(s) également conservé(s).</small>`:''}
@@ -423,6 +424,8 @@ function renderSelectedHistory(){
  }
  const limited=rs.slice(0,6);
  box.innerHTML=`<div class="rc-selected-history-title"><strong>🕘 Anciens contrôles des locaux sélectionnés</strong><small>Priorité aux 15 derniers jours</small></div>${limited.map(selectedHistoryHtml).join('')}${rs.length>6?`<div class="rc-history-prompt">+ ${rs.length-6} autre(s) local(aux) sélectionné(s). Leur historique sera visible pendant le contrôle.</div>`:''}`;
+ box.querySelectorAll('[data-view-history]').forEach(btn=>btn.onclick=()=>viewHistoryCheck(btn.dataset.viewHistory));
+ box.querySelectorAll('[data-delete-history]').forEach(btn=>btn.onclick=()=>deleteHistoryCheck(btn.dataset.deleteHistory));
 }
 function recentHistoryHtml(roomObj){
  const hist=recentHistoryForRoom(roomObj,15);
@@ -541,6 +544,29 @@ function statsFor(list){
  return {checks:list.length,total,conform,improve,nonconform,avg}
 }
 
+function viewHistoryCheck(id){
+ const c=loadChecks().find(x=>String(x.id)===String(id));
+ if(!c){alert('Ce contrôle est introuvable. Actualisez la page puis réessayez.');return}
+ const lines=(c.items||[]).map(i=>`${label(i.room||{})} — ${i.result||'—'} — ${Number(i.score||0).toFixed(1)}/10${i.note?`\nObservation : ${i.note}`:''}`).join('\n\n');
+ alert(`CONTRÔLE MÉNAGE\n\nDate : ${fmtDate(c.date)}\nBâtiment : ${c.building||'—'}\nÉtage : ${c.floor||'—'}\nSecteur : ${c.sector||'—'}\n\n${lines||'Aucun détail disponible.'}`);
+}
+async function deleteHistoryCheck(id){
+ const c=loadChecks().find(x=>String(x.id)===String(id));
+ if(!c){alert('Ce contrôle est introuvable.');return}
+ if(!confirm('Supprimer définitivement ce contrôle ménage ?\n\nS’il concernait un secteur entier, il sera retiré de l’historique de TOUS les locaux concernés.'))return;
+ try{
+  const main=window.PSTMainState?.get?.();
+  const source=String(c.sourceMainId||'');
+  if(main&&source&&Array.isArray(main.cleaning)) main.cleaning=main.cleaning.filter(x=>String(x?.id||'')!==source);
+  let arr=loadChecks().filter(x=>String(x.id)!==String(id)&&(!source||String(x.sourceMainId||'')!==source));
+  localStorage.setItem(CK,JSON.stringify(arr));
+  if(main){main.cleaningRoomChecks=clone(arr);window.PSTMainState?.save?.(false)}
+  renderHistory();renderSelectedHistory();
+  try{await window.PSTMainState?.persistNow?.()}catch(e){console.warn('Suppression contrôle ménage',e)}
+  alert('Contrôle ménage supprimé de l’historique.');
+ }catch(e){console.error(e);alert('La suppression n’a pas pu être terminée. Réessayez.');}
+}
+
 function renderHistory(){
  renderFilterOptions();
  const box=$('rcHistory'), stats=$('rcStats');if(!box||!stats)return;
@@ -568,10 +594,7 @@ function renderHistory(){
    </article>`).join('');
 
  box.querySelectorAll('[data-print-check]').forEach(btn=>btn.onclick=()=>printOne(btn.dataset.printCheck));
- box.querySelectorAll('[data-del-check]').forEach(btn=>btn.onclick=()=>{
-   const id=btn.dataset.delCheck;if(!confirm('Supprimer ce contrôle ménage de l’historique ?'))return;
-   const arr=loadChecks().filter(x=>x.id!==id);saveChecks(arr)
- })
+ box.querySelectorAll('[data-del-check]').forEach(btn=>btn.onclick=()=>deleteHistoryCheck(btn.dataset.delCheck))
 }
 
 function printableHtml(list,title){
