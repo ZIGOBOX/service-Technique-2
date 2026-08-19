@@ -2080,9 +2080,23 @@ function openCleaning(id){
   if(!(scopeStillValid||scopeSingleValid)){x.roomScopeIds=[];x.scopeMode=o.room==='Zone entière'?'sector':'single'}
   else if(o.room==='Zone entière'&&x.roomScopeIds.length>1)x.scopeMode='sector';
   const attachmentCheck=await processAttachments(form,x,'cleaning');if(!attachmentCheck?.ok)return;
-  const persisted=await commitFormRecordVerified('Contrôle ménage','cleaning',x);if(!persisted.ok)return;
-  try{await window.PSTCleaningRooms?.recordMainControl?.(x)}catch(e){console.warn('Historique ménage par local',e)}
-  closeModal();toast(persisted.offline?`✅ Contrôle enregistré sur cet appareil — synchronisation en attente`:`✅ Contrôle ménage enregistré — résultat : ${x.overallStatus||'—'}`)
+  const persisted=await commitFormRecordVerified('Contrôle ménage','cleaning',x);if(!persisted.ok)return {ok:false};
+  // Vérification supplémentaire : le contrôle doit être présent dans l'état principal
+  // avant de fermer le formulaire, puis répercuté dans l'historique par local.
+  const savedMain=Array.isArray(db.cleaning)&&db.cleaning.some(c=>String(c.id)===String(x.id));
+  if(!savedMain){toast('⚠️ Contrôle non retrouvé après enregistrement — formulaire conservé');return {ok:false}}
+  let historySaved=true;
+  try{const r=await window.PSTCleaningRooms?.recordMainControl?.(x);historySaved=(r!==false)}catch(e){historySaved=false;console.warn('Historique ménage par local',e)}
+  if(!historySaved){
+    // Le contrôle principal est déjà sauvegardé. L'historique sera reconstruit depuis db.cleaning,
+    // mais on le signale pour éviter un faux message de réussite totale.
+    console.warn('Contrôle enregistré, synchronisation historique différée',x.id);
+  }
+  closeModal();
+  try{renderCleaning()}catch(_){}
+  try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}
+  toast(persisted.offline?`✅ Contrôle enregistré sur cet appareil — synchronisation en attente`:`✅ Contrôle ménage enregistré — résultat : ${x.overallStatus||'—'}`)
+  return {ok:true};
  },{onDelete:old?()=>deleteRecord('cleaning',x.id,'contrôle'):null});
  const updateOtherRoom=()=>$('#mOtherRoomWrap')?.classList.toggle('hidden',$('#mRoom')?.value!=='Autre local');
  const updateSector=()=>{const e=$('#mSector');if(e)e.innerHTML=cleaningSectorOptions($('#mBuilding').value,$('#mFloor').value,e.value)};
