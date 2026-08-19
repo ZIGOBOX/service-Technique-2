@@ -130,7 +130,16 @@ function duplicateRoomNumber(buildingIndex,floorIndex,sectorIndex,roomIndex,valu
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return Array.isArray(x)&&x.length?x:clone(DEF)}catch(e){return clone(DEF)}}
-function loadChecks(){try{return JSON.parse(localStorage.getItem(CK))||[]}catch(e){return[]}}
+function loadChecks(){
+ try{
+  const main=window.PSTMainState?.get?.();
+  const cloud=Array.isArray(main?.cleaningRoomChecks)?main.cleaningRoomChecks:[];
+  const local=JSON.parse(localStorage.getItem(CK)||'[]')||[];
+  if(cloud.length){localStorage.setItem(CK,JSON.stringify(cloud));return cloud}
+  if(local.length&&main){main.cleaningRoomChecks=clone(local);window.PSTMainState?.save?.(false)}
+  return local;
+ }catch(e){return[]}
+}
 function save(redraw=true){
  localStorage.setItem(KEY,JSON.stringify(data));
  roomSettingsDirty=true;
@@ -145,7 +154,15 @@ function save(redraw=true){
  scheduleRoomConfigSave(false);
  if(redraw){renderSettings();renderBuildings();renderHistory()}
 }
-function saveChecks(arr){localStorage.setItem(CK,JSON.stringify(arr));renderHistory()}
+function saveChecks(arr,persist=true){
+ localStorage.setItem(CK,JSON.stringify(arr));
+ try{
+  const main=window.PSTMainState?.get?.();
+  if(main){main.cleaningRoomChecks=clone(arr);window.PSTMainState?.save?.(false)}
+ }catch(e){console.warn('Synchronisation historique ménage',e)}
+ renderHistory();renderSelectedHistory();
+ if(persist&&window.PSTMainState?.persistNow){window.PSTMainState.persistNow().catch(e=>console.warn('Sauvegarde historique ménage',e))}
+}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function label(r){return [r.number?`${r.number}`:'',r.name].filter(Boolean).join(' — ')||r.type}
 function fmtDate(v){try{return new Date(v).toLocaleDateString('fr-FR')}catch{return v||''}}
@@ -276,9 +293,17 @@ function recentHistoryForRoom(roomObj,days=15){
  return out.sort((a,b)=>new Date(b.date)-new Date(a.date));
 }
 
+function currentHistoryContext(){
+ const bi=Number($('rcBuilding')?.value||0),fi=Number($('rcFloor')?.value||0),si=Number($('rcSector')?.value||0);
+ return {building:data[bi]?.name||'',floor:data[bi]?.floors?.[fi]?.name||'',sector:data[bi]?.floors?.[fi]?.sectors?.[si]?.name||''};
+}
 function allHistoryForRoom(roomObj){
- const out=[];
+ const out=[],ctx=currentHistoryContext();
  for(const check of loadChecks()){
+   // Évite de mélanger les « Sanitaires », « Circulation », etc. de bâtiments/étages différents.
+   if(ctx.building&&check.building&&String(check.building)!==String(ctx.building))continue;
+   if(ctx.floor&&check.floor&&String(check.floor)!==String(ctx.floor))continue;
+   if(ctx.sector&&check.sector&&String(check.sector)!==String(ctx.sector))continue;
    for(const item of (check.items||[])){
      if(sameRoom(item.room,roomObj)){
        out.push({
@@ -398,7 +423,7 @@ function saveCheck(rs){
 
  let a=loadChecks();
  a.unshift(check);
- localStorage.setItem(CK,JSON.stringify(a));
+ saveChecks(a,true);
 
  alert(`Contrôle ménage enregistré : ${rs.length} local(aux). Les modifications de type/nom des locaux deviennent la nouvelle référence.`);
  $('rcForm').classList.add('hidden');
@@ -504,6 +529,38 @@ function exportCsv(){
  a.href=url;a.download=`controles-menage-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 
+function normalizeTextSimple(v){return String(v||'').trim().toLocaleLowerCase('fr-FR').normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function findCentralRoomForMainControl(x){
+ const bn=normalizeTextSimple(x?.building),fn=normalizeTextSimple(x?.floor),rn=normalizeTextSimple(x?.room);
+ let candidates=[];
+ for(const b of data){
+  if(bn&&normalizeTextSimple(b.name)!==bn)continue;
+  for(const f of b.floors||[])for(const sec of f.sectors||[])for(const r of sec.rooms||[]){
+   const lab=normalizeTextSimple(label(r)),num=normalizeTextSimple(r.number),name=normalizeTextSimple(r.name);
+   if(rn&&(lab===rn||num===rn||name===rn||lab.includes(rn)||rn.includes(lab)))candidates.push({b,f,sec,r});
+  }
+ }
+ if(!candidates.length)return null;
+ const floorMatch=candidates.find(c=>fn&&normalizeTextSimple(c.f.name)===fn);
+ return floorMatch||candidates[0];
+}
+async function recordMainControl(x){
+ if(!x?.id)return false;
+ let arr=loadChecks();
+ if(arr.some(c=>String(c.sourceMainId||'')===String(x.id)))return true;
+ const found=findCentralRoomForMainControl(x);
+ const result=x.overallStatus==='À reprendre'?'À améliorer':(x.overallStatus||'Non contrôlé');
+ const score=Math.max(0,Math.min(10,Number(x.score||0)/10));
+ const roomObj=found?clone(found.r):{id:'',number:'',name:x.room||'Zone entière',type:x.roomType||'Local'};
+ const check={
+  id:uid(),sourceMainId:x.id,date:x.date&&x.time?`${x.date}T${x.time}:00`:x.date||new Date().toISOString(),
+  building:found?.b?.name||x.building||'',floor:found?.f?.name||x.floor||'',sector:found?.sec?.name||x.sector||'',mode:'single',
+  items:[{room:roomObj,result,score,note:x.comment||''}]
+ };
+ arr.unshift(check);saveChecks(arr,false);
+ try{const res=await window.PSTMainState?.persistNow?.();return res?.ok!==false}catch(e){console.warn('Enregistrement historique local',e);return true}
+}
+
 function init(){
  renderSettings();renderBuildings();renderHistory();
  $('rcAddBuilding')?.addEventListener('click',()=>{data.push({id:uid(),name:'Nouveau bâtiment',floors:[{name:'RDC',sectors:[{name:'Secteur principal',rooms:[]}]}]});save();scheduleRoomConfigSave(true)});
@@ -549,5 +606,5 @@ function syncRoomsFromMain(){
  }catch(e){console.warn('Chargement configuration salles Supabase',e)}
 }
 window.addEventListener('pst:data-loaded',syncRoomsFromMain);
-window.PSTCleaningRooms={get:()=>clone(data),saveAll:(v)=>{if(Array.isArray(v)){data=clone(v);save()}},reset:()=>{data=clone(DEF);save()},history:loadChecks};
+window.PSTCleaningRooms={get:()=>clone(data),saveAll:(v)=>{if(Array.isArray(v)){data=clone(v);save()}},reset:()=>{data=clone(DEF);save()},history:loadChecks,recordMainControl};
 })();
