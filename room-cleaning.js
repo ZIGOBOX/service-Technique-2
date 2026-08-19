@@ -130,44 +130,84 @@ function duplicateRoomNumber(buildingIndex,floorIndex,sectorIndex,roomIndex,valu
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return Array.isArray(x)&&x.length?x:clone(DEF)}catch(e){return clone(DEF)}}
+function historyResultFromMain(x){
+ const result=x?.overallStatus==='À reprendre'?'À améliorer':(x?.overallStatus||'Non contrôlé');
+ const score=Math.max(0,Math.min(10,Number(x?.score||0)/10));
+ return {result,score,note:x?.comment||''};
+}
+function centralRoomRefsForMainControl(x){
+ const bn=normalizeTextSimple(x?.building),fn=normalizeTextSimple(x?.floor),sn=normalizeTextSimple(x?.sector);
+ const out=[];
+ for(const b of data){
+  if(bn&&normalizeTextSimple(b.name)!==bn)continue;
+  for(const f of b.floors||[]){
+   if(fn&&normalizeTextSimple(f.name)!==fn)continue;
+   for(const sec of f.sectors||[]){
+    if(sn&&normalizeTextSimple(sec.name)!==sn)continue;
+    for(const r of sec.rooms||[])out.push({b,f,sec,r});
+   }
+  }
+ }
+ return out;
+}
+function isWholeAreaMainControl(x){
+ const rn=normalizeTextSimple(x?.room);
+ if(['zone entiere','secteur entier','tout le secteur','tous les locaux','toutes les salles','etage entier','niveau entier'].includes(rn))return true;
+ return ['sector','multiple'].includes(String(x?.scopeMode||'')) && Array.isArray(x?.roomScopeIds) && x.roomScopeIds.length>1;
+}
+function buildHistoryItemsForMainControl(x){
+ const meta=historyResultFromMain(x);
+ const refs=centralRoomRefsForMainControl(x);
+ const ids=new Set((Array.isArray(x?.roomScopeIds)?x.roomScopeIds:[]).map(String));
+ let chosen=[];
+ if(ids.size)chosen=refs.filter(v=>ids.has(String(v.r?.id||'')));
+ if(!chosen.length&&isWholeAreaMainControl(x))chosen=refs;
+ if(!chosen.length){
+  const one=findCentralRoomForMainControl(x);
+  if(one)chosen=[one];
+ }
+ if(chosen.length){
+  return chosen.map(v=>({room:clone(v.r),result:meta.result,score:meta.score,note:meta.note,building:v.b.name,floor:v.f.name,sector:v.sec.name}));
+ }
+ return [{room:{id:'',number:'',name:x?.room||'Zone entière',type:x?.roomType||'Local'},result:meta.result,score:meta.score,note:meta.note,building:x?.building||'',floor:x?.floor||'',sector:x?.sector||''}];
+}
+function checkFromMainControl(x){
+ const items=buildHistoryItemsForMainControl(x);
+ const first=items[0]||{};
+ return {
+  id:'main-'+x.id,sourceMainId:x.id,
+  date:x.date&&x.time?`${x.date}T${x.time}:00`:x.date||new Date().toISOString(),
+  building:x.building||first.building||'',floor:x.floor||first.floor||'',sector:x.sector||first.sector||'',
+  mode:x.scopeMode||((items.length>1)?'sector':'single'),
+  items:items.map(i=>({room:i.room,result:i.result,score:i.score,note:i.note}))
+ };
+}
 function loadChecks(){
  try{
   const main=window.PSTMainState?.get?.();
   const cloud=Array.isArray(main?.cleaningRoomChecks)?clone(main.cleaningRoomChecks):[];
   const local=JSON.parse(localStorage.getItem(CK)||'[]')||[];
+  const mains=Array.isArray(main?.cleaning)?main.cleaning:[];
+  const mainIds=new Set(mains.map(x=>String(x?.id||'')).filter(Boolean));
 
-  // V147.56 : l'historique par salle ne dépend plus uniquement du miroir
-  // cleaningRoomChecks. On reconstruit aussi les contrôles depuis la collection
-  // principale `cleaning`, ce qui garantit qu'un contrôle saisi avec le formulaire
-  // « Nouveau contrôle ménage » apparaît dans l'historique des locaux.
+  // V147.57 : les contrôles principaux sont reconstruits à chaque lecture.
+  // Cela remplace les anciens miroirs incomplets et garantit qu'un contrôle
+  // d'une salle précise (ex. 106) ou d'un secteur entier apparaît pour chaque local concerné.
   const merged=[];
   const seen=new Set();
   const add=c=>{
    if(!c)return;
-   const k=String(c.sourceMainId||c.id||'');
+   const source=String(c.sourceMainId||'');
+   if(source&&mainIds.has(source))return; // le contrôle principal sera reconstruit ci-dessous
+   const k=String(c.id||source||'');
    if(k&&seen.has(k))return;
    if(k)seen.add(k);
    merged.push(c);
   };
   cloud.forEach(add);
   local.forEach(add);
+  for(const x of mains){if(x?.id)merged.push(checkFromMainControl(x));}
 
-  const mains=Array.isArray(main?.cleaning)?main.cleaning:[];
-  for(const x of mains){
-   if(!x?.id||seen.has(String(x.id)))continue;
-   const found=findCentralRoomForMainControl(x);
-   const result=x.overallStatus==='À reprendre'?'À améliorer':(x.overallStatus||'Non contrôlé');
-   const score=Math.max(0,Math.min(10,Number(x.score||0)/10));
-   const roomObj=found?clone(found.r):{id:'',number:'',name:x.room||'Zone entière',type:x.roomType||'Local'};
-   add({
-    id:'main-'+x.id,sourceMainId:x.id,
-    date:x.date&&x.time?`${x.date}T${x.time}:00`:x.date||new Date().toISOString(),
-    building:found?.b?.name||x.building||'',floor:found?.f?.name||x.floor||'',sector:found?.sec?.name||x.sector||'',mode:'single',
-    items:[{room:roomObj,result,score,note:x.comment||''}]
-   });
-  }
-
-  // Conserver le miroir local et dans l'état principal pour les prochains affichages.
   localStorage.setItem(CK,JSON.stringify(merged));
   if(main){main.cleaningRoomChecks=clone(merged);window.PSTMainState?.save?.(false)}
   return merged;
@@ -580,27 +620,33 @@ function findCentralRoomForMainControl(x){
 async function recordMainControl(x){
  if(!x?.id)return false;
  let arr=loadChecks();
- // Le formulaire principal peut avoir déjà été reconstruit par loadChecks().
- // Dans ce cas, on remplace son entrée plutôt que de sortir sans rafraîchir.
  arr=arr.filter(c=>String(c.sourceMainId||'')!==String(x.id));
- const found=findCentralRoomForMainControl(x);
- const result=x.overallStatus==='À reprendre'?'À améliorer':(x.overallStatus||'Non contrôlé');
- const score=Math.max(0,Math.min(10,Number(x.score||0)/10));
- const roomObj=found?clone(found.r):{id:'',number:'',name:x.room||'Zone entière',type:x.roomType||'Local'};
- const check={
-  id:uid(),sourceMainId:x.id,date:x.date&&x.time?`${x.date}T${x.time}:00`:x.date||new Date().toISOString(),
-  building:found?.b?.name||x.building||'',floor:found?.f?.name||x.floor||'',sector:found?.sec?.name||x.sector||'',mode:'single',
-  items:[{room:roomObj,result,score,note:x.comment||''}]
- };
- arr.unshift(check);saveChecks(arr,false);
+ const check=checkFromMainControl(x);
+ check.id=uid();
+ arr.unshift(check);
+ saveChecks(arr,false);
  try{const res=await window.PSTMainState?.persistNow?.();return res?.ok!==false}catch(e){console.warn('Enregistrement historique local',e);return true}
+}
+
+function pendingMainControlContext(){
+ const bi=Number($('rcBuilding')?.value||0),fi=Number($('rcFloor')?.value||0),si=Number($('rcSector')?.value||0);
+ const rs=selected();
+ return {
+  building:data[bi]?.name||'',floor:data[bi]?.floors?.[fi]?.name||'',sector:data[bi]?.floors?.[fi]?.sectors?.[si]?.name||'',
+  mode:$('rcMode')?.value||'sector',roomScopeIds:rs.map(r=>r.id),
+  roomScopeRooms:rs.map(r=>({id:r.id,number:r.number||'',name:r.name||'',type:r.type||''}))
+ };
+}
+function openNewMainControlFromHistory(){
+ try{localStorage.setItem('pst_cleaning_pending_scope_v147_57',JSON.stringify(pendingMainControlContext()))}catch(e){console.warn(e)}
+ const b=$('newCleaning');if(b)b.click();
 }
 
 function init(){
  renderSettings();renderBuildings();renderHistory();
  $('rcAddBuilding')?.addEventListener('click',()=>{data.push({id:uid(),name:'Nouveau bâtiment',floors:[{name:'RDC',sectors:[{name:'Secteur principal',rooms:[]}]}]});save();scheduleRoomConfigSave(true)});
  $('rcBuilding')?.addEventListener('change',renderFloors);$('rcFloor')?.addEventListener('change',renderSectors);$('rcSector')?.addEventListener('change',renderRooms);$('rcMode')?.addEventListener('change',renderRooms);
- $('rcAll')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input[type=checkbox]').forEach(x=>x.checked=true);saveRoomSelection();renderSelectedHistory()});$('rcNone')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input').forEach(x=>x.checked=false);saveRoomSelection();renderSelectedHistory()});$('rcStart')?.addEventListener('click',start);$('rcNewControl')?.addEventListener('click',()=>{const b=$('newCleaning');if(b)b.click();});
+ $('rcAll')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input[type=checkbox]').forEach(x=>x.checked=true);saveRoomSelection();renderSelectedHistory()});$('rcNone')?.addEventListener('click',()=>{document.querySelectorAll('#rcRooms input').forEach(x=>x.checked=false);saveRoomSelection();renderSelectedHistory()});$('rcStart')?.addEventListener('click',start);$('rcNewControl')?.addEventListener('click',openNewMainControlFromHistory);
  ['rcFilterFrom','rcFilterTo','rcFilterBuilding','rcFilterFloor','rcFilterSector','rcFilterResult','rcFilterRoom'].forEach(id=>$(id)?.addEventListener('change',renderHistory));
  $('rcApplyFilters')?.addEventListener('click',renderHistory);
  $('rcResetFilters')?.addEventListener('click',()=>{['rcFilterFrom','rcFilterTo','rcFilterBuilding','rcFilterFloor','rcFilterSector','rcFilterResult','rcFilterRoom'].forEach(id=>{if($(id))$(id).value=''});renderHistory()});
