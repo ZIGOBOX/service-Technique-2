@@ -1,4 +1,4 @@
-V147.62 — Vérification historique ménage tous bâtiments
+V147.63 — Vérification historique ménage tous bâtiments
 
 - Vérification du référentiel complet des bâtiments utilisés par le formulaire principal.
 - Ajout dans le référentiel historique : Demi-pension, Gymnase et Cour (ils manquaient).
