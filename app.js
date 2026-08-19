@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.57';
+const APP_VERSION='147.58';
 const APP_BUILD='19/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -2160,7 +2160,6 @@ function eventsForDate(d){
   ...(db.requests||[]).filter(x=>onDateOrDue(x)&&active(x)).map(x=>({...x,date:d,start:x.time||'',source:'request',title:`Direction · ${x.title||x.description||'Demande'}`})),
   ...(db.works||[]).filter(x=>onDateOrDue(x)&&active(x)).map(x=>({...x,date:d,start:x.time||'',source:'work',title:`Chantier/GPA · ${x.title||'Action'}`})),
   ...(db.issues||[]).filter(x=>onDateOrDue(x)&&active(x)).map(x=>({...x,date:d,start:x.time||'',source:'issue',title:`${normalizeText(x.priority)==='urgente'?'⚠️ ':''}Sécurité/qualité · ${x.title||x.description||'Action'}`})),
-  ...(db.cleaning||[]).filter(x=>sameDay(x.date)).map(x=>({...x,date:d,start:x.time||'',source:'cleaning',title:`Contrôle ménage · ${x.room||x.roomType||'Zone'}`})),
   ...(db.periodic||[]).filter(x=>sameDay(periodicDue(x))&&!isClosedStatus(x.status)).map(x=>({...x,date:d,start:x.time||'',source:'periodic',title:`Contrôle périodique · ${x.name||x.title||x.family||'Contrôle'}`})),
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
