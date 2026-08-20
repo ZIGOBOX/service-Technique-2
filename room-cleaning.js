@@ -1,6 +1,6 @@
 
 (()=>{'use strict';
-const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', SELKEY='pst_cleaning_room_selection_v147_53', CONFIG_VERSION='147.69';
+const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', SELKEY='pst_cleaning_room_selection_v147_53', CONFIG_VERSION='147.70';
 const $=x=>document.getElementById(x), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const room=(number,name,type='Salle')=>({id:uid(),number,name,type});
 const std=(base)=>Array.from({length:9},(_,i)=>room(String(base+i),'','Salle'));
@@ -275,13 +275,29 @@ function checkFromMainControl(x){
   items:items.map(i=>({room:i.room,result:i.result,score:i.score,note:i.note}))
  };
 }
+function historyDeleteFingerprint(c){
+ const date=String(c?.date||'').slice(0,16);
+ const b=buildingKey(c?.building||'');
+ const f=floorToken(c?.floor||'');
+ const s=normalizeTextSimple(c?.sector||'');
+ const rooms=(c?.items||[]).map(i=>roomIdentity(i?.room||{})).filter(Boolean).sort().join('|');
+ return [date,b,f,s,rooms].join('::');
+}
+function mainDeleteFingerprint(x){
+ try{return historyDeleteFingerprint(checkFromMainControl(x))}catch(_){return ''}
+}
+function deletedFingerprintSet(main){
+ return new Set((Array.isArray(main?.cleaningDeletedFingerprints)?main.cleaningDeletedFingerprints:[]).map(String).filter(Boolean));
+}
+
 function loadChecks(){
  try{
   const main=window.PSTMainState?.get?.();
   const cloud=Array.isArray(main?.cleaningRoomChecks)?clone(main.cleaningRoomChecks):[];
   const local=JSON.parse(localStorage.getItem(CK)||'[]')||[];
   const deletedIds=new Set((Array.isArray(main?.cleaningDeletedIds)?main.cleaningDeletedIds:[]).map(String).filter(Boolean));
-  const mains=(Array.isArray(main?.cleaning)?main.cleaning:[]).filter(x=>!deletedIds.has(String(x?.id||'')));
+  const deletedFingerprints=deletedFingerprintSet(main);
+  const mains=(Array.isArray(main?.cleaning)?main.cleaning:[]).filter(x=>!deletedIds.has(String(x?.id||''))&&!deletedFingerprints.has(mainDeleteFingerprint(x)));
   const mainIds=new Set(mains.map(x=>String(x?.id||'')).filter(Boolean));
 
   // V147.57 : les contrôles principaux sont reconstruits à chaque lecture.
@@ -293,7 +309,7 @@ function loadChecks(){
    if(!c)return;
    const source=String(c.sourceMainId||'');
    const cid=String(c.id||'');
-   if((source&&deletedIds.has(source))||(cid&&deletedIds.has(cid))||deletedIds.has(cid.replace(/^main-/,'')))return;
+   if((source&&deletedIds.has(source))||(cid&&deletedIds.has(cid))||deletedIds.has(cid.replace(/^main-/,''))||deletedFingerprints.has(historyDeleteFingerprint(c)))return;
    if(source&&mainIds.has(source))return; // le contrôle principal sera reconstruit ci-dessous
    const k=String(c.id||source||'');
    if(k&&seen.has(k))return;
@@ -648,34 +664,57 @@ function viewHistoryCheck(id){
 }
 async function deleteHistoryCheck(id){
  const c=loadChecks().find(x=>String(x.id)===String(id));
- if(!c){alert('Ce contrôle est introuvable.');return}
- if(!confirm('Supprimer définitivement ce contrôle ménage ?\n\nS’il concernait un secteur entier, il sera retiré de l’historique de TOUS les locaux concernés.'))return;
+ if(!c){alert('Ce contrôle est introuvable. Actualisez la page puis réessayez.');return}
+ if(!confirm('Supprimer définitivement ce contrôle ménage ?\n\nIl sera retiré de tous les historiques concernés et ne réapparaîtra pas après synchronisation.'))return;
  try{
   const main=window.PSTMainState?.get?.();
+  if(!main)throw new Error('État principal indisponible');
   const source=String(c.sourceMainId||String(id||'').replace(/^main-/,''));
-  const tombstones=new Set((Array.isArray(main?.cleaningDeletedIds)?main.cleaningDeletedIds:[]).map(String).filter(Boolean));
+  const fp=historyDeleteFingerprint(c);
+  const tombstones=new Set((Array.isArray(main.cleaningDeletedIds)?main.cleaningDeletedIds:[]).map(String).filter(Boolean));
+  const fpTombstones=deletedFingerprintSet(main);
   if(source)tombstones.add(source);
   if(id)tombstones.add(String(id));
-  if(main){
-    if(Array.isArray(main.cleaning)) main.cleaning=main.cleaning.filter(x=>String(x?.id||'')!==source && String(x?.id||'')!==String(id));
-    main.cleaningDeletedIds=[...tombstones];
+  if(fp)fpTombstones.add(fp);
+
+  // Recherche également les anciens contrôles qui n'avaient pas encore de sourceMainId.
+  const removedMainIds=[];
+  if(Array.isArray(main.cleaning)){
+    main.cleaning=main.cleaning.filter(x=>{
+      const xid=String(x?.id||'');
+      const sameId=(source&&xid===source)||xid===String(id);
+      const sameFp=fp&&mainDeleteFingerprint(x)===fp;
+      if(sameId||sameFp){if(xid){removedMainIds.push(xid);tombstones.add(xid)}return false}
+      return true;
+    });
   }
-  const arr=loadChecks().filter(x=>{
+  main.cleaningDeletedIds=[...tombstones];
+  main.cleaningDeletedFingerprints=[...fpTombstones];
+
+  const currentCloud=Array.isArray(main.cleaningRoomChecks)?main.cleaningRoomChecks:[];
+  const currentLocal=(()=>{try{return JSON.parse(localStorage.getItem(CK)||'[]')||[]}catch(_){return[]}})();
+  const all=[...currentCloud,...currentLocal];
+  const seen=new Set(), arr=[];
+  for(const x of all){
     const xid=String(x?.id||''), xs=String(x?.sourceMainId||'');
-    return xid!==String(id) && (!source||xs!==source) && !tombstones.has(xid) && !tombstones.has(xs) && !tombstones.has(xid.replace(/^main-/,''));
-  });
+    const xfp=historyDeleteFingerprint(x);
+    if(xid===String(id)||(source&&xs===source)||tombstones.has(xid)||tombstones.has(xs)||tombstones.has(xid.replace(/^main-/,''))||(fp&&xfp===fp)||fpTombstones.has(xfp))continue;
+    const k=xid||xs||xfp;if(k&&seen.has(k))continue;if(k)seen.add(k);arr.push(x);
+  }
   localStorage.setItem(CK,JSON.stringify(arr));
-  if(main)main.cleaningRoomChecks=clone(arr);
-  renderHistory();renderSelectedHistory();
+  main.cleaningRoomChecks=clone(arr);
+
+  // Écriture directe : aucune fusion avec une ancienne copie serveur pendant la suppression.
   let res={ok:true,offline:false};
   if(navigator.onLine && window.PSTMainState?.persistStateDirect){
     res=await window.PSTMainState.persistStateDirect({
       label:'Suppression contrôle ménage',
       verify:(saved)=>{
-        const deleted=new Set((saved?.cleaningDeletedIds||[]).map(String));
-        const stillMain=source&&Array.isArray(saved?.cleaning)&&saved.cleaning.some(x=>String(x?.id||'')===source);
-        const stillHist=Array.isArray(saved?.cleaningRoomChecks)&&saved.cleaningRoomChecks.some(x=>String(x?.id||'')===String(id)||(source&&String(x?.sourceMainId||'')===source));
-        return deleted.has(source||String(id))&&!stillMain&&!stillHist;
+        const ids=new Set((saved?.cleaningDeletedIds||[]).map(String));
+        const fps=new Set((saved?.cleaningDeletedFingerprints||[]).map(String));
+        const stillMain=(saved?.cleaning||[]).some(x=>ids.has(String(x?.id||''))||(fp&&mainDeleteFingerprint(x)===fp));
+        const stillHist=(saved?.cleaningRoomChecks||[]).some(x=>String(x?.id||'')===String(id)||(source&&String(x?.sourceMainId||'')===source)||(fp&&historyDeleteFingerprint(x)===fp));
+        return (!source||ids.has(source)||removedMainIds.some(v=>ids.has(v)))&&(!fp||fps.has(fp))&&!stillMain&&!stillHist;
       }
     });
   }else{
@@ -683,10 +722,12 @@ async function deleteHistoryCheck(id){
     res={ok:true,offline:true};
   }
   if(!res?.ok)throw new Error(res?.error||'Suppression non confirmée par le serveur');
+  renderHistory();renderSelectedHistory();
   alert(res.offline?'Contrôle supprimé sur cet appareil. La suppression sera synchronisée au retour du réseau.':'Contrôle ménage supprimé définitivement.');
  }catch(e){
   console.error('Suppression contrôle ménage',e);
-  alert('La suppression est conservée localement, mais la confirmation Supabase a échoué. Le contrôle restera masqué et la synchronisation sera retentée.');
+  renderHistory();renderSelectedHistory();
+  alert('Le contrôle a été masqué localement, mais Supabase n’a pas confirmé la suppression. La synchronisation sera retentée.');
   try{window.PSTMainState?.save?.(false)}catch(_){ }
  }
 }

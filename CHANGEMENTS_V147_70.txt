@@ -1,0 +1,15 @@
+V147.70 — 20/08/2026
+
+- Affichage PC du tableau de bord optimisé uniquement à partir de 1100 px :
+  * calendriers côte à côte ;
+  * planning du jour et aperçus répartis sur la largeur ;
+  * scroll interne dans les blocs longs au lieu d'allonger toute la page ;
+  * Android et tablette non modifiés par cette règle.
+- Ajout d'un lien « 📊 Dashboard » vers https://zigobox.github.io/Faciale-/ dans les actions rapides.
+- Suppression des contrôles ménage renforcée :
+  * suppression par identifiant ET empreinte du contrôle ;
+  * mémorisation persistante des contrôles supprimés ;
+  * empêche la reconstruction d'un ancien contrôle après synchronisation ;
+  * écriture Supabase directe sans fusion pendant la suppression ;
+  * support des anciens contrôles qui n'avaient pas de sourceMainId.
+- Anti-cache et version mis à jour en 147.70.
