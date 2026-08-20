@@ -1,0 +1,9 @@
+V147.75 — PC : BURGER EN HAUT + PLEINE LARGEUR
+
+- Base : V147.74 fournie par l’utilisateur.
+- PC >= 1280 px uniquement : menu latéral transformé en tiroir.
+- Bouton burger visible en haut à gauche sur PC.
+- Le contenu principal récupère toute la largeur de l’écran.
+- Le menu s’ouvre par-dessus la page et se ferme par la croix, le fond ou après navigation.
+- Android et tablette : aucune modification de disposition.
+- Les corrections fonctionnelles existantes sont conservées.
