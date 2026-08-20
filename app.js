@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.63';
+const APP_VERSION='147.64';
 const APP_BUILD='19/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -73,7 +73,7 @@ function badge(text){const s=String(text||'—');let c='neutral';if(/conforme|te
 const emptyRow=(n,msg='Aucune donnée enregistrée.')=>`<tr><td class="empty" colspan="${n}">${esc(msg)}</td></tr>`;
 
 const initialBuildings=[
- {name:'Extension',floors:['Rez-de-chaussée','1er étage']},{name:'Demi-pension',floors:['Rez-de-chaussée','1er étage']},{name:'Gymnase',floors:['Rez-de-chaussée','1er étage']},
+ {name:'Extension',floors:['Locaux','Rez-de-chaussée','1er étage']},{name:'Demi-pension',floors:['Locaux','Rez-de-chaussée','1er étage']},{name:'Gymnase',floors:['Rez-de-chaussée','1er étage']},
  ...['Bâtiment A','Bâtiment B','Bâtiment H','Bâtiment G','Bâtiment E','Bâtiment F'].map(name=>({name,floors:['Rez-de-chaussée','1er étage','2e étage','3e étage','4e étage']})),{name:'Cour',floors:['Extérieur']}
 ].map(x=>({id:uid(),...x}));
 const defaultLists={
@@ -236,7 +236,46 @@ function mergeContractControls14723(d){
  d.settings.contractControlsVersion='147.23';
 }
 
-function defaultSpaces(buildings){const out=[];for(const b of buildings){for(const f of b.floors){out.push({id:uid(),building:b.name,floor:f,type:b.name==='Gymnase'?'Salle de sport / gymnase':b.name==='Cour'?'Cour / extérieurs':'Circulations / halls / escaliers',name:'Zone entière'});if(!['Cour','Gymnase'].includes(b.name)){out.push({id:uid(),building:b.name,floor:f,type:'Sanitaires / vestiaires',name:'Sanitaires'});if(/^Bâtiment/.test(b.name)||b.name==='Extension')out.push({id:uid(),building:b.name,floor:f,type:'Salle de classe / devoirs / informatique',name:'Salles de classe'})}}}return out}
+const CANONICAL_FACILITY_SPACES={
+ 'Extension':[
+  ['Gymnase','Salle de sport / gymnase'],['Salle de musculation','Salle de sport / gymnase'],['Sanitaires','Sanitaires / vestiaires'],['Circulation','Circulations / halls / escaliers'],
+  ['Vestiaires','Sanitaires / vestiaires'],['Salle des professeurs','Salle des personnels'],['Rangement','Locaux techniques'],['Atelier','Atelier'],['Chaufferie','Locaux techniques']
+ ],
+ 'Demi-pension':[
+  ['Self','Demi-pension / restaurant'],['Cuisine','Cuisine'],['Côté technique eau chaude','Locaux techniques'],['Sanitaires filles','Sanitaires / vestiaires'],['Sanitaires garçons','Sanitaires / vestiaires'],
+  ['Hall du self','Circulations / halls / escaliers'],['Laverie','Cuisine'],['Circulation cuisine','Circulations / halls / escaliers'],['Espace détente','Salle des personnels'],
+  ['Vestiaire agents filles','Sanitaires / vestiaires'],['Vestiaire agents garçons','Sanitaires / vestiaires'],['Bureau','Bureaux / administration'],['Lingerie','Locaux techniques']
+ ]
+};
+function defaultSpaces(buildings){
+ const out=[];
+ for(const b of buildings){
+  for(const f of b.floors){
+   out.push({id:uid(),building:b.name,floor:f,type:b.name==='Gymnase'?'Salle de sport / gymnase':b.name==='Cour'?'Cour / extérieurs':'Circulations / halls / escaliers',name:'Zone entière'});
+   if(!['Cour','Gymnase'].includes(b.name)){
+    out.push({id:uid(),building:b.name,floor:f,type:'Sanitaires / vestiaires',name:'Sanitaires'});
+    if(/^Bâtiment/.test(b.name))out.push({id:uid(),building:b.name,floor:f,type:'Salle de classe / devoirs / informatique',name:'Salles de classe'});
+   }
+  }
+ }
+ for(const [building,items] of Object.entries(CANONICAL_FACILITY_SPACES))for(const [name,type] of items)out.push({id:uid(),building,floor:'Locaux',type,name});
+ return out;
+}
+function ensureCanonicalFacilitySpaces(d){
+ if(!Array.isArray(d.buildings))d.buildings=[];
+ if(!Array.isArray(d.spaces))d.spaces=[];
+ const key=v=>normalizeText(v).replace(/[^a-z0-9]+/g,' ').trim();
+ for(const building of ['Extension','Demi-pension']){
+  let b=d.buildings.find(x=>key(x?.name)===key(building));
+  if(!b){b={id:uid(),name:building,floors:['Locaux']};d.buildings.push(b)}
+  if(!Array.isArray(b.floors))b.floors=[];
+  if(!b.floors.some(f=>key(f)==='locaux'))b.floors.unshift('Locaux');
+  for(const [name,type] of CANONICAL_FACILITY_SPACES[building]){
+   const exists=d.spaces.some(x=>key(x?.building)===key(building)&&key(x?.name)===key(name));
+   if(!exists)d.spaces.push({id:uid(),building,floor:'Locaux',type,name});
+  }
+ }
+}
 function clone(x){return structuredClone(x)}
 
 const BUNDLED_CONTROL_REPORTS=[{"key":"apave-135054046-001-1-rvre","title":"RVRE — Installations électriques et éclairages","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"RVRE ERP — aucune non-conformité identifiée dans le périmètre de la vérification.","observations":0,"subtype":"RVRE ERP","sha256":"fbcc7667636c65c9a134f6421ab4056fd9fcaedb586bd58f9aa34410dd89759a","size":1344942,"path":"reports/2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf","file":"2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf"},{"key":"apave-135054046-001-1-rvp","title":"Vérification périodique des installations électriques","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"Vérification périodique des installations électriques — 23 observations signalées dans le rapport.","observations":23,"subtype":"Vérification périodique","sha256":"cda549f71a666baaf27efddd3fa653b5a7725910497e2c81403eadc7438fcc01","size":3680309,"path":"reports/2025-07-07_APAVE_Verification_Installations_Electriques.pdf","file":"2025-07-07_APAVE_Verification_Installations_Electriques.pdf"},{"key":"apave-135046511-001-1-gaz","title":"Installations thermiques / réseau gaz","org":"APAVE","family":"Gaz","date":"2025-09-05","ref":"135046511-001-1","summary":"Vérification des installations thermiques fluide / réseau gaz — 1 observation.","observations":1,"subtype":"Thermique / Gaz","sha256":"f5ffc7006ae754c35ce9dbd4a82611eeb6d2e64878f6583e31112cf051588906","size":1497083,"path":"reports/2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf","file":"2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf"},{"key":"apave-a513283837-004-1-sport","title":"Vérification périodique des équipements sportifs","org":"APAVE","family":"Équipements sportifs","date":"2025-12-05","ref":"A513283837-004-1","summary":"Vérification visuelle et manuelle des équipements sportifs — 26 observations.","observations":26,"subtype":"Équipements sportifs","sha256":"423aa2fd3840deafbd2daab0dae3df00f449f40a1b9f3f314f1b44bbdc249f9e","size":4445518,"path":"reports/2025-12-05_APAVE_Equipements_Sportifs.pdf","file":"2025-12-05_APAVE_Equipements_Sportifs.pdf"},{"key":"apave-a513283836-004-1-ancrage","title":"Vérification des dispositifs d’ancrage pour EPI","org":"APAVE","family":"Autres contrôles","date":"2026-02-02","ref":"A513283836-004-1","summary":"Vérification générale périodique des dispositifs d’ancrage pour EPI — 5 observations.","observations":5,"subtype":"Ancrages / EPI","sha256":"fcf149dfb1e45c0e1dab938b86dbee07fcf9839d3b8180734abb92155c2f3e50","size":135938,"path":"reports/2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf","file":"2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf"},{"key":"bv-28016576-155-1-1-cta-vmc","title":"Contrôle des CTA et VMC sanitaires","org":"Bureau Veritas","family":"VMC / Ventilation","date":"2026-03-20","ref":"28016576/155.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — CTA et VMC sanitaires — écarts et non-conformités présents dans le rapport.","observations":null,"subtype":"CTA / VMC sanitaires","sha256":"aadb4258da54a155ca98194d8602d3bef1ff46a26236911f82388766f39fdb96","size":5246665,"path":"reports/2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf","file":"2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf"},{"key":"bv-28016576-152-1-1-hottes","title":"Contrôle des hottes de cuisines","org":"Bureau Veritas","family":"Cuisine / Cuisson","date":"2026-03-20","ref":"28016576/152.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — hottes de cuisines — observations présentes dans le rapport.","observations":null,"subtype":"Hottes de cuisines","sha256":"144566b4d982b7a241b3400b91f0ce4396b13f1026dbfeabd91b4aa024c3b912","size":3374751,"path":"reports/2026-03-20_BureauVeritas_Hottes_Cuisines.pdf","file":"2026-03-20_BureauVeritas_Hottes_Cuisines.pdf"}];
@@ -303,6 +342,7 @@ function migrate(raw){
    if(!Array.isArray(d[k]))d[k]=base[k];
  }
  mergeContractControls14723(d);
+ ensureCanonicalFacilitySpaces(d);
  if(!Array.isArray(d.cleaningRoomChecks))d.cleaningRoomChecks=[];
  mergeBundledControlReports(d);
  if(!d.notificationDismissals||typeof d.notificationDismissals!=='object'||Array.isArray(d.notificationDismissals))d.notificationDismissals={};

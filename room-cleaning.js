@@ -1,6 +1,6 @@
 
 (()=>{'use strict';
-const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', SELKEY='pst_cleaning_room_selection_v147_53', CONFIG_VERSION='147.63';
+const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', SELKEY='pst_cleaning_room_selection_v147_53', CONFIG_VERSION='147.64';
 const $=x=>document.getElementById(x), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const room=(number,name,type='Salle')=>({id:uid(),number,name,type});
 const std=(base)=>Array.from({length:9},(_,i)=>room(String(base+i),'','Salle'));
@@ -83,12 +83,18 @@ const DEF=[
 ]},
 {id:"EXT",name:"Extension",floors:[
 {name:"Locaux",sectors:[
-{name:"Extension",rooms:[room("","Local extension","Local"),room("","Sanitaires","Sanitaires"),room("","Circulation","Circulation")]},
+{name:"Extension",rooms:[
+ room("","Gymnase","Salle de sport"),room("","Salle de musculation","Salle de sport"),room("","Sanitaires","Sanitaires"),room("","Circulation","Circulation"),
+ room("","Vestiaires","Sanitaires"),room("","Salle des professeurs","Salle"),room("","Rangement","Local"),room("","Atelier","Local"),room("","Chaufferie","Local")
+]},
 ]},
 ]},
 {id:"DP",name:"Demi-pension",floors:[
-{name:"RDC",sectors:[{name:"Secteur principal",rooms:[room("","Zone entière","Local"),room("","Sanitaires RDC","Sanitaires"),room("","Circulation RDC","Circulation")] }]},
-{name:"1er étage",sectors:[{name:"Secteur principal",rooms:[room("","Zone entière","Local"),room("","Sanitaires 1er étage","Sanitaires"),room("","Circulation 1er étage","Circulation")] }]},
+{name:"Locaux",sectors:[{name:"Demi-pension",rooms:[
+ room("","Self","Local"),room("","Cuisine","Local"),room("","Côté technique eau chaude","Local"),room("","Sanitaires filles","Sanitaires"),room("","Sanitaires garçons","Sanitaires"),
+ room("","Hall du self","Circulation"),room("","Laverie","Local"),room("","Circulation cuisine","Circulation"),room("","Espace détente","Local"),
+ room("","Vestiaire agents filles","Sanitaires"),room("","Vestiaire agents garçons","Sanitaires"),room("","Bureau","Bureau"),room("","Lingerie","Local")
+]}]},
 ]},
 {id:"GYM",name:"Gymnase",floors:[
 {name:"RDC",sectors:[{name:"Secteur principal",rooms:[room("","Zone entière","Salle de sport"),room("","Sanitaires / vestiaires","Sanitaires"),room("","Circulation RDC","Circulation")] }]},
@@ -145,10 +151,35 @@ function buildingKey(v){
  const aliases={'a':'a','b':'b','h':'h','g':'g','e':'e','f':'f','alg':'algeco','algeco':'algeco','ext':'extension','extension':'extension','dp':'demi-pension','demi pension':'demi-pension','demi-pension':'demi-pension','gym':'gymnase','gymnase':'gymnase','cour':'cour'};
  return aliases[n]||n;
 }
+function roomIdentity(r){
+ const n=normalizeTextSimple(r?.number||'').trim();
+ const name=normalizeTextSimple(r?.name||'').trim();
+ return n?`n:${n}`:`name:${name}|type:${normalizeTextSimple(r?.type||'')}`;
+}
 function mergeMissingBuildings(cfg){
  const out=Array.isArray(cfg)&&cfg.length?cfg:clone(DEF);
- const have=new Set(out.map(b=>buildingKey(b?.name||b?.id)));
- for(const d of DEF){if(!have.has(buildingKey(d.name))){out.push(clone(d));have.add(buildingKey(d.name));}}
+ const findBuilding=d=>out.find(b=>buildingKey(b?.name||b?.id)===buildingKey(d?.name||d?.id));
+ for(const d of DEF){
+  let b=findBuilding(d);
+  if(!b){out.push(clone(d));continue}
+  b.floors=Array.isArray(b.floors)?b.floors:[];
+  for(const df of d.floors||[]){
+   let f=b.floors.find(x=>sameFloorName(x?.name,df?.name,b.name));
+   // Pour Extension et Demi-pension, le niveau canonique est « Locaux » : on le crée s'il n'existe pas.
+   if(!f || (['extension','demi-pension'].includes(buildingKey(b.name)) && floorToken(df.name)==='locaux' && floorToken(f.name)!=='locaux')){
+    f=b.floors.find(x=>floorToken(x?.name)===floorToken(df?.name));
+   }
+   if(!f){b.floors.push(clone(df));continue}
+   f.sectors=Array.isArray(f.sectors)?f.sectors:[];
+   for(const ds of df.sectors||[]){
+    let sec=f.sectors.find(x=>sameSectorName(x?.name,ds?.name,b.name));
+    if(!sec){f.sectors.push(clone(ds));continue}
+    sec.rooms=Array.isArray(sec.rooms)?sec.rooms:[];
+    const have=new Set(sec.rooms.map(roomIdentity));
+    for(const dr of ds.rooms||[]){const k=roomIdentity(dr);if(!have.has(k)){sec.rooms.push(clone(dr));have.add(k)}}
+   }
+  }
+ }
  return out;
 }
 function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return mergeMissingBuildings(x)}catch(e){return clone(DEF)}}
@@ -319,7 +350,7 @@ function renderSettings(){
  <div class="rc-edit-head"><label>Bâtiment<input data-k="bn" data-b="${bi}" value="${esc(b.name)}"></label><div class="inline-actions"><button class="ghost small" data-af="${bi}">+ Étage</button><button class="primary small" type="button" data-save-rooms="${bi}">💾 Enregistrer</button></div></div>
  ${b.floors.map((f,fi)=>`<div class="rc-floor"><div class="rc-edit-head"><label>Étage<input data-k="fn" data-b="${bi}" data-f="${fi}" value="${esc(f.name)}"></label><button class="ghost small" data-as="${bi}:${fi}">+ Secteur</button></div>
  ${f.sectors.map((s,si)=>`<div class="rc-sector"><div class="rc-edit-head"><label>Secteur<input data-k="sn" data-b="${bi}" data-f="${fi}" data-s="${si}" value="${esc(s.name)}"></label><button class="ghost small" data-ar="${bi}:${fi}:${si}">+ Salle / local</button></div>
- <div class="rc-room-table">${s.rooms.map((r,ri)=>`<div class="rc-room-row"><input placeholder="N°" data-k="rn" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}" value="${esc(r.number)}"><input placeholder="Nom" data-k="rname" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}" value="${esc(r.name)}"><select data-k="rt" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}">${['Salle','Salle de classe','Chambre','Sanitaires','Circulation','Escalier','Internat','Foyer','Local','Bureau'].map(t=>`<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select><button class="danger-lite small" data-dr="${bi}:${fi}:${si}:${ri}">Supprimer</button></div>`).join('')}</div></div>`).join('')}</div>`).join('')}</div></details>`).join('');
+ <div class="rc-room-table">${s.rooms.map((r,ri)=>`<div class="rc-room-row"><input placeholder="N°" data-k="rn" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}" value="${esc(r.number)}"><input placeholder="Nom" data-k="rname" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}" value="${esc(r.name)}"><select data-k="rt" data-b="${bi}" data-f="${fi}" data-s="${si}" data-r="${ri}">${['Salle','Salle de classe','Salle de sport','Chambre','Sanitaires','Circulation','Escalier','Internat','Foyer','Local','Bureau','Atelier','Cuisine','Technique'].map(t=>`<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select><button class="danger-lite small" data-dr="${bi}:${fi}:${si}:${ri}">Supprimer</button></div>`).join('')}</div></div>`).join('')}</div>`).join('')}</div></details>`).join('');
  box.querySelectorAll('[data-k]').forEach(el=>{
    const applyValue=()=>{
      const b=+el.dataset.b,f=+el.dataset.f,s=+el.dataset.s,r=+el.dataset.r,k=el.dataset.k;
@@ -506,7 +537,7 @@ function start(){
  ${rs.map((r,i)=>`<div class="rc-check" data-room-id="${esc(r.id)}"><h4>${esc(label(r))}</h4>
  ${recentHistoryHtml(r)}
  <div class="rc-result">
-   <label>Type de local<select data-room-type>${['Salle','Salle de classe','Chambre','Sanitaires','Circulation','Escalier','Internat','Foyer','Local','Bureau'].map(t=>`<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select></label>
+   <label>Type de local<select data-room-type>${['Salle','Salle de classe','Salle de sport','Chambre','Sanitaires','Circulation','Escalier','Internat','Foyer','Local','Bureau','Atelier','Cuisine','Technique'].map(t=>`<option ${r.type===t?'selected':''}>${t}</option>`).join('')}</select></label>
    <label>Nom / appellation<input data-room-name value="${esc(r.name||'')}"></label>
    <label>Résultat<select data-res><option>Conforme</option><option>À améliorer</option><option>Non conforme</option></select></label>
    <label>Note /10<input data-score type="number" min="0" max="10" step=".5" value="10"></label>
@@ -622,10 +653,30 @@ async function deleteHistoryCheck(id){
   if(main&&source&&Array.isArray(main.cleaning)) main.cleaning=main.cleaning.filter(x=>String(x?.id||'')!==source);
   let arr=loadChecks().filter(x=>String(x.id)!==String(id)&&(!source||String(x.sourceMainId||'')!==source));
   localStorage.setItem(CK,JSON.stringify(arr));
-  if(main){main.cleaningRoomChecks=clone(arr);window.PSTMainState?.save?.(false)}
+  if(main){
+    main.cleaningRoomChecks=clone(arr);
+    window.PSTMainState?.save?.(false);
+  }
   renderHistory();renderSelectedHistory();
-  try{await window.PSTMainState?.persistNow?.()}catch(e){console.warn('Suppression contrôle ménage',e)}
-  alert('Contrôle ménage supprimé de l’historique.');
+  // IMPORTANT : une suppression ne doit pas être refusionnée avec l'ancienne copie serveur,
+  // sinon le contrôle supprimé réapparaît. On écrit l'état courant directement dans Supabase.
+  try{
+    if(window.PSTMainState?.persistStateDirect){
+      const res=await window.PSTMainState.persistStateDirect({
+        label:'Suppression contrôle ménage',
+        verify:(saved)=>{
+          const stillMain=source&&Array.isArray(saved?.cleaning)&&saved.cleaning.some(x=>String(x?.id||'')===source);
+          const stillHist=Array.isArray(saved?.cleaningRoomChecks)&&saved.cleaningRoomChecks.some(x=>String(x?.id||'')===String(id)|| (source&&String(x?.sourceMainId||'')===source));
+          return !stillMain&&!stillHist;
+        }
+      });
+      if(!res?.ok)throw new Error(res?.error||'Suppression non confirmée par le serveur');
+    }else{
+      const res=await window.PSTMainState?.persistNow?.();
+      if(res&&!res.ok&&!res.offline)throw new Error('Suppression non enregistrée');
+    }
+  }catch(e){console.warn('Suppression contrôle ménage',e);alert('Le contrôle a été supprimé localement, mais la suppression serveur n’est pas confirmée. Réessayez lorsque la connexion est disponible.');return}
+  alert('Contrôle ménage supprimé définitivement.');
  }catch(e){console.error(e);alert('La suppression n’a pas pu être terminée. Réessayez.');}
 }
 
