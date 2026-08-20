@@ -7,9 +7,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#075ca8">
-  <title>Pilotage Service Technique V147.73</title>
+  <title>Pilotage Service Technique V147.74</title>
   <link rel="icon" href="./assets/logo-service-technique.png">
-  <link rel="stylesheet" href="./styles.css?v=147.73-20260820-1738">
+  <link rel="stylesheet" href="./styles.css?v=147.74-20260820-1905">
 
 <style id="v14713-fixes">
 /* Barres horizontales locales aux plannings : elles ne repartent plus avec la page. */
@@ -327,47 +327,114 @@
 }
 </style>
 
-<style id="v14773-desktop-compact-safe">
-/* V147.73 — PC UNIQUEMENT : réduction du scroll vertical sans modifier la grille ni la largeur des cartes.
-   Android / tablette restent strictement inchangés. */
-@media (min-width:1280px){
-  /* On garde intégralement la disposition d'origine (V147.71). */
-  #dashboard .calendar-panel{min-width:0;}
+<style id="v14774-pc-dashboard-exact">
+/* V147.74 — TABLEAU DE BORD PC UNIQUEMENT.
+   Mobile / Android / tablette : aucun changement.
+   Objectif : retrouver la composition de la maquette validée sans écraser les cartes. */
+@media (min-width:1440px){
+  #dashboard{
+    display:grid;
+    grid-template-columns:repeat(12,minmax(0,1fr));
+    gap:18px;
+    align-items:start;
+  }
 
-  /* Les deux grands calendriers restent lisibles mais ne rallongent plus toute la page. */
-  #dashboard #teamWeekCalendar,
-  #dashboard #personalWeekCalendar{
-    max-height:390px;
+  /* Bandeau, raccourcis et KPI restent pleine largeur. */
+  #dashboard > .welcome-banner,
+  #dashboard > .quick-actions,
+  #dashboard > .kpi-grid,
+  #dashboard > .dashboard-chrono-panel{grid-column:1 / -1;margin:0!important;}
+
+  #dashboard > .quick-actions{margin-top:0!important;}
+  #dashboard > .kpi-grid{
+    display:grid!important;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    gap:14px!important;
+  }
+  #dashboard > .kpi-grid .kpi{min-width:0!important;}
+
+  /* Zone principale : planning large à gauche + cartes opérationnelles 2 x 3 à droite. */
+  #dashboard > .dashboard-today-panel{
+    grid-column:1 / span 4;
+    grid-row:auto / span 1;
+    min-width:0;
+    height:690px;
+    margin:0!important;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  #dashboard > .dashboard-today-panel .dashboard-today-agenda{
+    flex:1 1 auto;
+    min-height:0;
     overflow-y:auto;
+    overflow-x:hidden;
     overscroll-behavior:contain;
     scrollbar-gutter:stable;
   }
 
-  /* Même principe pour les listes longues, sans changer leur largeur ni leur nombre de colonnes. */
-  #dashboard .dashboard-today-agenda{
-    max-height:300px;
+  #dashboard > .dashboard-grid{
+    grid-column:5 / -1;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(340px,1fr))!important;
+    grid-auto-rows:336px;
+    gap:18px!important;
+    min-width:0;
+    margin:0!important;
+  }
+  #dashboard > .dashboard-grid > .panel{
+    min-width:0!important;
+    height:336px;
+    margin:0!important;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  #dashboard > .dashboard-grid > .panel .panel-head{flex:0 0 auto;}
+  #dashboard > .dashboard-grid > .panel .card-list{
+    flex:1 1 auto;
+    min-height:0;
+    max-height:none!important;
     overflow-y:auto;
+    overflow-x:hidden;
     overscroll-behavior:contain;
     scrollbar-gutter:stable;
   }
-  #dashboard .dashboard-grid .card-list{
-    max-height:285px;
-    overflow-y:auto;
+  /* Empêche toute superposition : les contenus peuvent revenir à la ligne. */
+  #dashboard > .dashboard-grid .card-list > *,
+  #dashboard > .dashboard-grid .card-list button,
+  #dashboard > .dashboard-grid .card-list a{
+    min-width:0!important;
+    max-width:100%!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+  }
+
+  /* Les calendriers viennent après la zone opérationnelle, côte à côte. */
+  #dashboard > .calendar-panel{
+    grid-column:span 6;
+    min-width:0;
+    margin:0!important;
+    overflow:hidden;
+  }
+  #dashboard > .calendar-panel .team-calendar,
+  #dashboard > .calendar-panel .personal-calendar{
+    max-height:330px;
+    overflow:auto;
     overscroll-behavior:contain;
     scrollbar-gutter:stable;
   }
 
-  /* Compactage vertical très léger uniquement : aucun changement de taille de texte. */
-  #dashboard > .panel{margin-bottom:14px;}
+  /* Respiration proche de la maquette sans modifier tailles de texte/boutons. */
+  #dashboard .panel{border-radius:18px;}
   #dashboard .panel-head{margin-bottom:10px;}
-  #dashboard .quick-actions{margin-top:12px;}
 }
 
-@media (min-width:1600px){
-  #dashboard #teamWeekCalendar,
-  #dashboard #personalWeekCalendar{max-height:360px;}
-  #dashboard .dashboard-today-agenda{max-height:270px;}
-  #dashboard .dashboard-grid .card-list{max-height:255px;}
+/* PC plus étroit : on garde un vrai mode bureau, sans jamais comprimer les cartes. */
+@media (min-width:1280px) and (max-width:1439px){
+  #dashboard > .kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+  #dashboard > .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
 }
 </style>
 
@@ -377,7 +444,7 @@
     <form class="auth-card" id="authForm" novalidate>
       <img src="./assets/logo-service-technique.png" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.73 — 20/08/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.74 — 20/08/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -417,7 +484,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.73 — 20/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.74 — 20/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -896,7 +963,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.73 — 20/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.74 — 20/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -958,23 +1025,23 @@
   </dialog>
   <dialog id="autoReportWizard" class="modal wizard-modal"><div class="modal-head"><div><h3>Assistant d’envoi automatique</h3><p class="muted">Configuration Microsoft 365 + Supabase</p></div><button type="button" class="icon-btn" id="autoReportWizardClose">×</button></div><div class="wizard-progress"><span class="active">1</span><span>2</span><span>3</span><span>4</span></div><div id="autoReportWizardBody"></div><div class="modal-actions"><button type="button" class="ghost" id="autoReportWizardBack">Précédent</button><button type="button" class="primary" id="autoReportWizardNext">Suivant</button></div></dialog>
   <div id="toast" class="toast"></div>
-  <script src="./navigation.js?v=147.73-20260820-1738"></script>
+  <script src="./navigation.js?v=147.74-20260820-1905"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./supabase-config.js?v=147.73-20260820-1738"></script>
-  <script src="./login-bootstrap.js?v=147.73-20260820-1738"></script>
+  <script src="./supabase-config.js?v=147.74-20260820-1905"></script>
+  <script src="./login-bootstrap.js?v=147.74-20260820-1905"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
-  <script src="./app.js?v=147.73-20260820-1738"></script>
-  <script src="./notification-center.js?v=147.73-20260820-1738"></script>
+  <script src="./app.js?v=147.74-20260820-1905"></script>
+  <script src="./notification-center.js?v=147.74-20260820-1905"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="./schedule-import.js?v=147.73-20260820-1738"></script>
-  <script src="./report-import.js?v=147.73-20260820-1738"></script>
+  <script src="./schedule-import.js?v=147.74-20260820-1905"></script>
+  <script src="./report-import.js?v=147.74-20260820-1905"></script>
 
-  <script src="./weather-waste.js?v=147.73-20260820-1738"></script>
+  <script src="./weather-waste.js?v=147.74-20260820-1905"></script>
 
-  <script src="./room-cleaning.js?v=147.73-20260820-1738"></script>
-  <script src="./room-prep.js?v=147.73-20260820-1738"></script>
+  <script src="./room-cleaning.js?v=147.74-20260820-1905"></script>
+  <script src="./room-prep.js?v=147.74-20260820-1905"></script>
 
   <!-- V147 correctif : ne plus afficher le bandeau permanent de synchronisation calendrier. -->
   <script>

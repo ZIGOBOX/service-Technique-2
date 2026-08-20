@@ -1,0 +1,9 @@
+V147.74 — AFFICHAGE PC SELON MAQUETTE VALIDÉE
+
+- Base : V147.71 stable.
+- Android / mobile / tablette inchangés.
+- PC >= 1440 px : KPI sur 1 ligne, Planning du jour large à gauche, 6 cartes opérationnelles en grille 2 colonnes à droite.
+- Scroll interne dans Planning et cartes longues : la page ne s’allonge plus inutilement.
+- Largeur minimale des cartes protégée et retour à la ligne forcé : aucun texte ne doit se superposer.
+- Calendriers conservés et placés côte à côte sous la zone principale.
+- Correction suppression contrôles ménage et bouton Dashboard conservés depuis V147.71.
