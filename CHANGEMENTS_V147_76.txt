@@ -1,0 +1,5 @@
+V147.76 — PC pleine largeur réelle
+- Supprime la colonne fantôme réservée au menu sur PC.
+- Le menu reste en tiroir via le burger en haut.
+- Le contenu principal occupe 100% de la largeur du viewport.
+- Android/tablette inchangés (règles actives uniquement à partir de 1280 px).

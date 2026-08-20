@@ -1,6 +1,6 @@
 
 (()=>{'use strict';
-const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', SELKEY='pst_cleaning_room_selection_v147_53', CONFIG_VERSION='147.75';
+const KEY='pst_cleaning_rooms_v103', CK='pst_cleaning_checks_v103', SELKEY='pst_cleaning_room_selection_v147_53', CONFIG_VERSION='147.76';
 const $=x=>document.getElementById(x), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const room=(number,name,type='Salle')=>({id:uid(),number,name,type});
 const std=(base)=>Array.from({length:9},(_,i)=>room(String(base+i),'','Salle'));
@@ -654,7 +654,7 @@ async function deleteHistoryCheck(id){
   const main=window.PSTMainState?.get?.();
   const source=String(c.sourceMainId||String(id||'').replace(/^main-/,''));
   const tombstones=new Set((Array.isArray(main?.cleaningDeletedIds)?main.cleaningDeletedIds:[]).map(String).filter(Boolean));
-  // V147.75 : suppression définitive robuste. On mémorise toutes les formes d'identifiant
+  // V147.76 : suppression définitive robuste. On mémorise toutes les formes d'identifiant
   // afin qu'un ancien contrôle ne puisse pas être reconstruit au prochain chargement.
   const aliases=new Set([String(id||''),source,String(id||'').replace(/^main-/,''),source?`main-${source}`:''].filter(Boolean));
   aliases.forEach(v=>tombstones.add(v));
