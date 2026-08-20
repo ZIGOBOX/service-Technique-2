@@ -1,0 +1,7 @@
+V147.71 — BASE V147.69 STABLE
+
+- Repart strictement de V147.69 pour l’affichage PC et Android.
+- AUCUNE règle CSS compacte / grille PC de V147.70 ajoutée.
+- Ajout du bouton Dashboard vers https://zigobox.github.io/Faciale-/
+- Suppression contrôle ménage renforcée : tombstones sur tous les alias d’identifiant + retrait de cleaning et cleaningRoomChecks avant sauvegarde Supabase.
+- Version/cache forcés en 147.71.

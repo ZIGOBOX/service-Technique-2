@@ -1,0 +1,13 @@
+V147.72 — AFFICHAGE PC UNIQUEMENT
+
+Base : V147.71.
+
+- Aucun changement d'affichage Android/mobile.
+- Optimisation appliquée uniquement à partir de 1280 px.
+- Tableau de bord PC en 2 colonnes pour les calendriers.
+- 6 KPI sur une ligne sur PC.
+- Blocs du bas en 3 colonnes sur PC.
+- Planning du jour et listes longues : défilement interne pour éviter une page très longue.
+- Aucun CSS global des autres onglets n'a été modifié.
+- Correction de suppression des contrôles ménage de V147.71 conservée.
+- Lien Dashboard conservé.
