@@ -1,0 +1,9 @@
+V147.73 — AFFICHAGE PC COMPACT SANS CASSER LA GRILLE
+
+Base : V147.71 stable.
+- Android/tablette : aucun changement de mise en page.
+- PC >= 1280 px : aucune modification du nombre de colonnes ni de la largeur des cartes.
+- Calendriers agents/personnel : hauteur limitée avec défilement interne.
+- Planning du jour et listes du tableau de bord : hauteur limitée avec défilement interne.
+- Espacements verticaux légèrement réduits, sans réduire les textes ni boutons.
+- Conservation des corrections V147.71 : suppression contrôles ménage renforcée + lien Dashboard.
