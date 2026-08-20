@@ -1,0 +1,8 @@
+V147.77 — 20/08/2026
+
+- Base : V147.76 fournie par l’utilisateur.
+- PC uniquement (>=1280 px) : le bandeau bleu « Pilotage Service Technique » remplace visuellement le titre « Tableau de bord » et sa date.
+- Le bandeau conserve : statut temps réel, titre, année scolaire avec flèches, phrase du jour et logo.
+- Le bandeau utilise toute la largeur utile de l’écran.
+- Barre haute conservée avec burger à gauche et Auto / notifications / Imprimer / Requête Supabase à droite.
+- Android et tablette : aucun changement de mise en page.
