@@ -1,0 +1,7 @@
+V147.91 — Réinitialisation de l'horaire réel
+
+- Ajout d'un bouton « Réinitialiser l'horaire réel » dans le formulaire agent.
+- Le bouton efface uniquement l'arrivée réelle, le départ réel et remet les heures +/- à 0.
+- Après Enregistrer, le planning revient automatiquement à l'horaire théorique pour cette date.
+- Les autres informations de la journée (type, statut, remplacement, etc.) restent conservées.
+- La sauvegarde locale immédiate de la V147.90 est conservée.
