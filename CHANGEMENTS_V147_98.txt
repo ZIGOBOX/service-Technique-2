@@ -1,0 +1,10 @@
+V147.98 — Impression filtrée de l'historique
+
+- Ajout d'un bouton Imprimer dans Archives > Récapitulatif de mes modifications.
+- L'impression reprend exactement les filtres actifs :
+  * année scolaire,
+  * type,
+  * recherche.
+- Impression en paysage avec les 8 colonnes du tableau.
+- Les suppressions restent exclues.
+- L'écran et l'impression utilisent désormais la même fonction de filtrage.

@@ -1,0 +1,7 @@
+V147.97 — Libellé concret dans l'historique
+- « Modification d’une donnée passée » n'est plus utilisé comme élément concerné.
+- Agent : nom complet.
+- Intervention : numéro + titre.
+- Demande : numéro + objet.
+- Contrôle ménage : numéro + lieu/local.
+- Compatibilité avec les anciennes lignes quand une information concrète est récupérable.
