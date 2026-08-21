@@ -1,0 +1,5 @@
+V147.93 — Historique allégé
+- Les suppressions ne sont pas affichées dans Archives > Récapitulatif de mes modifications.
+- Lorsqu'une saisie planning agent est supprimée, les traces de modification liées à cette saisie/date sont retirées du récapitulatif.
+- Aucune ligne « Suppression » n'est ajoutée.
+- Les modifications encore existantes restent consultables normalement.

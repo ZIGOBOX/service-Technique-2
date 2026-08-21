@@ -1,0 +1,8 @@
+V147.92 — Récapitulatif des modifications dans Archives
+
+- Ajout dans Archives d'un bloc « Récapitulatif de mes modifications ».
+- Affiche date/heure de modification, date concernée, saisie/agent, champ, ancienne valeur, nouvelle valeur et utilisateur.
+- Filtre par année scolaire et recherche libre.
+- L'année scolaire active est sélectionnée par défaut.
+- L'historique des modifications reste conservé localement et marqué à synchroniser.
+- Les fonctions de V147.91 (réinitialisation horaire réel, retour théorique, sauvegarde immédiate) sont conservées.

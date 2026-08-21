@@ -1016,6 +1016,21 @@
     <section class="view" id="archives">
       <div class="section-actions"><div><h3>Archivage</h3><p>Retrouvez les fichiers importés, les scans et les archives de pilotage. Les originaux importés restent consultables.</p></div><div><button class="ghost" id="archiveNow">Archiver la semaine précédente</button><button class="primary" id="exportArchives">Exporter l’index</button></div></div>
       <article class="panel import-archive-panel"><div class="panel-head"><div><h3>📥 Documents importés</h3><p class="muted">Chronotime, contrôles périodiques, rapports, notes scannées et autres documents.</p></div></div><div class="filters"><select id="importArchiveType"><option value="">Tous les types</option><option>Chronotime</option><option>Contrôle périodique</option><option>Rapport de contrôle</option><option>Note scannée</option><option>Document administratif</option><option>Autre document</option></select><input id="importArchiveSearch" placeholder="Rechercher un fichier, agent, organisme ou note"></div><div id="importArchiveSummary" class="summary-grid"></div><div id="importArchiveStatus" class="import-archive-status" aria-live="polite"></div><div id="importArchiveCards" class="import-archive-grid"></div></article>
+      <article class="panel change-history-panel">
+        <div class="panel-head">
+          <div><h3>📜 Récapitulatif de mes modifications</h3><p class="muted">Historique des saisies et corrections effectuées sur les données datées.</p></div>
+        </div>
+        <div class="filters">
+          <select id="changeHistoryYear"><option value="">Toutes les années scolaires</option></select>
+          <input id="changeHistorySearch" placeholder="Rechercher un agent, une date, un champ ou une valeur">
+          <button type="button" class="ghost" id="changeHistoryReset">Réinitialiser</button>
+        </div>
+        <div id="changeHistorySummary" class="summary-grid"></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Modification</th><th>Date concernée</th><th>Agent / saisie</th><th>Champ</th><th>Avant</th><th>Après</th><th>Utilisateur</th></tr></thead>
+          <tbody id="changeHistoryTable"></tbody>
+        </table></div>
+      </article>
       <article class="panel"><div class="panel-head"><div><h3>🗃 Archives de pilotage</h3><p class="muted">Archives hebdomadaires et clôtures annuelles.</p></div></div><div class="filters"><select id="archiveYear"><option value="">Toutes les années</option></select><input id="archiveSearch" placeholder="Rechercher un agent, un local ou une intervention"><button class="ghost" data-print="archives">Imprimer</button></div><div id="archiveSummary" class="summary-grid"></div><div id="archiveCards" class="archive-grid"></div></article>
     </section>
 
