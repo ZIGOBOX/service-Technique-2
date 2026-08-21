@@ -1,0 +1,5 @@
+V147.86 — Nom de l'agent dans Personnel > Mon calendrier
+
+- Lorsqu'un horaire réel diffère du théorique, le nom de l'agent est affiché avec l'horaire réel.
+- Le motif / information affiche également le nom de l'agent avec l'icône ⓘ.
+- Aucun changement visuel pour les journées sans modification d'horaire.

@@ -1,0 +1,6 @@
+V147.85 — Motif visible dans Personnel > Mon calendrier
+
+- Lorsqu'un horaire réel diffère de l'horaire théorique, il apparaît dans Mon calendrier.
+- Si la journée contient un motif / une information, celui-ci est affiché avec ⓘ sous l'horaire réel.
+- Les jours sans changement d'horaire ne sont pas modifiés.
+- Le motif reste conservé pour la comparaison Chronotime.

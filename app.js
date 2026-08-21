@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.83';
+const APP_VERSION='147.86';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1863,7 +1863,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.83 — une justification est obligatoire dès qu'une journée est modifiée manuellement.
+ // V147.86 — une justification est obligatoire dès qu'une journée est modifiée manuellement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2252,6 +2252,19 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
+ // V147.86 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
+   const info=dayInfo(r.agentId,d);
+   const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
+   const realStart=String(r.actualStart||'').trim(), realEnd=String(r.actualEnd||'').trim();
+   if(realStart && realEnd && (realStart!==thStart || realEnd!==thEnd)){
+     const realAgentName=agentName(agentById(r.agentId))||'Agent';
+     rows.push({id:r.id,date:d,start:realStart,time:realStart,source:'agent-real-schedule',
+       title:`${realAgentName} · Horaire réel : ${realStart}–${realEnd}`,
+       location:'',note:r.note||'',agentId:r.agentId,
+       calendarInfo:r.note?`ⓘ ${realAgentName} — ${r.note}`:`ⓘ ${realAgentName}`});
+   }
+ }
  const waste=wasteAgendaItemForDate(d);if(waste)rows.push(waste);
  return rows.sort((x,y)=>`${x.start||'99:99'}${x.title||''}`.localeCompare(`${y.start||'99:99'}${y.title||''}`));
 }
@@ -2269,7 +2282,7 @@ function agendaMeta(e){
 }
 function personalEventButton(e){
  const tm=agendaTime(e),meta=agendaMeta(e);
- return `<button class="mini-event agenda-action ${esc(e.source||'personal')}" data-agenda-source="${esc(e.source||'personal')}" data-agenda-id="${esc(e.id||'')}"><b>${tm?`🕒 ${esc(tm)}`:'🕒 —'}</b><span>${esc(e.title||'Événement')}</span>${meta?`<small>${esc(meta)}</small>`:''}</button>`;
+ return `<button class="mini-event agenda-action ${esc(e.source||'personal')}" data-agenda-source="${esc(e.source||'personal')}" data-agenda-id="${esc(e.id||'')}"><b>${tm?`🕒 ${esc(tm)}`:'🕒 —'}</b><span>${esc(e.title||'Événement')}</span>${meta?`<small>${esc(meta)}</small>`:''}${e.calendarInfo?`<small class="calendar-info">${esc(e.calendarInfo)}</small>`:''}</button>`;
 }
 function renderDashboardTodayAgenda(){
  const el=$('#dashboardTodayAgenda');if(!el)return;
