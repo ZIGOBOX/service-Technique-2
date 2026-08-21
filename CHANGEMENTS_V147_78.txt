@@ -1,0 +1,18 @@
+Pilotage Service Technique — V147.78 — 21/08/2026
+
+DASHBOARD CONTRÔLES MÉNAGE — LYCÉE JEAN PUY
+- Ajout d'un dashboard complet directement dans l'onglet Contrôle ménage, en complément de l'existant.
+- Aucun remplacement du formulaire ni de l'historique actuel.
+- Le dashboard utilise directement les contrôles enregistrés dans db.cleaning.
+- Les filtres existants (mois, bâtiment, type de local, statut) pilotent aussi le dashboard.
+- Indicateurs : note moyenne /5, score %, nombre de contrôles, conformes, à reprendre, non conformes et points faibles.
+- Graphique qualité moyenne par bâtiment.
+- Répartition visuelle conformes / à reprendre / non conformes / autres.
+- Courbe d'évolution du score moyen sur les derniers mois disponibles.
+- Top des critères les plus souvent à reprendre.
+- Liste automatique des contrôles prioritaires les moins bien notés.
+- Détection des récidives par local (au moins deux contrôles à reprendre).
+- Indicateurs de pilotage par rapport à un objectif qualité de 85 % / 4,25 sur 5.
+- Mise en page responsive PC / tablette / mobile.
+- Version affichée portée à V147.78.
+- Syntaxe JavaScript vérifiée avec node --check.
