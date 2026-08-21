@@ -1,0 +1,16 @@
+Pilotage Service Technique — V147.81 — audit global 21/08/2026
+
+CORRECTIONS PRIORITAIRES
+- Congé / RTT / Maladie / absences : une période hors de l'année scolaire active n'est plus acceptée silencieusement. L'application demande d'abord de basculer l'année scolaire du tableau de bord, afin d'éviter qu'une saisie apparaisse puis disparaisse des vues.
+- Les journées saisies manuellement sont marquées comme source manuelle et rattachées à leur année scolaire réelle.
+- Les horaires annuels ne proposent plus 2026-2027 en dur : leurs dates par défaut reprennent l'année scolaire active.
+- L'import/export des horaires ne génère plus 2026-2027 en dur : il reprend l'année scolaire active.
+
+AUDIT TECHNIQUE
+- Syntaxe vérifiée sur tous les fichiers JavaScript présents dans le ZIP.
+- Contrôle des identifiants HTML : aucun ID dupliqué.
+- Contrôle des références locales du HTML effectué.
+
+POINT IMPORTANT SUR LE DEPOT GITHUB
+- Le paquet historique appelle toujours styles.css, supabase-config.js, notification-center.js, weather-waste.js, room-prep.js et assets/logo-service-technique.png.
+- Ces fichiers ne sont pas tous présents dans les ZIP hérités. Ils doivent être conservés dans le dépôt GitHub pour que toutes les fonctions correspondantes restent disponibles.

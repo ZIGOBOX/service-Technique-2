@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.80';
+const APP_VERSION='147.81';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1293,8 +1293,8 @@ function normalizeWeeklyPlans(){
   if(!p.shift)p.shift='Standard';
   const supplied=IMPORTED_WEEKLY_PLANS.some(sp=>normalizeText(sp.agent||'')===normalizeText(p.agent||agentName(agentById(p.agentId))||'')&&Array.isArray(p.rows)&&p.rows.length);
   if(supplied&&p.shift==='Matin')p.shift='Standard';
-  if(!p.effectiveFrom)p.effectiveFrom='2026-09-01';
-  if(!p.effectiveTo)p.effectiveTo='2027-08-31';
+  if(!p.effectiveFrom){const r=academicYearRange(activeAcademicYear());p.effectiveFrom=r.start;}
+  if(!p.effectiveTo){const r=academicYearRange(activeAcademicYear());p.effectiveTo=r.end;}
   if(!p.dayProfiles)p.dayProfiles=deriveDayProfiles(p.rows||[]);
  }
 }
@@ -1838,6 +1838,11 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  if(!o.agentId){toast('Choisissez un agent');return}
  if(!from||!to){toast('Renseignez les dates du et au');return}
  if(to<from){toast('La date de fin doit être après la date de début');return}
+ const activeYear=activeAcademicYear();
+ if(!academicYearContains(activeYear,from)||!academicYearContains(activeYear,to)){
+   toast(`⚠️ Cette période n’appartient pas à l’année scolaire ${activeYear}. Changez l’année scolaire du tableau de bord avant de l’enregistrer.`);
+   return;
+ }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
  if(!Array.isArray(db.agentDays))db.agentDays=[];
  const countingRule=dayCountingRule(o.dayType);
@@ -1862,7 +1867,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
      const rule=dayCountingRule(o.dayType);
      const pStart=rule.mode==='planned'?((from===to?o.plannedStart:'')||sc.start||o.plannedStart||''):(from===to?(o.plannedStart||''):'');
      const pEnd=rule.mode==='planned'?((from===to?o.plannedEnd:'')||sc.end||o.plannedEnd||''):(from===to?(o.plannedEnd||''):'');
-     db.agentDays.push({id:uid(),periodId:newPeriodId,agentId:o.agentId,date:d,dayType:o.dayType,plannedStart:pStart,plannedEnd:pEnd,actualStart:sameStart?(o.actualStart||''):'',actualEnd:sameStart?(o.actualEnd||''):'',pause:Number((from===to&&o.pause!==''?o.pause:sc.pause??o.pause)||0),overtime:Number(sameStart?o.overtime||0:0),status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||''});
+     db.agentDays.push({id:uid(),periodId:newPeriodId,agentId:o.agentId,date:d,dayType:o.dayType,plannedStart:pStart,plannedEnd:pEnd,actualStart:sameStart?(o.actualStart||''):'',actualEnd:sameStart?(o.actualEnd||''):'',pause:Number((from===to&&o.pause!==''?o.pause:sc.pause??o.pause)||0),overtime:Number(sameStart?o.overtime||0:0),status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',academicYear:academicYearFor(d)});
      added++;
    }
    d=addDays(d,1);
@@ -2304,9 +2309,10 @@ function renderWeeklyPlans(){const box=$('#weeklyPlansBoard');if(!box)return;nor
 function openWeeklyPlan(i=null,agentId=''){
  normalizeWeeklyPlans();
  const old=i!==null?db.weeklyPlans[i]:null;
- const p=old||{id:uid(),agentId:agentId||db.agents[0]?.id,agent:agentName(agentById(agentId||db.agents[0]?.id)),shift:'Standard',effectiveFrom:'2026-09-01',effectiveTo:'2027-08-31',dayProfiles:{}};
+ const activeRange=academicYearRange(activeAcademicYear());
+ const p=old||{id:uid(),agentId:agentId||db.agents[0]?.id,agent:agentName(agentById(agentId||db.agents[0]?.id)),shift:'Standard',effectiveFrom:activeRange.start,effectiveTo:activeRange.end,dayProfiles:{}};
  const days=[['Lundi',1],['Mardi',2],['Mercredi',3],['Jeudi',4],['Vendredi',5],['Samedi',6],['Dimanche',0]];
- openModal(old?'Modifier les horaires théoriques':'Nouveaux horaires théoriques',`<div class="notice"><strong>Base annuelle théorique :</strong> choisissez la période scolaire (par défaut du 01/09/2026 au 31/08/2027), puis les horaires de chaque jour. Les jours non travaillés peuvent rester vides. Le tableau de bord affichera automatiquement Repos.</div><div class="form-grid"><label>Agent<select name="agentId" required>${agentOptions(p.agentId)}</select></label><label>Profil<select name="shift">${selectOptions(['Standard','Matin','Soir'],p.shift||'Standard')}</select></label>${field('Valable du','effectiveFrom',p.effectiveFrom||'2026-09-01','date','required')}${field('Valable au','effectiveTo',p.effectiveTo||'2027-08-31','date','required')}</div><div class="day-profile-editor">${days.map(([label,key])=>{const x=p.dayProfiles?.[key]||{};return `<fieldset><legend>${label}</legend><div class="form-grid"><label>Début<input type="time" name="start_${key}" value="${esc(x.start||'')}"></label><label>Fin<input type="time" name="end_${key}" value="${esc(x.end||'')}"></label><label>Pause (min)<input type="number" min="0" step="5" name="pause_${key}" value="${esc(x.pause||0)}"></label><label class="span2">Missions principales<input name="missions_${key}" value="${esc(x.missions||'')}"></label></div></fieldset>`}).join('')}</div>`,async form=>{
+ openModal(old?'Modifier les horaires théoriques':'Nouveaux horaires théoriques',`<div class="notice"><strong>Base annuelle théorique :</strong> la période proposée reprend automatiquement l’année scolaire active, puis les horaires de chaque jour. Les jours non travaillés peuvent rester vides. Le tableau de bord affichera automatiquement Repos.</div><div class="form-grid"><label>Agent<select name="agentId" required>${agentOptions(p.agentId)}</select></label><label>Profil<select name="shift">${selectOptions(['Standard','Matin','Soir'],p.shift||'Standard')}</select></label>${field('Valable du','effectiveFrom',p.effectiveFrom||activeRange.start,'date','required')}${field('Valable au','effectiveTo',p.effectiveTo||activeRange.end,'date','required')}</div><div class="day-profile-editor">${days.map(([label,key])=>{const x=p.dayProfiles?.[key]||{};return `<fieldset><legend>${label}</legend><div class="form-grid"><label>Début<input type="time" name="start_${key}" value="${esc(x.start||'')}"></label><label>Fin<input type="time" name="end_${key}" value="${esc(x.end||'')}"></label><label>Pause (min)<input type="number" min="0" step="5" name="pause_${key}" value="${esc(x.pause||0)}"></label><label class="span2">Missions principales<input name="missions_${key}" value="${esc(x.missions||'')}"></label></div></fieldset>`}).join('')}</div>`,async form=>{
    const o=formDataObj(form);if(!o.agentId){toast('Choisissez un agent');return}if(!o.effectiveFrom||!o.effectiveTo){toast('Renseignez la période de validité');return}if(o.effectiveTo<o.effectiveFrom){toast('La date de fin doit être après la date de début');return}
    p.agentId=o.agentId;p.agent=agentName(agentById(o.agentId));p.shift=o.shift;p.effectiveFrom=o.effectiveFrom;p.effectiveTo=o.effectiveTo;p.dayProfiles={};
    for(const [label,key] of days){const st=o[`start_${key}`]||'',en=o[`end_${key}`]||'';if((st&&!en)||(!st&&en)){toast(`${label} : renseignez le début et la fin, ou laissez les deux vides`);return}p.dayProfiles[key]={start:st,end:en,pause:Number(o[`pause_${key}`]||0),missions:o[`missions_${key}`]||'',segments:[]}}

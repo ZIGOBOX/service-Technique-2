@@ -1,6 +1,15 @@
 /* Pilotage Service Technique V51 — import/export des horaires */
 (() => {
   'use strict';
+
+  function activeSchoolRange(){
+    const data=window.PSTMainState?.get?.()||{};
+    const raw=String(data.settings?.academicYear||'');
+    const m=raw.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+    const now=new Date();
+    const startYear=(m&&Number(m[2])===Number(m[1])+1)?Number(m[1]):(now.getMonth()>=8?now.getFullYear():now.getFullYear()-1);
+    return {start:`${startYear}-09-01`,end:`${startYear+1}-08-31`,label:`${startYear}-${startYear+1}`};
+  }
   const DAYS=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
   const DAY_KEYS=[1,2,3,4,5,6,0];
   const PROFILES=['Standard','Matin','Soir'];
@@ -54,8 +63,8 @@
     active.forEach(a=>{
       const workdays=(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).map(Number);
       const plans=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(a.id));
-      if(!plans.length){DAYS.forEach((day,i)=>{const key=DAY_KEYS[i],working=workdays.includes(key);hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':'2026-09-01','Date fin':'2027-08-31','Profil horaire':'Standard','Jour':day,'Type de journée':working?'Travaillé':'Repos','Heure début':'','Heure fin':'','Pause (minutes)':0,'Mission principale':'','Commentaire':'','Contrôle':working?'À compléter':'OK'})});return}
-      plans.forEach(p=>DAYS.forEach((day,i)=>{const key=DAY_KEYS[i],x=p.dayProfiles?.[key]||{},working=workdays.includes(key)&&!!(x.start&&x.end);hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':p.effectiveFrom||'2026-09-01','Date fin':p.effectiveTo||'2027-08-31','Profil horaire':p.shift||'Standard','Jour':day,'Type de journée':working?'Travaillé':'Repos','Heure début':working?x.start||'':'','Heure fin':working?x.end||'':'','Pause (minutes)':working?Number(x.pause||0):0,'Mission principale':working?x.missions||'':'','Commentaire':'','Contrôle':'OK'})}));
+      if(!plans.length){DAYS.forEach((day,i)=>{const key=DAY_KEYS[i],working=workdays.includes(key);hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':activeSchoolRange().start,'Date fin':activeSchoolRange().end,'Profil horaire':'Standard','Jour':day,'Type de journée':working?'Travaillé':'Repos','Heure début':'','Heure fin':'','Pause (minutes)':0,'Mission principale':'','Commentaire':'','Contrôle':working?'À compléter':'OK'})});return}
+      plans.forEach(p=>DAYS.forEach((day,i)=>{const key=DAY_KEYS[i],x=p.dayProfiles?.[key]||{},working=workdays.includes(key)&&!!(x.start&&x.end);hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':p.effectiveFrom||activeSchoolRange().start,'Date fin':p.effectiveTo||activeSchoolRange().end,'Profil horaire':p.shift||'Standard','Jour':day,'Type de journée':working?'Travaillé':'Repos','Heure début':working?x.start||'':'','Heure fin':working?x.end||'':'','Pause (minutes)':working?Number(x.pause||0):0,'Mission principale':working?x.missions||'':'','Commentaire':'','Contrôle':'OK'})}));
     });
     const wsH=XLSX.utils.json_to_sheet(hrows);
     const hHeaders=Object.keys(hrows[0]||{});setWidths(wsH,[25,28,13,13,16,13,16,12,12,16,30,28,34]);addAutoFilter(wsH,wsH['!ref']);styleSheet(wsH,hHeaders.length,hrows.length+1);
@@ -68,7 +77,7 @@
     XLSX.utils.book_append_sheet(wb,wsH,'Horaires annuels');
 
     const rrows=(db.rotations||[]).map(r=>{const a=(db.agents||[]).find(x=>String(x.id)===String(r.agentId));return {'Identifiant roulement':r.id,'Identifiant agent':r.agentId,'Nom de l’agent':agentLabel(a),'Date d’effet':r.effectiveFrom||'','Date de fin':r.effectiveTo||'','Nom du roulement':r.no||'','Semaines Matin':Number(r.morningWeeks||2),'Semaines Soir':Number(r.eveningWeeks||2),'Commence par':r.startShift||'Matin','Heure matin début':r.morningStart||'','Heure matin fin':r.morningEnd||'','Heure soir début':r.eveningStart||'','Heure soir fin':r.eveningEnd||'','Pause (minutes)':Number(r.pause||0),'Jours travaillés':(r.weekdays||((a&&Array.isArray(a.workdays))?a.workdays:[1,2,3,4,5])).join(','),'Commentaire':r.notes||'','Contrôle':'OK'}});
-    if(!rrows.length)active.forEach(a=>rrows.push({'Identifiant roulement':'','Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date d’effet':'2026-09-01','Date de fin':'2027-08-31','Nom du roulement':'','Semaines Matin':2,'Semaines Soir':2,'Commence par':'Matin','Heure matin début':'','Heure matin fin':'','Heure soir début':'','Heure soir fin':'','Pause (minutes)':0,'Jours travaillés':(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).join(','),'Commentaire':'','Contrôle':'À compléter'}));
+    if(!rrows.length)active.forEach(a=>rrows.push({'Identifiant roulement':'','Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date d’effet':activeSchoolRange().start,'Date de fin':activeSchoolRange().end,'Nom du roulement':'','Semaines Matin':2,'Semaines Soir':2,'Commence par':'Matin','Heure matin début':'','Heure matin fin':'','Heure soir début':'','Heure soir fin':'','Pause (minutes)':0,'Jours travaillés':(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).join(','),'Commentaire':'','Contrôle':'À compléter'}));
     const wsR=XLSX.utils.json_to_sheet(rrows);setWidths(wsR,[24,25,28,13,13,20,15,15,15,16,16,16,16,15,18,28,32]);addAutoFilter(wsR,wsR['!ref']);styleSheet(wsR,17,rrows.length+1);XLSX.utils.book_append_sheet(wb,wsR,'Roulements');
 
     const instructions=[
