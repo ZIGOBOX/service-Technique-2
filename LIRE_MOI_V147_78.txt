@@ -1,0 +1,13 @@
+Pilotage Service Technique — V147.78 — 21/08/2026
+
+Base complète : V147.77 HERO EN-TETE PC.
+Évolution V147.78 : ajout du dashboard complet dans l'onglet Contrôle ménage.
+
+Fichiers versionnés en 147.78 :
+- app.js
+- index.html
+- room-cleaning.js (cache/config)
+- CHANGEMENTS_V147_78.txt
+
+Le ZIP conserve tous les autres fichiers présents dans le paquet V147.77.
+Les fichiers déjà hébergés sur le dépôt GitHub mais historiquement non inclus dans les ZIP (supabase-config.js, notification-center.js, weather-waste.js, room-prep.js, styles.css selon le dépôt) ne doivent pas être supprimés du dépôt.
