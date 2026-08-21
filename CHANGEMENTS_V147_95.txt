@@ -1,0 +1,10 @@
+V147.95 — Historique global des modifications
+
+Archives > Récapitulatif de mes modifications :
+- 8 colonnes : Date/heure modification, Type, Date concernée, Élément concerné, Champ modifié, Avant, Après, Utilisateur.
+- Types suivis : Agents, Interventions, Contrôles ménage, Demandes.
+- Filtre Type + année scolaire + recherche libre.
+- Les nouvelles modifications stockent explicitement leur type et l'élément concerné.
+- Les anciennes lignes restent relues avec compatibilité autant que possible.
+- Les suppressions restent exclues.
+- Les créations ne sont pas ajoutées à l'historique pour éviter de l'alourdir ; seules les modifications/corrections sont suivies.

@@ -1,0 +1,6 @@
+V147.94 — Nom de l'agent dans l'historique Archives
+
+- Le récapitulatif des modifications affiche maintenant clairement le nom de l'agent.
+- Les nouvelles modifications enregistrent agentId + nom de l'agent dans l'historique.
+- Les anciennes modifications sont également relues autant que possible à partir de l'identifiant ou du titre existant.
+- Les suppressions restent exclues du récapitulatif.

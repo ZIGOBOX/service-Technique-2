@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.93';
+const APP_VERSION='147.95';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -411,7 +411,7 @@ function restoreSuppliedData(showMessage=true){
  try{window.dispatchEvent(new Event('pst:data-saved'))}catch(_){ }
  if(showMessage){renderAll();toast('Toutes les données fournies ont été restaurées')}
 }
-let db=defaultData(); let teamWeek=startOfWeek(todayISO()),personalWeek=startOfWeek(todayISO()),modalHandler=null,modalDeleteHandler=null,currentView='dashboard',modalAuditInitial=null,modalAuditTitle='';
+let db=defaultData(); let teamWeek=startOfWeek(todayISO()),personalWeek=startOfWeek(todayISO()),modalHandler=null,modalDeleteHandler=null,currentView='dashboard',modalAuditInitial=null,modalAuditTitle='',modalAuditContext=null;
 let supabaseClient=null,currentUser=null,cloudReady=false,cloudSaveTimer=null,cloudRetryTimer=null,cloudBusy=false,cloudPollTimer=null,lastCloudUpdatedAt='',localDirty=false,lastCloudData=null,lastCloudError='';
 const OFFLINE_CACHE_KEY='pst_offline_pending_v130';
 const OFFLINE_MIRROR_KEY='pst_offline_mirror_v130';
@@ -1252,8 +1252,8 @@ const BUILTIN_GUIDES=[
 ];
 async function openGuide(path){await openStoragePath(path)}
 /* ---------- Fenêtres ---------- */
-function openModal(title,html,onSave,opts={}){modalHandler=onSave;modalDeleteHandler=opts.onDelete||null;modalAuditTitle=title;$('#modalTitle').textContent=title;$('#modalBody').innerHTML=html;$('#modalSave').textContent=opts.saveLabel||'Enregistrer';$('#modalDelete').classList.toggle('hidden',!modalDeleteHandler);const d=$('#modal');if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','');setTimeout(()=>{const f=$('#modalForm');modalAuditInitial={};if(f)for(const e of [...f.elements])if(e.name&&e.type!=='file'&&e.type!=='button'&&e.type!=='submit')modalAuditInitial[e.name]=e.type==='checkbox'?e.checked:e.value;$('#modalBody input:not([type="hidden"]),#modalBody select,#modalBody textarea')?.focus()},60)}
-function closeModal(){const d=$('#modal');if(d.open)d.close();else d.removeAttribute('open');modalHandler=null;modalDeleteHandler=null;modalAuditInitial=null;modalAuditTitle=''}
+function openModal(title,html,onSave,opts={}){modalHandler=onSave;modalDeleteHandler=opts.onDelete||null;modalAuditTitle=title;modalAuditContext=opts.audit||null;$('#modalTitle').textContent=title;$('#modalBody').innerHTML=html;$('#modalSave').textContent=opts.saveLabel||'Enregistrer';$('#modalDelete').classList.toggle('hidden',!modalDeleteHandler);const d=$('#modal');if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','');setTimeout(()=>{const f=$('#modalForm');modalAuditInitial={};if(f)for(const e of [...f.elements])if(e.name&&e.type!=='file'&&e.type!=='button'&&e.type!=='submit')modalAuditInitial[e.name]=e.type==='checkbox'?e.checked:e.value;$('#modalBody input:not([type="hidden"]),#modalBody select,#modalBody textarea')?.focus()},60)}
+function closeModal(){const d=$('#modal');if(d.open)d.close();else d.removeAttribute('open');modalHandler=null;modalDeleteHandler=null;modalAuditInitial=null;modalAuditTitle='';modalAuditContext=null}
 function openDetail(title,html){$('#detailTitle').textContent=title;$('#detailBody').innerHTML=html;const d=$('#detailModal');if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','')}
 function field(label,name,value='',type='text',extra=''){return `<label>${esc(label)}<input name="${esc(name)}" type="${esc(type)}" value="${esc(value)}" ${extra}></label>`}
 function selectField(label,name,items,value='',extra=''){return `<label>${esc(label)}<select name="${esc(name)}" ${extra}>${selectOptions(items,value)}</select></label>`}
@@ -1522,7 +1522,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.93 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.95 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1588,7 +1588,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.93 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.95 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1736,7 +1736,7 @@ function openAgent(id){
    syncStoredChronotimePastilles();
    const persisted=await commitFormRecordVerified('Agent','agents',x);if(!persisted.ok)return;
    closeModal();toast(`✅ Agent enregistré — horaire Standard applicable à partir du ${fmtDate(x.standardSchedule.effectiveFrom)}`);
- },{onDelete:old?()=>deleteRecord('agents',x.id,'agent'):null})
+ },{audit:{track:!!old,type:'Agent',agentId:x.id,agentName:agentName(x),entity:(form)=>[form?.elements?.firstName?.value||x.firstName,form?.elements?.lastName?.value||x.lastName].filter(Boolean).join(' '),date:x.arrivalDate||todayISO()},onDelete:old?()=>deleteRecord('agents',x.id,'agent'):null})
 }
 function applyWeekendRestToAll(){
  if(!confirm('Mettre le samedi et le dimanche en repos pour tous les agents ? Les horaires du lundi au vendredi seront conservés.'))return;
@@ -1866,7 +1866,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.93 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.95 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -1903,7 +1903,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.93 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
+ // V147.95 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
  localDirty=true;
  clearTheoreticalScheduleCache();
  try{writeMirror()}catch(_){}
@@ -1932,7 +1932,9 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
      setSaveState('Planning agent conservé localement — synchronisation à reprendre','local');
    }
  });
- return {ok:true};},{onDelete:old?()=>{if(!confirm('Supprimer cette saisie ou toute la période associée ?'))return;const deletedDates=periodId?db.agentDays.filter(r=>r.periodId===periodId).map(r=>r.date):[old.date];
+ return {ok:true};},{
+  audit:{track:true,type:'Agent',agentId:x.agentId,agentName:agentName(agentById(x.agentId)),entity:(form)=>{const a=agentById(form?.elements?.agentId?.value||x.agentId);return a?agentName(a):agentName(agentById(x.agentId))},date:initialDate},
+  onDelete:old?()=>{if(!confirm('Supprimer cette saisie ou toute la période associée ?'))return;const deletedDates=periodId?db.agentDays.filter(r=>r.periodId===periodId).map(r=>r.date):[old.date];
  db.agentDays=periodId?db.agentDays.filter(r=>r.periodId!==periodId):db.agentDays.filter(r=>r.id!==old.id);
  db.changeHistory=(db.changeHistory||[]).filter(h=>!(h.title===modalAuditTitle&&(h.pastDates||[]).some(d=>deletedDates.includes(d))));
  closeModal();save();toast('Saisie supprimée')}:null});
@@ -2206,7 +2208,7 @@ function openCleaning(id){
   try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}
   toast(persisted.offline?`✅ Contrôle enregistré sur cet appareil — synchronisation en attente`:`✅ Contrôle ménage enregistré — résultat : ${x.overallStatus||'—'}`)
   return {ok:true};
- },{onDelete:old?()=>deleteRecord('cleaning',x.id,'contrôle'):null});
+ },{audit:{track:!!old,type:'Contrôle ménage',agentId:x.agentId||'',entity:(form)=>[x.no,[form?.elements?.building?.value||x.building,form?.elements?.floor?.value||x.floor,form?.elements?.room?.value||x.room].filter(Boolean).join(' ')].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('cleaning',x.id,'contrôle'):null});
  const updateOtherRoom=()=>$('#mOtherRoomWrap')?.classList.toggle('hidden',$('#mRoom')?.value!=='Autre local');
  const updateSector=()=>{const e=$('#mSector');if(e)e.innerHTML=cleaningSectorOptions($('#mBuilding').value,$('#mFloor').value,e.value)};
  const updateLocation=()=>{const bb=$('#mBuilding').value,ff=$('#mFloor').value,tt=$('#mRoomType').value,oldRoom=$('#mRoom').value;$('#mRoom').innerHTML=roomOptions(bb,ff,tt,oldRoom);updateOtherRoom()};
@@ -2218,8 +2220,8 @@ function openCleaning(id){
  $$('[data-bulk-clean]').forEach(btn=>btn.onclick=()=>$$('[name="taskStatus"]',$('#cleanTaskEditor')).forEach(s=>s.value=btn.dataset.bulkClean))
 }
 
-function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),time:'',title:'',family:'Électricité',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier l’intervention':'Nouvelle intervention',`<div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Heure prévue','time',x.time,'time')}${field('Objet','title',x.title,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label>${centralLocationFields(x,'maintLoc')}${field('Demandeur','requester',x.requester)}${field('Assigné à / prestataire','assigned',x.assigned)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Description / diagnostic','description',x.description)}${textareaField('Action réalisée / suite','action',x.action)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'maintenance');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Intervention','maintenance',x);if(!persisted.ok)return;closeModal();refreshCollectionView('maintenance');toast(`✅ Intervention enregistrée — statut : ${x.status}`)},{onDelete:old?()=>deleteRecord('maintenance',x.id,'intervention'):null});bindCentralLocation('maintLoc')}
-function openRequest(id){const old=id?byId('requests',id):null;const x=old||{id:uid(),no:nextNo('request','DIR'),date:todayISO(),time:'',type:'Aménagement de salle',title:'',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'Direction',dueDate:'',description:'',response:'',attachments:[]};openModal(old?'Modifier la demande':'Nouvelle demande de la direction',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure prévue','time',x.time,'time')}<label>Type<select name="type">${selectOptions(db.lists.requestTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${centralLocationFields(x,'reqLoc')}${field('Demandeur','requester',x.requester)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Demande','description',x.description)}${textareaField('Réponse / réalisation','response',x.response)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'requests');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Demande','requests',x);if(!persisted.ok)return;closeModal();toast(`✅ Demande enregistrée — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('requests',x.id,'demande'):null});bindCentralLocation('reqLoc')}
+function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),time:'',title:'',family:'Électricité',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier l’intervention':'Nouvelle intervention',`<div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Heure prévue','time',x.time,'time')}${field('Objet','title',x.title,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label>${centralLocationFields(x,'maintLoc')}${field('Demandeur','requester',x.requester)}${field('Assigné à / prestataire','assigned',x.assigned)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Description / diagnostic','description',x.description)}${textareaField('Action réalisée / suite','action',x.action)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'maintenance');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Intervention','maintenance',x);if(!persisted.ok)return;closeModal();refreshCollectionView('maintenance');toast(`✅ Intervention enregistrée — statut : ${x.status}`)},{audit:{track:!!old,type:'Intervention',no:x.no,entity:(form)=>[x.no,form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('maintenance',x.id,'intervention'):null});bindCentralLocation('maintLoc')}
+function openRequest(id){const old=id?byId('requests',id):null;const x=old||{id:uid(),no:nextNo('request','DIR'),date:todayISO(),time:'',type:'Aménagement de salle',title:'',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'Direction',dueDate:'',description:'',response:'',attachments:[]};openModal(old?'Modifier la demande':'Nouvelle demande de la direction',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure prévue','time',x.time,'time')}<label>Type<select name="type">${selectOptions(db.lists.requestTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${centralLocationFields(x,'reqLoc')}${field('Demandeur','requester',x.requester)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Demande','description',x.description)}${textareaField('Réponse / réalisation','response',x.response)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'requests');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Demande','requests',x);if(!persisted.ok)return;closeModal();toast(`✅ Demande enregistrée — statut : ${x.status||'—'}`)},{audit:{track:!!old,type:'Demande',no:x.no,entity:(form)=>[x.no,form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('requests',x.id,'demande'):null});bindCentralLocation('reqLoc')}
 function openWork(id){const old=id?byId('works',id):null;const x=old||{id:uid(),no:nextNo('work','CHT'),date:todayISO(),time:'',type:'Réunion de chantier',title:'',company:'',architect:'',building:'',floor:'',sector:'',room:'',priority:'Normale',status:'À faire',dueDate:'',description:'',decision:'',gpaEnd:'',attachments:[]};openModal(old?'Modifier le suivi chantier':'Nouveau suivi chantier / GPA',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure prévue','time',x.time,'time')}<label>Type<select name="type">${selectOptions(db.lists.workTypes,x.type)}</select></label>${field('Objet / réserve','title',x.title,'text','required')}${field('Entreprise','company',x.company)}${field('Architecte / maîtrise d’œuvre','architect',x.architect)}${centralLocationFields(x,'workLoc')}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${field('Échéance','dueDate',x.dueDate,'date')}${field('Fin GPA','gpaEnd',x.gpaEnd,'date')}${textareaField('Constat / description','description',x.description)}${textareaField('Décision / suite','decision',x.decision)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'works');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Chantier / GPA','works',x);if(!persisted.ok)return;closeModal();toast(`✅ Suivi chantier enregistré — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('works',x.id,'suivi'):null});bindCentralLocation('workLoc')}
 function openMeeting(id,date=todayISO()){const old=id?byId('meetings',id):null;const x=old||{id:uid(),no:nextNo('meeting','RDV'),date,time:'',end:'',type:'Rendez-vous',title:'',building:'',floor:'',sector:'',room:'',participants:'',status:'Planifié',notes:'',actions:'',attachments:[]};openModal(old?'Modifier le rendez-vous':'Nouvelle réunion / rendez-vous',`<div class="form-grid">${field('Date','date',x.date,'date','required')}${field('Heure','time',x.time,'time')}${field('Fin','end',x.end,'time')}<label>Type<select name="type">${selectOptions(db.lists.meetingTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}${centralLocationFields(x,'meetLoc')}${field('Participants','participants',x.participants)}<label>Statut<select name="status">${selectOptions(['Planifié','Réalisé','Reporté','Annulé'],x.status)}</select></label>${textareaField('Compte rendu','notes',x.notes)}${textareaField('Actions décidées','actions',x.actions)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;x.location=[x.building,x.floor,x.sector,x.room].filter(Boolean).join(' · ');const attachmentCheck=await processAttachments(form,x,'meetings');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Réunion / rendez-vous','meetings',x);if(!persisted.ok)return;closeModal();toast(`✅ Rendez-vous enregistré — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('meetings',x.id,'rendez-vous'):null});bindCentralLocation('meetLoc')}
 function openNote(id,category='Autre'){const old=id?byId('notes',id):null;const x=old||{id:uid(),no:nextNo('note','NOT'),date:todayISO(),time:'',category,agentId:'',title:'',text:'',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',dueDate:'',items:[],attachments:[]};openModal(old?'Modifier la note':'Nouvelle note',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure','time',x.time,'time')}<label>Catégorie<select name="category">${selectOptions(db.lists.noteCategories,x.category)}</select></label><label>Agent concerné<select name="agentId">${agentOptions(x.agentId,true)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label>${field('Titre','title',x.title,'text','required')}<label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${field('Échéance','dueDate',x.dueDate,'date')}${centralLocationFields(x,'noteLoc')}${textareaField('Note','text',x.text,5)}</div><fieldset><legend>Liste d’items</legend>${noteItemsHTML(x.items)}</fieldset>${attachmentField(x.attachments)}`,async form=>{const o=formDataObj(form);const rows=$$('.item-row',form).map(r=>({text:r.querySelector('[name="itemText"]').value.trim(),done:r.querySelector('[name="itemDone"]').checked})).filter(i=>i.text);Object.assign(x,o,{items:rows});const attachmentCheck=await processAttachments(form,x,'notes');if(!attachmentCheck?.ok)return;if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const persisted=await commitFormRecordVerified('Note','notes',x);if(!persisted.ok)return;closeModal();toast(`✅ Note enregistrée — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('notes',x.id,'note'):null});bindCentralLocation('noteLoc');function bindItems(){const box=$('#noteItems');if(!box)return;$$('[data-remove-item]',box).forEach(b=>b.onclick=()=>b.closest('.item-row')?.remove())}bindItems();const add=$('#addNoteItem');if(add)add.onclick=()=>{const box=$('#noteItems');if(!box)return;box.insertAdjacentHTML('beforeend','<div class="item-row"><input name="itemText" placeholder="Nouvelle action"><label class="inline-check"><input name="itemDone" type="checkbox"> Fait</label><button type="button" data-remove-item>×</button></div>');bindItems()}}
@@ -2287,7 +2289,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.93 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.95 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -2850,22 +2852,62 @@ function openImportAnalysis(id){
 
 function changeHistoryFieldLabel(field){
  const labels={
-  agentId:'Agent',dayType:'Type de journée',dateFrom:'Du',dateTo:'Au',status:'Statut',
+  firstName:'Prénom',lastName:'Nom',role:'Fonction',weeklyHours:'Temps hebdomadaire',
+  email:'E-mail',phone:'Téléphone',assignment:'Affectation',arrivalDate:'Date d’arrivée',
+  agentId:'Agent',dayType:'Type de journée',date:'Date',dateFrom:'Du',dateTo:'Au',status:'Statut',
   plannedStart:'Horaire théorique — arrivée',plannedEnd:'Horaire théorique — départ',
   actualStart:'Horaire réel — arrivée',actualEnd:'Horaire réel — départ',
   pause:'Pause',overtime:'Heures +/-',replacement:'Remplacement / relais',
-  noReplacementNeeded:'Aucun remplacement nécessaire',note:'Informations / Motif'
+  noReplacementNeeded:'Aucun remplacement nécessaire',note:'Informations / Motif',
+  time:'Heure',title:'Objet',family:'Famille',priority:'Priorité',
+  building:'Bâtiment',floor:'Étage',sector:'Secteur',room:'Local / zone',
+  requester:'Demandeur',assigned:'Assigné à / prestataire',dueDate:'Échéance',
+  description:'Description / diagnostic',action:'Action réalisée / suite',
+  type:'Type',response:'Réponse / réalisation',inspector:'Contrôleur',
+  roomType:'Type de local',comment:'Observation générale'
  };
  return labels[field]||field||'Modification';
 }
 function changeHistoryValue(field,value){
- if(value===true||String(value)==='true')return 'Oui';
+ if(value===true||String(value)==='true'||String(value)==='on')return 'Oui';
  if(value===false||String(value)==='false')return 'Non';
  if(field==='agentId'){
    const a=agentById(value);return a?agentName(a):(value||'—');
  }
  if(value===null||value===undefined||String(value)==='')return '—';
  return String(value);
+}
+function changeHistoryAgentName(entry){
+ if(entry?.agentName)return String(entry.agentName);
+ if(entry?.agentId){
+   const a=agentById(entry.agentId);if(a)return agentName(a);
+ }
+ const c=(entry?.changes||[]).find(x=>x.field==='agentId');
+ const aid=c?.newValue||c?.oldValue||'';
+ if(aid){
+   const a=agentById(aid);if(a)return agentName(a);
+ }
+ const t=String(entry?.title||'');
+ const m=t.match(/^(.+?)\s+—\s+saisie planning/i);
+ if(m)return m[1].trim();
+ return '';
+}
+function changeHistoryType(entry){
+ if(entry?.type)return String(entry.type);
+ const t=normalizeText(entry?.title||'');
+ if(t.includes('saisie planning')||t.includes('agent'))return 'Agent';
+ if(t.includes('intervention'))return 'Intervention';
+ if(t.includes('controle menage')||t.includes('ménage')||t.includes('menage'))return 'Contrôle ménage';
+ if(t.includes('demande'))return 'Demande';
+ return 'Autre';
+}
+function changeHistoryEntity(entry){
+ if(entry?.entity)return String(entry.entity);
+ const type=changeHistoryType(entry);
+ if(type==='Agent'){
+   const a=changeHistoryAgentName(entry);if(a)return a;
+ }
+ return String(entry?.title||'Modification');
 }
 function changeHistoryAcademicYear(entry){
  const d=(entry?.pastDates||[])[0]||String(entry?.date||'').slice(0,10);
@@ -2874,36 +2916,39 @@ function changeHistoryAcademicYear(entry){
 function renderChangeHistory(){
  const table=$('#changeHistoryTable');if(!table)return;
  db.changeHistory=Array.isArray(db.changeHistory)?db.changeHistory:[];
- const active=activeAcademicYear(),yearEl=$('#changeHistoryYear'),searchEl=$('#changeHistorySearch');
+ const active=activeAcademicYear(),yearEl=$('#changeHistoryYear'),typeEl=$('#changeHistoryType'),searchEl=$('#changeHistorySearch');
  const years=[...new Set(db.changeHistory.map(changeHistoryAcademicYear).filter(Boolean))].sort().reverse();
  if(yearEl){
    const current=yearEl.value||active;
    yearEl.innerHTML='<option value="">Toutes les années scolaires</option>'+[...new Set([active,...years])].map(y=>`<option value="${esc(y)}">${esc(y)}</option>`).join('');
    yearEl.value=[...yearEl.options].some(o=>o.value===current)?current:active;
  }
- const year=yearEl?.value||active,q=String(searchEl?.value||'').trim().toLowerCase();
+ const year=yearEl?.value||active,type=typeEl?.value||'',q=String(searchEl?.value||'').trim().toLowerCase();
  let entries=db.changeHistory.slice()
    .filter(x=>!x.deleted && !/^suppression\b/i.test(String(x.title||'')) && String(x.action||'').toLowerCase()!=='delete')
-   .filter(x=>!year||changeHistoryAcademicYear(x)===year);
- if(q)entries=entries.filter(x=>JSON.stringify(x).toLowerCase().includes(q)||String(x.title||'').toLowerCase().includes(q));
+   .filter(x=>!year||changeHistoryAcademicYear(x)===year)
+   .filter(x=>!type||changeHistoryType(x)===type);
+ if(q)entries=entries.filter(x=>{
+   const hay=[JSON.stringify(x),changeHistoryType(x),changeHistoryEntity(x),changeHistoryAgentName(x)].join(' ').toLowerCase();
+   return hay.includes(q);
+ });
  entries.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
  const rows=[];
  for(const h of entries){
    const modDate=h.date?new Date(h.date):null;
    const stamp=modDate&&!isNaN(modDate)?modDate.toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
    const concerned=(h.pastDates||[]).map(fmtDate).join(', ')||'—';
-   const title=h.title||'Modification';
+   const hType=changeHistoryType(h),entity=changeHistoryEntity(h);
    const changes=Array.isArray(h.changes)&&h.changes.length?h.changes:[{field:'',oldValue:'',newValue:''}];
    for(const c of changes){
-     rows.push(`<tr><td>${esc(stamp)}</td><td>${esc(concerned)}</td><td><strong>${esc(title)}</strong></td><td>${esc(changeHistoryFieldLabel(c.field))}</td><td>${esc(changeHistoryValue(c.field,c.oldValue))}</td><td><strong>${esc(changeHistoryValue(c.field,c.newValue))}</strong></td><td>${esc(h.user||'Utilisateur')}</td></tr>`);
+     rows.push(`<tr><td>${esc(stamp)}</td><td>${esc(hType)}</td><td>${esc(concerned)}</td><td><strong>${esc(entity)}</strong></td><td>${esc(changeHistoryFieldLabel(c.field))}</td><td>${esc(changeHistoryValue(c.field,c.oldValue))}</td><td><strong>${esc(changeHistoryValue(c.field,c.newValue))}</strong></td><td>${esc(h.user||'Utilisateur')}</td></tr>`);
    }
  }
  const totalChanges=entries.reduce((n,h)=>n+(Array.isArray(h.changes)?h.changes.length:1),0);
- const agents=new Set(entries.map(h=>{
-   const c=(h.changes||[]).find(x=>x.field==='agentId');return c?.newValue||c?.oldValue||h.title||'';
- }).filter(Boolean));
- $('#changeHistorySummary').innerHTML=`<article><span>Saisies modifiées</span><strong>${entries.length}</strong></article><article><span>Champs modifiés</span><strong>${totalChanges}</strong></article><article><span>Agents / saisies concernés</span><strong>${agents.size}</strong></article><article><span>Année scolaire</span><strong>${esc(year||'Toutes')}</strong></article>`;
- table.innerHTML=rows.length?rows.join(''):'<tr><td colspan="7"><div class="empty">Aucune modification enregistrée pour cette sélection.</div></td></tr>';
+ const entities=new Set(entries.map(changeHistoryEntity).filter(Boolean));
+ const types=new Set(entries.map(changeHistoryType).filter(Boolean));
+ $('#changeHistorySummary').innerHTML=`<article><span>Saisies modifiées</span><strong>${entries.length}</strong></article><article><span>Champs modifiés</span><strong>${totalChanges}</strong></article><article><span>Éléments concernés</span><strong>${entities.size}</strong></article><article><span>Types concernés</span><strong>${types.size}</strong></article>`;
+ table.innerHTML=rows.length?rows.join(''):'<tr><td colspan="8"><div class="empty">Aucune modification enregistrée pour cette sélection.</div></td></tr>';
 }
 function renderArchives(){renderImportArchives();renderChangeHistory();const year=$('#archiveYear')?.value||activeAcademicYear(),q=($('#archiveSearch')?.value||'').toLowerCase().trim();const years=[...new Set(db.archives.map(a=>a.year).filter(Boolean))].sort().reverse();if($('#archiveYear')){
  const active=activeAcademicYear(),allYears=[...new Set([active,...years])];
@@ -3610,6 +3655,51 @@ function bindReliableDynamicActions(){
  });
 }
 
+
+function auditDateFromForm(form,ctx={}){
+ const candidates=[form?.elements?.date?.value,form?.elements?.dateFrom?.value,ctx.date].filter(Boolean);
+ return normalizeDateValue(candidates[0]||todayISO())||todayISO();
+}
+function auditEntityFromForm(form,ctx={}){
+ if(typeof ctx.entity==='function'){try{return ctx.entity(form)||ctx.label||'Élément'}catch(_){}}
+ if(ctx.entity)return ctx.entity;
+ if(ctx.type==='Agent'){
+   const aid=form?.elements?.agentId?.value||ctx.agentId||'';
+   const a=aid?agentById(aid):null;return a?agentName(a):(ctx.label||'Agent');
+ }
+ const no=form?.elements?.no?.value||ctx.no||'';
+ const title=form?.elements?.title?.value||ctx.title||ctx.label||'';
+ return [no,title].filter(Boolean).join(' — ')||ctx.type||'Élément';
+}
+function auditFieldLabel(field){
+ const labels={
+  firstName:'Prénom',lastName:'Nom',role:'Fonction',weeklyHours:'Temps hebdomadaire',
+  email:'E-mail',phone:'Téléphone',assignment:'Affectation',arrivalDate:'Date d’arrivée',
+  agentId:'Agent',dayType:'Type de journée',date:'Date',dateFrom:'Du',dateTo:'Au',
+  status:'Statut',plannedStart:'Horaire théorique — arrivée',plannedEnd:'Horaire théorique — départ',
+  actualStart:'Horaire réel — arrivée',actualEnd:'Horaire réel — départ',pause:'Pause',
+  overtime:'Heures +/-',replacement:'Remplacement / relais',noReplacementNeeded:'Aucun remplacement nécessaire',
+  note:'Informations / Motif',time:'Heure',title:'Objet',family:'Famille',priority:'Priorité',
+  building:'Bâtiment',floor:'Étage',sector:'Secteur',room:'Local / zone',requester:'Demandeur',
+  assigned:'Assigné à / prestataire',dueDate:'Échéance',description:'Description / diagnostic',
+  action:'Action réalisée / suite',type:'Type',response:'Réponse / réalisation',
+  inspector:'Contrôleur',roomType:'Type de local',comment:'Observation générale'
+ };
+ return labels[field]||changeHistoryFieldLabel?.(field)||field||'Modification';
+}
+function pushModificationHistory({type,entity,date,changes,user,agentId='',agentNameValue='',title=''}) {
+ if(!Array.isArray(changes)||!changes.length)return;
+ db.changeHistory=Array.isArray(db.changeHistory)?db.changeHistory:[];
+ const cleanChanges=changes.map(c=>({field:c.field,oldValue:c.oldValue,newValue:c.newValue}));
+ db.changeHistory.push({
+   id:uid(),date:new Date().toISOString(),type:type||'Autre',entity:entity||title||'Élément',
+   title:title||entity||'Modification',pastDates:[date||todayISO()],changes:cleanChanges,
+   agentId:agentId||'',agentName:agentNameValue||'',user:user||currentUser?.email||'Utilisateur'
+ });
+ localDirty=true;
+ try{writeMirror()}catch(_){}
+ try{writeOfflinePending('historique modification à synchroniser')}catch(_){}
+}
 function bindEvents(){
  $('#modalForm').addEventListener('submit',async e=>{
   e.preventDefault();if(!modalHandler)return;
@@ -3619,8 +3709,25 @@ function bindEvents(){
   const changed=[];if(modalAuditInitial){for(const e of [...form.elements]){if(!e.name||e.type==='file'||e.type==='button'||e.type==='submit')continue;const nv=e.type==='checkbox'?e.checked:e.value,ov=modalAuditInitial[e.name];if(String(nv)!==String(ov))changed.push({field:e.name,oldValue:ov,newValue:nv})}}
   if(pastDates.length&&changed.length&&!confirm('⚠️ Cette donnée concerne une date passée.\n\nLa modification sera enregistrée dans l’historique.\n\nContinuer ?'))return;
   const oldBtnText=btn.textContent;
+  const auditCtx=modalAuditContext?Object.assign({},modalAuditContext):null;
+  const auditTitle=modalAuditTitle;
+  const histAgentId=form.elements?.agentId?.value||auditCtx?.agentId||'';
+  const histAgent=histAgentId?agentById(histAgentId):null;
+  const auditDate=auditDateFromForm(form,auditCtx||{});
+  const auditEntity=auditEntityFromForm(form,auditCtx||{});
   btn.disabled=true;btn.textContent='Enregistrement…';
-  try{const handlerResult=await modalHandler(form);if(handlerResult===false||handlerResult?.ok===false)return;if(pastDates.length&&changed.length){db.changeHistory=db.changeHistory||[];db.changeHistory.push({id:uid(),date:new Date().toISOString(),title:modalAuditTitle||'Modification d’une donnée passée',pastDates:[...new Set(pastDates)],changes:changed,user:currentUser?.email||'Utilisateur'});localDirty=true;try{writeMirror()}catch(_){}try{writeOfflinePending('historique modification à synchroniser')}catch(_){}}}catch(err){
+  try{
+    const handlerResult=await modalHandler(form);
+    if(handlerResult===false||handlerResult?.ok===false)return;
+    if(changed.length&&auditCtx?.track){
+      pushModificationHistory({
+        type:auditCtx.type||'Autre',entity:auditEntity,date:auditDate,changes,
+        user:currentUser?.email||'Utilisateur',agentId:histAgentId,
+        agentNameValue:histAgent?agentName(histAgent):(auditCtx?.agentName||''),
+        title:auditTitle||auditEntity
+      });
+    }
+  }catch(err){
     console.error('Erreur d’enregistrement du formulaire :',err);
     const msg=err?.message?String(err.message):'Erreur inconnue';
     toast(`Enregistrement impossible : ${msg.slice(0,120)}`);
@@ -3636,7 +3743,7 @@ function bindEvents(){
  $('#prevTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,-7);renderTeamCalendar()};$('#nextTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,7);renderTeamCalendar()};$('#prevTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,-1));renderTeamCalendar()};$('#nextTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,1));renderTeamCalendar()};$('#todayTeamWeek').onclick=()=>{teamWeek=startOfWeek(todayISO());renderTeamCalendar()};$('#teamDateJump').onchange=e=>{teamWeek=startOfWeek(e.target.value);renderTeamCalendar()};$('#prevPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,-7);renderPersonalCalendar()};$('#nextPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,7);renderPersonalCalendar()};$('#todayPersonalWeek').onclick=()=>{personalWeek=startOfWeek(todayISO());renderPersonalCalendar()};
  $('#saveSettings').onclick=saveSettings;const wizardOpen=$('#openAutoReportWizard');if(wizardOpen)wizardOpen.onclick=openAutoReportWizard;const wizardClose=$('#autoReportWizardClose');if(wizardClose)wizardClose.onclick=()=>wizardEl().close();const wizardBack=$('#autoReportWizardBack');if(wizardBack)wizardBack.onclick=()=>{saveWizardStep();autoReportWizardStep=Math.max(0,autoReportWizardStep-1);renderAutoReportWizard()};const wizardNext=$('#autoReportWizardNext');if(wizardNext)wizardNext.onclick=()=>{saveWizardStep();if(autoReportWizardStep===3){wizardEl().close();return}autoReportWizardStep=Math.min(3,autoReportWizardStep+1);renderAutoReportWizard()};document.addEventListener('click',e=>{const p=e.target.closest('[data-wizard-provider]');if(p){autoReportWizardData.provider=p.dataset.wizardProvider;renderAutoReportWizard()}});const sart=$('#sendAutomaticReportTest');if(sart)sart.onclick=sendAutomaticReportTest;function openNotificationCenter(){window.PSTNotificationCenter?.open?.()}
 function closeNotificationCenter(){window.PSTNotificationCenter?.close?.()}
-const chr=$('#changeHistoryReset');if(chr)chr.onclick=()=>{const y=$('#changeHistoryYear'),q=$('#changeHistorySearch');if(y)y.value=activeAcademicYear();if(q)q.value='';renderChangeHistory()};
+const chr=$('#changeHistoryReset');if(chr)chr.onclick=()=>{const y=$('#changeHistoryYear'),t=$('#changeHistoryType'),q=$('#changeHistorySearch');if(y)y.value=activeAcademicYear();if(t)t.value='';if(q)q.value='';renderChangeHistory()};
  $('#archiveNow').onclick=()=>{const made=createWeeklyArchive(false);save();toast(made?'Archive créée':'La semaine précédente est déjà archivée')};$('#exportArchives').onclick=exportArchives;$('#exportBackup').onclick=exportBackup;$('#importBackup').onchange=e=>e.target.files[0]&&importBackup(e.target.files[0]);$('#resetData').onclick=resetData;const rr=$('#restoreReferenceData');if(rr)rr.onclick=restoreReferenceData;const dg=$('#runDiagnostic');if(dg)dg.onclick=runDiagnostic;const sp=$('#supabasePingBtn');if(sp)sp.onclick=manualSupabasePing;$('#resetPeriodicCatalog').onclick=()=>{if(confirm('Restaurer le catalogue par défaut ? Les contrôles personnalisés actuels seront remplacés.')){db.periodic=makePeriodic();save()}};$('#exportCsv').onclick=()=>exportStyledExcel($('#csvModule').value);$('#exportRotationCsv').onclick=()=>exportStyledExcel('rotations');const ewp=$('#exportWeeklyPlans');if(ewp)ewp.onclick=()=>exportStyledExcel('weeklyPlans');
  $('#copyMail').onclick=async()=>{const text=`À : ${$('#mailTo').value}\nCC : ${$('#mailCc').value}\nCCI : ${$('#mailBcc').value}\nObjet : ${$('#mailSubject').value}\n\n${$('#mailMessage').value}`;try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}toast('Message copié')}catch(e){prompt('Copiez le message :',text)}};$('#openMailClient').onclick=openMailClient;
  $$('[data-report-print]').forEach(b=>b.onclick=()=>printReport(b.dataset.reportPrint));$$('[data-report-email]').forEach(b=>b.onclick=()=>prepareEmail(b.dataset.reportEmail));$('#printFullRegister').onclick=()=>printReport('full');$$('[data-print]').forEach(b=>b.onclick=()=>printView(b.dataset.print)); const pc=$('#printCollectivePlanning');if(pc)pc.onclick=generateCollectivePlanningPDF;const pi=$('#printIndividualPlanning');if(pi)pi.onclick=generateIndividualPlanningPDF;
@@ -3645,7 +3752,7 @@ const chr=$('#changeHistoryReset');if(chr)chr.onclick=()=>{const y=$('#changeHis
  document.addEventListener('click',e=>{const b=e.target.closest('[data-delete-standard-period]');if(b){e.preventDefault();e.stopPropagation();deleteStandardSchedulePeriod(b.dataset.deleteStandardPeriod)}});
 
  document.addEventListener('click',e=>{const b=e.target.closest('[data-show-day-info]');if(!b)return;const rec=dayRecord(b.dataset.showDayInfo,b.dataset.date);if(!rec)return;openModal(`Informations — ${agentName(agentById(b.dataset.showDayInfo))} · ${fmtDate(b.dataset.date)}`,`<div class="manual-info-box"><strong>ⓘ Informations / Motif</strong><p>${esc(rec.note||'Aucune information renseignée.')}</p><small>Source : ${rec.source==='manual'?'Saisie manuelle':'Chronotime'}</small></div>`,()=>{});});
- const filterIds=['personalMonth','personalType','personalStatus','agentSearch','agentStatus','rotationAgent','rotationYear','rotationMonth','planningMonth','planningAgent','planningSignal','absenceMonth','absenceAgent','absenceType','absenceStatus','vacationZone','vacationStatus','issueMonth','issueAgent','issueCategory','issueStatus','periodicFamily','periodicStatus','periodicBuilding','cleanMonth','cleanBuilding','cleanRoomType','cleanStatus','cleaningGuideType','maintenanceStatus','maintenancePriority','maintenanceFamily','requestStatus','requestType','workStatus','workType','meetingMonth','meetingType','noteCategory','notePriority','noteStatus','noteSearch','documentCategory','documentSearch','archiveYear','archiveSearch','changeHistoryYear','changeHistorySearch','importArchiveType','importArchiveSearch'];for(const id of filterIds){const e=document.getElementById(id);if(e)e.addEventListener(e.tagName==='INPUT'&&e.type==='text'?'input':'change',()=>{if(id==='cleaningGuideType')renderCleaningGuide();else if(id.startsWith('personal'))renderPersonal();else if(id.startsWith('agent'))renderAgents();else if(id.startsWith('rotation'))renderRotations();else if(id.startsWith('planning'))renderPlanning();else if(id.startsWith('absence'))renderAbsences();else if(id.startsWith('vacation'))renderVacations();else if(id.startsWith('issue'))renderIssues();else if(id.startsWith('periodic'))renderPeriodic();else if(id.startsWith('clean'))renderCleaning();else if(id.startsWith('maintenance'))renderMaintenance();else if(id.startsWith('request'))renderRequests();else if(id.startsWith('work'))renderWorks();else if(id.startsWith('meeting'))renderMeetings();else if(id.startsWith('note'))renderNotes();else if(id.startsWith('document'))renderDocuments();else if(id.startsWith('archive')||id.startsWith('importArchive'))renderArchives()})}
+ const filterIds=['personalMonth','personalType','personalStatus','agentSearch','agentStatus','rotationAgent','rotationYear','rotationMonth','planningMonth','planningAgent','planningSignal','absenceMonth','absenceAgent','absenceType','absenceStatus','vacationZone','vacationStatus','issueMonth','issueAgent','issueCategory','issueStatus','periodicFamily','periodicStatus','periodicBuilding','cleanMonth','cleanBuilding','cleanRoomType','cleanStatus','cleaningGuideType','maintenanceStatus','maintenancePriority','maintenanceFamily','requestStatus','requestType','workStatus','workType','meetingMonth','meetingType','noteCategory','notePriority','noteStatus','noteSearch','documentCategory','documentSearch','archiveYear','archiveSearch','changeHistoryYear','changeHistoryType','changeHistorySearch','importArchiveType','importArchiveSearch'];for(const id of filterIds){const e=document.getElementById(id);if(e)e.addEventListener(e.tagName==='INPUT'&&e.type==='text'?'input':'change',()=>{if(id==='cleaningGuideType')renderCleaningGuide();else if(id.startsWith('personal'))renderPersonal();else if(id.startsWith('agent'))renderAgents();else if(id.startsWith('rotation'))renderRotations();else if(id.startsWith('planning'))renderPlanning();else if(id.startsWith('absence'))renderAbsences();else if(id.startsWith('vacation'))renderVacations();else if(id.startsWith('issue'))renderIssues();else if(id.startsWith('periodic'))renderPeriodic();else if(id.startsWith('clean'))renderCleaning();else if(id.startsWith('maintenance'))renderMaintenance();else if(id.startsWith('request'))renderRequests();else if(id.startsWith('work'))renderWorks();else if(id.startsWith('meeting'))renderMeetings();else if(id.startsWith('note'))renderNotes();else if(id.startsWith('document'))renderDocuments();else if(id.startsWith('archive')||id.startsWith('importArchive'))renderArchives()})}
  document.addEventListener('keydown',e=>{const go=e.target.closest?.('#dashboard [data-go]');if(go&&(e.key==='Enter'||e.key===' ')){e.preventDefault();dashboardShortcut(go.dataset.go)}});
  document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){if(go.closest('#dashboard'))dashboardShortcut(go.dataset.go);else setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ae=e.target.closest('[data-agenda-source]');if(ae){
  const source=ae.dataset.agendaSource,id=ae.dataset.agendaId;

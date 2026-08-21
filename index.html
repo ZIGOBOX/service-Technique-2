@@ -1022,12 +1022,19 @@
         </div>
         <div class="filters">
           <select id="changeHistoryYear"><option value="">Toutes les années scolaires</option></select>
-          <input id="changeHistorySearch" placeholder="Rechercher un agent, une date, un champ ou une valeur">
+          <select id="changeHistoryType">
+            <option value="">Tous les types</option>
+            <option value="Agent">👷 Agents</option>
+            <option value="Intervention">🔧 Interventions</option>
+            <option value="Contrôle ménage">🧹 Contrôles ménage</option>
+            <option value="Demande">📋 Demandes</option>
+          </select>
+          <input id="changeHistorySearch" placeholder="Rechercher un agent, une intervention, une date, un champ ou une valeur">
           <button type="button" class="ghost" id="changeHistoryReset">Réinitialiser</button>
         </div>
         <div id="changeHistorySummary" class="summary-grid"></div>
         <div class="table-wrap"><table>
-          <thead><tr><th>Modification</th><th>Date concernée</th><th>Agent / saisie</th><th>Champ</th><th>Avant</th><th>Après</th><th>Utilisateur</th></tr></thead>
+          <thead><tr><th>Date / heure modification</th><th>Type</th><th>Date concernée</th><th>Élément concerné</th><th>Champ modifié</th><th>Avant</th><th>Après</th><th>Utilisateur</th></tr></thead>
           <tbody id="changeHistoryTable"></tbody>
         </table></div>
       </article>
