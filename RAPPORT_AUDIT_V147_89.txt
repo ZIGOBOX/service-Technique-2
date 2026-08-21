@@ -1,0 +1,21 @@
+AUDIT V147.89 — Cohérence formulaire agent / affichages / impressions
+
+Vérifié et corrigé :
+- Saisie manuelle agent : type, dates, statut, théorique, réel, pause, heures +/-, remplacement, motif.
+- Priorité des saisies manuelles sur la reconstruction Chronotime.
+- Planning principal : utilise l'horaire réel uniquement lorsqu'il diffère du théorique.
+- Personnel > Mon calendrier : horaire réel différent + nom agent + motif.
+- Rapport journalier : horaire applicable + motif.
+- Rapport hebdomadaire : horaire applicable + motif.
+- Planning collectif imprimable : utilise désormais planningDisplayFor, donc l'horaire réel différent.
+- Planning individuel imprimable : affiche Réel + Théorique lorsqu'ils diffèrent, et Observation/motif.
+- Rapport absences : motif/note déjà présent.
+- Export Excel agentDays : prévu, réel, pause, heures +/-, statut et note déjà présents.
+- Rapport équipe : les calculs Réalisé/Écart utilisent dayHours(dayInfo), donc le réel est pris en compte.
+
+Contrôles techniques :
+- Syntaxe de tous les fichiers JavaScript.
+- Cohérence des fonctions de rendu et des générateurs d'impression liés au personnel.
+
+Limite :
+- La connexion Supabase réelle et l'impression physique depuis le navigateur/téléphone ne peuvent pas être reproduites dans cet environnement ; le code de sauvegarde/relecture et les générateurs d'impression ont été contrôlés statiquement.

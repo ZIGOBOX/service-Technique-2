@@ -1,0 +1,7 @@
+V147.87 — Correction bouton Enregistrer
+
+- Correction du blocage du bouton Enregistrer dans la saisie planning agent.
+- Le champ « Informations / Motif » reste disponible et enregistré.
+- Le motif n'est plus obligatoire : un champ vide ne bloque plus Congé, RTT, Maladie, Présence ou changement d'horaire.
+- Les motifs renseignés restent visibles dans Personnel > Mon calendrier et dans les comparaisons Chronotime.
+- Vérification de syntaxe de tous les fichiers JavaScript incluse.

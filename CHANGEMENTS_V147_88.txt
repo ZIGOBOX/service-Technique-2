@@ -1,0 +1,6 @@
+V147.88 — Correction des modifications manuelles agents
+
+- Une saisie manuelle n'est plus écrasée par Chronotime après sauvegarde.
+- La protection inclut Présence + horaire réel, heures ajoutées/retirées, RTT, congés, maladie.
+- Chronotime ne remplace une correction manuelle qu'après validation explicite dans l'écran des différences.
+- Après enregistrement, les vues Planning, Absences, Personnel > Mon calendrier et Agents sont rafraîchies.
