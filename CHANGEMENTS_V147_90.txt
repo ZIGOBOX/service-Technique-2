@@ -1,0 +1,9 @@
+V147.90 — Sécurisation bouton Enregistrer du planning agent
+
+- Le bouton Enregistrer ne dépend plus de la réponse Supabase.
+- La saisie est écrite localement immédiatement, puis affichée dans l'application.
+- Le formulaire se ferme immédiatement après validation locale.
+- Supabase est synchronisé ensuite en tâche différée.
+- En cas de problème réseau/Supabase, la modification reste conservée localement.
+- Les vues Planning, Absences, Personnel > Mon calendrier et Agents sont rafraîchies immédiatement.
+- Les corrections Chronotime de V147.88/V147.89 restent conservées.

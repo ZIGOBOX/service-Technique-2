@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.89';
+const APP_VERSION='147.90';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1522,7 +1522,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.89 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.90 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1588,7 +1588,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.89 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.90 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1866,7 +1866,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.89 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.90 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -1902,15 +1902,37 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    d=addDays(d,1);
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
- const persisted=await window.PSTMainState.persistStateDirect({
-   label:'Planning agent',
-   verify:remote=>expectedDays.every(exp=>{
-     const got=(remote.agentDays||[]).find(r=>String(r.id)===String(exp.id));
-     return recordMatchesExpected(exp,got);
-   })
+
+ // V147.90 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
+ localDirty=true;
+ clearTheoreticalScheduleCache();
+ try{writeMirror()}catch(_){}
+ try{writeOfflinePending('modification planning agent à synchroniser')}catch(_){}
+ refreshCollectionView('agentDays');
+ closeModal();
+ toast(`✅ ${added} jour(s) enregistré(s)`);
+
+ // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
+ Promise.resolve().then(async()=>{
+   try{
+     const persisted=await window.PSTMainState.persistStateDirect({
+       label:'Planning agent',
+       verify:remote=>expectedDays.every(exp=>{
+         const got=(remote.agentDays||[]).find(r=>String(r.id)===String(exp.id));
+         return recordMatchesExpected(exp,got);
+       })
+     });
+     if(persisted?.ok){
+       if(persisted.offline)setSaveState('Planning agent enregistré localement — synchronisation en attente','local');
+     }else{
+       setSaveState('Planning agent conservé localement — synchronisation à reprendre','local');
+     }
+   }catch(error){
+     console.error('Synchronisation planning agent différée',error);
+     setSaveState('Planning agent conservé localement — synchronisation à reprendre','local');
+   }
  });
- if(!persisted?.ok){toast('⚠️ Planning agent non confirmé — le formulaire reste ouvert');return;}
- refreshCollectionView('agentDays');closeModal();toast(persisted.offline?`🟠 ${added} jour(s) enregistré(s) localement — synchronisation en attente`:`✅ ${added} jour(s) enregistré(s)`)},{onDelete:old?()=>{if(!confirm('Supprimer cette saisie ou toute la période associée ?'))return;if(periodId)db.agentDays=db.agentDays.filter(r=>r.periodId!==periodId);else db.agentDays=db.agentDays.filter(r=>r.id!==old.id);closeModal();save();toast('Saisie supprimée')}:null});
+ return {ok:true};},{onDelete:old?()=>{if(!confirm('Supprimer cette saisie ou toute la période associée ?'))return;if(periodId)db.agentDays=db.agentDays.filter(r=>r.periodId!==periodId);else db.agentDays=db.agentDays.filter(r=>r.id!==old.id);closeModal();save();toast('Saisie supprimée')}:null});
  function refreshTheoretical(force=false){
    const f=$('#modalForm');if(!f)return;
    const aid=f.elements.agentId.value, d=f.elements.dateFrom.value||todayISO(), currentType=f.elements.dayType.value||'Présence', sc=resolvedTheoreticalSchedule(aid,d,currentType);
@@ -2254,7 +2276,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.89 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.90 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -3529,7 +3551,7 @@ function bindEvents(){
   if(pastDates.length&&changed.length&&!confirm('⚠️ Cette donnée concerne une date passée.\n\nLa modification sera enregistrée dans l’historique.\n\nContinuer ?'))return;
   const oldBtnText=btn.textContent;
   btn.disabled=true;btn.textContent='Enregistrement…';
-  try{const handlerResult=await modalHandler(form);if(handlerResult===false||handlerResult?.ok===false)return;if(pastDates.length&&changed.length){db.changeHistory=db.changeHistory||[];db.changeHistory.push({id:uid(),date:new Date().toISOString(),title:modalAuditTitle||'Modification d’une donnée passée',pastDates:[...new Set(pastDates)],changes:changed,user:currentUser?.email||'Utilisateur'});save()}}catch(err){
+  try{const handlerResult=await modalHandler(form);if(handlerResult===false||handlerResult?.ok===false)return;if(pastDates.length&&changed.length){db.changeHistory=db.changeHistory||[];db.changeHistory.push({id:uid(),date:new Date().toISOString(),title:modalAuditTitle||'Modification d’une donnée passée',pastDates:[...new Set(pastDates)],changes:changed,user:currentUser?.email||'Utilisateur'});try{writeMirror()}catch(_){}}}catch(err){
     console.error('Erreur d’enregistrement du formulaire :',err);
     const msg=err?.message?String(err.message):'Erreur inconnue';
     toast(`Enregistrement impossible : ${msg.slice(0,120)}`);
