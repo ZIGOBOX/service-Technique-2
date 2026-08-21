@@ -1,0 +1,14 @@
+Pilotage Service Technique — V147.80 — 21/08/2026
+
+ANNÉE SCOLAIRE PILOTÉE PAR LE TABLEAU DE BORD
+- Le sélecteur « Année scolaire » du tableau de bord devient la référence unique de l’application.
+- À l’ouverture, l’application se positionne automatiquement sur l’année scolaire correspondant à la date du jour (1er septembre → 31 août).
+- Si l’utilisateur change l’année scolaire depuis le tableau de bord, tous les filtres temporels et vues de l’application sont resynchronisés sur cette année.
+- Le changement déclenche le rafraîchissement global des modules et rapports.
+- Le champ « Année scolaire » des paramètres devient informatif/lecture seule afin d’éviter deux réglages contradictoires.
+- La valeur active reste inscrite dans les réglages internes pour compatibilité avec les exports, archives, imports et synchronisation Supabase.
+- Aucune donnée des autres années scolaires n’est supprimée.
+
+BASE
+- Reprend intégralement la V147.79 et son dashboard Contrôle ménage.
+- Version/cache : 147.80.

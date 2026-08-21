@@ -1,0 +1,10 @@
+Pilotage Service Technique — V147.79 — 21/08/2026
+
+Base : V147.78 complète avec dashboard Contrôle ménage.
+
+NOUVEAU
+À chaque ouverture, l’application se recale automatiquement sur la date du jour et sur l’année scolaire correspondant à cette date.
+Règle utilisée : 1er septembre → 31 août.
+Les données historiques sont conservées.
+
+Installation GitHub : remplacer les fichiers présents par ceux de ce ZIP, en conservant également les fichiers externes déjà présents dans le dépôt et non contenus dans cette base.

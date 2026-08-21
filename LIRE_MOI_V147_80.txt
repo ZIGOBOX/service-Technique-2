@@ -1,0 +1,8 @@
+PILOTAGE SERVICE TECHNIQUE — V147.80
+
+Le sélecteur « Année scolaire » présent sur le tableau de bord est désormais le sélecteur principal de toute l’application.
+
+Au démarrage : année scolaire de la date du jour.
+Après sélection dans le dashboard : cette année devient immédiatement le contexte actif pour les vues, filtres, rapports, historiques et nouveaux enregistrements qui utilisent l’année scolaire active.
+
+Le champ Année scolaire des Paramètres est volontairement en lecture seule pour éviter un réglage différent de celui du tableau de bord.
