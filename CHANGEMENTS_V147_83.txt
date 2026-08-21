@@ -1,0 +1,11 @@
+Pilotage Service Technique — V147.83
+
+- Ajout d’un encadré Informations / Motif dans la saisie d’une journée agent.
+- Motif obligatoire pour RTT/congé/maladie/autre type, ajout/retrait d’heures ou horaire réel saisi.
+- Icône ⓘ dans le planning pour relire le motif d’une modification manuelle.
+- Nouvel import Chronotime : comparaison avec les données actuelles de l’application.
+- Chaque journée différente exige une décision : Garder actuel ou Appliquer Chronotime.
+- Boutons Tout garder / Tout appliquer disponibles, mais chaque conflit doit être décidé avant validation.
+- Les motifs manuels sont affichés dans l’écran de comparaison Chronotime.
+- Une saisie manuelle conservée n’est jamais écrasée silencieusement.
+- Si Chronotime est appliqué, la journée devient la nouvelle référence Chronotime.

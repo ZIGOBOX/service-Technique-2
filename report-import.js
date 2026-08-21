@@ -302,8 +302,66 @@
     if(canonical[code])return canonical[code];
     return localMap[raw]||localMap[code]||db.settings.chronoCodeMap?.[raw]||db.settings.chronoCodeMap?.[code]||'';
   }
-  function chronoChanges(p,aid,localMap={}){if(!p||!aid)return[];const out=[];for(const r of p.records||[]){const next=mappedChronoType(r,localMap);if(!next)continue;const old=(db.chronotimeDaily||[]).find(x=>String(x.agentId)===String(aid)&&x.date===r.date&&x.academicYear===p.academicYear);const prev=old?.dayType||'';if(prev&&prev!==next)out.push({date:r.date,oldType:prev,newType:next});}return out}
-  function renderChronoChanges(p){const box=document.getElementById('chronoChangePreview');if(!box)return;const aid=document.getElementById('chronoAgentSelect')?.value||'';const local={};document.querySelectorAll('[data-chrono-code]').forEach(el=>{if(el.value)local[el.dataset.chronoCode]=el.value});const changes=chronoChanges(p,aid,local);if(!aid){box.innerHTML='<div class="import-message warning">Choisissez l’agent pour comparer avec son précédent Chronotime.</div>';return}if(!changes.length){box.innerHTML='<div class="import-message ok">✅ Aucune modification de type de journée par rapport au précédent Chronotime.</div>';return}box.innerHTML=`<div class="import-message warning"><strong>⚠ ${changes.length} modification${changes.length>1?'s':''} Chronotime détectée${changes.length>1?'s':''}</strong><br>Le nouveau PDF fera foi après validation.</div><div class="table-wrap chrono-change-table"><table><thead><tr><th>Date</th><th>Ancien type de journée Chronotime</th><th>Nouveau type de journée Chronotime</th></tr></thead><tbody>${changes.map(x=>`<tr><td>${esc(fmtDate(x.date))}</td><td>${esc(x.oldType)}</td><td><strong>${esc(x.newType)}</strong></td></tr>`).join('')}</tbody></table></div>`}
+  function chronoCurrentAppValue(aid,r,localMap={}){
+    const next=mappedChronoType(r,localMap)||(r.duration!=null?'Présence':'');
+    const current=(db.agentDays||[]).find(x=>String(x.agentId)===String(aid)&&x.date===r.date);
+    const currentType=current?.dayType||'Présence';
+    const manual=current&&current.source!=='chronotime'&&!/Chronotime/i.test(String(current.note||''));
+    const manualHours=manual&&(Math.abs(Number(current.overtime||0))>0.0001||!!current.actualStart||!!current.actualEnd);
+    let currentMinutes=null;
+    if(manualHours&&typeof dayHours==='function'){
+      try{currentMinutes=Math.round(Number(dayHours(current).total||0)*60)}catch(_){currentMinutes=null}
+    }
+    const typeDiff=!!next&&currentType!==next;
+    const hoursDiff=manualHours&&r.duration!=null&&currentMinutes!=null&&Math.abs(currentMinutes-Number(r.duration))>=1;
+    return {next,current,currentType,manual,manualHours,currentMinutes,typeDiff,hoursDiff};
+  }
+  function chronoChanges(p,aid,localMap={}){
+    if(!p||!aid)return[];
+    const out=[];
+    for(const r of p.records||[]){
+      const c=chronoCurrentAppValue(aid,r,localMap);
+      if(!c.next)continue;
+      // Toute différence entre l'application et le nouveau PDF doit être validée.
+      if(c.typeDiff||c.hoursDiff){
+        out.push({
+          date:r.date,oldType:c.currentType,newType:c.next,
+          oldMinutes:c.currentMinutes,newMinutes:r.duration,
+          manual:c.manual,note:c.current?.note||'',
+          reason:c.typeDiff&&c.hoursDiff?'Type + durée':c.typeDiff?'Type de journée':'Durée / heures'
+        });
+      }
+    }
+    return out;
+  }
+  function renderChronoChanges(p){
+    const box=document.getElementById('chronoChangePreview');if(!box)return;
+    const aid=document.getElementById('chronoAgentSelect')?.value||'';
+    const local={};document.querySelectorAll('[data-chrono-code]').forEach(el=>{if(el.value)local[el.dataset.chronoCode]=el.value});
+    const changes=chronoChanges(p,aid,local);
+    if(!aid){box.innerHTML='<div class="import-message warning">Choisissez l’agent pour comparer le nouveau PDF avec les journées actuellement enregistrées dans l’application.</div>';return}
+    if(!changes.length){box.innerHTML='<div class="import-message ok">✅ Aucune différence avec les journées actuellement enregistrées dans l’application.</div>';return}
+    box.innerHTML=`<div class="import-message warning"><strong>⚠ ${changes.length} différence${changes.length>1?'s':''} à valider</strong><br>Aucune de ces journées ne sera modifiée sans votre choix.</div>
+      <div class="chrono-bulk-actions"><button type="button" class="ghost small" id="chronoKeepAll">Tout garder dans l’application</button><button type="button" class="ghost small" id="chronoApplyAll">Tout appliquer depuis Chronotime</button></div>
+      <div class="table-wrap chrono-change-table"><table><thead><tr><th>Date</th><th>Application</th><th>Nouveau Chronotime</th><th>Informations</th><th>Décision obligatoire</th></tr></thead><tbody>${changes.map(x=>{
+        const appHours=x.oldMinutes!=null?` · ${(x.oldMinutes/60).toLocaleString('fr-FR',{maximumFractionDigits:2})} h`:'';
+        const chronoHours=x.newMinutes!=null?` · ${(Number(x.newMinutes)/60).toLocaleString('fr-FR',{maximumFractionDigits:2})} h`:'';
+        return `<tr data-chrono-conflict-date="${esc(x.date)}"><td>${esc(fmtDate(x.date))}<small>${esc(x.reason)}</small></td><td><strong>${esc(x.oldType)}</strong>${appHours}<small>${x.manual?'✏️ Saisie manuelle':'Donnée actuelle'}</small></td><td><strong>${esc(x.newType)}</strong>${chronoHours}</td><td>${x.note?`<span class="chrono-info-note">ⓘ ${esc(x.note)}</span>`:'—'}</td><td><label class="chrono-choice"><input type="radio" name="chronoChoice_${esc(x.date)}" value="keep"> Garder actuel</label><label class="chrono-choice"><input type="radio" name="chronoChoice_${esc(x.date)}" value="apply"> Appliquer Chronotime</label></td></tr>`;
+      }).join('')}</tbody></table></div>`;
+    const setAll=value=>box.querySelectorAll('tr[data-chrono-conflict-date]').forEach(tr=>{const i=tr.querySelector(`input[value="${value}"]`);if(i)i.checked=true});
+    document.getElementById('chronoKeepAll')?.addEventListener('click',()=>setAll('keep'));
+    document.getElementById('chronoApplyAll')?.addEventListener('click',()=>setAll('apply'));
+  }
+  function chronoConflictDecisions(p,aid){
+    const local={};document.querySelectorAll('[data-chrono-code]').forEach(el=>{if(el.value)local[el.dataset.chronoCode]=el.value});
+    const changes=chronoChanges(p,aid,local),decisions={};
+    for(const x of changes){
+      const choice=document.querySelector(`input[name="chronoChoice_${CSS.escape(x.date)}"]:checked`)?.value||'';
+      if(!choice)return {ok:false,missing:x,changes,decisions};
+      decisions[x.date]=choice;
+    }
+    return {ok:true,changes,decisions};
+  }
 
   function renderHistory(){ensureData();const box=document.getElementById('pdfImportHistory');if(!box)return;const arr=[...db.pdfImports].filter(x=>x.kind==='chronotime').sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));box.innerHTML=arr.length?`<table><thead><tr><th>Date</th><th>Type</th><th>Fichier</th><th>Agent / organisme</th><th>Année</th><th>Résumé</th></tr></thead><tbody>${arr.map(x=>`<tr><td>${esc(fmtDateTime(x.createdAt))}</td><td>${esc(x.kind==='chronotime'?'Chronotime':'Rapport contrôle')}</td><td>${esc(x.fileName||'')}</td><td>${esc(x.subject||'')}</td><td>${esc(x.academicYear||'—')}</td><td>${esc(x.summary||'')}</td></tr>`).join('')}</tbody></table>`:'<div class="empty-state">Aucune injection PDF.</div>'}
   function currentAcademic(){return typeof activeAcademicYear==='function'?activeAcademicYear():academicYearFor(todayISO())}
@@ -329,6 +387,7 @@
   }
   async function applyChrono(){
     const p=chronoPending;if(!p)return;if(p.academicYear&&p.academicYear!==currentAcademic()){if(typeof setAcademicYearMismatch==='function')setAcademicYearMismatch(p.academicYear,'Document Chronotime');toast(`Sélectionnez l’année ${p.academicYear} avant l’injection`);return}const aid=document.getElementById('chronoAgentSelect')?.value;if(!aid){toast('Choisissez l’agent concerné');return}
+    const conflictReview=chronoConflictDecisions(p,aid);if(!conflictReview.ok){toast(`⚠ Décision obligatoire pour le ${fmtDate(conflictReview.missing.date)} : Garder actuel ou Appliquer Chronotime.`);document.querySelector(`[data-chrono-conflict-date="${CSS.escape(conflictReview.missing.date)}"]`)?.scrollIntoView({behavior:'smooth',block:'center'});return}
     if(p.expectedDays&&!p.calendarComplete&&!confirm(`Le calendrier n’est pas complet (${p.records.length}/${p.expectedDays} jours). Voulez-vous vraiment l’injecter ?`))return;
     if(!p.informationComplete&&!confirm(`Certaines informations annuelles n’ont pas pu être récupérées : ${(p.missingInfo||[]).join(', ')}. Elles seront clairement signalées comme manquantes. Voulez-vous continuer ?`))return
     const chronoDup=window.PSTImportDuplicates?.inspect?await window.PSTImportDuplicates.inspect(p.file):{fileHash:await fileFingerprint(p.file),matches:[]};if(!p.duplicateConfirmed&&chronoDup.matches?.length&&window.PSTImportDuplicates?.confirm&&!window.PSTImportDuplicates.confirm(chronoDup))return;
@@ -343,9 +402,18 @@
       const daily={id:uid(),agentId:aid,date:r.date,value:r.value,durationMinutes:r.duration,dayType:mapped||'',academicYear:p.academicYear,sourceFile:p.file.name,importedAt:new Date().toISOString()};
       const oldDaily=db.chronotimeDaily.find(x=>String(x.agentId)===String(aid)&&x.date===r.date&&x.academicYear===p.academicYear);if(oldDaily)Object.assign(oldDaily,daily,{id:oldDaily.id});else db.chronotimeDaily.push(daily);
       if(r.duration!=null)durations++;else absences++;
-      // Le dernier PDF Chronotime fait toujours foi pour le TYPE DE JOURNÉE.
-      // Les horaires saisis / issus du Pilotage des horaires ne sont jamais écrasés ici.
-      if(mapped){let day=db.agentDays.find(x=>String(x.agentId)===String(aid)&&x.date===r.date);if(!day){day={id:uid(),agentId:aid,date:r.date};db.agentDays.push(day)}day.dayType=mapped;day.status='Validée';day.note=`Type de journée issu du dernier Chronotime : ${p.file.name}`;day.source='chronotime';day.chronotimeType=mapped;day.chronotimeImportedAt=new Date().toISOString();if(['Repos','Jour férié'].includes(mapped))day.noReplacementNeeded=true;else if(day.noReplacementNeeded&&day.source==='chronotime')day.noReplacementNeeded=false;}
+      // V147.83 — une différence avec l'application est soumise à validation journée par journée.
+      const nextType=mapped||(r.duration!=null?'Présence':'');
+      const decision=conflictReview.decisions[r.date]||'apply';
+      let day=db.agentDays.find(x=>String(x.agentId)===String(aid)&&x.date===r.date);
+      if(nextType&&decision==='apply'){
+        if(!day){day={id:uid(),agentId:aid,date:r.date};db.agentDays.push(day)}
+        day.dayType=nextType;day.status='Validée';day.note=`Type de journée issu du dernier Chronotime : ${p.file.name}`;day.source='chronotime';day.chronotimeType=nextType;day.chronotimeImportedAt=new Date().toISOString();
+        if(nextType==='Présence'){day.actualStart='';day.actualEnd='';day.overtime=0;day.noReplacementNeeded=false;day.replacement='';}
+        else if(['Repos','Jour férié'].includes(nextType))day.noReplacementNeeded=true;
+        else day.noReplacementNeeded=false;
+      }
+      // decision==='keep' : on conserve intégralement la saisie actuelle, y compris son motif.
     }
     const annual={id:uid(),agentId:aid,academicYear:p.academicYear,periodStart:p.start,periodEnd:p.end,presenceMinutes:p.totals.presence,referenceMinutes:p.totals.reference,deltaMinutes:p.totals.delta,leaveTakenDays:p.totals.leaveTakenDays,calendarCoverage:p.coverage,informationCoverage:p.infoCoverage,missingInfo:[...(p.missingInfo||[])],codeCounts:{...(p.codeCounts||{})},monthly:p.monthly||{},totalSources:p.totalSources||{},fileName:p.file.name,attachmentId:attachment?.id||'',injectedAt:new Date().toISOString()};
     const oldAnnual=db.chronotimeAnnual.find(x=>String(x.agentId)===String(aid)&&x.academicYear===p.academicYear);if(oldAnnual)Object.assign(oldAnnual,annual,{id:oldAnnual.id});else db.chronotimeAnnual.push(annual);
