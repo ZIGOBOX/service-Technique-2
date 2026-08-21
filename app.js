@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.95';
+const APP_VERSION='147.96';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -853,7 +853,10 @@ window.addEventListener('offline',()=>{if(currentUser){writeMirror();if(localDir
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser){if(navigator.onLine){if(localDirty||readOfflinePending())syncOfflinePending();else pollCloudChanges()}else writeMirror()}});
 function nextNo(type,prefix){db.settings.counters[type]=(db.settings.counters[type]||0)+1;return `${prefix}-${new Date().getFullYear()}-${String(db.settings.counters[type]).padStart(4,'0')}`}
 function toast(msg){const e=$('#toast');e.textContent=msg;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2200)}
-function byId(type,id){return db[type]?.find(x=>x.id===id)} function agentById(id){return db.agents.find(a=>a.id===id)} function agentName(a){return a?`${a.firstName||''} ${a.lastName||''}`.trim():'Équipe'}
+function byId(type,id){return db[type]?.find(x=>x.id===id)} function agentById(id){
+ if(id===null||id===undefined||id==='')return null;
+ return (db.agents||[]).find(a=>String(a.id)===String(id))||null;
+} function agentName(a){return a?`${a.firstName||''} ${a.lastName||''}`.trim():'Équipe'}
 function agentWorkdays(agentId){const a=agentById(agentId);return Array.isArray(a?.workdays)&&a.workdays.length?a.workdays.map(Number):[1,2,3,4,5]}
 function agentOptions(v='',team=false){return `${team?'<option value="">Toute l’équipe</option>':'<option value="">Choisir un agent</option>'}${selectOptions(db.agents.filter(a=>a.status!=='Inactif'||a.id===v),v,agentName,a=>a.id)}`}
 
@@ -1522,7 +1525,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.95 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.96 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1588,7 +1591,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.95 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.96 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1866,7 +1869,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.95 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.96 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -1903,7 +1906,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.95 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
+ // V147.96 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
  localDirty=true;
  clearTheoreticalScheduleCache();
  try{writeMirror()}catch(_){}
@@ -2289,7 +2292,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.95 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.96 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -2902,11 +2905,13 @@ function changeHistoryType(entry){
  return 'Autre';
 }
 function changeHistoryEntity(entry){
- if(entry?.entity)return String(entry.entity);
  const type=changeHistoryType(entry);
  if(type==='Agent'){
-   const a=changeHistoryAgentName(entry);if(a)return a;
+   const a=changeHistoryAgentName(entry);
+   if(a)return a;
+   if(entry?.entity && !['Agent','Équipe','Element','Élément'].includes(String(entry.entity)))return String(entry.entity);
  }
+ if(entry?.entity)return String(entry.entity);
  return String(entry?.title||'Modification');
 }
 function changeHistoryAcademicYear(entry){

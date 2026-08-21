@@ -1,0 +1,6 @@
+V147.96 — Correction définitive du nom des agents dans l'historique
+
+- Correction de agentById : comparaison des identifiants en texte pour retrouver l'agent même si l'ID vient d'un formulaire HTML.
+- Archives > Récapitulatif : pour Type = Agent, le nom complet est désormais prioritaire dans « Élément concerné ».
+- Les anciennes lignes d'historique peuvent également récupérer le nom à partir de agentId.
+- Aucun changement aux règles sur les suppressions.
