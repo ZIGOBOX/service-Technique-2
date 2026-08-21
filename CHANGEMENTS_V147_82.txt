@@ -1,0 +1,37 @@
+Pilotage Service Technique — V147.82 — AUDIT COMPLET — 21/08/2026
+
+CORRECTIONS PRIORITAIRES
+- Congés / RTT / Maladie : priorité explicite aux saisies manuelles sur les imports Chronotime en cas d'ancien doublon.
+- Les saisies Refusées / Annulées ne masquent plus le planning théorique dans les calendriers.
+- Une saisie agent reçoit un horodatage de modification et son année scolaire réelle.
+- Si Supabase ou Internet est momentanément indisponible, la saisie sensible est conservée localement et mise en attente de synchronisation au lieu d'être perdue.
+- Le formulaire indique clairement quand l'enregistrement est local/en attente de synchronisation.
+
+ANNEE SCOLAIRE = CONTEXTE MAITRE
+- Au démarrage : date du jour + année scolaire correspondant au jour.
+- Le sélecteur du dashboard reste libre ensuite.
+- L'année choisie pilote aussi les listes Maintenance, Demandes direction, Chantiers/GPA, Notes, Documents, Vacances, Roulements et horaires annuels.
+- Les vues mensuelles/journalières existantes restent navigables comme avant.
+- Le dashboard filtre les indicateurs métier sur l'année scolaire choisie.
+- Si une année historique est sélectionnée, le KPI de présence n'affiche pas faussement « présents aujourd'hui ».
+
+COHERENCE DES FICHIERS
+- Ajout du chemin assets/logo-service-technique.png réellement attendu par index.html et app.js.
+- Cache des scripts/styles forcé en V147.82.
+- Valeur initiale de l'année scolaire rendue dynamique au lieu d'être codée en dur sur 2026-2027.
+
+AUDIT STATIQUE EFFECTUE
+- Syntaxe de tous les fichiers JavaScript.
+- Absence d'ID HTML dupliqué.
+- Présence des fichiers locaux appelés par index.html.
+- Contrôle des principaux formulaires CRUD et de leur câblage.
+- Contrôle du flux saisie agent -> mémoire -> Supabase/local -> relecture -> rendu.
+- Contrôle des filtres année/mois et des modules principaux.
+
+LIMITATION DU TEST
+- L'audit peut valider le code, les dépendances locales et les parcours programmatiques, mais ne peut pas simuler ici une authentification Supabase réelle ni garantir le comportement réseau du compte GitHub/Supabase sans exécution avec les identifiants de l'utilisateur.
+
+CORRECTIONS SUPPLEMENTAIRES TROUVEES AU SECOND AUDIT
+- Archives : correction du filtre qui comparait parfois une année scolaire (ex. 2025-2026) à une année civile (ex. 2025).
+- Dashboard : urgences et retards filtrés sur l'année scolaire active.
+- Les anciennes archives restent accessibles sans modification de leur contenu.

@@ -1,0 +1,10 @@
+V147.82 — PAQUET GITHUB ALLEGE
+
+Ce dossier contient uniquement les fichiers nécessaires à la version V147.82 et les documents de contrôle utiles.
+Il est volontairement inférieur à 100 fichiers pour permettre l'envoi depuis l'interface web GitHub.
+
+IMPORTANT :
+- Décompresser ce ZIP avant l'envoi sur GitHub.
+- Envoyer le CONTENU du dossier, pas le ZIP lui-même.
+- Conserver le dossier assets avec logo-service-technique.png à l'intérieur.
+- Les anciens fichiers CHANGEMENTS déjà présents sur GitHub peuvent rester : ils n'empêchent pas l'application de fonctionner.

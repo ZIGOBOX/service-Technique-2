@@ -1,0 +1,69 @@
+RAPPORT D'AUDIT COMPLET — PILOTAGE SERVICE TECHNIQUE V147.82
+Date : 21/08/2026
+Base auditée : ZIP complet téléchargé depuis le dépôt GitHub service-Technique-2-main.
+
+1. INTEGRITE DU DEPOT
+- 109 fichiers dans le dépôt source ; 111 fichiers dans la version corrigée (ajout du chemin logo attendu + rapport d'audit).
+- Tous les fichiers JavaScript présents passent le contrôle de syntaxe Node.js.
+- Aucun identifiant HTML (id) dupliqué dans index.html.
+- Toutes les ressources locales statiques appelées par index.html existent dans la version corrigée.
+- Le chemin assets/logo-service-technique.png attendu par index.html et app.js existe maintenant réellement.
+
+2. SAUVEGARDE / SUPABASE
+- Vérification du flux principal : état en mémoire -> écriture Supabase -> relecture -> vérification -> remplacement de l'état local.
+- Les formulaires sensibles utilisent une relecture de contrôle après écriture.
+- Correction : en l'absence d'Internet/Supabase, une saisie sensible est conservée localement et mise en attente de synchronisation au lieu d'être considérée comme perdue.
+- Les erreurs réseau restent visibles dans l'état de synchronisation.
+
+3. PLANNING AGENTS / CONGES / RTT / MALADIE
+- Vérification du formulaire de saisie planning, période Du/Au, type de journée, statut et remplacement.
+- Vérification du stockage par jour ouvré pour une période d'absence.
+- Correction : priorité aux saisies manuelles sur Chronotime quand un ancien doublon existe.
+- Correction : une saisie Refusée ou Annulée ne masque plus le planning effectif.
+- Ajout d'un updatedAt aux saisies manuelles.
+- Vérification que l'année scolaire de chaque journée est calculée depuis sa date.
+- En cas de sauvegarde hors ligne, le formulaire indique que la synchronisation est en attente.
+
+4. ANNEE SCOLAIRE / DATES
+- Au démarrage : année scolaire calculée automatiquement depuis la date du jour.
+- La valeur initiale n'est plus figée sur 2026-2027.
+- Le sélecteur du dashboard reste la source maître après ouverture.
+- Navigation semaine/mois/jour conservée.
+- Synchronisation des filtres mensuels et journaliers avec l'année sélectionnée lorsque la date courante est hors plage.
+- Contrôle des roulements et horaires annuels sur l'année scolaire active.
+
+5. VISUALISATION PILOTEE PAR L'ANNEE SCOLAIRE
+- Maintenance : filtrée sur l'année active.
+- Demandes direction : filtrées sur l'année active.
+- Chantiers/GPA : filtrés sur l'année active.
+- Notes : filtrées sur l'année active.
+- Documents : filtrés sur l'année active.
+- Vacances : périodes qui chevauchent l'année active.
+- Roulements : périodes qui chevauchent l'année active.
+- Horaires annuels : périodes qui chevauchent l'année active.
+- Dashboard ménage : conserve ses filtres mensuels synchronisés avec l'année active.
+- Dashboard principal : maintenance, ménage, notes, réunions, urgences et retards contextualisés sur l'année active.
+- Archives : correction du mélange année civile / année scolaire.
+
+6. MODULES CONTROLES
+- Contrôle ménage : formulaire, historique par local, dashboard qualité et filtres toujours présents.
+- Contrôles périodiques : catalogue et cartes conservés ; ce module reste volontairement transversal car un contrôle périodique peut avoir une échéance qui traverse plusieurs années scolaires.
+- Imports PDF / Chronotime : modules présents et syntaxiquement valides.
+- Room cleaning / room prep / notifications / météo-déchets / imports horaires : fichiers présents et syntaxiquement valides.
+
+7. NAVIGATION / HTML / RESPONSIVE
+- Navigation principale et navigation mobile présentes.
+- Contrôle des boutons directs câblés depuis app.js vers index.html : les références absentes relevées correspondent aux champs créés dynamiquement dans les modales, pas à des boutons manquants du document principal.
+- Aucun doublon d'id HTML détecté.
+
+8. IMPRESSION / EXPORT
+- Fonctions d'impression, rapports et exports toujours présentes.
+- Les impressions utilisent l'année scolaire active dans les plannings.
+- Les ressources logo utilisées par l'impression sont désormais disponibles par le chemin attendu.
+
+9. LIMITES DE CE QUI PEUT ETRE CERTIFIE ICI
+Cet audit est un audit complet du code livré, de ses dépendances locales, de ses liaisons statiques, de ses fonctions JavaScript et des parcours programmatiques identifiables. Il ne peut pas reproduire une vraie session utilisateur connectée au compte Supabase, ni provoquer les conditions réseau réelles d'un téléphone Android. La validation finale d'une écriture Supabase réelle nécessite donc un test dans l'application connectée. Le code a toutefois été modifié pour préserver les saisies localement en cas d'échec réseau.
+
+RESULTAT
+Version consolidée : V147.82 — AUDIT COMPLET.
+Objectif : utiliser cette version comme nouvelle base de test, au lieu d'empiler de petites versions sur des ZIP incomplets.
