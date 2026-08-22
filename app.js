@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.102';
+const APP_VERSION='147.103';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1525,7 +1525,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.102 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.103 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1591,7 +1591,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.102 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.103 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1924,7 +1924,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.102 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.103 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -1961,7 +1961,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.102 — historique agent écrit directement ici, avant fermeture et avant Supabase.
+ // V147.103 — historique agent écrit directement ici, avant fermeture et avant Supabase.
  const directAgent=agentById(o.agentId);
  const directAgentName=directAgent?agentName(directAgent):'Agent';
  const directChanges=agentDayAuditChanges(agentDayAuditBefore,o);
@@ -1985,7 +1985,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    });
  }
 
- // V147.102 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
+ // V147.103 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
  localDirty=true;
  clearTheoreticalScheduleCache();
  try{writeMirror()}catch(_){}
@@ -1997,7 +1997,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.102 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.103 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2373,7 +2373,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.102 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.103 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -3151,6 +3151,24 @@ function changeHistoryAcademicYear(entry){
  return d?academicYearFor(d):'';
 }
 
+function isConcreteHistoryEntity(entry){
+ const type=changeHistoryType(entry);
+ const entity=String(changeHistoryEntity(entry)||'').trim();
+ if(!entity)return false;
+ if(/^(agent concerné|élément à identifier|element a identifier|élément concerné|element concerne|information|autre|élément à identifier)$/i.test(entity))return false;
+ if(type==='Agent'){
+   return !!changeHistoryAgentName(entry) && !/^(agent|équipe)$/i.test(changeHistoryAgentName(entry));
+ }
+ return !['Autre','Information'].includes(type);
+}
+function usableChangeHistoryEntries(){
+ return (db.changeHistory||[]).filter(h=>{
+   if(h?.deleted||/^suppression\b/i.test(String(h?.title||''))||String(h?.action||'').toLowerCase()==='delete')return false;
+   if(Number(h?.historyVersion||0)>=2)return isConcreteHistoryEntity(h);
+   // Anciennes entrées : on ne garde que celles qui sont déjà clairement identifiables.
+   return isConcreteHistoryEntity(h);
+ });
+}
 function clearHistoryLegacyResolutionCache(){
  for(const h of (db.changeHistory||[]))try{delete h.__resolvedLegacy}catch(_){}
 }
@@ -3159,8 +3177,7 @@ function filteredChangeHistoryEntries(){
  clearHistoryLegacyResolutionCache();
  const active=activeAcademicYear(),yearEl=$('#changeHistoryYear'),typeEl=$('#changeHistoryType'),searchEl=$('#changeHistorySearch');
  const year=yearEl?.value||active,type=typeEl?.value||'',q=String(searchEl?.value||'').trim().toLowerCase();
- let entries=db.changeHistory.slice()
-   .filter(x=>!x.deleted && !/^suppression\b/i.test(String(x.title||'')) && String(x.action||'').toLowerCase()!=='delete')
+ let entries=usableChangeHistoryEntries()
    .filter(x=>!year||changeHistoryAcademicYear(x)===year)
    .filter(x=>!type||changeHistoryType(x)===type);
  if(q)entries=entries.filter(x=>{
@@ -3196,7 +3213,7 @@ function renderChangeHistory(){
  const table=$('#changeHistoryTable');if(!table)return;
  db.changeHistory=Array.isArray(db.changeHistory)?db.changeHistory:[];
  const active=activeAcademicYear(),yearEl=$('#changeHistoryYear'),typeEl=$('#changeHistoryType'),searchEl=$('#changeHistorySearch');
- const years=[...new Set(db.changeHistory.map(changeHistoryAcademicYear).filter(Boolean))].sort().reverse();
+ const years=[...new Set(usableChangeHistoryEntries().map(changeHistoryAcademicYear).filter(Boolean))].sort().reverse();
  if(yearEl){
    const current=yearEl.value||active;
    yearEl.innerHTML='<option value="">Toutes les années scolaires</option>'+[...new Set([active,...years])].map(y=>`<option value="${esc(y)}">${esc(y)}</option>`).join('');
@@ -3979,7 +3996,8 @@ function pushModificationHistory({
    location:String(location||''),
    agentId:String(agentId||''),
    agentName:String(agentNameValue||''),
-   user:user||currentUser?.email||'Utilisateur'
+   user:user||currentUser?.email||'Utilisateur',
+   historyVersion:2
  });
  localDirty=true;
  try{writeMirror()}catch(_){}
@@ -4043,6 +4061,14 @@ function bindEvents(){
 function closeNotificationCenter(){window.PSTNotificationCenter?.close?.()}
 const chr=$('#changeHistoryReset');if(chr)chr.onclick=()=>{const y=$('#changeHistoryYear'),t=$('#changeHistoryType'),q=$('#changeHistorySearch');if(y)y.value=activeAcademicYear();if(t)t.value='';if(q)q.value='';renderChangeHistory()};
  const chp=$('#changeHistoryPrint');if(chp)chp.onclick=printChangeHistory;
+ const chc=$('#changeHistoryClean');if(chc)chc.onclick=()=>{
+   const before=(db.changeHistory||[]).length;
+   db.changeHistory=(db.changeHistory||[]).filter(h=>Number(h?.historyVersion||0)>=2||isConcreteHistoryEntity(h));
+   const removed=before-db.changeHistory.length;
+   localDirty=true;try{writeMirror()}catch(_){}try{writeOfflinePending('nettoyage historique à synchroniser')}catch(_){}
+   renderChangeHistory();
+   toast(removed?`🧹 ${removed} ancienne(s) ligne(s) illisible(s) supprimée(s)`:'Historique déjà propre');
+ };
  $('#archiveNow').onclick=()=>{const made=createWeeklyArchive(false);save();toast(made?'Archive créée':'La semaine précédente est déjà archivée')};$('#exportArchives').onclick=exportArchives;$('#exportBackup').onclick=exportBackup;$('#importBackup').onchange=e=>e.target.files[0]&&importBackup(e.target.files[0]);$('#resetData').onclick=resetData;const rr=$('#restoreReferenceData');if(rr)rr.onclick=restoreReferenceData;const dg=$('#runDiagnostic');if(dg)dg.onclick=runDiagnostic;const sp=$('#supabasePingBtn');if(sp)sp.onclick=manualSupabasePing;$('#resetPeriodicCatalog').onclick=()=>{if(confirm('Restaurer le catalogue par défaut ? Les contrôles personnalisés actuels seront remplacés.')){db.periodic=makePeriodic();save()}};$('#exportCsv').onclick=()=>exportStyledExcel($('#csvModule').value);$('#exportRotationCsv').onclick=()=>exportStyledExcel('rotations');const ewp=$('#exportWeeklyPlans');if(ewp)ewp.onclick=()=>exportStyledExcel('weeklyPlans');
  $('#copyMail').onclick=async()=>{const text=`À : ${$('#mailTo').value}\nCC : ${$('#mailCc').value}\nCCI : ${$('#mailBcc').value}\nObjet : ${$('#mailSubject').value}\n\n${$('#mailMessage').value}`;try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}toast('Message copié')}catch(e){prompt('Copiez le message :',text)}};$('#openMailClient').onclick=openMailClient;
  $$('[data-report-print]').forEach(b=>b.onclick=()=>printReport(b.dataset.reportPrint));$$('[data-report-email]').forEach(b=>b.onclick=()=>prepareEmail(b.dataset.reportEmail));$('#printFullRegister').onclick=()=>printReport('full');$$('[data-print]').forEach(b=>b.onclick=()=>printView(b.dataset.print)); const pc=$('#printCollectivePlanning');if(pc)pc.onclick=generateCollectivePlanningPDF;const pi=$('#printIndividualPlanning');if(pi)pi.onclick=generateIndividualPlanningPDF;

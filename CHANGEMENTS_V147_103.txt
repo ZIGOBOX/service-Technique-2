@@ -1,0 +1,11 @@
+V147.103 — Nettoyage définitif de l'historique
+
+- Les lignes anciennes impossibles à identifier (Agent concerné, Élément à identifier,
+  Information, Autre) ne sont plus affichées.
+- Les années scolaires du filtre sont calculées uniquement à partir de lignes exploitables.
+- Les nouvelles modifications sont marquées historyVersion 2 et doivent contenir
+  un élément concret.
+- Ajout d'un bouton « Nettoyer les anciennes lignes » qui supprime définitivement
+  uniquement les anciennes traces illisibles.
+- Les interventions/demandes/contrôles anciens déjà identifiables sont conservés.
+- Les nouvelles modifications d'agent restent enregistrées directement avec le nom complet.
