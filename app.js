@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.100';
+const APP_VERSION='147.101';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1525,7 +1525,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.100 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.101 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1591,7 +1591,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.100 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.101 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1869,7 +1869,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.100 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.101 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -1906,7 +1906,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.100 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
+ // V147.101 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
  localDirty=true;
  clearTheoreticalScheduleCache();
  try{writeMirror()}catch(_){}
@@ -1916,8 +1916,10 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  toast(`✅ ${added} jour(s) enregistré(s)`);
 
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
- Promise.resolve().then(async()=>{
+ setTimeout(async()=>{
    try{
+     // V147.101 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
        verify:remote=>expectedDays.every(exp=>{
@@ -1934,7 +1936,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
      console.error('Synchronisation planning agent différée',error);
      setSaveState('Planning agent conservé localement — synchronisation à reprendre','local');
    }
- });
+ },0);
  return {ok:true};},{
   audit:{track:true,type:'Agent',recordId:x.id,agentId:x.agentId,agentName:agentName(agentById(x.agentId)),entity:(form)=>{const a=agentById(form?.elements?.agentId?.value||x.agentId);return a?agentName(a):agentName(agentById(x.agentId))},date:initialDate},
   onDelete:old?()=>{if(!confirm('Supprimer cette saisie ou toute la période associée ?'))return;const deletedDates=periodId?db.agentDays.filter(r=>r.periodId===periodId).map(r=>r.date):[old.date];
@@ -2292,7 +2294,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.100 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.101 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -3899,6 +3901,9 @@ function pushModificationHistory({
  localDirty=true;
  try{writeMirror()}catch(_){}
  try{writeOfflinePending('historique modification à synchroniser')}catch(_){}
+ try{
+   if(document.querySelector('.view.active')?.id==='archives')renderChangeHistory();
+ }catch(_){}
 }
 function bindEvents(){
  $('#modalForm').addEventListener('submit',async e=>{

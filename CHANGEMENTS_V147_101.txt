@@ -1,0 +1,18 @@
+V147.101 — Correction déclenchement historique des horaires
+
+CAUSE TROUVÉE
+- La synchronisation Supabase du planning pouvait démarrer avant l'ajout de la ligne
+  dans changeHistory.
+- La relecture Supabase pouvait alors remplacer l'état local et faire disparaître
+  l'historique qui venait d'être créé.
+
+CORRECTION
+- Enregistrer d'abord la journée.
+- Ajouter immédiatement la modification à l'historique.
+- Écrire le miroir local / file de synchronisation.
+- Synchroniser Supabase seulement après.
+- Si Archives est affiché, le tableau est rafraîchi immédiatement.
+
+RÉSULTAT ATTENDU
+- Toute modification réelle d'un horaire existant apparaît dès Enregistrer dans
+  Archives > Récapitulatif de mes modifications.
