@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.109';
+const APP_VERSION='147.110';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1580,7 +1580,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.109 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.110 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1646,7 +1646,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.109 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.110 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1955,6 +1955,17 @@ function removeAgentDayHistoryForReset(agentId,date){
    return !(fs.has('actualStart')||fs.has('actualEnd')||fs.has('overtime'));
  });
 }
+function verifyAgentDaySaved(agentId,date,expected={}){
+ const rec=dayRecord(agentId,date,expected.dayType||'');
+ if(!rec)return {ok:false,reason:'Journée introuvable après enregistrement'};
+ const fields=['dayType','actualStart','actualEnd','note','status'];
+ for(const f of fields){
+   if(expected[f]!==undefined && String(rec[f]??'')!==String(expected[f]??'')){
+     return {ok:false,reason:`${f} non conservé`};
+   }
+ }
+ return {ok:true,record:rec};
+}
 function openAgentDay(agentId,date,id,preferredDayType=''){
  const clicked=id?byId('agentDays',id):dayRecord(agentId,date,preferredDayType);
  const periodId=clicked?.periodId||'';
@@ -1979,7 +1990,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.109 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.110 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2010,7 +2021,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
      const rule=dayCountingRule(o.dayType);
      const pStart=rule.mode==='planned'?((from===to?o.plannedStart:'')||sc.start||o.plannedStart||''):(from===to?(o.plannedStart||''):'');
      const pEnd=rule.mode==='planned'?((from===to?o.plannedEnd:'')||sc.end||o.plannedEnd||''):(from===to?(o.plannedEnd||''):'');
-     db.agentDays.push({id:uid(),periodId:newPeriodId,agentId:o.agentId,date:d,dayType:o.dayType,plannedStart:pStart,plannedEnd:pEnd,actualStart:sameStart?(o.actualStart||''):'',actualEnd:sameStart?(o.actualEnd||''):'',pause:Number((from===to&&o.pause!==''?o.pause:sc.pause??o.pause)||0),overtime:Number(sameStart?o.overtime||0:0),status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',academicYear:academicYearFor(d),updatedAt:new Date().toISOString()});
+     db.agentDays.push({id:uid(),periodId:newPeriodId,agentId:o.agentId,date:d,dayType:o.dayType,plannedStart:pStart,plannedEnd:pEnd,actualStart:sameStart?(o.actualStart||''):'',actualEnd:sameStart?(o.actualEnd||''):'',pause:Number((from===to&&o.pause!==''?o.pause:sc.pause??o.pause)||0),overtime:Number(sameStart?o.overtime||0:0),status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',realScheduleReset:(!o.actualStart&&!o.actualEnd),academicYear:academicYearFor(d),updatedAt:new Date().toISOString()});
      added++;
    }
    d=addDays(d,1);
@@ -2024,14 +2035,14 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
      actualStart:o.actualStart||'',actualEnd:o.actualEnd||'',
      pause:Number(o.pause||sc.pause||0),overtime:Number(o.overtime||0),
      status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),
-     noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',
+     noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',realScheduleReset:(!o.actualStart&&!o.actualEnd),
      academicYear:academicYearFor(from),updatedAt:new Date().toISOString()
    });
    added=1;
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.109 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.110 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2070,14 +2081,22 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    console.error('Historique agent non bloquant',historyError);
  }
 
+ const savedIntegrity=verifyAgentDaySaved(o.agentId,from,{
+   dayType:o.dayType,actualStart:o.actualStart||'',actualEnd:o.actualEnd||'',note:o.note||'',status:o.status||'Validée'
+ });
+ if(!savedIntegrity.ok){
+   console.error('Contrôle sauvegarde journée agent',savedIntegrity);
+   toast(`⚠️ Enregistrement incomplet : ${savedIntegrity.reason}`);
+   return {ok:false};
+ }
  refreshCollectionView('agentDays');
  closeModal();
- toast(`✅ ${added} jour(s) enregistré(s)`);
+ toast(`✅ ${added} jour(s) enregistré(s) — planning mis à jour`);
 
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.109 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.110 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2227,7 +2246,7 @@ function refreshCollectionView(collection){
    notes:renderNotes,issues:renderIssues,periodic:renderPeriodic,cleaning:renderCleaning,
    vacations:renderVacations,personalEvents:renderPersonal,documents:renderDocuments,
    agents:renderAgents,rotations:renderRotations,weeklyPlans:renderPlanning,
-   agentDays:()=>{renderPlanning();renderAbsences();renderPersonalCalendar();renderAgents();},
+   agentDays:()=>{renderPlanning();renderAbsences();renderTeamCalendar();renderPersonalCalendar();renderAgents();},
    spaces:renderSettings
  };
  try{map[collection]?.()}catch(error){console.warn('Rafraîchissement collection',collection,error)}
@@ -2402,26 +2421,51 @@ function renderTeamCalendar(){
   $('#teamDateJump').value=teamWeek;
   const agents=db.agents.filter(a=>a.status==='Actif');
   if(!agents.length){$('#teamWeekCalendar').innerHTML='<div class="empty">Ajoutez un agent pour afficher le planning de la semaine.</div>';return}
+
   const html=days.map(date=>{
     const dateObj=parseDate(date);
     let present=0;
     const rows=agents.map(a=>{
-      const info=dayInfo(a.id,date),h=dayHours(info);
+      const info=dayInfo(a.id,date),h=dayHours(info),display=planningDisplayFor(a,date);
       if(info.dayType==='Présence')present++;
+
       const absent=isAbsenceType(info.dayType);
       const cls=absent?'absence':info.dayType==='Formation'?'training':info.dayType==='Repos'?'rest':info.shift==='Soir'?'evening':info.shift==='Matin'?'morning':'neutral';
 
-      // dayInfo contient déjà l'horaire théorique résolu : pas de deuxième calcul.
-      const theoretical=info;
-      const theoreticalText=theoretical.plannedStart&&theoretical.plannedEnd?`${esc(theoretical.plannedStart)}–${esc(theoretical.plannedEnd)}`:(theoretical.shift==='Repos'?'Repos / non travaillé':'Horaire non défini');
-      const sourceLabel=theoretical.shift==='Permanence'?'Permanence':theoretical.source==='rotation'?(theoretical.shift||'Roulement'):theoretical.shift==='Standard'?'Standard':theoretical.shift==='Repos'?'Repos':'';
-      const theoreticalLine=info.dayType==='Présence'?`<small class="agent-theoretical"><b>Théorique :</b> ${theoreticalText}${sourceLabel?` · ${esc(sourceLabel)}`:''}</small>`:`<small class="agent-theoretical muted"><b>Théorique :</b> ${theoreticalText}${sourceLabel?` · ${esc(sourceLabel)}`:''}</small>`;
-      const mission=info.dayType==='Présence'&&theoretical.missions?`<small class="agent-missions">${esc(theoretical.missions)}</small>`:(info.note?`<small class="agent-missions">${esc(info.note)}</small>`:'');
-      const delta=Math.abs(h.delta)>0.001?`<em class="agent-delta ${h.delta>0?'positive':'negative'}">${h.delta>0?'+':''}${h.delta.toFixed(2)} h</em>`:'';
-      return `<button class="team-agent-entry ${cls}" data-agent-day="${a.id}" data-date="${date}" title="Modifier ${esc(agentName(a))} le ${fmtDate(date)}"><span class="agent-entry-avatar">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><span class="agent-entry-main"><strong>${esc(agentName(a))}</strong>${theoreticalLine}${mission}</span>${delta}<span class="agent-entry-arrow">›</span></button>`;
+      const theoreticalText=info.plannedStart&&info.plannedEnd
+        ?`${info.plannedStart}–${info.plannedEnd}`
+        :(info.shift==='Repos'?'Repos / non travaillé':'Horaire non défini');
+
+      let mainLine='',secondaryLine='';
+      if(info.dayType!=='Présence'){
+        // Congé, RTT, maladie, formation, repos… : le statut saisi est l'information principale.
+        mainLine=`<small class="agent-effective-day"><b>${esc(info.dayType)}</b></small>`;
+        secondaryLine=theoreticalText&&theoreticalText!=='Horaire non défini'
+          ?`<small class="agent-theoretical muted">Théorique : ${esc(theoreticalText)}</small>`:'';
+      }else if(display.realChanged){
+        // Un horaire réel différent remplace l'horaire théorique dans le quadrillage.
+        mainLine=`<small class="agent-effective-day"><b>Réel : ${esc(display.real)}</b></small>`;
+        secondaryLine=`<small class="agent-theoretical muted">Théorique : ${esc(display.theoretical)}</small>`;
+      }else{
+        // Pas de changement réel : on reste sur le théorique.
+        mainLine=`<small class="agent-effective-day"><b>Horaire : ${esc(theoreticalText)}</b></small>`;
+        const sourceLabel=info.shift==='Permanence'?'Permanence':info.source==='rotation'?(info.shift||'Roulement'):info.shift==='Standard'?'Standard':info.shift==='Repos'?'Repos':'';
+        secondaryLine=sourceLabel?`<small class="agent-theoretical muted">${esc(sourceLabel)}</small>`:'';
+      }
+
+      const motive=info.source==='manual'&&info.note
+        ?`<small class="agent-missions">ⓘ ${esc(info.note)}</small>`
+        :(info.dayType==='Présence'&&info.missions?`<small class="agent-missions">${esc(info.missions)}</small>`:'');
+
+      const delta=Math.abs(h.delta)>0.001
+        ?`<em class="agent-delta ${h.delta>0?'positive':'negative'}">${h.delta>0?'+':''}${h.delta.toFixed(2)} h</em>`:'';
+
+      return `<button class="team-agent-entry ${cls}" data-agent-day="${a.id}" data-date="${date}" title="Modifier ${esc(agentName(a))} le ${fmtDate(date)}"><span class="agent-entry-avatar">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><span class="agent-entry-main"><strong>${esc(agentName(a))}</strong>${mainLine}${secondaryLine}${motive}</span>${delta}<span class="agent-entry-arrow">›</span></button>`;
     }).join('');
+
     return `<section class="team-day-card ${date===todayISO()?'today':''}"><header class="team-day-header"><div><strong>${dateObj.toLocaleDateString('fr-FR',{weekday:'long'})}</strong><span>${dateObj.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}</span></div><small>${present}/${agents.length} prévu${present>1?'s':''}</small></header><div class="team-day-agents">${rows}</div></section>`;
   }).join('');
+
   $('#teamWeekCalendar').innerHTML=`<div class="team-week-cards">${html}</div>`;
 }
 function roomPrepAgendaItems(){
@@ -2454,7 +2498,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.109 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.110 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -2586,7 +2630,7 @@ function openWeeklyPlan(i=null,agentId=''){
    closeModal();toast('✅ Horaires théoriques enregistrés, confirmés et appliqués partout');
  },{onDelete:old?()=>{if(confirm('Supprimer ce profil horaire ?')){db.weeklyPlans.splice(i,1);closeModal();save()}}:null});
 }
-function renderPlanning(){renderWeeklyPlans();const month=$('#planningMonth').value||monthISO(),agent=$('#planningAgent').value,signal=$('#planningSignal').value;const start=`${month}-01`,end=localISO(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0));const rows=[];for(const a of db.agents.filter(x=>x.status==='Actif'&&(!agent||x.id===agent))){let d=start;while(d<=end){if(![0,6].includes(parseDate(d).getDay())){const info=dayInfo(a.id,d),h=dayHours(info);let sig=isAbsenceType(info.dayType)?'Absence':h.delta>0.01?'Heures supplémentaires':h.delta<-0.01?'Heures manquantes':'Conforme';if(!signal||sig===signal)rows.push({a,d,info,h,sig})}d=addDays(d,1)}}const sums=rows.reduce((s,r)=>{s.p+=r.h.planned;s.a+=r.h.total;s.o+=Number(r.info.overtime||0);return s},{p:0,a:0,o:0});$('#planningSummary').innerHTML=`<article><span>Prévu</span><strong>${fmtHours(sums.p)}</strong></article><article><span>Réalisé</span><strong>${fmtHours(sums.a)}</strong></article><article><span>Écart</span><strong>${sums.a-sums.p>=0?'+':''}${fmtHours(sums.a-sums.p)}</strong></article><article><span>Heures ajoutées</span><strong>${fmtHours(sums.o)}</strong></article>`;$('#planningTable').innerHTML=rows.length?rows.map(r=>`<tr><td>${fmtDate(r.d)}</td><td>${esc(agentName(r.a))}</td><td>${r.info.dayType==='Présence'?`${r.info.plannedStart||'—'}–${r.info.plannedEnd||'—'} (${fmtHours(r.h.planned)})`:badge(r.info.dayType)}</td><td>${r.info.actualStart?`${r.info.actualStart}–${r.info.actualEnd} (${fmtHours(r.h.total)})`:'—'}</td><td>${r.h.delta>=0?'+':''}${fmtHours(r.h.delta)}</td><td>${badge(r.sig)}</td><td>${r.info.source==='manual'&&r.info.note?`<button class="icon-btn manual-info-trigger" type="button" data-show-day-info="${r.a.id}" data-date="${r.d}" title="${esc(r.info.note)}">ⓘ</button>`:''}<button class="icon-btn" data-agent-day="${r.a.id}" data-date="${r.d}">✎</button></td></tr>`).join(''):emptyRow(7)}
+function renderPlanning(){renderWeeklyPlans();const month=$('#planningMonth').value||monthISO(),agent=$('#planningAgent').value,signal=$('#planningSignal').value;const start=`${month}-01`,end=localISO(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0));const rows=[];for(const a of db.agents.filter(x=>x.status==='Actif'&&(!agent||x.id===agent))){let d=start;while(d<=end){if(![0,6].includes(parseDate(d).getDay())){const info=dayInfo(a.id,d),h=dayHours(info);let sig=isAbsenceType(info.dayType)?'Absence':h.delta>0.01?'Heures supplémentaires':h.delta<-0.01?'Heures manquantes':'Conforme';if(!signal||sig===signal)rows.push({a,d,info,h,sig})}d=addDays(d,1)}}const sums=rows.reduce((s,r)=>{s.p+=r.h.planned;s.a+=r.h.total;s.o+=Number(r.info.overtime||0);return s},{p:0,a:0,o:0});$('#planningSummary').innerHTML=`<article><span>Prévu</span><strong>${fmtHours(sums.p)}</strong></article><article><span>Réalisé</span><strong>${fmtHours(sums.a)}</strong></article><article><span>Écart</span><strong>${sums.a-sums.p>=0?'+':''}${fmtHours(sums.a-sums.p)}</strong></article><article><span>Heures ajoutées</span><strong>${fmtHours(sums.o)}</strong></article>`;$('#planningTable').innerHTML=rows.length?rows.map(r=>{const disp=planningDisplayFor(r.a,r.d);return `<tr><td>${fmtDate(r.d)}</td><td>${esc(agentName(r.a))}</td><td>${r.info.dayType==='Présence'?`${r.info.plannedStart||'—'}–${r.info.plannedEnd||'—'} (${fmtHours(r.h.planned)})`:badge(r.info.dayType)}</td><td>${r.info.dayType==='Présence'&&disp.realChanged?`${esc(disp.real)} (${fmtHours(r.h.total)})`:r.info.dayType!=='Présence'?badge(r.info.dayType):'—'}</td><td>${r.h.delta>=0?'+':''}${fmtHours(r.h.delta)}</td><td>${badge(r.sig)}</td><td>${r.info.source==='manual'&&r.info.note?`<button class="icon-btn manual-info-trigger" type="button" data-show-day-info="${r.a.id}" data-date="${r.d}" title="${esc(r.info.note)}">ⓘ</button>`:''}<button class="icon-btn" data-agent-day="${r.a.id}" data-date="${r.d}">✎</button></td></tr>`}).join(''):emptyRow(7)}
 function renderAbsences(){renderAbsenceBoard();const month=$('#absenceMonth').value||monthISO(),agent=$('#absenceAgent').value,type=$('#absenceType').value,status=$('#absenceStatus').value;const rows=db.agentDays.filter(x=>dateMonthMatch(x.date,month)&&isAbsenceType(x.dayType)&&(!agent||x.agentId===agent)&&(!type||x.dayType===type)&&(!status||x.status===status));const groups=new Map();for(const x of rows){const key=x.periodId||x.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)}const arr=[...groups.values()].map(g=>g.sort((a,b)=>a.date.localeCompare(b.date))).sort((a,b)=>a[0].date.localeCompare(b[0].date));$('#absencesTable').innerHTML=arr.length?arr.map(g=>{const x=g[0],from=g[0].date,to=g.at(-1).date;return `<tr><td>${esc(agentName(agentById(x.agentId)))}</td><td>${fmtDate(from)}</td><td>${fmtDate(to)}</td><td>${badge(x.dayType)}</td><td>${g.length} jour${g.length>1?'s':''}</td><td>${badge(x.status||'Validée')}</td><td>${x.noReplacementNeeded?'<span class="badge good">Sans remplacement</span>':esc(x.replacement||'À décider')}</td><td><button class="icon-btn" data-agent-day="${x.agentId}" data-date="${from}">✎</button></td></tr>`}).join(''):emptyRow(8);renderAbsenceCounters(month)}
 function renderAbsenceCounters(month){const agents=db.agents.filter(a=>a.status==='Actif');const types=db.lists.dayTypes.filter(isAbsenceType);const used=types.filter(t=>db.agentDays.some(x=>dateMonthMatch(x.date,month)&&x.dayType===t));const cols=used.length?used:types.slice(0,5);const head=`<table><thead><tr><th>Agent</th>${cols.map(t=>`<th>${esc(t)}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;const body=agents.map(a=>{const rs=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)&&isAbsenceType(x.dayType));return `<tr><td><strong>${esc(agentName(a))}</strong></td>${cols.map(t=>`<td>${rs.filter(x=>x.dayType===t).length}</td>`).join('')}<td><strong>${rs.length}</strong></td></tr>`}).join('');$('#absenceCounters').innerHTML=head+body+'</tbody></table>'}
 function renderVacations(){

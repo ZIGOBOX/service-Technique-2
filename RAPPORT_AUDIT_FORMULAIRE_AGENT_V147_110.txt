@@ -1,0 +1,23 @@
+V147.110 — Parcours complet formulaire agent corrigé
+
+CAUSES TROUVÉES
+1. Le quadrillage hebdomadaire affichait toujours le théorique.
+2. Après agentDays, le quadrillage hebdomadaire n'était pas rafraîchi.
+
+RÈGLES DÉSORMAIS APPLIQUÉES
+- Congé / RTT / maladie / formation / repos : le type de journée est visible dans le quadrillage.
+- Horaire réel différent : le quadrillage affiche « Réel » en premier et conserve le théorique dessous.
+- Pas d'horaire réel ou horaire réel réinitialisé : retour immédiat à l'horaire théorique.
+- Informations / Motif : visible avec ⓘ dans le quadrillage si saisie manuelle.
+- Planning des horaires : distingue théorique et réel.
+- Absences : relues depuis la même journée agent.
+- Mon calendrier : continue d'utiliser l'horaire réel lorsqu'il est différent.
+- Archives : l'historique direct du formulaire agent est conservé.
+- Après Enregistrer : Planning + Absences + Quadrillage agents + Mon calendrier + Agents sont rafraîchis.
+- Contrôle d'intégrité avant message de réussite : type de journée, horaire réel, motif et statut doivent être relus depuis agentDays.
+
+RÉINITIALISATION HORAIRE RÉEL
+- actualStart et actualEnd sont vidés.
+- la journée manuelle est conservée.
+- le quadrillage revient sur le théorique.
+- aucune fausse trace de suppression n'est ajoutée.
