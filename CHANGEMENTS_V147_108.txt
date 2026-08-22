@@ -1,0 +1,6 @@
+V147.108 — Correctif bouton Enregistrer formulaire agent
+- Retour sur la base V147.106 où le bouton fonctionnait.
+- Aucun changement de la logique métier de sauvegarde.
+- Suppression du conflit entre clic direct et soumission du formulaire.
+- Le bouton est toujours réactivé après succès ou erreur.
+- Les drapeaux d'enregistrement sont remis à zéro à chaque ouverture/fermeture.
