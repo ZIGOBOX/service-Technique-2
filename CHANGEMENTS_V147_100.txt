@@ -1,0 +1,19 @@
+V147.100 — Historique lisible cellule par cellule
+
+RÈGLE
+Chaque cellule du tableau doit apporter une information métier compréhensible.
+
+AMÉLIORATIONS
+- Les champs techniques sont traduits en libellés humains.
+- Les valeurs vides affichent « Non renseigné » au lieu d'un tiret incompréhensible.
+- Les dates sont affichées au format français.
+- Les pauses sont affichées en minutes.
+- Les écarts d'heures sont affichés avec unité et signe (+1 h / -0,5 h).
+- Les identifiants agents sont remplacés par les noms quand ils sont retrouvables.
+- Pour les agents, début + fin d'horaire sont regroupés en une seule ligne :
+  « Horaire réel : 06:00–14:45 → 07:00–16:00 »
+  au lieu de deux lignes techniques séparées.
+- Les lignes sans changement réel sont ignorées.
+- Le tableau écran et l'impression utilisent exactement la même transformation.
+- Les 8 colonnes restent : date/heure, type, date concernée, élément concerné,
+  champ modifié, avant, après, utilisateur.

@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.98';
+const APP_VERSION='147.100';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1525,7 +1525,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.98 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.100 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1591,7 +1591,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.98 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.100 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1739,7 +1739,7 @@ function openAgent(id){
    syncStoredChronotimePastilles();
    const persisted=await commitFormRecordVerified('Agent','agents',x);if(!persisted.ok)return;
    closeModal();toast(`✅ Agent enregistré — horaire Standard applicable à partir du ${fmtDate(x.standardSchedule.effectiveFrom)}`);
- },{audit:{track:!!old,type:'Agent',agentId:x.id,agentName:agentName(x),entity:(form)=>[form?.elements?.firstName?.value||x.firstName,form?.elements?.lastName?.value||x.lastName].filter(Boolean).join(' '),date:x.arrivalDate||todayISO()},onDelete:old?()=>deleteRecord('agents',x.id,'agent'):null})
+ },{audit:{track:!!old,type:'Agent',recordId:x.id,agentId:x.id,agentName:agentName(x),entity:(form)=>[form?.elements?.firstName?.value||x.firstName,form?.elements?.lastName?.value||x.lastName].filter(Boolean).join(' '),date:x.arrivalDate||todayISO()},onDelete:old?()=>deleteRecord('agents',x.id,'agent'):null})
 }
 function applyWeekendRestToAll(){
  if(!confirm('Mettre le samedi et le dimanche en repos pour tous les agents ? Les horaires du lundi au vendredi seront conservés.'))return;
@@ -1869,7 +1869,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.98 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.100 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -1906,7 +1906,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.98 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
+ // V147.100 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
  localDirty=true;
  clearTheoreticalScheduleCache();
  try{writeMirror()}catch(_){}
@@ -1936,7 +1936,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    }
  });
  return {ok:true};},{
-  audit:{track:true,type:'Agent',agentId:x.agentId,agentName:agentName(agentById(x.agentId)),entity:(form)=>{const a=agentById(form?.elements?.agentId?.value||x.agentId);return a?agentName(a):agentName(agentById(x.agentId))},date:initialDate},
+  audit:{track:true,type:'Agent',recordId:x.id,agentId:x.agentId,agentName:agentName(agentById(x.agentId)),entity:(form)=>{const a=agentById(form?.elements?.agentId?.value||x.agentId);return a?agentName(a):agentName(agentById(x.agentId))},date:initialDate},
   onDelete:old?()=>{if(!confirm('Supprimer cette saisie ou toute la période associée ?'))return;const deletedDates=periodId?db.agentDays.filter(r=>r.periodId===periodId).map(r=>r.date):[old.date];
  db.agentDays=periodId?db.agentDays.filter(r=>r.periodId!==periodId):db.agentDays.filter(r=>r.id!==old.id);
  db.changeHistory=(db.changeHistory||[]).filter(h=>!(h.title===modalAuditTitle&&(h.pastDates||[]).some(d=>deletedDates.includes(d))));
@@ -2211,7 +2211,7 @@ function openCleaning(id){
   try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}
   toast(persisted.offline?`✅ Contrôle enregistré sur cet appareil — synchronisation en attente`:`✅ Contrôle ménage enregistré — résultat : ${x.overallStatus||'—'}`)
   return {ok:true};
- },{audit:{track:!!old,type:'Contrôle ménage',agentId:x.agentId||'',entity:(form)=>[x.no,[form?.elements?.building?.value||x.building,form?.elements?.floor?.value||x.floor,form?.elements?.room?.value||x.room].filter(Boolean).join(' ')].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('cleaning',x.id,'contrôle'):null});
+ },{audit:{track:!!old,type:'Contrôle ménage',recordId:x.id,no:x.no,agentId:x.agentId||'',entity:(form)=>[x.no,[form?.elements?.building?.value||x.building,form?.elements?.floor?.value||x.floor,form?.elements?.room?.value||x.room].filter(Boolean).join(' ')].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('cleaning',x.id,'contrôle'):null});
  const updateOtherRoom=()=>$('#mOtherRoomWrap')?.classList.toggle('hidden',$('#mRoom')?.value!=='Autre local');
  const updateSector=()=>{const e=$('#mSector');if(e)e.innerHTML=cleaningSectorOptions($('#mBuilding').value,$('#mFloor').value,e.value)};
  const updateLocation=()=>{const bb=$('#mBuilding').value,ff=$('#mFloor').value,tt=$('#mRoomType').value,oldRoom=$('#mRoom').value;$('#mRoom').innerHTML=roomOptions(bb,ff,tt,oldRoom);updateOtherRoom()};
@@ -2223,8 +2223,8 @@ function openCleaning(id){
  $$('[data-bulk-clean]').forEach(btn=>btn.onclick=()=>$$('[name="taskStatus"]',$('#cleanTaskEditor')).forEach(s=>s.value=btn.dataset.bulkClean))
 }
 
-function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),time:'',title:'',family:'Électricité',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier l’intervention':'Nouvelle intervention',`<div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Heure prévue','time',x.time,'time')}${field('Objet','title',x.title,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label>${centralLocationFields(x,'maintLoc')}${field('Demandeur','requester',x.requester)}${field('Assigné à / prestataire','assigned',x.assigned)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Description / diagnostic','description',x.description)}${textareaField('Action réalisée / suite','action',x.action)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'maintenance');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Intervention','maintenance',x);if(!persisted.ok)return;closeModal();refreshCollectionView('maintenance');toast(`✅ Intervention enregistrée — statut : ${x.status}`)},{audit:{track:!!old,type:'Intervention',no:x.no,entity:(form)=>[x.no,form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('maintenance',x.id,'intervention'):null});bindCentralLocation('maintLoc')}
-function openRequest(id){const old=id?byId('requests',id):null;const x=old||{id:uid(),no:nextNo('request','DIR'),date:todayISO(),time:'',type:'Aménagement de salle',title:'',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'Direction',dueDate:'',description:'',response:'',attachments:[]};openModal(old?'Modifier la demande':'Nouvelle demande de la direction',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure prévue','time',x.time,'time')}<label>Type<select name="type">${selectOptions(db.lists.requestTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${centralLocationFields(x,'reqLoc')}${field('Demandeur','requester',x.requester)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Demande','description',x.description)}${textareaField('Réponse / réalisation','response',x.response)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'requests');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Demande','requests',x);if(!persisted.ok)return;closeModal();toast(`✅ Demande enregistrée — statut : ${x.status||'—'}`)},{audit:{track:!!old,type:'Demande',no:x.no,entity:(form)=>[x.no,form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('requests',x.id,'demande'):null});bindCentralLocation('reqLoc')}
+function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),time:'',title:'',family:'Électricité',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier l’intervention':'Nouvelle intervention',`<div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Heure prévue','time',x.time,'time')}${field('Objet','title',x.title,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label>${centralLocationFields(x,'maintLoc')}${field('Demandeur','requester',x.requester)}${field('Assigné à / prestataire','assigned',x.assigned)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Description / diagnostic','description',x.description)}${textareaField('Action réalisée / suite','action',x.action)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'maintenance');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Intervention','maintenance',x);if(!persisted.ok)return;closeModal();refreshCollectionView('maintenance');toast(`✅ Intervention enregistrée — statut : ${x.status}`)},{audit:{track:!!old,type:'Intervention',recordId:x.id,no:x.no,title:x.title,entity:(form)=>[x.no,form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('maintenance',x.id,'intervention'):null});bindCentralLocation('maintLoc')}
+function openRequest(id){const old=id?byId('requests',id):null;const x=old||{id:uid(),no:nextNo('request','DIR'),date:todayISO(),time:'',type:'Aménagement de salle',title:'',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'Direction',dueDate:'',description:'',response:'',attachments:[]};openModal(old?'Modifier la demande':'Nouvelle demande de la direction',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure prévue','time',x.time,'time')}<label>Type<select name="type">${selectOptions(db.lists.requestTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${centralLocationFields(x,'reqLoc')}${field('Demandeur','requester',x.requester)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Demande','description',x.description)}${textareaField('Réponse / réalisation','response',x.response)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'requests');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Demande','requests',x);if(!persisted.ok)return;closeModal();toast(`✅ Demande enregistrée — statut : ${x.status||'—'}`)},{audit:{track:!!old,type:'Demande',recordId:x.id,no:x.no,title:x.title,entity:(form)=>[x.no,form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('requests',x.id,'demande'):null});bindCentralLocation('reqLoc')}
 function openWork(id){const old=id?byId('works',id):null;const x=old||{id:uid(),no:nextNo('work','CHT'),date:todayISO(),time:'',type:'Réunion de chantier',title:'',company:'',architect:'',building:'',floor:'',sector:'',room:'',priority:'Normale',status:'À faire',dueDate:'',description:'',decision:'',gpaEnd:'',attachments:[]};openModal(old?'Modifier le suivi chantier':'Nouveau suivi chantier / GPA',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure prévue','time',x.time,'time')}<label>Type<select name="type">${selectOptions(db.lists.workTypes,x.type)}</select></label>${field('Objet / réserve','title',x.title,'text','required')}${field('Entreprise','company',x.company)}${field('Architecte / maîtrise d’œuvre','architect',x.architect)}${centralLocationFields(x,'workLoc')}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${field('Échéance','dueDate',x.dueDate,'date')}${field('Fin GPA','gpaEnd',x.gpaEnd,'date')}${textareaField('Constat / description','description',x.description)}${textareaField('Décision / suite','decision',x.decision)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'works');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Chantier / GPA','works',x);if(!persisted.ok)return;closeModal();toast(`✅ Suivi chantier enregistré — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('works',x.id,'suivi'):null});bindCentralLocation('workLoc')}
 function openMeeting(id,date=todayISO()){const old=id?byId('meetings',id):null;const x=old||{id:uid(),no:nextNo('meeting','RDV'),date,time:'',end:'',type:'Rendez-vous',title:'',building:'',floor:'',sector:'',room:'',participants:'',status:'Planifié',notes:'',actions:'',attachments:[]};openModal(old?'Modifier le rendez-vous':'Nouvelle réunion / rendez-vous',`<div class="form-grid">${field('Date','date',x.date,'date','required')}${field('Heure','time',x.time,'time')}${field('Fin','end',x.end,'time')}<label>Type<select name="type">${selectOptions(db.lists.meetingTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}${centralLocationFields(x,'meetLoc')}${field('Participants','participants',x.participants)}<label>Statut<select name="status">${selectOptions(['Planifié','Réalisé','Reporté','Annulé'],x.status)}</select></label>${textareaField('Compte rendu','notes',x.notes)}${textareaField('Actions décidées','actions',x.actions)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;x.location=[x.building,x.floor,x.sector,x.room].filter(Boolean).join(' · ');const attachmentCheck=await processAttachments(form,x,'meetings');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Réunion / rendez-vous','meetings',x);if(!persisted.ok)return;closeModal();toast(`✅ Rendez-vous enregistré — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('meetings',x.id,'rendez-vous'):null});bindCentralLocation('meetLoc')}
 function openNote(id,category='Autre'){const old=id?byId('notes',id):null;const x=old||{id:uid(),no:nextNo('note','NOT'),date:todayISO(),time:'',category,agentId:'',title:'',text:'',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',dueDate:'',items:[],attachments:[]};openModal(old?'Modifier la note':'Nouvelle note',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure','time',x.time,'time')}<label>Catégorie<select name="category">${selectOptions(db.lists.noteCategories,x.category)}</select></label><label>Agent concerné<select name="agentId">${agentOptions(x.agentId,true)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label>${field('Titre','title',x.title,'text','required')}<label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${field('Échéance','dueDate',x.dueDate,'date')}${centralLocationFields(x,'noteLoc')}${textareaField('Note','text',x.text,5)}</div><fieldset><legend>Liste d’items</legend>${noteItemsHTML(x.items)}</fieldset>${attachmentField(x.attachments)}`,async form=>{const o=formDataObj(form);const rows=$$('.item-row',form).map(r=>({text:r.querySelector('[name="itemText"]').value.trim(),done:r.querySelector('[name="itemDone"]').checked})).filter(i=>i.text);Object.assign(x,o,{items:rows});const attachmentCheck=await processAttachments(form,x,'notes');if(!attachmentCheck?.ok)return;if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const persisted=await commitFormRecordVerified('Note','notes',x);if(!persisted.ok)return;closeModal();toast(`✅ Note enregistrée — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('notes',x.id,'note'):null});bindCentralLocation('noteLoc');function bindItems(){const box=$('#noteItems');if(!box)return;$$('[data-remove-item]',box).forEach(b=>b.onclick=()=>b.closest('.item-row')?.remove())}bindItems();const add=$('#addNoteItem');if(add)add.onclick=()=>{const box=$('#noteItems');if(!box)return;box.insertAdjacentHTML('beforeend','<div class="item-row"><input name="itemText" placeholder="Nouvelle action"><label class="inline-check"><input name="itemDone" type="checkbox"> Fait</label><button type="button" data-remove-item>×</button></div>');bindItems()}}
@@ -2292,7 +2292,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.98 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.100 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -2857,31 +2857,86 @@ function changeHistoryFieldLabel(field){
  const labels={
   firstName:'Prénom',lastName:'Nom',role:'Fonction',weeklyHours:'Temps hebdomadaire',
   email:'E-mail',phone:'Téléphone',assignment:'Affectation',arrivalDate:'Date d’arrivée',
-  agentId:'Agent',dayType:'Type de journée',date:'Date',dateFrom:'Du',dateTo:'Au',status:'Statut',
-  plannedStart:'Horaire théorique — arrivée',plannedEnd:'Horaire théorique — départ',
-  actualStart:'Horaire réel — arrivée',actualEnd:'Horaire réel — départ',
-  pause:'Pause',overtime:'Heures +/-',replacement:'Remplacement / relais',
-  noReplacementNeeded:'Aucun remplacement nécessaire',note:'Informations / Motif',
+  agentId:'Agent',dayType:'Type de journée',date:'Date',dateFrom:'Début de période',dateTo:'Fin de période',
+  status:'Statut',plannedStart:'Début horaire théorique',plannedEnd:'Fin horaire théorique',
+  actualStart:'Début horaire réel',actualEnd:'Fin horaire réel',
+  pause:'Pause',overtime:'Écart d’heures',replacement:'Remplacement / relais',
+  noReplacementNeeded:'Remplacement nécessaire',note:'Information / motif',
   time:'Heure',title:'Objet',family:'Famille',priority:'Priorité',
   building:'Bâtiment',floor:'Étage',sector:'Secteur',room:'Local / zone',
-  requester:'Demandeur',assigned:'Assigné à / prestataire',dueDate:'Échéance',
+  requester:'Demandeur',assigned:'Agent / prestataire affecté',dueDate:'Échéance',
   description:'Description / diagnostic',action:'Action réalisée / suite',
   type:'Type',response:'Réponse / réalisation',inspector:'Contrôleur',
-  roomType:'Type de local',comment:'Observation générale'
+  roomType:'Type de local',comment:'Observation générale',
+  overallStatus:'Résultat du contrôle',score:'Note / score'
  };
- return labels[field]||field||'Modification';
+ return labels[field]||String(field||'Information modifiée').replace(/([a-z])([A-Z])/g,'$1 $2').replace(/^./,x=>x.toUpperCase());
+}
+function historyLooksLikeDateField(field){
+ return ['date','dateFrom','dateTo','dueDate','arrivalDate','effectiveFrom','createdAt','updatedAt'].includes(String(field||''));
+}
+function historyLooksLikeTimeField(field){
+ return ['time','plannedStart','plannedEnd','actualStart','actualEnd','start','end'].includes(String(field||''));
+}
+function historySignedHours(value){
+ const n=Number(value);
+ if(!Number.isFinite(n))return String(value||'—');
+ if(n===0)return '0 h';
+ return `${n>0?'+':''}${String(n).replace('.',',')} h`;
 }
 function changeHistoryValue(field,value){
- if(value===true||String(value)==='true'||String(value)==='on')return 'Oui';
- if(value===false||String(value)==='false')return 'Non';
- if(field==='agentId'){
-   const a=agentById(value);return a?agentName(a):(value||'—');
+ if(value===null||value===undefined||String(value).trim()==='')return 'Non renseigné';
+ const raw=String(value).trim();
+ if(value===true||raw==='true'||raw==='on')return field==='noReplacementNeeded'?'Non':'Oui';
+ if(value===false||raw==='false')return field==='noReplacementNeeded'?'Oui':'Non';
+ if(field==='agentId'||field==='assigned'||field==='replacement'){
+   const a=agentById(value);if(a)return agentName(a);
  }
- if(value===null||value===undefined||String(value)==='')return '—';
- return String(value);
+ if(historyLooksLikeDateField(field)){
+   const d=normalizeDateValue(raw);if(d)return fmtDate(d);
+ }
+ if(field==='pause'){
+   const n=Number(value);return Number.isFinite(n)?`${n} min`:raw;
+ }
+ if(field==='overtime')return historySignedHours(value);
+ if(field==='weeklyHours'){
+   const n=Number(value);return Number.isFinite(n)?`${String(n).replace('.',',')} h / semaine`:raw;
+ }
+ if(historyLooksLikeTimeField(field)&&/^\d{1,2}:\d{2}/.test(raw))return raw.slice(0,5);
+ return raw;
+}
+function historyMeaningfulChange(c){
+ if(!c||!c.field)return false;
+ return historyComparable(c.oldValue)!==historyComparable(c.newValue);
+}
+function historyDisplayChanges(entry){
+ const src=Array.isArray(entry?.changes)?entry.changes.filter(historyMeaningfulChange):[];
+ if(changeHistoryType(entry)==='Agent'){
+   const map=new Map(src.map(c=>[c.field,c]));
+   const pairs=[
+     ['plannedStart','plannedEnd','Horaire théorique'],
+     ['actualStart','actualEnd','Horaire réel']
+   ];
+   const used=new Set(),out=[];
+   for(const [sf,ef,label] of pairs){
+     if(map.has(sf)||map.has(ef)){
+       const sc=map.get(sf),ec=map.get(ef);
+       const oldS=sc?.oldValue??'',oldE=ec?.oldValue??'',newS=sc?.newValue??oldS,newE=ec?.newValue??oldE;
+       const fmt=(a,b)=>a&&b?`${String(a).slice(0,5)}–${String(b).slice(0,5)}`:(a||b?String(a||b).slice(0,5):'Non renseigné');
+       out.push({fieldLabel:label,before:fmt(oldS,oldE),after:fmt(newS,newE)});
+       used.add(sf);used.add(ef);
+     }
+   }
+   for(const c of src){
+     if(used.has(c.field))continue;
+     out.push({fieldLabel:changeHistoryFieldLabel(c.field),before:changeHistoryValue(c.field,c.oldValue),after:changeHistoryValue(c.field,c.newValue)});
+   }
+   return out;
+ }
+ return src.map(c=>({fieldLabel:changeHistoryFieldLabel(c.field),before:changeHistoryValue(c.field,c.oldValue),after:changeHistoryValue(c.field,c.newValue)}));
 }
 function changeHistoryAgentName(entry){
- if(entry?.agentName)return String(entry.agentName);
+ if(entry?.agentName && !/^Modification d[’']une donnée passée$/i.test(String(entry.agentName)))return String(entry.agentName);
  if(entry?.agentId){
    const a=agentById(entry.agentId);if(a)return agentName(a);
  }
@@ -2895,45 +2950,128 @@ function changeHistoryAgentName(entry){
  if(m)return m[1].trim();
  return '';
 }
+function historyComparable(v){
+ if(v===true||String(v)==='true'||String(v)==='on')return 'true';
+ if(v===false||String(v)==='false')return 'false';
+ if(v===null||v===undefined)return '';
+ return String(v).trim();
+}
+function legacyHistoryCandidateScore(entry,record){
+ let score=0,matched=0;
+ for(const c of (entry?.changes||[])){
+   let field=c.field;
+   if(field==='dateFrom'||field==='dateTo')field='date';
+   if(!(field in record))continue;
+   matched++;
+   if(historyComparable(record[field])===historyComparable(c.newValue))score+=4;
+   else if(historyComparable(record[field])===historyComparable(c.oldValue))score+=1;
+ }
+ const target=(entry?.pastDates||[])[0]||'';
+ if(target&&record.date===target)score+=3;
+ return {score,matched};
+}
+function resolveLegacyHistoryEntry(entry){
+ if(entry?.__resolvedLegacy)return entry.__resolvedLegacy;
+ const generic=/^modification d[’']une donnée passée$/i;
+ const title=String(entry?.title||'');
+ const needs=!entry?.type||entry.type==='Autre'||generic.test(title)||!entry?.entity||generic.test(String(entry.entity));
+ if(!needs)return entry.__resolvedLegacy={type:entry.type||'Autre',entity:entry.entity||title||'Élément'};
+ const date=(entry?.pastDates||[])[0]||'';
+ const sets=[
+   ['Agent',db.agentDays||[],r=>agentName(agentById(r.agentId))||'Agent'],
+   ['Intervention',db.maintenance||[],r=>[r.no,r.title].filter(Boolean).join(' — ')||'Intervention'],
+   ['Demande',db.requests||[],r=>[r.no,r.title].filter(Boolean).join(' — ')||'Demande'],
+   ['Contrôle ménage',db.cleaning||[],r=>[r.no,[r.building,r.floor,r.room].filter(Boolean).join(' ')].filter(Boolean).join(' — ')||'Contrôle ménage']
+ ];
+ const candidates=[];
+ for(const [type,arr,label] of sets){
+   for(const r of arr){
+     if(date&&r.date&&r.date!==date)continue;
+     const sc=legacyHistoryCandidateScore(entry,r);
+     if(sc.matched>0||date&&r.date===date)candidates.push({type,record:r,entity:label(r),score:sc.score,matched:sc.matched});
+   }
+ }
+ candidates.sort((a,b)=>b.score-a.score||b.matched-a.matched);
+ const best=candidates[0],second=candidates[1];
+ if(best && best.score>0 && (!second||best.score>second.score)){
+   if(best.type==='Agent'){
+     entry.agentId=entry.agentId||best.record.agentId||'';
+     entry.agentName=entry.agentName||agentName(agentById(best.record.agentId))||'';
+   }
+   return entry.__resolvedLegacy={type:best.type,entity:best.entity};
+ }
+ // Strong field-based inference even if a unique record cannot be identified.
+ const fields=new Set((entry?.changes||[]).map(c=>c.field));
+ if(['actualStart','actualEnd','plannedStart','plannedEnd','overtime','dayType','replacement','noReplacementNeeded'].some(f=>fields.has(f))){
+   return entry.__resolvedLegacy={type:'Agent',entity:changeHistoryAgentName(entry)||'Agent concerné'};
+ }
+ if(['family','assigned','action'].some(f=>fields.has(f)))return entry.__resolvedLegacy={type:'Intervention',entity:'Intervention concernée'};
+ if(fields.has('response'))return entry.__resolvedLegacy={type:'Demande',entity:'Demande concernée'};
+ if(['inspector','roomType','comment'].some(f=>fields.has(f)))return entry.__resolvedLegacy={type:'Contrôle ménage',entity:'Contrôle ménage concerné'};
+ return entry.__resolvedLegacy={type:entry.type||'Autre',entity:(!generic.test(String(entry.entity||''))&&entry.entity)?String(entry.entity):(!generic.test(title)&&title?title:'Élément à identifier')};
+}
 function changeHistoryType(entry){
- if(entry?.type)return String(entry.type);
- const t=normalizeText(entry?.title||'');
- if(t.includes('saisie planning')||t.includes('agent'))return 'Agent';
- if(t.includes('intervention'))return 'Intervention';
- if(t.includes('controle menage')||t.includes('ménage')||t.includes('menage'))return 'Contrôle ménage';
- if(t.includes('demande'))return 'Demande';
- return 'Autre';
+ if(entry?.type && entry.type!=='Autre')return String(entry.type);
+ return resolveLegacyHistoryEntry(entry).type||'Autre';
 }
 function changeHistoryEntity(entry){
  const type=changeHistoryType(entry);
  const generic=/^modification d[’']une donnée passée$/i;
  if(type==='Agent'){
-   const a=changeHistoryAgentName(entry);
-   if(a && !generic.test(a))return a;
+   const a=changeHistoryAgentName(entry);if(a)return a;
  }
  if(entry?.entity && !generic.test(String(entry.entity)) && !['Agent','Équipe','Element','Élément'].includes(String(entry.entity)))return String(entry.entity);
+ if(entry?.recordId){
+   const maps={
+     'Agent':db.agents||[],
+     'Intervention':db.maintenance||[],
+     'Demande':db.requests||[],
+     'Contrôle ménage':db.cleaning||[]
+   };
+   const r=(maps[type]||[]).find(x=>String(x.id)===String(entry.recordId));
+   if(r){
+     if(type==='Agent')return agentName(r);
+     if(type==='Intervention'||type==='Demande')return [r.no,r.title].filter(Boolean).join(' — ');
+     if(type==='Contrôle ménage')return [r.no,[r.building,r.floor,r.room].filter(Boolean).join(' ')].filter(Boolean).join(' — ');
+   }
+ }
  if(type==='Intervention'){
-   const no=entry?.no||'',t=entry?.interventionTitle||entry?.itemTitle||'';
-   if(no||t)return [no,t].filter(Boolean).join(' — ');
+   const label=[entry?.no,entry?.itemTitle].filter(Boolean).join(' — ');if(label)return label;
  }
  if(type==='Demande'){
-   const no=entry?.no||'',t=entry?.requestTitle||entry?.itemTitle||'';
-   if(no||t)return [no,t].filter(Boolean).join(' — ');
+   const label=[entry?.no,entry?.itemTitle].filter(Boolean).join(' — ');if(label)return label;
  }
  if(type==='Contrôle ménage'){
-   const no=entry?.no||'',loc=entry?.location||'';
-   if(no||loc)return [no,loc].filter(Boolean).join(' — ');
+   const label=[entry?.no,entry?.location].filter(Boolean).join(' — ');if(label)return label;
  }
+ const legacy=resolveLegacyHistoryEntry(entry);
+ if(legacy?.entity && !generic.test(String(legacy.entity)))return legacy.entity;
  const title=String(entry?.title||'');
- return title&&!generic.test(title)?title:(type==='Agent'?'Agent concerné':type||'Élément concerné');
+ return title&&!generic.test(title)?title:'Élément à identifier';
+}
+function changeHistoryTypeLabel(entry){
+ const t=changeHistoryType(entry);
+ if(t==='Agent')return 'Agent';
+ if(t==='Intervention')return 'Intervention';
+ if(t==='Demande')return 'Demande';
+ if(t==='Contrôle ménage')return 'Contrôle ménage';
+ return 'Information';
+}
+function changeHistoryConcernedDate(entry){
+ const dates=(entry?.pastDates||[]).filter(Boolean);
+ return dates.length?dates.map(fmtDate).join(', '):'Date non renseignée';
 }
 function changeHistoryAcademicYear(entry){
  const d=(entry?.pastDates||[])[0]||String(entry?.date||'').slice(0,10);
  return d?academicYearFor(d):'';
 }
 
+function clearHistoryLegacyResolutionCache(){
+ for(const h of (db.changeHistory||[]))try{delete h.__resolvedLegacy}catch(_){}
+}
 function filteredChangeHistoryEntries(){
  db.changeHistory=Array.isArray(db.changeHistory)?db.changeHistory:[];
+ clearHistoryLegacyResolutionCache();
  const active=activeAcademicYear(),yearEl=$('#changeHistoryYear'),typeEl=$('#changeHistoryType'),searchEl=$('#changeHistorySearch');
  const year=yearEl?.value||active,type=typeEl?.value||'',q=String(searchEl?.value||'').trim().toLowerCase();
  let entries=db.changeHistory.slice()
@@ -2955,11 +3093,11 @@ function printChangeHistory(){
  for(const h of entries){
    const modDate=h.date?new Date(h.date):null;
    const stamp=modDate&&!isNaN(modDate)?modDate.toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
-   const concerned=(h.pastDates||[]).map(fmtDate).join(', ')||'—';
-   const hType=changeHistoryType(h),entity=changeHistoryEntity(h);
-   const changes=Array.isArray(h.changes)&&h.changes.length?h.changes:[{field:'',oldValue:'',newValue:''}];
+   const concerned=changeHistoryConcernedDate(h);
+   const hType=changeHistoryTypeLabel(h),entity=changeHistoryEntity(h);
+   const changes=historyDisplayChanges(h);
    for(const c of changes){
-     rows.push(`<tr><td>${esc(stamp)}</td><td>${esc(hType)}</td><td>${esc(concerned)}</td><td>${esc(entity)}</td><td>${esc(changeHistoryFieldLabel(c.field))}</td><td>${esc(changeHistoryValue(c.field,c.oldValue))}</td><td>${esc(changeHistoryValue(c.field,c.newValue))}</td><td>${esc(h.user||'Utilisateur')}</td></tr>`);
+     rows.push(`<tr><td>${esc(stamp)}</td><td>${esc(hType)}</td><td>${esc(concerned)}</td><td>${esc(entity)}</td><td>${esc(c.fieldLabel)}</td><td>${esc(c.before)}</td><td>${esc(c.after)}</td><td>${esc(h.user||'Utilisateur')}</td></tr>`);
    }
  }
  const filters=[`Année scolaire : ${year||'Toutes'}`,`Type : ${type}`];
@@ -2985,14 +3123,14 @@ function renderChangeHistory(){
  for(const h of entries){
    const modDate=h.date?new Date(h.date):null;
    const stamp=modDate&&!isNaN(modDate)?modDate.toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
-   const concerned=(h.pastDates||[]).map(fmtDate).join(', ')||'—';
-   const hType=changeHistoryType(h),entity=changeHistoryEntity(h);
-   const changes=Array.isArray(h.changes)&&h.changes.length?h.changes:[{field:'',oldValue:'',newValue:''}];
+   const concerned=changeHistoryConcernedDate(h);
+   const hType=changeHistoryTypeLabel(h),entity=changeHistoryEntity(h);
+   const changes=historyDisplayChanges(h);
    for(const c of changes){
-     rows.push(`<tr><td>${esc(stamp)}</td><td>${esc(hType)}</td><td>${esc(concerned)}</td><td><strong>${esc(entity)}</strong></td><td>${esc(changeHistoryFieldLabel(c.field))}</td><td>${esc(changeHistoryValue(c.field,c.oldValue))}</td><td><strong>${esc(changeHistoryValue(c.field,c.newValue))}</strong></td><td>${esc(h.user||'Utilisateur')}</td></tr>`);
+     rows.push(`<tr><td>${esc(stamp)}</td><td>${esc(hType)}</td><td>${esc(concerned)}</td><td><strong>${esc(entity)}</strong></td><td>${esc(c.fieldLabel)}</td><td>${esc(c.before)}</td><td><strong>${esc(c.after)}</strong></td><td>${esc(h.user||'Utilisateur')}</td></tr>`);
    }
  }
- const totalChanges=entries.reduce((n,h)=>n+(Array.isArray(h.changes)?h.changes.length:1),0);
+ const totalChanges=entries.reduce((n,h)=>n+historyDisplayChanges(h).length,0);
  const entities=new Set(entries.map(changeHistoryEntity).filter(Boolean));
  const types=new Set(entries.map(changeHistoryType).filter(Boolean));
  $('#changeHistorySummary').innerHTML=`<article><span>Saisies modifiées</span><strong>${entries.length}</strong></article><article><span>Champs modifiés</span><strong>${totalChanges}</strong></article><article><span>Éléments concernés</span><strong>${entities.size}</strong></article><article><span>Types concernés</span><strong>${types.size}</strong></article>`;
@@ -3735,14 +3873,28 @@ function auditFieldLabel(field){
  };
  return labels[field]||changeHistoryFieldLabel?.(field)||field||'Modification';
 }
-function pushModificationHistory({type,entity,date,changes,user,agentId='',agentNameValue='',title=''}) {
+function pushModificationHistory({
+ type,entity,date,changes,user,agentId='',agentNameValue='',title='',
+ recordId='',no='',itemTitle='',location=''
+}) {
  if(!Array.isArray(changes)||!changes.length)return;
  db.changeHistory=Array.isArray(db.changeHistory)?db.changeHistory:[];
  const cleanChanges=changes.map(c=>({field:c.field,oldValue:c.oldValue,newValue:c.newValue}));
+ const concreteEntity=String(entity||'').trim();
  db.changeHistory.push({
-   id:uid(),date:new Date().toISOString(),type:type||'Autre',entity:entity||title||'Élément',
-   title:(title&&!/^Modification d[’']une donnée passée$/i.test(String(title)))?title:(entity||'Modification'),pastDates:[date||todayISO()],changes:cleanChanges,
-   agentId:agentId||'',agentName:agentNameValue||'',user:user||currentUser?.email||'Utilisateur'
+   id:uid(),date:new Date().toISOString(),
+   type:type||'Autre',
+   entity:concreteEntity||title||'Élément',
+   title:(title&&!/^Modification d[’']une donnée passée$/i.test(String(title)))?title:(concreteEntity||'Modification'),
+   pastDates:[date||todayISO()],
+   changes:cleanChanges,
+   recordId:String(recordId||''),
+   no:String(no||''),
+   itemTitle:String(itemTitle||''),
+   location:String(location||''),
+   agentId:String(agentId||''),
+   agentName:String(agentNameValue||''),
+   user:user||currentUser?.email||'Utilisateur'
  });
  localDirty=true;
  try{writeMirror()}catch(_){}
@@ -3759,20 +3911,30 @@ function bindEvents(){
   const oldBtnText=btn.textContent;
   const auditCtx=modalAuditContext?Object.assign({},modalAuditContext):null;
   const auditTitle=modalAuditTitle;
-  const histAgentId=form.elements?.agentId?.value||auditCtx?.agentId||'';
-  const histAgent=histAgentId?agentById(histAgentId):null;
+  const formAgentId=form.elements?.agentId?.value||auditCtx?.agentId||'';
+  const formAgent=formAgentId?agentById(formAgentId):null;
   const auditDate=auditDateFromForm(form,auditCtx||{});
   const auditEntity=auditEntityFromForm(form,auditCtx||{});
+  const auditType=auditCtx?.type||'Autre';
+  const auditNo=String(auditCtx?.no||form.elements?.no?.value||'');
+  const auditItemTitle=String(form.elements?.title?.value||auditCtx?.title||'');
+  const auditLocation=[form.elements?.building?.value,form.elements?.floor?.value,form.elements?.room?.value].filter(Boolean).join(' ');
+  const auditRecordId=String(auditCtx?.recordId||'');
+  let auditAgentName=formAgent?agentName(formAgent):String(auditCtx?.agentName||'');
+  if(auditType==='Agent'&&!auditAgentName){
+    auditAgentName=[form.elements?.firstName?.value||'',form.elements?.lastName?.value||''].filter(Boolean).join(' ').trim();
+  }
   btn.disabled=true;btn.textContent='Enregistrement…';
   try{
     const handlerResult=await modalHandler(form);
     if(handlerResult===false||handlerResult?.ok===false)return;
     if(changed.length&&auditCtx?.track){
       pushModificationHistory({
-        type:auditCtx.type||'Autre',entity:auditEntity,date:auditDate,changes,
-        user:currentUser?.email||'Utilisateur',agentId:histAgentId,
-        agentNameValue:histAgent?agentName(histAgent):(auditCtx?.agentName||''),
-        title:auditTitle||auditEntity
+        type:auditType,entity:auditEntity,date:auditDate,changes,
+        user:currentUser?.email||'Utilisateur',
+        agentId:formAgentId,agentNameValue:auditAgentName,
+        title:auditTitle||auditEntity,
+        recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
       });
     }
   }catch(err){

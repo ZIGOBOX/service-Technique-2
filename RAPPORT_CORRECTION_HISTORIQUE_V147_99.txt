@@ -1,0 +1,22 @@
+V147.99 — Reconstruction réelle du tableau d'historique
+
+CORRECTION DE FOND
+- Les anciennes lignes « Modification d’une donnée passée » avaient perdu le contexte de la fiche à la fermeture du formulaire.
+- Le tableau tente maintenant de reconstruire ces anciennes lignes en croisant :
+  date concernée + champs modifiés + nouvelle valeur
+  avec les journées agents, interventions, demandes et contrôles ménage existants.
+
+NOUVELLES MODIFICATIONS
+- Chaque nouvelle entrée d'historique stocke directement :
+  type, recordId, numéro, titre, lieu, agentId et nom de l'agent.
+- Le tableau n'a plus besoin de deviner l'élément concerné pour les nouvelles modifications.
+
+AFFICHAGE
+- Agent : nom complet.
+- Intervention : numéro + titre.
+- Demande : numéro + objet.
+- Contrôle ménage : numéro + bâtiment/étage/local.
+- Si une ancienne ligne ne peut réellement pas être identifiée sans ambiguïté, elle affiche « Élément à identifier » plutôt qu'un faux nom.
+
+FILTRES / IMPRESSION
+- Les filtres et l'impression continuent d'utiliser exactement les mêmes données du tableau.
