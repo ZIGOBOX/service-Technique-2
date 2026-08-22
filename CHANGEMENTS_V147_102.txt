@@ -1,0 +1,14 @@
+V147.102 — Historique agent fiable
+
+CORRECTIONS
+- Une modification de journée agent est inscrite directement dans changeHistory
+  avant fermeture du formulaire et avant toute synchronisation Supabase.
+- Le nom complet de l'agent est stocké directement, pas déduit après coup.
+- Les anciennes valeurs « Agent concerné » / « Élément à identifier » sont désormais
+  considérées comme des placeholders et peuvent être reconstruites depuis les données existantes.
+- Pour un nouvel horaire réel, la colonne Avant utilise l'horaire théorique comme référence.
+- Réinitialiser l'horaire réel n'ajoute pas de trace de suppression et retire l'ancienne trace horaire.
+- L'audit générique est désactivé pour le formulaire journée agent afin d'éviter les doublons.
+
+RÉSULTAT ATTENDU
+Agent | 10/08/2026 | Mme Tarrio | Horaire réel | 06:00–14:45 | 07:00–16:00

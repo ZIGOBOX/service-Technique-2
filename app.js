@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.101';
+const APP_VERSION='147.102';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1525,7 +1525,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.101 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.102 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1591,7 +1591,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.101 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.102 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1846,6 +1846,60 @@ function deleteStandardSchedulePeriod(planId){
  return true;
 }
 
+
+function agentDayAuditBaseline(x,dateFrom,dateTo){
+ return {
+   agentId:String(x?.agentId||''),
+   dayType:String(x?.dayType||'Présence'),
+   dateFrom:String(dateFrom||x?.date||''),
+   dateTo:String(dateTo||x?.date||''),
+   status:String(x?.status||'Validée'),
+   plannedStart:String(x?.plannedStart||''),
+   plannedEnd:String(x?.plannedEnd||''),
+   // S'il n'existait pas encore d'horaire réel, l'horaire théorique est la référence "Avant".
+   actualStart:String(x?.actualStart||x?.plannedStart||''),
+   actualEnd:String(x?.actualEnd||x?.plannedEnd||''),
+   pause:String(x?.pause??''),
+   overtime:String(x?.overtime??0),
+   replacement:String(x?.replacement||''),
+   noReplacementNeeded:!!x?.noReplacementNeeded,
+   note:String(x?.note||'')
+ };
+}
+function agentDayAuditChanges(before,o){
+ const after={
+   agentId:String(o.agentId||''),
+   dayType:String(o.dayType||'Présence'),
+   dateFrom:String(o.dateFrom||''),
+   dateTo:String(o.dateTo||''),
+   status:String(o.status||'Validée'),
+   plannedStart:String(o.plannedStart||''),
+   plannedEnd:String(o.plannedEnd||''),
+   actualStart:String(o.actualStart||o.plannedStart||''),
+   actualEnd:String(o.actualEnd||o.plannedEnd||''),
+   pause:String(o.pause??''),
+   overtime:String(o.overtime??0),
+   replacement:String(o.replacement||''),
+   noReplacementNeeded:!!o.noReplacementNeeded,
+   note:String(o.note||'')
+ };
+ const fields=['agentId','dayType','dateFrom','dateTo','status','plannedStart','plannedEnd',
+   'actualStart','actualEnd','pause','overtime','replacement','noReplacementNeeded','note'];
+ return fields.filter(f=>historyComparable(before[f])!==historyComparable(after[f]))
+   .map(f=>({field:f,oldValue:before[f],newValue:after[f]}));
+}
+function removeAgentDayHistoryForReset(agentId,date){
+ db.changeHistory=Array.isArray(db.changeHistory)?db.changeHistory:[];
+ db.changeHistory=db.changeHistory.filter(h=>{
+   if(changeHistoryType(h)!=='Agent')return true;
+   const sameAgent=String(h.agentId||'')===String(agentId||'') ||
+      changeHistoryEntity(h)===agentName(agentById(agentId));
+   const sameDate=(h.pastDates||[]).includes(date);
+   if(!sameAgent||!sameDate)return true;
+   const fs=new Set((h.changes||[]).map(c=>c.field));
+   return !(fs.has('actualStart')||fs.has('actualEnd')||fs.has('overtime'));
+ });
+}
 function openAgentDay(agentId,date,id,preferredDayType=''){
  const clicked=id?byId('agentDays',id):dayRecord(agentId,date,preferredDayType);
  const periodId=clicked?.periodId||'';
@@ -1858,6 +1912,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  const x=old?Object.assign({},old,{plannedStart:sched.start||old.plannedStart||'',plannedEnd:sched.end||old.plannedEnd||'',pause:Number(sched.pause??old.pause??0),theoreticalSource:sched.source||sched.shift||''}):{id:uid(),agentId:initialAgentId,date:initialDate,dayType:initialType,plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',pause:sched.pause,overtime:0,status:'Validée',note:'',replacement:'',noReplacementNeeded:false,theoreticalSource:sched.source||sched.shift||''};
  const dateFrom=periodRows.length?periodRows.map(r=>r.date).sort()[0]:x.date;
  const dateTo=periodRows.length?periodRows.map(r=>r.date).sort().at(-1):x.date;
+ const agentDayAuditBefore=agentDayAuditBaseline(x,dateFrom,dateTo);
  openModal(`${agentName(agentById(x.agentId))} — saisie planning`,`<div id="annualTheoreticalSummary">${agentAnnualScheduleSummary(x.agentId,initialDate)}</div><div class="day-shortcuts"><button type="button" data-set-day="Congé annuel">Congé</button><button type="button" data-set-day="RTT">RTT</button><button type="button" data-set-day="Maladie">Maladie</button><button type="button" data-set-day="Présence">Présence</button></div><div class="theoretical-schedule" id="theoreticalSchedule"></div><div class="form-grid"><label>Agent<select name="agentId">${agentOptions(x.agentId)}</select></label><label>Type de journée<select name="dayType">${dayTypeOptions(x.dayType)}</select></label>${field('Du','dateFrom',dateFrom,'date','required')}${field('Au','dateTo',dateTo,'date','required')}<label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],x.status||'Validée')}</select></label>${field('Horaire théorique — arrivée','plannedStart',x.plannedStart,'time')}${field('Horaire théorique — départ','plannedEnd',x.plannedEnd,'time')}${field('Horaire réel — arrivée','actualStart',x.actualStart,'time')}${field('Horaire réel — départ','actualEnd',x.actualEnd,'time')}<div class="full-width"><button type="button" class="ghost" id="resetRealSchedule">↩ Réinitialiser l’horaire réel</button><p class="hint">Efface uniquement l’horaire réel et remet l’affichage sur l’horaire théorique de cette journée.</p></div>${field('Pause (minutes)','pause',x.pause,'number','min="0" step="5"')}${field('Heures supplémentaires (+) / retirées (-)','overtime',x.overtime,'number','step="0.25"')}<label class="full-width replacement-choice"><span>Gestion du remplacement</span><span class="checkbox-row"><input type="checkbox" name="noReplacementNeeded" ${x.noReplacementNeeded?'checked':''}> Aucun remplacement nécessaire pendant cette période</span></label>${field('Remplacement / relais','replacement',x.replacement||'')}<div class="full-width manual-info-box"><strong>ⓘ Informations / Motif</strong><p class="hint">Informations facultatives pour préciser une modification manuelle : RTT, congé, maladie, ajout/retrait d’heures ou changement d’horaire.</p>${textareaField('Informations / Motif','note',x.note)}</div></div><p class="hint">Aucune notification de remplacement n’est créée le samedi, le dimanche ou un jour férié. Si la case « Aucun remplacement nécessaire » est cochée, aucune notification de remplacement ne sera créée pour toute la période.</p><div class="calculation-preview" id="dayCalc"></div>`,async form=>{const o=formDataObj(form);
  const from=o.dateFrom, to=o.dateTo;
  if(!o.agentId){toast('Choisissez un agent');return}
@@ -1869,7 +1924,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.101 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.102 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -1906,7 +1961,31 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.101 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
+ // V147.102 — historique agent écrit directement ici, avant fermeture et avant Supabase.
+ const directAgent=agentById(o.agentId);
+ const directAgentName=directAgent?agentName(directAgent):'Agent';
+ const directChanges=agentDayAuditChanges(agentDayAuditBefore,o);
+ const resetReal=(!o.actualStart&&!o.actualEnd) &&
+   (!!x.actualStart||!!x.actualEnd||Math.abs(Number(x.overtime||0))>0.0001);
+ if(resetReal){
+   // Une réinitialisation n'ajoute pas une ligne "suppression" : on retire l'ancienne trace horaire.
+   removeAgentDayHistoryForReset(o.agentId,from);
+ }
+ if(directChanges.length && !resetReal){
+   pushModificationHistory({
+     type:'Agent',
+     entity:directAgentName,
+     date:from,
+     changes:directChanges,
+     user:currentUser?.email||'Utilisateur',
+     agentId:o.agentId,
+     agentNameValue:directAgentName,
+     title:directAgentName,
+     recordId:expectedDays[0]?.id||x.id||''
+   });
+ }
+
+ // V147.102 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
  localDirty=true;
  clearTheoreticalScheduleCache();
  try{writeMirror()}catch(_){}
@@ -1918,7 +1997,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.101 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.102 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -1938,7 +2017,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    }
  },0);
  return {ok:true};},{
-  audit:{track:true,type:'Agent',recordId:x.id,agentId:x.agentId,agentName:agentName(agentById(x.agentId)),entity:(form)=>{const a=agentById(form?.elements?.agentId?.value||x.agentId);return a?agentName(a):agentName(agentById(x.agentId))},date:initialDate},
+  audit:{track:false,type:'Agent',recordId:x.id,agentId:x.agentId,agentName:agentName(agentById(x.agentId)),entity:(form)=>{const a=agentById(form?.elements?.agentId?.value||x.agentId);return a?agentName(a):agentName(agentById(x.agentId))},date:initialDate},
   onDelete:old?()=>{if(!confirm('Supprimer cette saisie ou toute la période associée ?'))return;const deletedDates=periodId?db.agentDays.filter(r=>r.periodId===periodId).map(r=>r.date):[old.date];
  db.agentDays=periodId?db.agentDays.filter(r=>r.periodId!==periodId):db.agentDays.filter(r=>r.id!==old.id);
  db.changeHistory=(db.changeHistory||[]).filter(h=>!(h.title===modalAuditTitle&&(h.pastDates||[]).some(d=>deletedDates.includes(d))));
@@ -2294,7 +2373,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.101 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.102 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -2976,7 +3055,9 @@ function resolveLegacyHistoryEntry(entry){
  if(entry?.__resolvedLegacy)return entry.__resolvedLegacy;
  const generic=/^modification d[’']une donnée passée$/i;
  const title=String(entry?.title||'');
- const needs=!entry?.type||entry.type==='Autre'||generic.test(title)||!entry?.entity||generic.test(String(entry.entity));
+ const placeholder=/^(agent concerné|élément à identifier|element a identifier|élément concerné|element concerne)$/i;
+ const needs=!entry?.type||entry.type==='Autre'||generic.test(title)||!entry?.entity||
+   generic.test(String(entry.entity))||placeholder.test(String(entry.entity).trim());
  if(!needs)return entry.__resolvedLegacy={type:entry.type||'Autre',entity:entry.entity||title||'Élément'};
  const date=(entry?.pastDates||[])[0]||'';
  const sets=[
@@ -3022,7 +3103,9 @@ function changeHistoryEntity(entry){
  if(type==='Agent'){
    const a=changeHistoryAgentName(entry);if(a)return a;
  }
- if(entry?.entity && !generic.test(String(entry.entity)) && !['Agent','Équipe','Element','Élément'].includes(String(entry.entity)))return String(entry.entity);
+ const placeholder=/^(agent concerné|élément à identifier|element a identifier|élément concerné|element concerne)$/i;
+ if(entry?.entity && !generic.test(String(entry.entity)) && !placeholder.test(String(entry.entity).trim()) &&
+    !['Agent','Équipe','Element','Élément'].includes(String(entry.entity)))return String(entry.entity);
  if(entry?.recordId){
    const maps={
      'Agent':db.agents||[],
