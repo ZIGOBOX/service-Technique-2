@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.108';
+const APP_VERSION='147.109';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1580,7 +1580,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.108 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.109 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1646,7 +1646,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.108 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.109 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1979,7 +1979,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.108 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.109 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2003,7 +2003,8 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  let d=from,added=0;
  while(d<=to){
    const weekday=![0,6].includes(parseDate(d).getDay());
-   if(!isPeriod||weekday){
+   const shouldSaveDay=(from===to)||!isPeriod||weekday;
+   if(shouldSaveDay){
      db.agentDays=db.agentDays.filter(r=>!(String(r.agentId)===String(o.agentId)&&r.date===d));
      const sc=resolvedTheoreticalSchedule(o.agentId,d,o.dayType), sameStart=d===from;
      const rule=dayCountingRule(o.dayType);
@@ -2014,9 +2015,23 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    }
    d=addDays(d,1);
  }
+ if(added===0 && from===to){
+   const sc=resolvedTheoreticalSchedule(o.agentId,from,o.dayType);
+   db.agentDays=db.agentDays.filter(r=>!(String(r.agentId)===String(o.agentId)&&r.date===from));
+   db.agentDays.push({
+     id:uid(),periodId:'',agentId:o.agentId,date:from,dayType:o.dayType,
+     plannedStart:o.plannedStart||sc.start||'',plannedEnd:o.plannedEnd||sc.end||'',
+     actualStart:o.actualStart||'',actualEnd:o.actualEnd||'',
+     pause:Number(o.pause||sc.pause||0),overtime:Number(o.overtime||0),
+     status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),
+     noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',
+     academicYear:academicYearFor(from),updatedAt:new Date().toISOString()
+   });
+   added=1;
+ }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.108 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.109 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2062,7 +2077,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.108 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.109 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2439,7 +2454,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.108 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.109 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
