@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.104';
+const APP_VERSION='147.105';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1580,7 +1580,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.104 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.105 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1646,7 +1646,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.104 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.105 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1979,7 +1979,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.104 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.105 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2016,35 +2016,45 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.104 — historique agent écrit directement ici, avant fermeture et avant Supabase.
- const directAgent=agentById(o.agentId);
- const directAgentName=directAgent?agentName(directAgent):'Agent';
- const directChanges=agentDayAuditChanges(agentDayAuditBefore,o);
- const resetReal=(!o.actualStart&&!o.actualEnd) &&
-   (!!x.actualStart||!!x.actualEnd||Math.abs(Number(x.overtime||0))>0.0001);
- if(resetReal){
-   // Une réinitialisation n'ajoute pas une ligne "suppression" : on retire l'ancienne trace horaire.
-   removeAgentDayHistoryForReset(o.agentId,from);
- }
- if(directChanges.length && !resetReal){
-   pushModificationHistory({
-     type:'Agent',
-     entity:directAgentName,
-     date:from,
-     changes:directChanges,
-     user:currentUser?.email||'Utilisateur',
-     agentId:o.agentId,
-     agentNameValue:directAgentName,
-     title:directAgentName,
-     recordId:expectedDays[0]?.id||x.id||''
-   });
- }
-
- // V147.104 — sauvegarde locale immédiate : le bouton ne dépend plus du délai Supabase.
+ // V147.105 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
- try{writeMirror()}catch(_){}
- try{writeOfflinePending('modification planning agent à synchroniser')}catch(_){}
+ try{writeMirror()}catch(error){console.warn('Miroir local planning agent',error)}
+ try{writeOfflinePending('modification planning agent à synchroniser')}catch(error){console.warn('File locale planning agent',error)}
+
+ // Historique traité ensuite dans un bloc totalement isolé.
+ try{
+   const directAgent=agentById(o.agentId);
+   const directAgentName=directAgent?agentName(directAgent):'Agent';
+   const directChanges=agentDayAuditChanges(agentDayAuditBefore,o);
+   const resetReal=(!o.actualStart&&!o.actualEnd) &&
+     (!!x.actualStart||!!x.actualEnd||Math.abs(Number(x.overtime||0))>0.0001);
+
+   if(resetReal){
+     removeAgentDayHistoryForReset(o.agentId,from);
+   }else if(directChanges.length){
+     pushModificationHistory({
+       type:'Agent',
+       entity:directAgentName,
+       date:from,
+       changes:directChanges,
+       user:currentUser?.email||'Utilisateur',
+       agentId:o.agentId,
+       agentNameValue:directAgentName,
+       title:directAgentName,
+       recordId:expectedDays[0]?.id||x.id||''
+     });
+   }
+
+   // Le miroir est réécrit une seconde fois pour inclure l'historique,
+   // sans jamais remettre en cause la sauvegarde de la journée.
+   try{writeMirror()}catch(_){}
+   try{writeOfflinePending('planning agent + historique à synchroniser')}catch(_){}
+ }catch(historyError){
+   console.error('Historique agent non bloquant',historyError);
+ }
+
  refreshCollectionView('agentDays');
  closeModal();
  toast(`✅ ${added} jour(s) enregistré(s)`);
@@ -2052,7 +2062,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.104 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.105 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2428,7 +2438,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.104 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.105 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -4070,33 +4080,43 @@ function bindEvents(){
   const changed=[];if(modalAuditInitial){for(const e of [...form.elements]){if(!e.name||e.type==='file'||e.type==='button'||e.type==='submit')continue;const nv=e.type==='checkbox'?e.checked:e.value,ov=modalAuditInitial[e.name];if(String(nv)!==String(ov))changed.push({field:e.name,oldValue:ov,newValue:nv})}}
   if(pastDates.length&&changed.length&&!confirm('⚠️ Cette donnée concerne une date passée.\n\nLa modification sera enregistrée dans l’historique.\n\nContinuer ?'))return;
   const oldBtnText=btn.textContent;
-  const auditCtx=modalAuditContext?Object.assign({},modalAuditContext):null;
-  const auditTitle=modalAuditTitle;
-  const formAgentId=form.elements?.agentId?.value||auditCtx?.agentId||'';
-  const formAgent=formAgentId?agentById(formAgentId):null;
-  const auditDate=auditDateFromForm(form,auditCtx||{});
-  const auditEntity=auditEntityFromForm(form,auditCtx||{});
-  const auditType=auditCtx?.type||'Autre';
-  const auditNo=String(auditCtx?.no||form.elements?.no?.value||'');
-  const auditItemTitle=String(form.elements?.title?.value||auditCtx?.title||'');
-  const auditLocation=[form.elements?.building?.value,form.elements?.floor?.value,form.elements?.room?.value].filter(Boolean).join(' ');
-  const auditRecordId=String(auditCtx?.recordId||'');
-  let auditAgentName=formAgent?agentName(formAgent):String(auditCtx?.agentName||'');
-  if(auditType==='Agent'&&!auditAgentName){
-    auditAgentName=[form.elements?.firstName?.value||'',form.elements?.lastName?.value||''].filter(Boolean).join(' ').trim();
+  let auditCtx=null,auditTitle='',formAgentId='',formAgent=null,auditDate=todayISO(),auditEntity='',auditType='Autre',auditNo='',auditItemTitle='',auditLocation='',auditRecordId='',auditAgentName='';
+  try{
+    auditCtx=modalAuditContext?Object.assign({},modalAuditContext):null;
+    auditTitle=modalAuditTitle||'';
+    formAgentId=form.elements?.agentId?.value||auditCtx?.agentId||'';
+    formAgent=formAgentId?agentById(formAgentId):null;
+    auditDate=auditDateFromForm(form,auditCtx||{});
+    auditEntity=auditEntityFromForm(form,auditCtx||{});
+    auditType=auditCtx?.type||'Autre';
+    auditNo=String(auditCtx?.no||form.elements?.no?.value||'');
+    auditItemTitle=String(form.elements?.title?.value||auditCtx?.title||'');
+    auditLocation=[form.elements?.building?.value,form.elements?.floor?.value,form.elements?.room?.value].filter(Boolean).join(' ');
+    auditRecordId=String(auditCtx?.recordId||'');
+    auditAgentName=formAgent?agentName(formAgent):String(auditCtx?.agentName||'');
+    if(auditType==='Agent'&&!auditAgentName){
+      auditAgentName=[form.elements?.firstName?.value||'',form.elements?.lastName?.value||''].filter(Boolean).join(' ').trim();
+    }
+  }catch(auditPrepError){
+    console.warn('Préparation historique ignorée pour ne pas bloquer le formulaire',auditPrepError);
+    auditCtx=null;
   }
   btn.disabled=true;btn.textContent='Enregistrement…';
   try{
     const handlerResult=await modalHandler(form);
     if(handlerResult===false||handlerResult?.ok===false)return;
     if(changed.length&&auditCtx?.track){
-      pushModificationHistory({
-        type:auditType,entity:auditEntity,date:auditDate,changes,
-        user:currentUser?.email||'Utilisateur',
-        agentId:formAgentId,agentNameValue:auditAgentName,
-        title:auditTitle||auditEntity,
-        recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
-      });
+      try{
+        pushModificationHistory({
+          type:auditType,entity:auditEntity,date:auditDate,changes,
+          user:currentUser?.email||'Utilisateur',
+          agentId:formAgentId,agentNameValue:auditAgentName,
+          title:auditTitle||auditEntity,
+          recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
+        });
+      }catch(auditWriteError){
+        console.error('Historique non bloquant',auditWriteError);
+      }
     }
   }catch(err){
     console.error('Erreur d’enregistrement du formulaire :',err);

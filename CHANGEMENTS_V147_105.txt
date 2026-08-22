@@ -1,0 +1,9 @@
+V147.105 — Bouton Enregistrer sécurisé
+
+- La sauvegarde du formulaire agent est désormais prioritaire sur l'historique.
+- Une erreur dans l'historique ne peut plus bloquer le bouton Enregistrer.
+- La journée est écrite localement d'abord.
+- L'historique est ajouté ensuite dans un bloc isolé.
+- Le miroir local est réécrit après l'historique afin de conserver les deux.
+- La synchronisation Supabase reste différée.
+- La préparation de l'audit générique est également protégée contre les erreurs.
