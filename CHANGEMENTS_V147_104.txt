@@ -1,0 +1,15 @@
+V147.104 — Historique protégé contre la synchronisation Supabase
+
+PROBLÈME
+Une modification apparaissait dans Archives puis pouvait disparaître après la relecture serveur.
+
+CORRECTION
+- changeHistory est maintenant fusionné par identifiant à chaque relecture Supabase.
+- Une ligne locale récente ne peut plus être supprimée par un état serveur plus ancien.
+- persistStateDirect conserve un instantané de l'historique avant écriture et le restaure après relecture.
+- Si Supabase renvoie un état sans une ligne locale, l'application répare immédiatement l'état serveur.
+- cloudSaveNow fusionne explicitement les historiques local et distant.
+- Le polling Supabase préserve également l'historique local lors d'une actualisation distante.
+
+RÉSULTAT
+Une ligne qui apparaît dans Archives après Enregistrer doit y rester après synchronisation.
