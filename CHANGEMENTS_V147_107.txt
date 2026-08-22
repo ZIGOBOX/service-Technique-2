@@ -1,0 +1,4 @@
+V147.107 — Sauvegarde complète fiche agent
+- Un seul circuit submit pour Enregistrer.
+- Contrôle après écriture du type de journée, motif et horaires réels.
+- Le formulaire ne confirme plus une sauvegarde incomplète.

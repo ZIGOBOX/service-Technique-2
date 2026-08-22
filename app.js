@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.106';
+const APP_VERSION='147.107';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1580,7 +1580,7 @@ function upsertChronotimePermanence(c){
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.106 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.107 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1646,7 +1646,7 @@ function syncStoredChronotimePastilles(){
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.106 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.107 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1979,7 +1979,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.106 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.107 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2015,8 +2015,16 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    d=addDays(d,1);
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
+ const savedCheck=expectedDays.find(r=>r.date===from)||expectedDays[0];
+ if(!savedCheck ||
+    String(savedCheck.dayType||'')!==String(o.dayType||'') ||
+    String(savedCheck.note||'')!==String(o.note||'') ||
+    String(savedCheck.actualStart||'')!==String(o.actualStart||'') ||
+    String(savedCheck.actualEnd||'')!==String(o.actualEnd||'')){
+   throw new Error('La fiche agent n’a pas été enregistrée complètement');
+ }
 
- // V147.106 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.107 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2062,7 +2070,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.106 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.107 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2439,7 +2447,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.106 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.107 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -4076,7 +4084,15 @@ function bindEvents(){
  $('#modalForm').addEventListener('submit',async e=>{
   e.preventDefault();if(!modalHandler)return;
   const form=e.currentTarget,btn=$('#modalSave');
-  if(btn?.dataset?.directSave==='1')return;
+  if(btn?.dataset?.directSave==='1'){
+    if(!form.checkValidity()){form.reportValidity();toast('Complétez les champs obligatoires indiqués');return}
+    if(btn.disabled)return;
+    const oldText=btn.textContent;btn.disabled=true;btn.textContent='Enregistrement…';
+    try{const result=await modalHandler(form);if(result===false||result?.ok===false)return}
+    catch(error){console.error('Enregistrement formulaire agent',error);toast(`Enregistrement impossible : ${(error?.message||String(error)).slice(0,140)}`);setSaveState('Action non enregistrée','error')}
+    finally{btn.disabled=false;btn.textContent=oldText||'Enregistrer'}
+    return;
+  }
   if(!form.checkValidity()){form.reportValidity();toast('Complétez les champs obligatoires indiqués');return}
   const pastDates=[...form.querySelectorAll('input[type="date"]')].map(e=>e.value).filter(Boolean).filter(v=>v<todayISO());
   const changed=[];if(modalAuditInitial){for(const e of [...form.elements]){if(!e.name||e.type==='file'||e.type==='button'||e.type==='submit')continue;const nv=e.type==='checkbox'?e.checked:e.value,ov=modalAuditInitial[e.name];if(String(nv)!==String(ov))changed.push({field:e.name,oldValue:ov,newValue:nv})}}
@@ -4126,27 +4142,6 @@ function bindEvents(){
     toast(`Enregistrement impossible : ${msg.slice(0,120)}`);
     setSaveState('Action non enregistrée — données précédentes conservées','local');
   }finally{btn.disabled=false;btn.textContent=oldBtnText||'Enregistrer'}
- });
- $('#modalSave').addEventListener('click',async e=>{
-  const btn=e.currentTarget;
-  if(btn?.dataset?.directSave!=='1')return;
-  e.preventDefault();e.stopPropagation();
-  const form=$('#modalForm');
-  if(!form||!modalHandler)return;
-  if(!form.checkValidity()){form.reportValidity();toast('Complétez les champs obligatoires indiqués');return}
-  if(btn.disabled)return;
-  const oldText=btn.textContent;
-  btn.disabled=true;btn.textContent='Enregistrement…';
-  try{
-    const result=await modalHandler(form);
-    if(result===false||result?.ok===false)return;
-  }catch(error){
-    console.error('Enregistrement direct formulaire agent',error);
-    toast(`Enregistrement impossible : ${(error?.message||String(error)).slice(0,140)}`);
-    setSaveState('Action non enregistrée','error');
-  }finally{
-    btn.disabled=false;btn.textContent=oldText||'Enregistrer';
-  }
  });
  $('#modalCancel').onclick=closeModal;$('#modalClose').onclick=closeModal;$('#modalDelete').onclick=()=>modalDeleteHandler?.();$('#detailClose').onclick=()=>$('#detailModal').close();$('#emailClose').onclick=()=>$('#emailModal').close();
  // Navigation mobile gérée uniquement par navigation.js pour éviter les doubles événements.
