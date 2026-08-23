@@ -1,0 +1,10 @@
+V147.128 — Nettoyage définitif des doublons d'horaires théoriques
+
+- Le bouton Supprimer reste relié à une vraie suppression du planning théorique.
+- Les anciens horaires théoriques déjà en doublon/chevauchement sont nettoyés.
+- Pour un même agent, une date ne peut rester couverte que par un seul planning théorique.
+- En cas de chevauchement existant, la période la plus récente/prioritaire est conservée.
+- Les anciennes périodes sont découpées avant/après si nécessaire au lieu de supprimer des dates non concernées.
+- Après suppression et après création/modification, un contrôle anti-chevauchement est relancé.
+- Le nettoyage est synchronisé automatiquement avec Supabase lorsqu'Internet est disponible.
+- Aucun autre module n'est modifié.

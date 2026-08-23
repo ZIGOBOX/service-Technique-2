@@ -1,0 +1,29 @@
+V147.127 — Horaires théoriques sans doublons + suppression réparée
+
+PÉRIMÈTRE STRICT
+Uniquement gestion des horaires théoriques. Le reste de la V147.126 est conservé.
+
+RÈGLES
+1. Pour un agent donné, une date ne peut appartenir qu'à UN SEUL horaire théorique.
+2. Si une nouvelle période chevauche une période existante :
+   - l'application affiche les périodes concernées ;
+   - elle demande l'autorisation de remplacer ;
+   - Refuser = aucune modification ;
+   - Accepter = seule la partie chevauchée est remplacée.
+3. Si une nouvelle période se trouve au milieu d'une ancienne :
+   - l'ancienne est automatiquement découpée en partie avant + partie après ;
+   - aucune date ne contient deux horaires.
+4. Même contrôle lorsque l'horaire standard est modifié depuis la fiche Agent.
+5. Suppression :
+   - bouton Supprimer réparé dans le formulaire Horaire théorique ;
+   - bouton Supprimer ajouté dans l'historique Standard de la fiche Agent ;
+   - suppression locale immédiate ;
+   - raccourci standard de l'agent recalculé ;
+   - synchronisation/confirmation Supabase.
+6. Après enregistrement, contrôle supplémentaire qu'aucun chevauchement ne subsiste.
+
+CONSERVÉ
+- OneDrive contrôles périodiques ;
+- règle 0 h = aucune déduction ;
+- synchronisation existante ;
+- tous les autres modules.

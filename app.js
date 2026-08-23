@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.126';
+const APP_VERSION='147.128';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -2180,7 +2180,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.126 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.128 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2248,7 +2248,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.126 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.128 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2326,7 +2326,7 @@ function dayHours(info){
  // Règle métier immuable : une journée Maladie compte 7 h.
  if(info.dayType==='Maladie')actual=7;
  const total=actual+Number(info.overtime||0);
- // V147.126 — Une journée comptabilisée à 0 h ne doit jamais créer un débit
+ // V147.128 — Une journée comptabilisée à 0 h ne doit jamais créer un débit
  // simplement parce qu'un horaire théorique existe.
  const delta=Math.abs(total)<0.001?0:total-planned;
  return {planned,actual,total,delta}
@@ -2369,7 +2369,7 @@ function openAgent(id){
  const stdPlans=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(x.id)&&p.shift==='Standard').sort((p,q)=>(p.effectiveFrom||'').localeCompare(q.effectiveFrom||''));
  const currentPlan=stdPlans.filter(p=>(!p.effectiveFrom||p.effectiveFrom<=refDate)&&(!p.effectiveTo||p.effectiveTo>=refDate)).sort((p,q)=>(q.effectiveFrom||'').localeCompare(p.effectiveFrom||''))[0];
  x.standardSchedule={start:stdExisting.start||'',end:stdExisting.end||'',pause:Number(stdExisting.pause||0),missions:stdExisting.missions||'',effectiveFrom:currentPlan?.effectiveFrom||range.start};
- const standardHistoryHtml=stdPlans.length?`<div class="standard-history-list">${stdPlans.map(p=>{const wd=Object.values(p.dayProfiles||{}).find(v=>v?.start&&v?.end)||{};return `<div class="standard-history-row"><strong>${fmtDate(p.effectiveFrom)||'—'} → ${fmtDate(p.effectiveTo)||'—'}</strong><span>${wd.start&&wd.end?`${esc(wd.start)}–${esc(wd.end)}`:'Repos'}</span>${wd.pause?`<small>Pause ${Number(wd.pause)} min</small>`:''}</div>`}).join('')}</div>`:'<p class="hint">Aucun historique Standard enregistré.</p>';
+ const standardHistoryHtml=stdPlans.length?`<div class="standard-history-list">${stdPlans.map(p=>{const wd=Object.values(p.dayProfiles||{}).find(v=>v?.start&&v?.end)||{};return `<div class="standard-history-row"><strong>${fmtDate(p.effectiveFrom)||'—'} → ${fmtDate(p.effectiveTo)||'—'}</strong><span>${wd.start&&wd.end?`${esc(wd.start)}–${esc(wd.end)}`:'Repos'}</span>${wd.pause?`<small>Pause ${Number(wd.pause)} min</small>`:''}<button type="button" class="ghost small" data-delete-standard-plan="${esc(p.id)}">🗑 Supprimer</button></div>`}).join('')}</div>`:'<p class="hint">Aucun historique Standard enregistré.</p>';
  const dayLabels=[['Lundi',1],['Mardi',2],['Mercredi',3],['Jeudi',4],['Vendredi',5],['Samedi',6],['Dimanche',0]];
  openModal(old?'Modifier l’agent':'Nouvel agent',`<div class="form-grid">${field('Prénom','firstName',x.firstName,'text','required')}${field('Nom','lastName',x.lastName)}<label>Fonction<select name="role">${selectOptions(db.lists.roles,x.role)}</select></label>${field('Temps hebdomadaire (h)','weeklyHours',x.weeklyHours,'number','min="0" step="0.25"')}${field('Téléphone','phone',x.phone,'tel')}${field('E-mail','email',x.email,'email')}${field('Affectation principale','assignment',x.assignment)}<label>Statut<select name="status">${selectOptions(['Actif','Inactif'],x.status)}</select></label>${field('Date d’arrivée','arrivalDate',x.arrivalDate,'date')}<fieldset class="span2 standard-config"><legend>🔵 Horaire standard théorique</legend><p class="hint">Utilisé quand l’agent n’est ni en permanence ni en roulement. Toute modification crée une nouvelle période et conserve l’ancien horaire.</p><div class="form-grid">${field('Date d’effet','standardEffectiveFrom',x.standardSchedule?.effectiveFrom||range.start,'date','required')}${field('Début standard','standardStart',x.standardSchedule?.start||'','time')}${field('Fin standard','standardEnd',x.standardSchedule?.end||'','time')}${field('Pause standard (min)','standardPause',x.standardSchedule?.pause??0,'number','min="0" step="5"')}${field('Mission standard','standardMissions',x.standardSchedule?.missions||'')}</div><details class="standard-history"><summary>Historique des horaires Standard (${stdPlans.length})</summary>${standardHistoryHtml}</details></fieldset><fieldset class="span2 permanence-config"><legend>🟠 Horaire de permanence</legend><p class="hint">Horaire fixe utilisé automatiquement lorsque Chronotime détecte une journée travaillée pendant les vacances scolaires.</p><div class="form-grid">${field('Début permanence','permanenceStart',x.permanenceSchedule?.start||x.permanenceStart||'','time')}${field('Fin permanence','permanenceEnd',x.permanenceSchedule?.end||x.permanenceEnd||'','time')}${field('Pause permanence (min)','permanencePause',x.permanenceSchedule?.pause??x.permanencePause??0,'number','min="0" step="5"')}</div></fieldset><fieldset class="span2"><legend>Jours travaillés habituels</legend><p class="hint">Par défaut : lundi à vendredi. Décoche un jour pour qu'il apparaisse automatiquement en Repos.</p>${dayLabels.map(([label,d])=>`<label class="inline-check"><input type="checkbox" name="agentWorkday" value="${d}" ${x.workdays.includes(d)?'checked':''}>${label}</label>`).join('')}</fieldset>${textareaField('Notes','notes',x.notes)}${attachmentField(x.attachments)}</div>`,async form=>{
    Object.assign(x,formDataObj(form),{weeklyHours:Number(form.elements.weeklyHours.value||0),workdays:[...form.querySelectorAll('[name="agentWorkday"]:checked')].map(e=>Number(e.value))});
@@ -2395,11 +2395,48 @@ function openAgent(id){
    x.permanencePause=x.permanenceSchedule.pause;
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
+
+   // V147.128 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // horaire théorique sur une date déjà couverte.
+   const standardFrom=x.standardSchedule.effectiveFrom;
+   const exactStandard=(db.weeklyPlans||[]).find(q=>
+     String(q.agentId)===String(x.id)&&q.shift==='Standard'&&String(q.effectiveFrom||'')===String(standardFrom)
+   );
+   const coveringPlans=(db.weeklyPlans||[]).filter(q=>
+     String(q.agentId)===String(x.id) &&
+     (!exactStandard||String(q.id)!==String(exactStandard.id)) &&
+     weeklyPlanRangeOverlap(standardFrom,standardFrom,q.effectiveFrom,q.effectiveTo)
+   );
+
+   if(coveringPlans.length){
+     const details=coveringPlans.map(q=>`• ${fmtDate(q.effectiveFrom)} → ${fmtDate(q.effectiveTo)} (${q.shift||'Standard'})`).join('\n');
+     if(!confirm(`⚠️ Un horaire théorique existe déjà pour ${agentName(x)} à la date du ${fmtDate(standardFrom)}.\n\n${details}\n\nVoulez-vous le remplacer à partir de cette date ?`)){
+       toast('Horaire théorique inchangé');
+       return {ok:false};
+     }
+     // À partir de la date d'effet jusqu'à la fin de la période existante,
+     // on laisse syncAgentStandardPlan créer/mettre à jour la nouvelle période
+     // après avoir coupé les chevauchements à cette date.
+     const rangeEnd=academicYearRange(activeAcademicYear()).end;
+     removeWeeklyPlanOverlap(x.id,standardFrom,rangeEnd,exactStandard?.id||'');
+   }
+
    syncAgentStandardPlan(x,x.standardSchedule.effectiveFrom);
+   refreshAgentStandardShortcut(x.id,x.standardSchedule.effectiveFrom);
+   clearTheoreticalScheduleCache();
    syncStoredChronotimePastilles();
    const persisted=await commitFormRecordVerified('Agent','agents',x);if(!persisted.ok)return;
    closeModal();toast(`✅ Agent enregistré — horaire Standard applicable à partir du ${fmtDate(x.standardSchedule.effectiveFrom)}`);
  },{audit:{track:!!old,type:'Agent',recordId:x.id,agentId:x.id,agentName:agentName(x),entity:(form)=>[form?.elements?.firstName?.value||x.firstName,form?.elements?.lastName?.value||x.lastName].filter(Boolean).join(' '),date:x.arrivalDate||todayISO()},onDelete:old?()=>deleteRecord('agents',x.id,'agent'):null})
+
+ setTimeout(()=>{
+   $$('[data-delete-standard-plan]',$('#modalBody')).forEach(btn=>{
+     btn.onclick=async()=>{
+       const planId=btn.dataset.deleteStandardPlan;
+       await deleteWeeklyPlanById(planId);
+     };
+   });
+ },0);
 }
 function applyWeekendRestToAll(){
  if(!confirm('Mettre le samedi et le dimanche en repos pour tous les agents ? Les horaires du lundi au vendredi seront conservés.'))return;
@@ -2595,7 +2632,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.126 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.128 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2647,7 +2684,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.126 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.128 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2702,7 +2739,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.126 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.128 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -3158,7 +3195,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.126 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.128 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -3252,43 +3289,346 @@ function latestChronotimeAcademicStartYear(){
 }
 function renderRotationPreview(){syncRotationYearWithDashboard();const startYear=dashboardAcademicStartYear(),month=$('#rotationMonth').value,agentId=$('#rotationAgent').value||db.agents.find(a=>a.status==='Actif')?.id;if(!agentId){$('#rotationPreview').innerHTML='<p>Aucun agent.</p>';return}const months=month?[Number(month)]:[9,10,11,12,1,2,3,4,5,6,7,8];const academicLabel=`${startYear}–${startYear+1}`;$('#rotationPreview').innerHTML=`<div class="rotation-schoolyear-title"><h4>${esc(agentName(agentById(agentId)))} — année scolaire ${academicLabel}</h4><small>1er septembre ${startYear} → 31 août ${startYear+1}</small></div>`+months.map(m=>{const y=m>=9?startYear:startYear+1,first=`${y}-${pad(m)}-01`,last=new Date(y,m,0).getDate();return `<div class="rotation-month"><strong>${parseDate(first).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</strong><div>${Array.from({length:last},(_,i)=>{const d=`${y}-${pad(m)}-${pad(i+1)}`,info=dayInfo(agentId,d),shift=normalizeText(info.shift||'standard'),day=String(info.dayType||'Présence'),cls=/maladie/i.test(day)?'sick':/congé|conge/i.test(day)?'leave':/rtt/i.test(day)?'rtt':/férié|ferie|rfe/i.test(day)?'holiday':day!=='Présence'?'off':shift==='matin'?'morning':shift==='soir'?'evening':'standard',label=day!=='Présence'?day:(info.shift||'Standard');return `<button class="rotation-day ${cls}" data-agent-day="${agentId}" data-date="${d}" title="${fmtDate(d)} — ${label}${info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:''}"><span>${i+1}</span><small>${cls==='morning'?'M':cls==='evening'?'S':cls==='standard'?'STD':cls==='leave'?'CA':cls==='rtt'?'RTT':cls==='sick'?'MAL':cls==='holiday'?'JF':'—'}</small></button>`}).join('')}</div></div>`}).join('')}
 
-function renderWeeklyPlans(){const box=$('#weeklyPlansBoard');if(!box)return;normalizeWeeklyPlans();const days=['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];box.innerHTML=(db.weeklyPlans||[]).map((p,pi)=>({p,pi})).filter(({p})=>periodOverlapsAcademicYear(p)).map(({p,pi})=>`<article class="weekly-plan-card"><div class="panel-head"><div><h4>${esc(agentName(agentById(p.agentId))||p.agent||'Planning')}</h4>${badge(p.shift||'Standard')}<small>${fmtDate(p.effectiveFrom)} → ${fmtDate(p.effectiveTo)}</small></div><button class="ghost small" data-edit-weekly-plan="${pi}">Modifier</button></div><div class="weekly-day-grid">${days.map((d,i)=>{const x=p.dayProfiles?.[i+1]||{};return `<button class="weekly-day" data-edit-weekly-plan="${pi}"><strong>${d}</strong><span>${x.start&&x.end?`${x.start}–${x.end}`:'Non travaillé'}</span><small>${esc(x.missions||'')}</small></button>`}).join('')}</div></article>`).join('')||'<div class="empty">Aucun horaire de référence. Ajoutez un agent ou un planning.</div>'}
+function renderWeeklyPlans(){const box=$('#weeklyPlansBoard');if(!box)return;normalizeWeeklyPlans();const cleaned=cleanupExistingWeeklyPlanOverlaps();if(cleaned>0){localDirty=true;try{writeMirror()}catch(_){};if(currentUser&&navigator.onLine&&!cloudBusy)setTimeout(()=>window.PSTMainState.persistNow(),400)}const days=['Lundi','Mardi','Mercredi','Jeudi','Vendredi'];box.innerHTML=(db.weeklyPlans||[]).map((p,pi)=>({p,pi})).filter(({p})=>periodOverlapsAcademicYear(p)).map(({p,pi})=>`<article class="weekly-plan-card"><div class="panel-head"><div><h4>${esc(agentName(agentById(p.agentId))||p.agent||'Planning')}</h4>${badge(p.shift||'Standard')}<small>${fmtDate(p.effectiveFrom)} → ${fmtDate(p.effectiveTo)}</small></div><button class="ghost small" data-edit-weekly-plan="${pi}">Modifier</button></div><div class="weekly-day-grid">${days.map((d,i)=>{const x=p.dayProfiles?.[i+1]||{};return `<button class="weekly-day" data-edit-weekly-plan="${pi}"><strong>${d}</strong><span>${x.start&&x.end?`${x.start}–${x.end}`:'Non travaillé'}</span><small>${esc(x.missions||'')}</small></button>`}).join('')}</div></article>`).join('')||'<div class="empty">Aucun horaire de référence. Ajoutez un agent ou un planning.</div>'}
+
+function weeklyPlanRangeOverlap(aFrom,aTo,bFrom,bTo){
+ const af=String(aFrom||'0000-01-01'),at=String(aTo||'9999-12-31');
+ const bf=String(bFrom||'0000-01-01'),bt=String(bTo||'9999-12-31');
+ return af<=bt&&bf<=at;
+}
+function weeklyPlanConflicts(agentId,from,to,excludeId=''){
+ return (db.weeklyPlans||[]).filter(q=>
+   String(q.agentId)===String(agentId) &&
+   (!excludeId||String(q.id)!==String(excludeId)) &&
+   weeklyPlanRangeOverlap(from,to,q.effectiveFrom,q.effectiveTo)
+ );
+}
+function weeklyPlanConflictText(agentId,from,to,excludeId=''){
+ const rows=weeklyPlanConflicts(agentId,from,to,excludeId);
+ if(!rows.length)return '';
+ const agent=agentName(agentById(agentId))||'cet agent';
+ const details=rows
+   .sort((a,b)=>String(a.effectiveFrom||'').localeCompare(String(b.effectiveFrom||'')))
+   .map(q=>`• ${fmtDate(q.effectiveFrom)||'Début non défini'} → ${fmtDate(q.effectiveTo)||'Fin non définie'} (${q.shift||'Standard'})`)
+   .join('\n');
+ return `⚠️ ${agent} possède déjà un horaire théorique sur tout ou partie de cette période.\n\n${details}\n\nIl ne peut y avoir qu’UN SEUL horaire théorique par date.\n\nVoulez-vous remplacer l’horaire existant sur la période ${fmtDate(from)} → ${fmtDate(to)} ?`;
+}
+function cloneWeeklyPlanForRange(plan,from,to){
+ const c=deepClone(plan);
+ c.id=uid();
+ c.effectiveFrom=from;
+ c.effectiveTo=to;
+ c.historyCreatedAt=new Date().toISOString();
+ c.historySourcePlanId=plan.id||'';
+ return c;
+}
+function removeWeeklyPlanOverlap(agentId,from,to,excludeId=''){
+ const source=Array.isArray(db.weeklyPlans)?db.weeklyPlans:[];
+ const out=[];
+ for(const q of source){
+   if(String(q.agentId)!==String(agentId) ||
+      (excludeId&&String(q.id)===String(excludeId)) ||
+      !weeklyPlanRangeOverlap(from,to,q.effectiveFrom,q.effectiveTo)){
+     out.push(q);continue;
+   }
+
+   const qFrom=String(q.effectiveFrom||'0000-01-01');
+   const qTo=String(q.effectiveTo||'9999-12-31');
+
+   // La nouvelle période est au milieu de l'ancienne : conserver avant + après.
+   if(qFrom<from && qTo>to){
+     const left=deepClone(q);
+     left.effectiveTo=addDays(from,-1);
+     const right=cloneWeeklyPlanForRange(q,addDays(to,1),qTo);
+     out.push(left,right);
+     continue;
+   }
+
+   // Chevauchement à droite de l'ancienne : conserver uniquement la partie avant.
+   if(qFrom<from && qTo>=from && qTo<=to){
+     const left=deepClone(q);
+     left.effectiveTo=addDays(from,-1);
+     if(left.effectiveTo>=left.effectiveFrom)out.push(left);
+     continue;
+   }
+
+   // Chevauchement à gauche de l'ancienne : conserver uniquement la partie après.
+   if(qFrom>=from && qFrom<=to && qTo>to){
+     const right=deepClone(q);
+     right.effectiveFrom=addDays(to,1);
+     if(right.effectiveTo>=right.effectiveFrom)out.push(right);
+     continue;
+   }
+
+   // Sinon l'ancienne période est entièrement couverte : elle est remplacée.
+ }
+ db.weeklyPlans=out;
+}
+
+function weeklyPlanPriority(plan){
+ const updated=Date.parse(plan?.updatedAt||plan?.historyUpdatedAt||plan?.createdAt||plan?.historyCreatedAt||'')||0;
+ const from=Date.parse(plan?.effectiveFrom||'')||0;
+ return updated*10000000000000+from;
+}
+function cleanupExistingWeeklyPlanOverlaps(){
+ normalizeWeeklyPlans();
+ const source=(db.weeklyPlans||[]).map(x=>deepClone(x));
+ if(source.length<2)return 0;
+
+ const byAgent=new Map();
+ for(const p of source){
+   const key=String(p.agentId||'');
+   if(!byAgent.has(key))byAgent.set(key,[]);
+   byAgent.get(key).push(p);
+ }
+
+ const final=[];
+ let changed=0;
+
+ for(const [agentId,plans] of byAgent){
+   // Traiter du plus prioritaire au moins prioritaire.
+   const ordered=plans.slice().sort((a,b)=>{
+     const pa=weeklyPlanPriority(a),pb=weeklyPlanPriority(b);
+     if(pb!==pa)return pb-pa;
+     return String(b.effectiveFrom||'').localeCompare(String(a.effectiveFrom||''));
+   });
+
+   const accepted=[];
+   for(const p of ordered){
+     let fragments=[deepClone(p)];
+
+     // Tout plan déjà accepté est prioritaire : retirer son chevauchement du plan courant.
+     for(const high of accepted){
+       const next=[];
+       for(const f of fragments){
+         if(!weeklyPlanRangeOverlap(f.effectiveFrom,f.effectiveTo,high.effectiveFrom,high.effectiveTo)){
+           next.push(f);continue;
+         }
+
+         const ff=String(f.effectiveFrom||'0000-01-01');
+         const ft=String(f.effectiveTo||'9999-12-31');
+         const hf=String(high.effectiveFrom||'0000-01-01');
+         const ht=String(high.effectiveTo||'9999-12-31');
+
+         // Partie avant non chevauchée.
+         if(ff<hf){
+           const left=deepClone(f);
+           left.effectiveTo=addDays(hf,-1);
+           if(left.effectiveTo>=left.effectiveFrom)next.push(left);
+         }
+         // Partie après non chevauchée.
+         if(ft>ht){
+           const right=cloneWeeklyPlanForRange(f,addDays(ht,1),ft);
+           if(right.effectiveTo>=right.effectiveFrom)next.push(right);
+         }
+         changed++;
+       }
+       fragments=next;
+       if(!fragments.length)break;
+     }
+
+     for(const f of fragments)accepted.push(f);
+   }
+
+   final.push(...accepted);
+ }
+
+ // Déduplication finale stricte par id/range/profile.
+ const seen=new Set(),clean=[];
+ for(const p of final.sort((a,b)=>
+   String(a.agentId||'').localeCompare(String(b.agentId||''))||
+   String(a.effectiveFrom||'').localeCompare(String(b.effectiveFrom||''))
+ )){
+   const key=[
+     p.agentId,p.effectiveFrom,p.effectiveTo,p.shift,
+     JSON.stringify(p.dayProfiles||{})
+   ].join('|');
+   if(seen.has(key)){changed++;continue}
+   seen.add(key);clean.push(p);
+ }
+
+ db.weeklyPlans=clean;
+
+ // Vérification de sécurité : aucune paire agent/date ne doit se chevaucher.
+ for(const [agentId] of byAgent){
+   const rows=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(agentId));
+   for(let i=0;i<rows.length;i++){
+     for(let j=i+1;j<rows.length;j++){
+       if(weeklyPlanRangeOverlap(rows[i].effectiveFrom,rows[i].effectiveTo,rows[j].effectiveFrom,rows[j].effectiveTo)){
+         console.error('Chevauchement théorique résiduel après nettoyage',rows[i],rows[j]);
+       }
+     }
+   }
+ }
+ return changed;
+}
+function refreshAgentStandardShortcut(agentId,referenceDate=todayISO()){
+ const ag=agentById(agentId);if(!ag)return;
+ normalizeWeeklyPlans();
+ const standards=(db.weeklyPlans||[])
+   .filter(q=>String(q.agentId)===String(agentId)&&q.shift==='Standard')
+   .sort((a,b)=>String(a.effectiveFrom||'').localeCompare(String(b.effectiveFrom||'')));
+
+ let plan=standards
+   .filter(q=>(!q.effectiveFrom||q.effectiveFrom<=referenceDate)&&(!q.effectiveTo||q.effectiveTo>=referenceDate))
+   .sort((a,b)=>String(b.effectiveFrom||'').localeCompare(String(a.effectiveFrom||'')))[0];
+
+ if(!plan)plan=standards.slice().sort((a,b)=>String(b.effectiveFrom||'').localeCompare(String(a.effectiveFrom||'')))[0];
+
+ if(!plan){
+   ag.standardSchedule={start:'',end:'',pause:0,missions:'',effectiveFrom:''};
+   ag.standardStart='';ag.standardEnd='';ag.standardPause=0;ag.standardMissions='';
+   clearTheoreticalScheduleCache();
+   return;
+ }
+
+ const first=Object.values(plan.dayProfiles||{}).find(x=>x?.start&&x?.end)||{};
+ ag.standardSchedule={
+   start:first.start||'',end:first.end||'',pause:Number(first.pause||0),
+   missions:first.missions||'',effectiveFrom:plan.effectiveFrom||''
+ };
+ ag.standardStart=first.start||'';
+ ag.standardEnd=first.end||'';
+ ag.standardPause=Number(first.pause||0);
+ ag.standardMissions=first.missions||'';
+ clearTheoreticalScheduleCache();
+}
+async function deleteWeeklyPlanById(planId){
+ const plan=(db.weeklyPlans||[]).find(q=>String(q.id)===String(planId));
+ if(!plan)return;
+ if(!confirm(`Supprimer cet horaire théorique ?\n\n${fmtDate(plan.effectiveFrom)} → ${fmtDate(plan.effectiveTo)}\n\nCette suppression retirera réellement cette période du planning de l’agent.`))return;
+
+ const agentId=plan.agentId;
+ db.weeklyPlans=(db.weeklyPlans||[]).filter(q=>String(q.id)!==String(planId));
+ cleanupExistingWeeklyPlanOverlaps();
+ refreshAgentStandardShortcut(agentId,plan.effectiveFrom||todayISO());
+ clearTheoreticalScheduleCache();
+ localDirty=true;
+ try{writeMirror()}catch(_){}
+ renderWeeklyPlans();
+ renderTeamCalendar();
+ renderPlanning();
+
+ const result=await window.PSTMainState.persistNow();
+ if(!result?.ok||result?.offline||result?.pending){
+   toast('Horaire théorique supprimé localement — synchronisation en attente');
+   return;
+ }
+ closeModal();
+ toast('✅ Horaire théorique supprimé et confirmé dans Supabase');
+}
 function openWeeklyPlan(i=null,agentId=''){
  normalizeWeeklyPlans();
  const old=i!==null?db.weeklyPlans[i]:null;
+ const oldSnapshot=old?deepClone(old):null;
  const activeRange=academicYearRange(activeAcademicYear());
  const p=old||{id:uid(),agentId:agentId||db.agents[0]?.id,agent:agentName(agentById(agentId||db.agents[0]?.id)),shift:'Standard',effectiveFrom:activeRange.start,effectiveTo:activeRange.end,dayProfiles:{}};
  const days=[['Lundi',1],['Mardi',2],['Mercredi',3],['Jeudi',4],['Vendredi',5],['Samedi',6],['Dimanche',0]];
- openModal(old?'Modifier les horaires théoriques':'Nouveaux horaires théoriques',`<div class="notice"><strong>Base annuelle théorique :</strong> la période proposée reprend automatiquement l’année scolaire active, puis les horaires de chaque jour. Les jours non travaillés peuvent rester vides. Le tableau de bord affichera automatiquement Repos.</div><div class="form-grid"><label>Agent<select name="agentId" required>${agentOptions(p.agentId)}</select></label><label>Profil<select name="shift">${selectOptions(['Standard','Matin','Soir'],p.shift||'Standard')}</select></label>${field('Valable du','effectiveFrom',p.effectiveFrom||activeRange.start,'date','required')}${field('Valable au','effectiveTo',p.effectiveTo||activeRange.end,'date','required')}</div><div class="day-profile-editor">${days.map(([label,key])=>{const x=p.dayProfiles?.[key]||{};return `<fieldset><legend>${label}</legend><div class="form-grid"><label>Début<input type="time" name="start_${key}" value="${esc(x.start||'')}"></label><label>Fin<input type="time" name="end_${key}" value="${esc(x.end||'')}"></label><label>Pause (min)<input type="number" min="0" step="5" name="pause_${key}" value="${esc(x.pause||0)}"></label><label class="span2">Missions principales<input name="missions_${key}" value="${esc(x.missions||'')}"></label></div></fieldset>`}).join('')}</div>`,async form=>{
-   const o=formDataObj(form);if(!o.agentId){toast('Choisissez un agent');return}if(!o.effectiveFrom||!o.effectiveTo){toast('Renseignez la période de validité');return}if(o.effectiveTo<o.effectiveFrom){toast('La date de fin doit être après la date de début');return}
-   p.agentId=o.agentId;p.agent=agentName(agentById(o.agentId));p.shift=o.shift;p.effectiveFrom=o.effectiveFrom;p.effectiveTo=o.effectiveTo;p.dayProfiles={};
-   for(const [label,key] of days){const st=o[`start_${key}`]||'',en=o[`end_${key}`]||'';if((st&&!en)||(!st&&en)){toast(`${label} : renseignez le début et la fin, ou laissez les deux vides`);return}p.dayProfiles[key]={start:st,end:en,pause:Number(o[`pause_${key}`]||0),missions:o[`missions_${key}`]||'',segments:[]}}
-   p.rows=[];
-   if(!old){
-     if(p.shift==='Standard'){
-       const prev=(db.weeklyPlans||[]).filter(q=>String(q.agentId)===String(o.agentId)&&q.shift==='Standard'&&(q.effectiveFrom||'')<p.effectiveFrom).sort((x,y)=>(y.effectiveFrom||'').localeCompare(x.effectiveFrom||''))[0];
-       if(prev&&(!prev.effectiveTo||prev.effectiveTo>=p.effectiveFrom))prev.effectiveTo=addDays(p.effectiveFrom,-1);
-       const next=(db.weeklyPlans||[]).filter(q=>String(q.agentId)===String(o.agentId)&&q.shift==='Standard'&&(q.effectiveFrom||'')>p.effectiveFrom).sort((x,y)=>(x.effectiveFrom||'').localeCompare(y.effectiveFrom||''))[0];
-       if(next&&p.effectiveTo>=next.effectiveFrom)p.effectiveTo=addDays(next.effectiveFrom,-1);
+
+ openModal(old?'Modifier les horaires théoriques':'Nouveaux horaires théoriques',
+ `<div class="notice"><strong>Base annuelle théorique :</strong> la période proposée reprend automatiquement l’année scolaire active, puis les horaires de chaque jour. <strong>Un agent ne peut avoir qu’un seul horaire théorique par date.</strong> Si la période choisie chevauche un horaire existant, l’application vous demandera l’autorisation de le remplacer.</div>
+ <div class="form-grid"><label>Agent<select name="agentId" required>${agentOptions(p.agentId)}</select></label><label>Profil<select name="shift">${selectOptions(['Standard','Matin','Soir'],p.shift||'Standard')}</select></label>${field('Valable du','effectiveFrom',p.effectiveFrom||activeRange.start,'date','required')}${field('Valable au','effectiveTo',p.effectiveTo||activeRange.end,'date','required')}</div>
+ <div class="day-profile-editor">${days.map(([label,key])=>{const x=p.dayProfiles?.[key]||{};return `<fieldset><legend>${label}</legend><div class="form-grid"><label>Début<input type="time" name="start_${key}" value="${esc(x.start||'')}"></label><label>Fin<input type="time" name="end_${key}" value="${esc(x.end||'')}"></label><label>Pause (min)<input type="number" min="0" step="5" name="pause_${key}" value="${esc(x.pause||0)}"></label><label class="span2">Missions principales<input name="missions_${key}" value="${esc(x.missions||'')}"></label></div></fieldset>`}).join('')}</div>`,
+ async form=>{
+   const o=formDataObj(form);
+   if(!o.agentId){toast('Choisissez un agent');return {ok:false}}
+   if(!o.effectiveFrom||!o.effectiveTo){toast('Renseignez la période de validité');return {ok:false}}
+   if(o.effectiveTo<o.effectiveFrom){toast('La date de fin doit être après la date de début');return {ok:false}}
+
+   // Construire d'abord un brouillon : aucune donnée existante n'est modifiée avant validation.
+   const draft=deepClone(p);
+   draft.agentId=o.agentId;
+   draft.agent=agentName(agentById(o.agentId));
+   draft.shift=o.shift;
+   draft.effectiveFrom=o.effectiveFrom;
+   draft.effectiveTo=o.effectiveTo;
+   draft.dayProfiles={};
+   for(const [label,key] of days){
+     const st=o[`start_${key}`]||'',en=o[`end_${key}`]||'';
+     if((st&&!en)||(!st&&en)){
+       toast(`${label} : renseignez le début et la fin, ou laissez les deux vides`);
+       return {ok:false};
      }
-     db.weeklyPlans.push(p);
+     draft.dayProfiles[key]={start:st,end:en,pause:Number(o[`pause_${key}`]||0),missions:o[`missions_${key}`]||'',segments:[]};
    }
-   const ag=agentById(o.agentId);
+   draft.rows=[];
+
+   const conflicts=weeklyPlanConflicts(draft.agentId,draft.effectiveFrom,draft.effectiveTo,old?.id||'');
+   if(conflicts.length){
+     const msg=weeklyPlanConflictText(draft.agentId,draft.effectiveFrom,draft.effectiveTo,old?.id||'');
+     if(!confirm(msg)){
+       toast('Aucun changement effectué');
+       return {ok:false};
+     }
+   }
+
+   // Autorisation obtenue : retirer uniquement les parties chevauchées.
+   if(conflicts.length){
+     removeWeeklyPlanOverlap(draft.agentId,draft.effectiveFrom,draft.effectiveTo,old?.id||'');
+   }
+
+   if(old){
+     const target=(db.weeklyPlans||[]).find(q=>String(q.id)===String(old.id));
+     if(target)Object.assign(target,draft,{updatedAt:new Date().toISOString()});
+     else db.weeklyPlans.push({...draft,updatedAt:new Date().toISOString()});
+   }else{
+     draft.createdAt=draft.createdAt||new Date().toISOString();
+     draft.updatedAt=new Date().toISOString();
+     db.weeklyPlans.push(draft);
+   }
+
+   normalizeWeeklyPlans();
+   cleanupExistingWeeklyPlanOverlaps();
+
+   // Sécurité finale : aucune paire agent/date ne doit rester en chevauchement.
+   const remaining=weeklyPlanConflicts(draft.agentId,draft.effectiveFrom,draft.effectiveTo,draft.id);
+   if(remaining.length){
+     console.error('Chevauchement théorique résiduel',remaining);
+     // Revenir à l'état précédent pour l'élément édité si nécessaire.
+     if(oldSnapshot){
+       db.weeklyPlans=(db.weeklyPlans||[]).filter(q=>String(q.id)!==String(draft.id));
+       db.weeklyPlans.push(oldSnapshot);
+     }
+     toast('⚠️ Horaire non enregistré : chevauchement détecté');
+     return {ok:false};
+   }
+
+   const ag=agentById(draft.agentId);
    if(ag){
      const working=new Set();
-     for(const plan of (db.weeklyPlans||[]).filter(q=>String(q.agentId)===String(o.agentId))){
+     for(const plan of (db.weeklyPlans||[]).filter(q=>String(q.agentId)===String(draft.agentId))){
        for(const [,key] of days)if(plan.dayProfiles?.[key]?.start&&plan.dayProfiles?.[key]?.end)working.add(key);
      }
      ag.workdays=working.size?[...working]:[1,2,3,4,5];
-     if(p.shift==='Standard'){
-       const first=days.map(([,key])=>p.dayProfiles?.[key]).find(x=>x?.start&&x?.end)||{};
-       ag.standardSchedule={start:first.start||'',end:first.end||'',pause:Number(first.pause||0),missions:first.missions||'',effectiveFrom:p.effectiveFrom};
-       ag.standardStart=first.start||'';ag.standardEnd=first.end||'';ag.standardPause=Number(first.pause||0);ag.standardMissions=first.missions||'';
-     }
+     refreshAgentStandardShortcut(draft.agentId,draft.effectiveFrom);
    }
-   const persisted=await commitFormRecordVerified('Horaires théoriques','weeklyPlans',p);if(!persisted.ok)return;
-   closeModal();toast('✅ Horaires théoriques enregistrés, confirmés et appliqués partout');
- },{onDelete:old?()=>{if(confirm('Supprimer ce profil horaire ?')){db.weeklyPlans.splice(i,1);closeModal();save()}}:null});
+
+   clearTheoreticalScheduleCache();
+   localDirty=true;
+   try{writeMirror()}catch(_){}
+   renderWeeklyPlans();
+   renderTeamCalendar();
+   renderPlanning();
+
+   const persisted=await window.PSTMainState.persistStateDirect({
+     label:'Horaires théoriques',
+     verify:remote=>{
+       const rows=Array.isArray(remote?.weeklyPlans)?remote.weeklyPlans:[];
+       const saved=rows.find(q=>String(q.id)===String(draft.id));
+       const overlaps=rows.filter(q=>String(q.agentId)===String(draft.agentId)&&String(q.id)!==String(draft.id)&&weeklyPlanRangeOverlap(draft.effectiveFrom,draft.effectiveTo,q.effectiveFrom,q.effectiveTo));
+       return !!saved&&overlaps.length===0;
+     }
+   });
+   if(!persisted?.ok){
+     toast('Horaire enregistré localement mais non confirmé par Supabase');
+     return {ok:false};
+   }
+
+   closeModal();
+   toast(conflicts.length?'✅ Horaire théorique remplacé sans doublon':'✅ Horaire théorique enregistré sans doublon');
+   return {ok:true};
+ },
+ {onDelete:old?()=>deleteWeeklyPlanById(old.id):null});
 }
 function renderPlanning(){renderWeeklyPlans();const month=$('#planningMonth').value||monthISO(),agent=$('#planningAgent').value,signal=$('#planningSignal').value;const start=`${month}-01`,end=localISO(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0));const rows=[];for(const a of db.agents.filter(x=>x.status==='Actif'&&(!agent||x.id===agent))){let d=start;while(d<=end){if(![0,6].includes(parseDate(d).getDay())){const info=dayInfo(a.id,d),h=dayHours(info);let sig=isAbsenceType(info.dayType)?'Absence':h.delta>0.01?'Heures supplémentaires':h.delta<-0.01?'Heures manquantes':'Conforme';if(!signal||sig===signal)rows.push({a,d,info,h,sig})}d=addDays(d,1)}}const sums=rows.reduce((s,r)=>{s.p+=r.h.planned;s.a+=r.h.total;s.o+=Number(r.info.overtime||0);s.d+=Number(r.h.delta||0);return s},{p:0,a:0,o:0,d:0});$('#planningSummary').innerHTML=`<article><span>Prévu</span><strong>${fmtHours(sums.p)}</strong></article><article><span>Réalisé</span><strong>${fmtHours(sums.a)}</strong></article><article><span>Écart</span><strong>${sums.d>=0?'+':''}${fmtHours(sums.d)}</strong></article><article><span>Heures ajoutées</span><strong>${fmtHours(sums.o)}</strong></article>`;$('#planningTable').innerHTML=rows.length?rows.map(r=>{const disp=planningDisplayFor(r.a,r.d);return `<tr><td>${fmtDate(r.d)}</td><td>${esc(agentName(r.a))}</td><td>${r.info.dayType==='Présence'?`${r.info.plannedStart||'—'}–${r.info.plannedEnd||'—'} (${fmtHours(r.h.planned)})`:badge(r.info.dayType)}</td><td>${r.info.dayType==='Présence'&&disp.realChanged?`${esc(disp.real)} (${fmtHours(r.h.total)})`:r.info.dayType!=='Présence'?badge(r.info.dayType):'—'}</td><td>${r.h.delta>=0?'+':''}${fmtHours(r.h.delta)}</td><td>${badge(r.sig)}</td><td>${r.info.source==='manual'&&r.info.note?`<button class="icon-btn manual-info-trigger" type="button" data-show-day-info="${r.a.id}" data-date="${r.d}" title="${esc(r.info.note)}">ⓘ</button>`:''}<button class="icon-btn" data-agent-day="${r.a.id}" data-date="${r.d}">✎</button></td></tr>`}).join(''):emptyRow(7)}
 function renderAbsences(){renderAbsenceBoard();const month=$('#absenceMonth').value||monthISO(),agent=$('#absenceAgent').value,type=$('#absenceType').value,status=$('#absenceStatus').value;const rows=db.agentDays.filter(x=>dateMonthMatch(x.date,month)&&isAbsenceType(x.dayType)&&(!agent||x.agentId===agent)&&(!type||x.dayType===type)&&(!status||x.status===status));const groups=new Map();for(const x of rows){const key=x.periodId||x.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)}const arr=[...groups.values()].map(g=>g.sort((a,b)=>a.date.localeCompare(b.date))).sort((a,b)=>a[0].date.localeCompare(b[0].date));$('#absencesTable').innerHTML=arr.length?arr.map(g=>{const x=g[0],from=g[0].date,to=g.at(-1).date;return `<tr><td>${esc(agentName(agentById(x.agentId)))}</td><td>${fmtDate(from)}</td><td>${fmtDate(to)}</td><td>${badge(x.dayType)}</td><td>${g.length} jour${g.length>1?'s':''}</td><td>${badge(x.status||'Validée')}</td><td>${x.noReplacementNeeded?'<span class="badge good">Sans remplacement</span>':esc(x.replacement||'À décider')}</td><td><button class="icon-btn" data-agent-day="${x.agentId}" data-date="${from}">✎</button></td></tr>`}).join(''):emptyRow(8);renderAbsenceCounters(month)}
@@ -4847,7 +5187,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.126 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.128 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
