@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.121';
+const APP_VERSION='147.122';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -424,10 +424,34 @@ const OFFLINE_MIRROR_KEY='pst_offline_mirror_v130';
 let saveStateChangedAt=0;
 
 let lastConfirmedSupabaseAt=0;
+let lastLocalMutationAt=0;
 let dashboardSyncBusy=false;
 
+function pendingSyncDiagnostics(){
+ let pending=null;
+ try{pending=readOfflinePending()}catch(_){}
+ const pendingSavedAt=pending?.savedAt?Date.parse(pending.savedAt)||0:0;
+ const confirmedAt=Number(lastConfirmedSupabaseAt||0);
+
+ // Une ancienne file locale antérieure à une confirmation Supabase réussie est obsolète.
+ const stalePending=!!pending && confirmedAt>0 && pendingSavedAt>0 && pendingSavedAt<=confirmedAt && !localDirty;
+ if(stalePending){
+   try{clearOfflinePending()}catch(_){}
+   pending=null;
+ }
+
+ return {
+   dirty:!!localDirty,
+   pending:!!pending,
+   pendingSavedAt,
+   confirmedAt,
+   cloudBusy:!!cloudBusy,
+   dashboardBusy:!!dashboardSyncBusy
+ };
+}
 function hasLocalSyncPending(){
- try{return !!localDirty || !!readOfflinePending()}catch(_){return !!localDirty}
+ const d=pendingSyncDiagnostics();
+ return d.dirty||d.pending;
 }
 function setDashboardSyncIndicator(state,title,detail=''){
  const panel=$('#dashboardSyncPanel'),led=$('#dashboardSyncLed'),t=$('#dashboardSyncTitle'),d=$('#dashboardSyncDetail');
@@ -437,17 +461,20 @@ function setDashboardSyncIndicator(state,title,detail=''){
  if(d)d.textContent=detail;
 }
 function refreshDashboardSyncIndicator(){
- const pending=hasLocalSyncPending();
+ const diag=pendingSyncDiagnostics();
  if(!navigator.onLine){
    setDashboardSyncIndicator('red','Hors connexion','Les données restent enregistrées sur cet appareil. Elles seront synchronisées au retour du réseau.');
    return;
  }
- if(dashboardSyncBusy||cloudBusy){
+ if(diag.dashboardBusy||diag.cloudBusy){
    setDashboardSyncIndicator('orange','Synchronisation en cours','Envoi et vérification des données avec Supabase…');
    return;
  }
- if(pending){
-   setDashboardSyncIndicator('orange','Données à synchroniser','Des modifications locales attendent encore leur confirmation Supabase.');
+ if(diag.dirty||diag.pending){
+   const reasons=[];
+   if(diag.dirty)reasons.push('modification locale non confirmée');
+   if(diag.pending)reasons.push('file hors-ligne encore présente');
+   setDashboardSyncIndicator('orange','Données à synchroniser',reasons.join(' · '));
    return;
  }
  if(lastConfirmedSupabaseAt){
@@ -518,7 +545,12 @@ async function dashboardSyncNow(){
  }finally{
    dashboardSyncBusy=false;
    if(btn){btn.disabled=false;btn.textContent=oldText}
-   refreshDashboardSyncIndicator();
+   const diag=pendingSyncDiagnostics();
+   if(navigator.onLine&&lastConfirmedSupabaseAt&&!diag.dirty&&!diag.pending&&!cloudBusy){
+     setDashboardSyncIndicator('green','Tout est synchronisé',`Supabase confirmé à ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}.`);
+   }else{
+     refreshDashboardSyncIndicator();
+   }
  }
 }
 function setSaveState(text,state=''){
@@ -617,6 +649,7 @@ function writeMirror(){if(!currentUser)return false;return writeJson(OFFLINE_MIR
 function loadMirrorIntoMemory(){const m=readJson(OFFLINE_MIRROR_KEY);if(!m?.data)return false;if(currentUser?.id&&m.userId&&m.userId!==currentUser.id)return false;db=migrate(m.data);safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}return true}
 function writeOfflinePending(reason='hors ligne'){
  try{
+   lastLocalMutationAt=Date.now();
    let previous=readOfflinePending();
    const baseData=previous?.baseData||lastCloudData||db;
    const item={userId:currentUser?.id||'',savedAt:new Date().toISOString(),baseCloudUpdatedAt:previous?.baseCloudUpdatedAt||lastCloudUpdatedAt||'',baseData:deepClone(baseData),reason,data:deepClone(db)};
@@ -656,7 +689,13 @@ async function cloudLoad({silent=false}={}){
    cloudBusy=false;
    if(localDirty){const ok=await cloudSaveNow({silent:true,mergeRemote:true});if(!ok)return false}
    cloudReady=true;lastConfirmedSupabaseAt=Date.now();lastCloudError='';writeMirror();renderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
-   setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);clearTimeout(cloudRetryTimer);return true;
+   setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+setTimeout(()=>{
+  const diag=pendingSyncDiagnostics();
+  if(!diag.dirty&&!diag.pending&&!diag.cloudBusy&&!diag.dashboardBusy){
+    refreshDashboardSyncIndicator();
+  }
+},700);clearTimeout(cloudRetryTimer);return true;
  }catch(error){console.error('Supabase indisponible :',error);useLocalMode(error?.message||String(error));try{window.dispatchEvent(new CustomEvent('pst:cloud-error',{detail:{message:error?.message||String(error)}}))}catch(_){ }return false}
  finally{cloudBusy=false}
 }
@@ -700,8 +739,14 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
    toSave.maintenance=applyDeletedRecordsToCollection('maintenance',toSave.maintenance,toSave);
    db=toSave;
    enforceAllDeletedRecords('fin cloudSaveNow');
-   lastCloudData=deepClone(db);lastCloudUpdatedAt=stamp;localDirty=false;cloudReady=true;lastCloudError='';lastConfirmedSupabaseAt=Date.now();clearOfflinePending();writeMirror();
-   setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);clearTimeout(cloudRetryTimer);safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}return true;
+   lastCloudData=deepClone(db);lastCloudUpdatedAt=stamp;localDirty=false;cloudReady=true;lastCloudError='';clearOfflinePending();lastConfirmedSupabaseAt=Date.now();writeMirror();
+   setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+setTimeout(()=>{
+  const diag=pendingSyncDiagnostics();
+  if(!diag.dirty&&!diag.pending&&!diag.cloudBusy&&!diag.dashboardBusy){
+    refreshDashboardSyncIndicator();
+  }
+},700);clearTimeout(cloudRetryTimer);safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}return true;
   }catch(error){
     lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue';
     console.error('Sauvegarde cloud différée :',error);
@@ -1057,14 +1102,20 @@ window.PSTMainState={
       lastCloudData=deepClone(db);
       lastCloudUpdatedAt=read?.data?.updated_at||write?.data?.updated_at||nowIso;
       lastCloudError='';
-      lastConfirmedSupabaseAt=Date.now();
       localDirty=false;
       cloudReady=true;
       clearOfflinePending();
+      lastConfirmedSupabaseAt=Date.now();
       writeMirror();
       safeRenderAll();
       try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}
-      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);
+      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+setTimeout(()=>{
+  const diag=pendingSyncDiagnostics();
+  if(!diag.dirty&&!diag.pending&&!diag.cloudBusy&&!diag.dashboardBusy){
+    refreshDashboardSyncIndicator();
+  }
+},700);
       return {ok:true,offline:false};
     }catch(error){
       lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue';
@@ -1095,7 +1146,13 @@ window.PSTMainState={
       if(!found)throw new Error('Écriture réussie mais nouvel import absent lors de la relecture Supabase.');
       lastCloudData=deepClone(remote); lastCloudUpdatedAt=read?.data?.updated_at||nowIso; lastCloudError=''; localDirty=false; cloudReady=true;
       clearOfflinePending(); writeMirror();
-      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);
+      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+setTimeout(()=>{
+  const diag=pendingSyncDiagnostics();
+  if(!diag.dirty&&!diag.pending&&!diag.cloudBusy&&!diag.dashboardBusy){
+    refreshDashboardSyncIndicator();
+  }
+},700);
       return {ok:true,offline:false,found:true};
     }catch(error){
       lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue'; localDirty=true; writeOfflinePending(lastCloudError);
@@ -1121,7 +1178,13 @@ window.PSTMainState={
         cloudReady=true;
         clearOfflinePending();
         writeMirror();
-        setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);
+        setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+setTimeout(()=>{
+  const diag=pendingSyncDiagnostics();
+  if(!diag.dirty&&!diag.pending&&!diag.cloudBusy&&!diag.dashboardBusy){
+    refreshDashboardSyncIndicator();
+  }
+},700);
         return {ok:true,found:true};
       }
       localDirty=true;
@@ -2110,7 +2173,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.121 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.122 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2178,7 +2241,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.121 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.122 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2522,7 +2585,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.121 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.122 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2574,7 +2637,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.121 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.122 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2629,7 +2692,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.121 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.122 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -3079,7 +3142,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.121 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.122 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();

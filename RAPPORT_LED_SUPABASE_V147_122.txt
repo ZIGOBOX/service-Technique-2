@@ -1,0 +1,11 @@
+V147.122 — Voyant Supabase : orange persistant corrigé
+
+- Le voyant distingue maintenant exactement :
+  * localDirty = vraie modification locale non confirmée ;
+  * offline pending = file hors-ligne encore présente ;
+  * cloudBusy = synchronisation réellement en cours.
+- Une file hors-ligne plus ancienne qu'une confirmation Supabase réussie est automatiquement considérée comme obsolète et nettoyée.
+- Après une confirmation Supabase réussie, le voyant est recalculé après libération des états busy.
+- Si le voyant reste orange, le texte sous la LED indique maintenant la cause exacte :
+  « modification locale non confirmée » ou « file hors-ligne encore présente ».
+- Vert = Supabase confirmé + aucune vraie donnée locale en attente.
