@@ -1,0 +1,11 @@
+V147.112 STABLE — Verrouillage du comportement pour tous les agents
+
+- La logique déjà validée est appliquée de manière générique à chaque agent via son identifiant.
+- Pour un même agent + une même date : un seul état effectif.
+- Saisie manuelle > Chronotime.
+- Entre deux saisies manuelles : la plus récente gagne.
+- Présence / Congé / RTT / Maladie / Formation / Repos : la dernière saisie enregistrée reste affichée.
+- Horaire réel différent : il reste affiché après relecture/synchronisation.
+- Réinitialisation horaire réel : le réel reste vide et l'affichage revient au théorique.
+- Stabilisation après formulaire, migration/relecture, Chronotime et polling Supabase.
+- Les données et noms d'agents existants ne sont pas modifiés.

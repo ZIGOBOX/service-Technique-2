@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.111';
+const APP_VERSION='147.114';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -343,6 +343,9 @@ function migrate(raw){
  }
  mergeContractControls14723(d);
  ensureCanonicalFacilitySpaces(d);
+ d.agentDays=normalizeAgentDaysStable(d.agentDays);
+ d.maintenance=normalizeMaintenanceStable(d.maintenance);
+ for(const c of STABLE_FORM_COLLECTIONS)d[c]=normalizeStableCollection(d[c]);
  if(!Array.isArray(d.cleaningRoomChecks))d.cleaningRoomChecks=[];
  if(!Array.isArray(d.cleaningDeletedIds))d.cleaningDeletedIds=[];
  mergeBundledControlReports(d);
@@ -514,7 +517,7 @@ async function syncOfflinePending(){
  if(!supabaseClient||!currentUser||!navigator.onLine)return false;
  const pending=readOfflinePending();
  if(pending?.userId&&pending.userId!==currentUser.id)return false;
- if(pending?.data){const currentAgentDays=deepClone(db.agentDays||[]);db=migrate(pending.data);db.agentDays=mergeAgentDaysSafe(db.agentDays,currentAgentDays);lastCloudData=pending.baseData?migrate(pending.baseData):lastCloudData;localDirty=true}
+ if(pending?.data){const currentAgentDays=deepClone(db.agentDays||[]),currentMaintenance=deepClone(db.maintenance||[]),currentStable=stableCollectionSnapshots();db=migrate(pending.data);db.agentDays=mergeAgentDaysSafe(db.agentDays,currentAgentDays);db.maintenance=mergeMaintenanceSafe(db.maintenance,currentMaintenance);mergeStableCollectionsInto(db,currentStable);lastCloudData=pending.baseData?migrate(pending.baseData):lastCloudData;localDirty=true}
  if(!localDirty)return true;
  setSaveState('Connexion revenue — fusion et synchronisation…','loading');
  const ok=await cloudSaveNow({silent:true,mergeRemote:true});
@@ -556,9 +559,13 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
        toSave=migrate(mergeThreeWay(base,toSave,remote));
        toSave.changeHistory=mergeChangeHistorySafe(remote.changeHistory,db.changeHistory);
        toSave.agentDays=mergeAgentDaysSafe(remote.agentDays,db.agentDays);
+       toSave.maintenance=mergeMaintenanceSafe(remote.maintenance,db.maintenance);
+       mergeStableCollectionsInto(toSave,stableCollectionSnapshots());
      }else{
        toSave.changeHistory=mergeChangeHistorySafe(toSave.changeHistory,db.changeHistory);
        toSave.agentDays=mergeAgentDaysSafe(toSave.agentDays,db.agentDays);
+       toSave.maintenance=mergeMaintenanceSafe(toSave.maintenance,db.maintenance);
+       mergeStableCollectionsInto(toSave,stableCollectionSnapshots());
      }
    }
    const stamp=new Date().toISOString();
@@ -640,6 +647,117 @@ function preserveLocalManualAgentDays(remote,localSnapshot){
  r.agentDays=mergeAgentDaysSafe(r.agentDays,localSnapshot||[]);
  return r;
 }
+
+function normalizeAgentDaysStable(list){
+ return mergeAgentDaysSafe([],Array.isArray(list)?list:[]);
+}
+function enforceAgentDaysStable(reason=''){
+ try{
+   const before=Array.isArray(db.agentDays)?db.agentDays.length:0;
+   db.agentDays=normalizeAgentDaysStable(db.agentDays);
+   const after=db.agentDays.length;
+   if(before!==after)console.info(`AgentDays stabilisés (${reason}) : ${before} → ${after}`);
+   return true;
+ }catch(error){
+   console.error('Stabilisation agentDays',reason,error);
+   return false;
+ }
+}
+
+function maintenanceTime(r){
+ const t=Date.parse(r?.updatedAt||r?.createdAt||'');
+ return Number.isFinite(t)?t:0;
+}
+function mergeMaintenanceSafe(remoteRows,localRows){
+ const remote=Array.isArray(remoteRows)?remoteRows:[];
+ const local=Array.isArray(localRows)?localRows:[];
+ const byId=new Map();
+
+ const add=(r,origin)=>{
+   if(!r?.id)return;
+   const id=String(r.id),cur=byId.get(id);
+   if(!cur){byId.set(id,{row:deepClone(r),origin});return}
+
+   const a=cur.row,b=r;
+   const at=maintenanceTime(a),bt=maintenanceTime(b);
+
+   if(bt>at){byId.set(id,{row:deepClone(b),origin});return}
+   if(bt<at)return;
+
+   // En cas d'égalité ou d'absence d'horodatage, la copie locale est prioritaire.
+   if(origin==='local')byId.set(id,{row:deepClone(b),origin});
+ };
+
+ for(const r of remote)add(r,'remote');
+ for(const r of local)add(r,'local');
+
+ return [...byId.values()].map(x=>x.row);
+}
+function normalizeMaintenanceStable(list){
+ return mergeMaintenanceSafe([],Array.isArray(list)?list:[]);
+}
+function enforceMaintenanceStable(reason=''){
+ try{
+   const before=Array.isArray(db.maintenance)?db.maintenance.length:0;
+   db.maintenance=normalizeMaintenanceStable(db.maintenance);
+   const after=db.maintenance.length;
+   if(before!==after)console.info(`Interventions stabilisées (${reason}) : ${before} → ${after}`);
+   return true;
+ }catch(error){
+   console.error('Stabilisation interventions',reason,error);
+   return false;
+ }
+}
+
+const STABLE_FORM_COLLECTIONS=['requests','works','meetings','notes','issues','periodic','cleaning','vacations','personalEvents','documents','agents','rotations','weeklyPlans','spaces'];
+
+function stableRecordTime(r){
+ const t=Date.parse(r?.updatedAt||r?.createdAt||r?.modifiedAt||'');
+ return Number.isFinite(t)?t:0;
+}
+function mergeRecordsByIdSafe(remoteRows,localRows){
+ const remote=Array.isArray(remoteRows)?remoteRows:[];
+ const local=Array.isArray(localRows)?localRows:[];
+ const byId=new Map();
+ const add=(r,origin)=>{
+   if(!r?.id)return;
+   const id=String(r.id),cur=byId.get(id);
+   if(!cur){byId.set(id,{row:deepClone(r),origin});return}
+   const a=cur.row,b=r,at=stableRecordTime(a),bt=stableRecordTime(b);
+   if(bt>at){byId.set(id,{row:deepClone(b),origin});return}
+   if(bt<at)return;
+   if(origin==='local')byId.set(id,{row:deepClone(b),origin});
+ };
+ for(const r of remote)add(r,'remote');
+ for(const r of local)add(r,'local');
+ return [...byId.values()].map(x=>x.row);
+}
+function normalizeStableCollection(list){return mergeRecordsByIdSafe([],Array.isArray(list)?list:[])}
+function enforceStableCollection(collection,reason=''){
+ try{
+   if(!STABLE_FORM_COLLECTIONS.includes(collection))return true;
+   const before=Array.isArray(db[collection])?db[collection].length:0;
+   db[collection]=normalizeStableCollection(db[collection]);
+   const after=db[collection].length;
+   if(before!==after)console.info(`${collection} stabilisé (${reason}) : ${before} → ${after}`);
+   return true;
+ }catch(error){
+   console.error(`Stabilisation ${collection}`,reason,error);
+   return false;
+ }
+}
+function stableCollectionSnapshots(){
+ const out={};
+ for(const c of STABLE_FORM_COLLECTIONS)out[c]=deepClone(db[c]||[]);
+ return out;
+}
+function mergeStableCollectionsInto(target,snapshots){
+ if(!target||typeof target!=='object')return target;
+ for(const c of STABLE_FORM_COLLECTIONS){
+   target[c]=mergeRecordsByIdSafe(target[c],snapshots?.[c]||[]);
+ }
+ return target;
+}
 window.PSTMainState={
  get:()=>db,
  save:(render=true)=>save(render),
@@ -671,8 +789,12 @@ window.PSTMainState={
       setSaveState(`${label} : écriture directe Supabase…`,'loading');
       const localHistorySnapshot=deepClone(db.changeHistory||[]);
       const localAgentDaysSnapshot=deepClone(db.agentDays||[]);
+      const localMaintenanceSnapshot=deepClone(db.maintenance||[]);
+      const localStableSnapshots=stableCollectionSnapshots();
       const payload=migrate(deepClone(db));
       payload.agentDays=mergeAgentDaysSafe(payload.agentDays,localAgentDaysSnapshot);
+      payload.maintenance=mergeMaintenanceSafe(payload.maintenance,localMaintenanceSnapshot);
+      mergeStableCollectionsInto(payload,localStableSnapshots);
       payload.changeHistory=mergeChangeHistorySafe(payload.changeHistory,localHistorySnapshot);
       const nowIso=new Date().toISOString();
       const write=await withTimeout(
@@ -693,6 +815,10 @@ window.PSTMainState={
       let remote=migrate(read?.data?.data||{});
       remote=preserveLocalHistoryInRemote(remote,localHistorySnapshot);
       remote=preserveLocalManualAgentDays(remote,localAgentDaysSnapshot);
+      remote.agentDays=normalizeAgentDaysStable(remote.agentDays);
+      remote.maintenance=mergeMaintenanceSafe(remote.maintenance,localMaintenanceSnapshot);
+      remote.maintenance=normalizeMaintenanceStable(remote.maintenance);
+      mergeStableCollectionsInto(remote,localStableSnapshots);
       if(typeof verify==='function' && !verify(remote)){
         throw new Error(`${label} écrit mais non retrouvé lors de la relecture Supabase.`);
       }
@@ -803,9 +929,16 @@ async function pollCloudChanges(){
      clearTheoreticalScheduleCache();
      const localHistorySnapshot=deepClone(db.changeHistory||[]);
      const localAgentDaysSnapshot=deepClone(db.agentDays||[]);
+     const localMaintenanceSnapshot=deepClone(db.maintenance||[]);
+     const localStableSnapshots=stableCollectionSnapshots();
      db=migrate(data.data);
      db.changeHistory=mergeChangeHistorySafe(db.changeHistory,localHistorySnapshot);
      db.agentDays=mergeAgentDaysSafe(db.agentDays,localAgentDaysSnapshot);
+     db.maintenance=mergeMaintenanceSafe(db.maintenance,localMaintenanceSnapshot);
+     mergeStableCollectionsInto(db,localStableSnapshots);
+     enforceAgentDaysStable('poll Supabase');
+     enforceMaintenanceStable('poll Supabase');
+     for(const c of STABLE_FORM_COLLECTIONS)enforceStableCollection(c,'poll Supabase');
      lastCloudData=deepClone(db);lastCloudUpdatedAt=remoteStamp;writeMirror();safeRenderAll();
      try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud')
@@ -1563,7 +1696,7 @@ function dayRecord(agentId,date,preferredDayType=''){
   const preferred=normalizeText(preferredDayType||'');
   const rank=r=>{
     let n=0;
-    if(String(r.source||'').toLowerCase()==='manual')n+=100;
+    if(String(r.source||'').toLowerCase()==='manual'||r.manualOverride===true)n+=1000;
     if(isAbsenceType(r.dayType)||r.dayType==='Formation'||r.dayType==='Repos')n+=30;
     if(normalizeText(r.status||'')==='validee')n+=20;
     else if(normalizeText(r.status||'')==='demandee')n+=10;
@@ -1620,7 +1753,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.111 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.114 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1688,7 +1821,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.111 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.114 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2032,7 +2165,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.111 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.114 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2084,7 +2217,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.111 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.114 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2123,6 +2256,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    console.error('Historique agent non bloquant',historyError);
  }
 
+ enforceAgentDaysStable('enregistrement formulaire agent');
  const savedIntegrity=verifyAgentDaySaved(o.agentId,from,{
    dayType:o.dayType,actualStart:o.actualStart||'',actualEnd:o.actualEnd||'',note:o.note||'',status:o.status||'Validée'
  });
@@ -2138,7 +2272,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.111 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.114 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2295,18 +2429,27 @@ function refreshCollectionView(collection){
 }
 async function commitFormRecordVerified(label,collection,record){
  if(!record?.id)return {ok:false,error:'Identifiant manquant'};
+
+ const nowIso=new Date().toISOString();
+ if(!record.createdAt)record.createdAt=nowIso;
+ record.updatedAt=nowIso;
+ if(STABLE_FORM_COLLECTIONS.includes(collection) && !record.source)record.source='manual';
+
+ // La copie locale devient immédiatement la référence.
  upsertDbRecord(collection,record);
+ if(STABLE_FORM_COLLECTIONS.includes(collection))enforceStableCollection(collection,`${label} local`);
  const expected=recordComparableSnapshot(record);
 
  try{
    localDirty=true;
    if(typeof clearTheoreticalScheduleCache==='function')clearTheoreticalScheduleCache();
+   try{writeMirror()}catch(_){}
+   try{writeOfflinePending(`${label} à synchroniser`)}catch(_){}
+   refreshCollectionView(collection);
 
    if(!navigator.onLine){
-     const ok=writeOfflinePending('appareil hors connexion');
-     refreshCollectionView(collection);
      setSaveState(`${label} conservé localement — synchronisation au retour du réseau`,'local');
-     return {ok:!!ok,offline:true};
+     return {ok:true,offline:true};
    }
 
    if(window.PSTMainState?.persistStateDirect){
@@ -2321,12 +2464,15 @@ async function commitFormRecordVerified(label,collection,record){
      });
      if(!result?.ok)throw new Error(result?.error||`${label} non confirmé par Supabase`);
 
+     if(STABLE_FORM_COLLECTIONS.includes(collection))enforceStableCollection(collection,`${label} relecture`);
      const confirmed=Array.isArray(db?.[collection])
        ? db[collection].find(x=>String(x.id)===String(record.id))
        : null;
+
      if(!recordMatchesExpected(expected,confirmed)){
        throw new Error(`${label} relu mais les modifications ne correspondent pas`);
      }
+
      refreshCollectionView(collection);
      return {ok:true,offline:false};
    }
@@ -2446,7 +2592,43 @@ function openCleaning(id){
  $$('[data-bulk-clean]').forEach(btn=>btn.onclick=()=>$$('[name="taskStatus"]',$('#cleanTaskEditor')).forEach(s=>s.value=btn.dataset.bulkClean))
 }
 
-function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),time:'',title:'',family:'Électricité',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier l’intervention':'Nouvelle intervention',`<div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Heure prévue','time',x.time,'time')}${field('Objet','title',x.title,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label>${centralLocationFields(x,'maintLoc')}${field('Demandeur','requester',x.requester)}${field('Assigné à / prestataire','assigned',x.assigned)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Description / diagnostic','description',x.description)}${textareaField('Action réalisée / suite','action',x.action)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'maintenance');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Intervention','maintenance',x);if(!persisted.ok)return;closeModal();refreshCollectionView('maintenance');toast(`✅ Intervention enregistrée — statut : ${x.status}`)},{audit:{track:!!old,type:'Intervention',recordId:x.id,no:x.no,title:x.title,entity:(form)=>[x.no,form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('maintenance',x.id,'intervention'):null});bindCentralLocation('maintLoc')}
+function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),time:'',title:'',family:'Électricité',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier l’intervention':'Nouvelle intervention',`<div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Heure prévue','time',x.time,'time')}${field('Objet','title',x.title,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label>${centralLocationFields(x,'maintLoc')}${field('Demandeur','requester',x.requester)}${field('Assigné à / prestataire','assigned',x.assigned)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Description / diagnostic','description',x.description)}${textareaField('Action réalisée / suite','action',x.action)}${attachmentField(x.attachments)}</div>`,async form=>{
+ const wasExisting=!!old;
+ Object.assign(x,formDataObj(form));
+ if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;
+ const nowIso=new Date().toISOString();
+ if(!x.createdAt)x.createdAt=old?.createdAt||nowIso;
+ x.updatedAt=nowIso;
+ x.source='manual';
+
+ const attachmentCheck=await processAttachments(form,x,'maintenance');
+ if(!attachmentCheck?.ok)return {ok:false};
+
+ // La copie locale devient immédiatement la référence.
+ upsertDbRecord('maintenance',x);
+ enforceMaintenanceStable(wasExisting?'modification intervention':'création intervention');
+ localDirty=true;
+ try{writeMirror()}catch(_){}
+ try{writeOfflinePending('intervention à synchroniser')}catch(_){}
+ refreshCollectionView('maintenance');
+
+ const persisted=await commitFormRecordVerified('Intervention','maintenance',x);
+ if(!persisted.ok)return {ok:false};
+
+ // Contrôle réel après relecture.
+ const confirmed=(db.maintenance||[]).find(r=>String(r.id)===String(x.id));
+ const expected=recordComparableSnapshot(x);
+ if(!confirmed||!recordMatchesExpected(expected,confirmed)){
+   toast('⚠️ Intervention non confirmée après relecture');
+   return {ok:false};
+ }
+
+ enforceMaintenanceStable('confirmation intervention');
+ closeModal();
+ refreshCollectionView('maintenance');
+ toast(`✅ Intervention ${wasExisting?'modifiée':'créée'} — statut : ${x.status}`);
+ return {ok:true};
+},{audit:{track:!!old,type:'Intervention',recordId:x.id,no:x.no,title:x.title,entity:(form)=>[x.no,form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('maintenance',x.id,'intervention'):null});bindCentralLocation('maintLoc')}
 function openRequest(id){const old=id?byId('requests',id):null;const x=old||{id:uid(),no:nextNo('request','DIR'),date:todayISO(),time:'',type:'Aménagement de salle',title:'',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'Direction',dueDate:'',description:'',response:'',attachments:[]};openModal(old?'Modifier la demande':'Nouvelle demande de la direction',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure prévue','time',x.time,'time')}<label>Type<select name="type">${selectOptions(db.lists.requestTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${centralLocationFields(x,'reqLoc')}${field('Demandeur','requester',x.requester)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Demande','description',x.description)}${textareaField('Réponse / réalisation','response',x.response)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'requests');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Demande','requests',x);if(!persisted.ok)return;closeModal();toast(`✅ Demande enregistrée — statut : ${x.status||'—'}`)},{audit:{track:!!old,type:'Demande',recordId:x.id,no:x.no,title:x.title,entity:(form)=>[x.no,form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('requests',x.id,'demande'):null});bindCentralLocation('reqLoc')}
 function openWork(id){const old=id?byId('works',id):null;const x=old||{id:uid(),no:nextNo('work','CHT'),date:todayISO(),time:'',type:'Réunion de chantier',title:'',company:'',architect:'',building:'',floor:'',sector:'',room:'',priority:'Normale',status:'À faire',dueDate:'',description:'',decision:'',gpaEnd:'',attachments:[]};openModal(old?'Modifier le suivi chantier':'Nouveau suivi chantier / GPA',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure prévue','time',x.time,'time')}<label>Type<select name="type">${selectOptions(db.lists.workTypes,x.type)}</select></label>${field('Objet / réserve','title',x.title,'text','required')}${field('Entreprise','company',x.company)}${field('Architecte / maîtrise d’œuvre','architect',x.architect)}${centralLocationFields(x,'workLoc')}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${field('Échéance','dueDate',x.dueDate,'date')}${field('Fin GPA','gpaEnd',x.gpaEnd,'date')}${textareaField('Constat / description','description',x.description)}${textareaField('Décision / suite','decision',x.decision)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'works');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Chantier / GPA','works',x);if(!persisted.ok)return;closeModal();toast(`✅ Suivi chantier enregistré — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('works',x.id,'suivi'):null});bindCentralLocation('workLoc')}
 function openMeeting(id,date=todayISO()){const old=id?byId('meetings',id):null;const x=old||{id:uid(),no:nextNo('meeting','RDV'),date,time:'',end:'',type:'Rendez-vous',title:'',building:'',floor:'',sector:'',room:'',participants:'',status:'Planifié',notes:'',actions:'',attachments:[]};openModal(old?'Modifier le rendez-vous':'Nouvelle réunion / rendez-vous',`<div class="form-grid">${field('Date','date',x.date,'date','required')}${field('Heure','time',x.time,'time')}${field('Fin','end',x.end,'time')}<label>Type<select name="type">${selectOptions(db.lists.meetingTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}${centralLocationFields(x,'meetLoc')}${field('Participants','participants',x.participants)}<label>Statut<select name="status">${selectOptions(['Planifié','Réalisé','Reporté','Annulé'],x.status)}</select></label>${textareaField('Compte rendu','notes',x.notes)}${textareaField('Actions décidées','actions',x.actions)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;x.location=[x.building,x.floor,x.sector,x.room].filter(Boolean).join(' · ');const attachmentCheck=await processAttachments(form,x,'meetings');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Réunion / rendez-vous','meetings',x);if(!persisted.ok)return;closeModal();toast(`✅ Rendez-vous enregistré — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('meetings',x.id,'rendez-vous'):null});bindCentralLocation('meetLoc')}
@@ -2540,7 +2722,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.111 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.114 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -4497,6 +4679,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 window.addEventListener('pst:data-loaded',()=>{
   try{
     const n=syncStoredChronotimePastilles();
+    enforceAgentDaysStable('relecture données / Chronotime');
     syncRotationYearWithDashboard();
     if(n>0)save(false);
     safeRenderAll();

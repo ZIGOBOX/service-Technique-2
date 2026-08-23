@@ -1,0 +1,34 @@
+V147.114 STABLE — Tous les formulaires métier
+
+La règle de stabilité est généralisée à :
+- Demandes
+- Chantiers
+- Réunions
+- Notes
+- Sécurité / incidents
+- Contrôles périodiques
+- Contrôles ménage
+- Vacances / fermetures
+- Agenda / événements personnels
+- Documents
+- Agents
+- Roulements
+- Plannings hebdomadaires
+- Locaux / espaces
+
+Principe commun :
+1. Enregistrer localement immédiatement.
+2. Afficher la modification immédiatement.
+3. Horodater createdAt / updatedAt.
+4. La dernière version locale gagne en cas de conflit avec une ancienne version distante.
+5. Synchroniser Supabase.
+6. Relire et vérifier la fiche.
+7. Polling / reconnexion / redémarrage ne doivent pas restaurer une ancienne valeur.
+
+Les règles spécifiques déjà stabilisées restent intactes :
+- agentDays : saisie manuelle > Chronotime ;
+- interventions : dernière modification locale > ancienne version serveur.
+
+Archives :
+- les modifications déjà auditées continuent à être tracées ;
+- les créations restent hors historique pour ne pas l'alourdir.

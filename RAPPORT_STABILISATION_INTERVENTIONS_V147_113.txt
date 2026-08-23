@@ -1,0 +1,32 @@
+V147.113 STABLE — Création et modification des interventions
+
+RÈGLE
+- Une intervention créée ou modifiée dans le formulaire devient immédiatement la version de référence.
+- La version locale la plus récente gagne en cas de conflit avec une ancienne version Supabase.
+- Une relecture serveur, le polling automatique, un retour réseau ou un redémarrage ne doit pas restaurer une ancienne intervention.
+
+CRÉATION
+- id conservé,
+- createdAt créé une seule fois,
+- updatedAt actualisé,
+- affichage immédiat dans le tableau,
+- sauvegarde locale,
+- synchronisation Supabase,
+- relecture et vérification de tous les champs.
+
+MODIFICATION
+- updatedAt actualisé à chaque Enregistrer,
+- la dernière modification gagne,
+- affichage immédiatement rafraîchi,
+- vérification après relecture Supabase.
+
+ARCHIVES
+- Les modifications d'intervention continuent d'alimenter le récapitulatif Avant / Après.
+- Les créations ne sont pas ajoutées à l'historique, conformément à la règle déjà validée pour garder Archives lisible.
+
+PROTECTION APPLIQUÉE À
+- persistStateDirect,
+- cloudSaveNow,
+- polling Supabase,
+- reprise hors-ligne,
+- migration/rechargement.
