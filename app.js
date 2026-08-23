@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.123';
+const APP_VERSION='147.125';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -2180,7 +2180,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.123 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.125 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2248,7 +2248,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.123 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.125 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2592,7 +2592,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.123 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.125 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2644,7 +2644,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.123 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.125 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2699,7 +2699,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.123 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.125 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2933,7 +2933,13 @@ function addMonthsClamped(dateISO,months){
 function periodicIsInactive(x){const s=normalizeText(x?.status);return s==='cloture'||s==='cloturee'||s==='non applicable'||s==='archive'||s==='archivee'}
 function periodicDue(x){if(x.nextDate)return normalizeDateValue(x.nextDate);if(x.lastDate&&Number(x.intervalMonths)>0)return addMonthsClamped(x.lastDate,x.intervalMonths);return ''}
 function periodicComputed(x){const due=periodicDue(x);if(periodicIsInactive(x))return x.status||'Clôturé';if(!due)return x.status||'À planifier';const diff=(parseDate(due)-parseDate(todayISO()))/86400000;if(diff<0)return 'En retard';if(diff<=60)return 'Bientôt';return 'À jour'}
-function openPeriodic(id){const old=id?byId('periodic',id):null;const x=old||{id:uid(),no:nextNo('periodic','CP'),name:'',family:db.lists.periodicFamilies[0],intervalMonths:12,requirement:'',provider:'',register:'Registre de sécurité',building:'Tous bâtiments',lastDate:'',nextDate:'',status:'À planifier',notes:'',attachments:[]};openModal(old?'Modifier le contrôle périodique':'Nouveau contrôle périodique',`<div class="form-grid">${field('N° contrôle','no',x.no||'')}${field('Contrôle','name',x.name,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.periodicFamilies,x.family)}</select></label><label>Bâtiment<select name="building"><option>Tous bâtiments</option>${buildingOptions(x.building)}</select></label>${field('Périodicité (mois, 0 = variable)','intervalMonths',x.intervalMonths,'number','min="0"')}${field('Périodicité / précision','periodicityText',x.periodicityText||'')}${field('Dernier contrôle','lastDate',x.lastDate,'date')}${field('Prochaine échéance','nextDate',periodicDue(x),'date')}${field('Heure prévue','time',x.time,'time')}${field('Étage / niveau','floor',x.floor)}${field('Secteur','sector',x.sector||'')}${field('Local / zone','room',x.room)}<label>Statut<select name="status">${selectOptions(['À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable'],x.status)}</select></label>${field('Prestataire / responsable','provider',x.provider)}${field('Registre / dossier','register',x.register)}${textareaField('Exigence / contenu','requirement',x.requirement)}${textareaField('Notes','notes',x.notes)}<p class="form-hint"><strong>Suivi permanent :</strong> ce contrôle reste suivi au-delà de l'année scolaire jusqu'à sa véritable prochaine échéance.</p>${attachmentField(x.attachments)}</div>`,async form=>{const o=formDataObj(form),intervalMonths=Number(o.intervalMonths||0);Object.assign(x,o,{intervalMonths});if(x.lastDate&&intervalMonths>0&&!o.nextDate)x.nextDate=addMonthsClamped(x.lastDate,intervalMonths);const attachResult=await processAttachments(form,x,'periodic');
+function openPeriodic(id){const old=id?byId('periodic',id):null;const x=old||{id:uid(),no:nextNo('periodic','CP'),name:'',family:db.lists.periodicFamilies[0],intervalMonths:12,requirement:'',provider:'',register:'Registre de sécurité',building:'Tous bâtiments',lastDate:'',nextDate:'',status:'À planifier',notes:'',oneDriveUrl:'',attachments:[]};openModal(old?'Modifier le contrôle périodique':'Nouveau contrôle périodique',`<div class="form-grid">${field('N° contrôle','no',x.no||'')}${field('Contrôle','name',x.name,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.periodicFamilies,x.family)}</select></label><label>Bâtiment<select name="building"><option>Tous bâtiments</option>${buildingOptions(x.building)}</select></label>${field('Périodicité (mois, 0 = variable)','intervalMonths',x.intervalMonths,'number','min="0"')}${field('Périodicité / précision','periodicityText',x.periodicityText||'')}${field('Dernier contrôle','lastDate',x.lastDate,'date')}${field('Prochaine échéance','nextDate',periodicDue(x),'date')}${field('Heure prévue','time',x.time,'time')}${field('Étage / niveau','floor',x.floor)}${field('Secteur','sector',x.sector||'')}${field('Local / zone','room',x.room)}<label>Statut<select name="status">${selectOptions(['À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable'],x.status)}</select></label>${field('Prestataire / responsable','provider',x.provider)}${field('Registre / dossier','register',x.register)}${textareaField('Exigence / contenu','requirement',x.requirement)}${field('Lien OneDrive','oneDriveUrl',periodicOneDriveUrl(x),'url','placeholder="https://..."')}${textareaField('Notes','notes',x.notes)}<p class="form-hint"><strong>Suivi permanent :</strong> ce contrôle reste suivi au-delà de l'année scolaire jusqu'à sa véritable prochaine échéance.</p>${attachmentField(x.attachments)}</div>`,async form=>{const o=formDataObj(form),intervalMonths=Number(o.intervalMonths||0);Object.assign(x,o,{intervalMonths});if(x.lastDate&&intervalMonths>0&&!o.nextDate)x.nextDate=addMonthsClamped(x.lastDate,intervalMonths);
+const oneDriveUrl=String(o.oneDriveUrl||'').trim();
+if(oneDriveUrl){
+ x.oneDriveUrl=oneDriveUrl;
+ savePeriodicOneDriveLink(x,oneDriveUrl);
+}
+const attachResult=await processAttachments(form,x,'periodic');
 if(!attachResult?.ok){
  toast('Le contrôle n’est pas enregistré : au moins un fichier n’a pas été chargé dans Supabase.');
  setSaveState('PDF non chargé — corrigez avant d’enregistrer','error');
@@ -3149,7 +3155,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.123 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.125 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -3292,7 +3298,7 @@ function renderVacations(){
    (!x.start||!x.end||(x.end>=range.start&&x.start<=range.end))
  ).sort((a,b)=>a.start.localeCompare(b.start));$('#vacationCards').innerHTML=cardList(arr.map(x=>{const done=(x.tasks||[]).filter(t=>t.done).length,total=(x.tasks||[]).length,pct=total?Math.round(done/total*100):0;return `<article class="vacation-card"><div class="panel-head"><div><h3>${esc(x.name)}</h3><p>${fmtDate(x.start)} → ${fmtDate(x.end)} · Zone ${esc(x.zone)}</p></div>${badge(x.status)}</div><div class="progress"><span style="width:${pct}%"></span></div><p>${done}/${total} actions terminées (${pct} %)</p><ul>${(x.tasks||[]).slice(0,6).map(t=>`<li class="${t.done?'done':''}">${t.done?'✓':'○'} ${esc(t.text)}</li>`).join('')}</ul><div class="card-actions"><button type="button" data-edit-type="vacation" data-edit-id="${x.id}">Ouvrir la checklist</button></div></article>`}),'Aucune période chargée.')}
 function renderIssues(){const m=$('#issueMonth').value,agent=$('#issueAgent').value,cat=$('#issueCategory').value,status=$('#issueStatus').value;let arr=db.issues.filter(x=>dateMonthMatch(x.date,m)&&(!agent||x.agentId===agent)&&(!cat||x.category===cat)&&(!status||x.status===status)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));if(window.__dashboardUrgentOnly)arr=arr.filter(x=>!isClosedStatus(x.status)&&isUrgentPriority(x.priority));$('#issuesTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.category)}</td><td>${esc(agentName(agentById(x.agentId)))}</td><td>${badge(x.priority)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.action||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('issue',x.id)}</td></tr>`).join(''):emptyRow(9)}
-function renderPeriodic(){const fam=$('#periodicFamily').value,status=$('#periodicStatus').value,bld=$('#periodicBuilding').value;const arr=db.periodic.filter(x=>(!fam||x.family===fam)&&(!status||periodicComputed(x)===status||x.status===status)&&(!bld||x.building===bld||x.building==='Tous bâtiments')).sort((a,b)=>(periodicDue(a)||'9999').localeCompare(periodicDue(b)||'9999'));$('#periodicCards').innerHTML=cardList(arr.map(x=>{const state=periodicComputed(x),ncs=(db.reportNonconformities||[]).filter(n=>String(n.periodicControlId||'')===String(x.id));const open=ncs.filter(n=>!['FAIT','Levée'].includes(n.status)),done=ncs.filter(n=>['FAIT','Levée'].includes(n.status)),plans=(db.issues||[]).filter(i=>ncs.some(n=>String(n.id)===String(i.sourceNonconformityId||''))),openPlans=plans.filter(i=>!isClosedStatus(i.status));const nc=ncs.length?`<section class="periodic-nc-block ${open.length?'has-open':'all-done'}"><div class="periodic-nc-summary"><strong>${open.length?'🔴 CONTRÔLE NON CONFORME':'🟢 OBSERVATIONS LEVÉES'}</strong><span>${ncs.length} observations · 🔴 ${open.length} à traiter · 🟢 ${done.length} FAIT/levées · 📋 ${openPlans.length} plan(s) d’action ouvert(s)</span></div>${open.length?`<h4>Non-conformités à traiter</h4>${open.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p>${n.action?`<p><b>Préconisation :</b> ${esc(n.action)}</p>`:''}</div><select data-nc-status="${esc(n.id)}"><option selected>À traiter</option><option>FAIT</option><option>Levée</option></select></article>`).join('')}`:''}${done.length?`<details><summary>🟢 ${done.length} FAIT / levées</summary>${done.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')} — ${esc(n.status)}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p></div><select data-nc-status="${esc(n.id)}"><option>À traiter</option><option ${n.status==='FAIT'?'selected':''}>FAIT</option><option ${n.status==='Levée'?'selected':''}>Levée</option></select></article>`).join('')}</details>`:''}</section>`:'';return `<article class="periodic-card ${state==='En retard'?'late':''}"><div class="panel-head"><span>${esc(x.no)}</span>${badge(state)}</div><h3>${esc(x.name)}</h3><p>${esc(x.family)} · ${esc(x.building)}</p>${x.periodicityText?`<p class="muted"><strong>Périodicité :</strong> ${esc(x.periodicityText)}</p>`:''}<dl><dt>Dernier</dt><dd>${fmtDate(x.lastDate)||'Non renseigné'}</dd><dt>Échéance</dt><dd>${fmtDate(periodicDue(x))||'À définir'}</dd><dt>Responsable</dt><dd>${esc(x.provider||'À définir')}</dd></dl>${nc}${attachmentButtons(x.attachments)}${oneDriveLinkButtons('periodic',x.id)}<button type="button" class="ghost" data-edit-type="periodic" data-edit-id="${x.id}">✎ Ouvrir / modifier le contrôle</button></article>`}),'Aucun contrôle trouvé.');}
+function renderPeriodic(){const fam=$('#periodicFamily').value,status=$('#periodicStatus').value,bld=$('#periodicBuilding').value;const arr=db.periodic.filter(x=>(!fam||x.family===fam)&&(!status||periodicComputed(x)===status||x.status===status)&&(!bld||x.building===bld||x.building==='Tous bâtiments')).sort((a,b)=>(periodicDue(a)||'9999').localeCompare(periodicDue(b)||'9999'));$('#periodicCards').innerHTML=cardList(arr.map(x=>{const state=periodicComputed(x),ncs=(db.reportNonconformities||[]).filter(n=>String(n.periodicControlId||'')===String(x.id));const open=ncs.filter(n=>!['FAIT','Levée'].includes(n.status)),done=ncs.filter(n=>['FAIT','Levée'].includes(n.status)),plans=(db.issues||[]).filter(i=>ncs.some(n=>String(n.id)===String(i.sourceNonconformityId||''))),openPlans=plans.filter(i=>!isClosedStatus(i.status));const nc=ncs.length?`<section class="periodic-nc-block ${open.length?'has-open':'all-done'}"><div class="periodic-nc-summary"><strong>${open.length?'🔴 CONTRÔLE NON CONFORME':'🟢 OBSERVATIONS LEVÉES'}</strong><span>${ncs.length} observations · 🔴 ${open.length} à traiter · 🟢 ${done.length} FAIT/levées · 📋 ${openPlans.length} plan(s) d’action ouvert(s)</span></div>${open.length?`<h4>Non-conformités à traiter</h4>${open.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p>${n.action?`<p><b>Préconisation :</b> ${esc(n.action)}</p>`:''}</div><select data-nc-status="${esc(n.id)}"><option selected>À traiter</option><option>FAIT</option><option>Levée</option></select></article>`).join('')}`:''}${done.length?`<details><summary>🟢 ${done.length} FAIT / levées</summary>${done.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')} — ${esc(n.status)}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p></div><select data-nc-status="${esc(n.id)}"><option>À traiter</option><option ${n.status==='FAIT'?'selected':''}>FAIT</option><option ${n.status==='Levée'?'selected':''}>Levée</option></select></article>`).join('')}</details>`:''}</section>`:'';return `<article class="periodic-card ${state==='En retard'?'late':''}"><div class="panel-head"><span>${esc(x.no)}</span>${badge(state)}</div><h3>${esc(x.name)}</h3><p>${esc(x.family)} · ${esc(x.building)}</p>${x.periodicityText?`<p class="muted"><strong>Périodicité :</strong> ${esc(x.periodicityText)}</p>`:''}<dl><dt>Dernier</dt><dd>${fmtDate(x.lastDate)||'Non renseigné'}</dd><dt>Échéance</dt><dd>${fmtDate(periodicDue(x))||'À définir'}</dd><dt>Responsable</dt><dd>${esc(x.provider||'À définir')}</dd></dl>${nc}${attachmentButtons(x.attachments)}${periodicOneDriveButtons(x)}<button type="button" class="ghost" data-edit-type="periodic" data-edit-id="${x.id}">✎ Ouvrir / modifier le contrôle</button></article>`}),'Aucun contrôle trouvé.');}
 function renderCleaningGuide(){const type=$('#cleaningGuideType').value||db.lists.roomTypes.find(x=>GUIDE[x])||Object.keys(GUIDE)[0];$('#cleaningGuideType').value=type;const rows=GUIDE[type]||[];$('#cleaningGuideTable').innerHTML=`<table><thead><tr><th>Opération</th><th>Fréquence préconisée</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table>`}
 
 /* V147.78 — Dashboard qualité intégré à l'onglet Contrôle ménage. */
@@ -4838,7 +4844,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.123 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.125 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -4979,6 +4985,45 @@ function oneDriveLinkButtons(module,recordId=''){
  const rows=oneDriveLinksFor(module,recordId);if(!rows.length)return '';
  return `<div class="onedrive-links">${rows.map(x=>`<a class="ghost small onedrive-link" href="${esc(x.url)}" target="_blank" rel="noopener">☁️ ${esc(x.fileName||x.title||'Ouvrir dans OneDrive')}</a>`).join('')}</div>`;
 }
+function periodicOneDriveUrl(record){
+ if(!record)return '';
+ const linked=oneDriveLinksFor('periodic',record.id).find(x=>String(x.url||'').trim());
+ return String(linked?.url||record.oneDriveUrl||'').trim();
+}
+function periodicOneDriveButtons(record){
+ if(!record)return '';
+ const rows=oneDriveLinksFor('periodic',record.id).filter(x=>String(x.url||'').trim());
+ const urls=new Set(rows.map(x=>String(x.url||'').trim()));
+ const fallback=String(record.oneDriveUrl||'').trim();
+ const links=rows.map(x=>({
+   url:String(x.url||'').trim(),
+   label:x.fileName||x.title||'Ouvrir dans OneDrive'
+ }));
+ if(fallback&&!urls.has(fallback))links.push({url:fallback,label:'Ouvrir le document OneDrive'});
+ if(!links.length)return '';
+ return `<div class="onedrive-links">${links.map(x=>`<a class="ghost small onedrive-link" href="${esc(x.url)}" target="_blank" rel="noopener">☁️ ${esc(x.label)}</a>`).join('')}</div>`;
+}
+function savePeriodicOneDriveLink(record,url){
+ const clean=String(url||'').trim();
+ if(!record||!clean)return null;
+ db.oneDriveLinks=Array.isArray(db.oneDriveLinks)?db.oneDriveLinks:[];
+ const rows=oneDriveLinksFor('periodic',record.id);
+ const existing=rows[0]||null;
+ const meta={
+   module:'periodic',
+   recordId:record.id,
+   category:record.family||'Contrôles périodiques',
+   title:record.name||record.no||'Contrôle périodique',
+   fileName:existing?.fileName||record.name||'Document OneDrive',
+   url:clean,
+   source:existing?.source||'periodic-form',
+   updatedAt:new Date().toISOString(),
+   academicYear:activeAcademicYear()
+ };
+ if(existing){Object.assign(existing,meta);return existing}
+ return saveOneDriveIndex(meta);
+}
+
 function saveOneDriveIndex(meta){
  db.oneDriveLinks=Array.isArray(db.oneDriveLinks)?db.oneDriveLinks:[];
  const x={id:uid(),createdAt:new Date().toISOString(),academicYear:activeAcademicYear(),...meta};

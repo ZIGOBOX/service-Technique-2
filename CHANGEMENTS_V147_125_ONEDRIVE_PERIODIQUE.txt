@@ -1,0 +1,16 @@
+V147.125 — Correctif ciblé OneDrive / Contrôles périodiques
+
+PÉRIMÈTRE STRICT :
+- aucun changement de synchronisation ;
+- aucun changement agents / planning ;
+- aucun changement ménage ;
+- aucun changement interventions ;
+- aucun autre formulaire modifié.
+
+UNIQUEMENT :
+1. Ajout du champ « Lien OneDrive » dans le formulaire Contrôle périodique.
+2. Le lien existant importé est repris automatiquement dans ce champ.
+3. Enregistrer un nouveau lien crée l'association OneDrive avec le contrôle.
+4. Modifier le lien remplace l'URL de l'association existante.
+5. La carte du contrôle périodique affiche le ou les boutons ☁️ OneDrive.
+6. Un lien stocké directement dans la fiche reste affichable même si l'index OneDrive associé manque.
