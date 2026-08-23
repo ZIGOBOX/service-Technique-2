@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.116';
+const APP_VERSION='147.117';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -594,7 +594,14 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
    const stamp=new Date().toISOString();
    const payload={user_id:currentUser.id,data:toSave,updated_at:stamp};
    const {error}=await withTimeout(supabaseClient.from('app_state').upsert(payload,{onConflict:'user_id'}));if(error)throw error;
-   db=toSave;lastCloudData=deepClone(toSave);lastCloudUpdatedAt=stamp;localDirty=false;cloudReady=true;lastCloudError='';clearOfflinePending();writeMirror();
+   // Une suppression peut avoir eu lieu pendant que cette sauvegarde réseau était en cours.
+   // On fusionne donc les tombstones ACTUELS juste avant de remplacer db.
+   toSave.deletedRecords=mergeDeletedRecordsSafe(toSave.deletedRecords,deepClone(ensureDeletedRecordsStore(db)));
+   for(const c of STABLE_FORM_COLLECTIONS)toSave[c]=applyDeletedRecordsToCollection(c,toSave[c],toSave);
+   toSave.maintenance=applyDeletedRecordsToCollection('maintenance',toSave.maintenance,toSave);
+   db=toSave;
+   enforceAllDeletedRecords('fin cloudSaveNow');
+   lastCloudData=deepClone(db);lastCloudUpdatedAt=stamp;localDirty=false;cloudReady=true;lastCloudError='';clearOfflinePending();writeMirror();
    setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);clearTimeout(cloudRetryTimer);safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}return true;
   }catch(error){
     lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue';
@@ -775,6 +782,25 @@ function applyDeletedRecordsToCollection(collection,rows,target=db){
  const deleted=deletedIdsFor(collection,target);
  return (Array.isArray(rows)?rows:[]).filter(r=>!deleted.has(String(r?.id)));
 }
+function enforceAllDeletedRecords(reason=''){
+ try{
+   ensureDeletedRecordsStore(db);
+   for(const c of STABLE_FORM_COLLECTIONS){
+     db[c]=applyDeletedRecordsToCollection(c,db[c],db);
+   }
+   // maintenance utilise sa propre fusion mais peut aussi être supprimée via deleteRecord.
+   db.maintenance=applyDeletedRecordsToCollection('maintenance',db.maintenance,db);
+   if(reason)console.info('Suppressions réappliquées :',reason);
+ }catch(error){console.error('Réapplication suppressions',reason,error)}
+}
+async function waitForCloudIdle(maxMs=18000){
+ const start=Date.now();
+ while(cloudBusy && Date.now()-start<maxMs){
+   await new Promise(resolve=>setTimeout(resolve,150));
+ }
+ return !cloudBusy;
+}
+
 const STABLE_FORM_COLLECTIONS=['requests','works','meetings','notes','issues','periodic','cleaning','vacations','personalEvents','documents','agents','rotations','weeklyPlans','spaces'];
 
 function stableRecordTime(r){
@@ -835,11 +861,23 @@ window.PSTMainState={
  // En ligne : attend la confirmation Supabase. Hors ligne : met explicitement en attente locale.
  persistNow:async()=>{
    localDirty=true;
-   if(!currentUser){setSaveState('Non connecté — non enregistré','error');return {ok:false,offline:false}}
-   if(!navigator.onLine){const ok=writeOfflinePending('appareil hors connexion');return {ok:!!ok,offline:true}}
-   setSaveState('Test et envoi réel vers Supabase…','loading');
+   if(!currentUser){setSaveState('Non connecté — non enregistré','error');return {ok:false,offline:false,error:'Non connecté'}}
+   if(!navigator.onLine){const ok=writeOfflinePending('appareil hors connexion');return {ok:!!ok,offline:true,pending:true}}
+
+   // Le Wi‑Fi est présent : une sauvegarde déjà en cours n'est PAS un état hors ligne.
+   setSaveState(cloudBusy?'Synchronisation précédente en cours…':'Test et envoi réel vers Supabase…','loading');
+   const idle=await waitForCloudIdle(18000);
+   if(!idle){
+     const ok=writeOfflinePending('serveur occupé — synchronisation à reprendre');
+     setSaveState('Synchronisation en attente','local');
+     return {ok:!!ok,offline:false,pending:true,error:'Synchronisation précédente encore en cours'};
+   }
+
    const ok=await cloudSaveNow({silent:false,mergeRemote:true});
-   return {ok:!!ok,offline:!ok};
+   if(ok)return {ok:true,offline:false};
+   // Échec serveur ≠ absence de Wi‑Fi.
+   const queued=!!readOfflinePending();
+   return {ok:queued,offline:false,pending:queued,error:lastCloudError||'Synchronisation Supabase impossible'};
  },
   persistStateDirect:async({label='Données',verify}={})=>{
     if(!currentUser){
@@ -912,8 +950,12 @@ window.PSTMainState={
           writeOfflinePending('historique à resynchroniser');
         }
       }
+      remote.deletedRecords=mergeDeletedRecordsSafe(remote.deletedRecords,deepClone(ensureDeletedRecordsStore(db)));
+      for(const c of STABLE_FORM_COLLECTIONS)remote[c]=applyDeletedRecordsToCollection(c,remote[c],remote);
+      remote.maintenance=applyDeletedRecordsToCollection('maintenance',remote.maintenance,remote);
       db=remote;
-      lastCloudData=deepClone(remote);
+      enforceAllDeletedRecords('fin persistStateDirect');
+      lastCloudData=deepClone(db);
       lastCloudUpdatedAt=read?.data?.updated_at||write?.data?.updated_at||nowIso;
       lastCloudError='';
       localDirty=false;
@@ -1012,6 +1054,7 @@ async function pollCloudChanges(){
      enforceAgentDaysStable('poll Supabase');
      enforceMaintenanceStable('poll Supabase');
      for(const c of STABLE_FORM_COLLECTIONS)enforceStableCollection(c,'poll Supabase');
+     enforceAllDeletedRecords('poll Supabase');
      lastCloudData=deepClone(db);lastCloudUpdatedAt=remoteStamp;writeMirror();safeRenderAll();
      try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud')
@@ -1564,25 +1607,84 @@ function textareaField(label,name,value='',rows=3,extra=''){return `<label class
 function formDataObj(form){return Object.fromEntries(new FormData(form).entries())}
 async function deleteRecord(type,id,label='élément'){
  if(!confirm(`Supprimer cet ${label} ?`))return;
- markRecordDeleted(type,id);
- db[type]=(db[type]||[]).filter(x=>String(x.id)!==String(id));
+
+ const sid=String(id);
+ markRecordDeleted(type,sid);
+ db[type]=(db[type]||[]).filter(x=>String(x.id)!==sid);
  if(STABLE_FORM_COLLECTIONS.includes(type))enforceStableCollection(type,'suppression');
+ enforceAllDeletedRecords('suppression locale');
+
  localDirty=true;
  try{writeMirror()}catch(_){}
  try{writeOfflinePending(`suppression ${label} à synchroniser`)}catch(_){}
+
+ // Le formulaire se ferme et l'écran est rafraîchi AVANT tout appel serveur.
  closeModal();
  refreshCollectionView(type);
- setSaveState('Suppression en cours…','loading');
+ if(type==='periodic')renderPeriodic();
 
- let res={ok:true,offline:false};
- try{res=await window.PSTMainState.persistNow()}catch(error){console.error('Suppression',error);res={ok:false,offline:!navigator.onLine}}
+ const stillLocal=(db[type]||[]).some(x=>String(x.id)===sid);
+ if(stillLocal){
+   console.error('Suppression locale non appliquée',type,sid);
+   toast(`⚠️ Le ${label} n’a pas pu être retiré localement`);
+   return;
+ }
 
- if(res?.ok){
+ if(!currentUser){
+   setSaveState('Suppression locale — non connecté','local');
+   toast(`${label} supprimé sur cet appareil — connexion requise pour synchroniser`);
+   return;
+ }
+ if(!navigator.onLine){
+   setSaveState('Suppression en attente de synchronisation','local');
+   toast(`${label} supprimé sur cet appareil — synchronisation au retour du réseau`);
+   return;
+ }
+
+ setSaveState(cloudBusy?'Suppression enregistrée — attente de la synchro en cours…':'Suppression envoyée au serveur…','loading');
+
+ // Important : attendre une éventuelle ancienne sauvegarde qui pourrait contenir encore l'élément.
+ const idle=await waitForCloudIdle(18000);
+ if(!idle){
+   writeOfflinePending(`suppression ${label} en attente — serveur occupé`);
+   setSaveState('Suppression en attente de synchronisation','local');
    refreshCollectionView(type);
-   toast(res.offline?'Supprimé sur cet appareil — synchronisation automatique au retour du réseau':`${label} supprimé et synchronisé`);
- }else{
+   return;
+ }
+
+ try{
+   const result=await window.PSTMainState.persistStateDirect({
+     label:`Suppression ${label}`,
+     verify:remote=>{
+       const absent=!(Array.isArray(remote?.[type])&&remote[type].some(x=>String(x.id)===sid));
+       const deleted=deletedIdsFor(type,remote).has(sid);
+       return absent&&deleted;
+     }
+   });
+
+   enforceAllDeletedRecords('confirmation suppression');
    refreshCollectionView(type);
-   toast('Suppression gardée localement — elle sera renvoyée automatiquement vers Supabase');
+   if(type==='periodic')renderPeriodic();
+
+   if(result?.ok && !result?.offline){
+     setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+     toast(`${label} supprimé et synchronisé`);
+   }else if(result?.ok){
+     setSaveState('Suppression en attente de synchronisation','local');
+     toast(`${label} supprimé — synchronisation en attente`);
+   }else{
+     writeOfflinePending(`suppression ${label} à resynchroniser`);
+     setSaveState('Suppression en attente de synchronisation','local');
+     toast(`${label} supprimé localement — synchronisation à reprendre`);
+   }
+ }catch(error){
+   console.error('Suppression vérifiée',error);
+   enforceAllDeletedRecords('erreur suppression serveur');
+   refreshCollectionView(type);
+   if(type==='periodic')renderPeriodic();
+   writeOfflinePending(error?.message||`suppression ${label} à resynchroniser`);
+   setSaveState('Suppression en attente de synchronisation','local');
+   toast(`${label} supprimé localement — synchronisation à reprendre`);
  }
 }
 
@@ -1839,7 +1941,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.116 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.117 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1907,7 +2009,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.116 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.117 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2251,7 +2353,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.116 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.117 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2303,7 +2405,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.116 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.117 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2358,7 +2460,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.116 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.117 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2808,7 +2910,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.116 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.117 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();

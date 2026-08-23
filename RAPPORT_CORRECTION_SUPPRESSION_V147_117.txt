@@ -1,0 +1,19 @@
+V147.117 — Suppression contrôles périodiques + faux mode local corrigés
+
+CAUSES TROUVÉES
+1. persistNow interprétait cloudBusy comme un échec et renvoyait offline=true, même avec le Wi‑Fi.
+2. Une sauvegarde Supabase déjà démarrée avant la suppression pouvait finir après elle et réinjecter l'ancienne liste.
+
+CORRECTIONS
+- Wi‑Fi présent + synchro déjà en cours = attente, jamais « hors ligne ».
+- Le contrôle est supprimé et l'écran périodique est rafraîchi AVANT le serveur.
+- Une marque de suppression est conservée localement.
+- Toutes les fins de sauvegarde/rerelecture réappliquent les marques de suppression actuelles.
+- La suppression attend la fin d'une ancienne synchro puis utilise persistStateDirect.
+- Vérification serveur : l'ID doit être absent ET présent dans deletedRecords.
+- Le polling ne peut plus réinjecter un contrôle supprimé.
+
+RÉSULTAT ATTENDU
+- Cliquer Supprimer : le contrôle disparaît immédiatement.
+- Avec Internet : « contrôle supprimé et synchronisé ».
+- Si le serveur est momentanément occupé : il reste supprimé et affiche seulement « synchronisation en attente ».
