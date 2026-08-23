@@ -1,0 +1,7 @@
+V147.111 — Priorité absolue aux saisies manuelles agents
+
+- Une saisie manuelle gagne toujours sur Chronotime pour le même agent et la même date.
+- Entre deux saisies manuelles, la plus récente gagne.
+- La relecture Supabase, le polling, la sauvegarde cloud et le hors-ligne fusionnent désormais agentDays au lieu d'écraser la saisie locale.
+- Chronotime ne crée/reprend plus une journée si une saisie manuelle existe déjà.
+- Présence, Congé, RTT, horaires réels et réinitialisation des horaires réels restent donc stables après synchronisation.

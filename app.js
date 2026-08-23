@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.110';
+const APP_VERSION='147.111';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -514,7 +514,7 @@ async function syncOfflinePending(){
  if(!supabaseClient||!currentUser||!navigator.onLine)return false;
  const pending=readOfflinePending();
  if(pending?.userId&&pending.userId!==currentUser.id)return false;
- if(pending?.data){db=migrate(pending.data);lastCloudData=pending.baseData?migrate(pending.baseData):lastCloudData;localDirty=true}
+ if(pending?.data){const currentAgentDays=deepClone(db.agentDays||[]);db=migrate(pending.data);db.agentDays=mergeAgentDaysSafe(db.agentDays,currentAgentDays);lastCloudData=pending.baseData?migrate(pending.baseData):lastCloudData;localDirty=true}
  if(!localDirty)return true;
  setSaveState('Connexion revenue — fusion et synchronisation…','loading');
  const ok=await cloudSaveNow({silent:true,mergeRemote:true});
@@ -555,8 +555,10 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
        const remote=migrate(remoteRow.data),base=lastCloudData||remote;
        toSave=migrate(mergeThreeWay(base,toSave,remote));
        toSave.changeHistory=mergeChangeHistorySafe(remote.changeHistory,db.changeHistory);
+       toSave.agentDays=mergeAgentDaysSafe(remote.agentDays,db.agentDays);
      }else{
        toSave.changeHistory=mergeChangeHistorySafe(toSave.changeHistory,db.changeHistory);
+       toSave.agentDays=mergeAgentDaysSafe(toSave.agentDays,db.agentDays);
      }
    }
    const stamp=new Date().toISOString();
@@ -607,6 +609,37 @@ function preserveLocalHistoryInRemote(remote,localSnapshot){
  r.changeHistory=mergeChangeHistorySafe(r.changeHistory,localSnapshot||[]);
  return r;
 }
+
+function agentDayKey(r){return `${String(r?.agentId||'')}|${String(r?.date||'')}`}
+function agentDayTime(r){
+ const t=Date.parse(r?.updatedAt||r?.createdAt||r?.chronotimeImportedAt||'');
+ return Number.isFinite(t)?t:0;
+}
+function isManualAgentDay(r){return String(r?.source||'').toLowerCase()==='manual'}
+function mergeAgentDaysSafe(remoteDays,localDays){
+ const remote=Array.isArray(remoteDays)?remoteDays:[];
+ const local=Array.isArray(localDays)?localDays:[];
+ const byKey=new Map();
+ const add=(r,origin)=>{
+   if(!r?.agentId||!r?.date)return;
+   const k=agentDayKey(r),cur=byKey.get(k);
+   if(!cur){byKey.set(k,{row:deepClone(r),origin});return}
+   const a=cur.row,b=r,am=isManualAgentDay(a),bm=isManualAgentDay(b);
+   if(am!==bm){if(bm)byKey.set(k,{row:deepClone(b),origin});return}
+   const at=agentDayTime(a),bt=agentDayTime(b);
+   if(bt>at){byKey.set(k,{row:deepClone(b),origin});return}
+   if(bt<at)return;
+   if(origin==='local')byKey.set(k,{row:deepClone(b),origin});
+ };
+ for(const r of remote)add(r,'remote');
+ for(const r of local)add(r,'local');
+ return [...byKey.values()].map(x=>x.row);
+}
+function preserveLocalManualAgentDays(remote,localSnapshot){
+ const r=remote&&typeof remote==='object'?remote:{};
+ r.agentDays=mergeAgentDaysSafe(r.agentDays,localSnapshot||[]);
+ return r;
+}
 window.PSTMainState={
  get:()=>db,
  save:(render=true)=>save(render),
@@ -637,7 +670,9 @@ window.PSTMainState={
       localDirty=true;
       setSaveState(`${label} : écriture directe Supabase…`,'loading');
       const localHistorySnapshot=deepClone(db.changeHistory||[]);
+      const localAgentDaysSnapshot=deepClone(db.agentDays||[]);
       const payload=migrate(deepClone(db));
+      payload.agentDays=mergeAgentDaysSafe(payload.agentDays,localAgentDaysSnapshot);
       payload.changeHistory=mergeChangeHistorySafe(payload.changeHistory,localHistorySnapshot);
       const nowIso=new Date().toISOString();
       const write=await withTimeout(
@@ -657,6 +692,7 @@ window.PSTMainState={
 
       let remote=migrate(read?.data?.data||{});
       remote=preserveLocalHistoryInRemote(remote,localHistorySnapshot);
+      remote=preserveLocalManualAgentDays(remote,localAgentDaysSnapshot);
       if(typeof verify==='function' && !verify(remote)){
         throw new Error(`${label} écrit mais non retrouvé lors de la relecture Supabase.`);
       }
@@ -766,8 +802,10 @@ async function pollCloudChanges(){
    if(remoteStamp&&remoteStamp!==lastCloudUpdatedAt){
      clearTheoreticalScheduleCache();
      const localHistorySnapshot=deepClone(db.changeHistory||[]);
+     const localAgentDaysSnapshot=deepClone(db.agentDays||[]);
      db=migrate(data.data);
      db.changeHistory=mergeChangeHistorySafe(db.changeHistory,localHistorySnapshot);
+     db.agentDays=mergeAgentDaysSafe(db.agentDays,localAgentDaysSnapshot);
      lastCloudData=deepClone(db);lastCloudUpdatedAt=remoteStamp;writeMirror();safeRenderAll();
      try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud')
@@ -1578,9 +1616,11 @@ function upsertChronotimePermanence(c){
   db.agentDays=Array.isArray(db.agentDays)?db.agentDays:[];
   const sched=permanenceScheduleForAgent(c.agentId);
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
+  const manualDay=rows.find(x=>String(x.source||'').toLowerCase()==='manual');
+  if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.110 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.111 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1644,9 +1684,11 @@ function syncStoredChronotimePastilles(){
     if(c.dayType!==mapped){c.dayType=mapped;changed++}
 
     const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
+    const manualDay=rows.find(x=>String(x.source||'').toLowerCase()==='manual');
+    if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.110 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.111 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -1990,7 +2032,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.110 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.111 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2021,7 +2063,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
      const rule=dayCountingRule(o.dayType);
      const pStart=rule.mode==='planned'?((from===to?o.plannedStart:'')||sc.start||o.plannedStart||''):(from===to?(o.plannedStart||''):'');
      const pEnd=rule.mode==='planned'?((from===to?o.plannedEnd:'')||sc.end||o.plannedEnd||''):(from===to?(o.plannedEnd||''):'');
-     db.agentDays.push({id:uid(),periodId:newPeriodId,agentId:o.agentId,date:d,dayType:o.dayType,plannedStart:pStart,plannedEnd:pEnd,actualStart:sameStart?(o.actualStart||''):'',actualEnd:sameStart?(o.actualEnd||''):'',pause:Number((from===to&&o.pause!==''?o.pause:sc.pause??o.pause)||0),overtime:Number(sameStart?o.overtime||0:0),status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',realScheduleReset:(!o.actualStart&&!o.actualEnd),academicYear:academicYearFor(d),updatedAt:new Date().toISOString()});
+     db.agentDays.push({id:uid(),periodId:newPeriodId,agentId:o.agentId,date:d,dayType:o.dayType,plannedStart:pStart,plannedEnd:pEnd,actualStart:sameStart?(o.actualStart||''):'',actualEnd:sameStart?(o.actualEnd||''):'',pause:Number((from===to&&o.pause!==''?o.pause:sc.pause??o.pause)||0),overtime:Number(sameStart?o.overtime||0:0),status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',manualOverride:true,realScheduleReset:(!o.actualStart&&!o.actualEnd),academicYear:academicYearFor(d),updatedAt:new Date().toISOString()});
      added++;
    }
    d=addDays(d,1);
@@ -2035,14 +2077,14 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
      actualStart:o.actualStart||'',actualEnd:o.actualEnd||'',
      pause:Number(o.pause||sc.pause||0),overtime:Number(o.overtime||0),
      status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),
-     noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',realScheduleReset:(!o.actualStart&&!o.actualEnd),
+     noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',manualOverride:true,realScheduleReset:(!o.actualStart&&!o.actualEnd),
      academicYear:academicYearFor(from),updatedAt:new Date().toISOString()
    });
    added=1;
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.110 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.111 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2096,7 +2138,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.110 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.111 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2498,7 +2540,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.110 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.111 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
