@@ -1,4 +1,4 @@
-V147.119 — Mode offline-first + synchronisation semi-automatique
+V147.122 — Mode offline-first + synchronisation semi-automatique
 
 OBJECTIF
 Utilisation dans les bâtiments sans réseau, puis synchronisation lisible et vérifiable dès le retour d'Internet.

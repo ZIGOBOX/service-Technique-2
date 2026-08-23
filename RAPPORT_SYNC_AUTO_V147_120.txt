@@ -1,4 +1,4 @@
-V147.121 — Synchronisation automatique Wi‑Fi / 4G / 5G
+V147.122 — Synchronisation automatique Wi‑Fi / 4G / 5G
 
 - Hors réseau : fonctionnement local, LED rouge.
 - Dès qu'Internet revient en Wi‑Fi, 4G ou 5G : tentative de synchronisation automatique.

@@ -1,4 +1,4 @@
-V147.121 — Correction de la boucle réelle de synchronisation Supabase
+V147.122 — Correction de la boucle réelle de synchronisation Supabase
 
 CAUSE IDENTIFIÉE DANS LE CODE
 Après chaque synchronisation réussie, l'application déclenchait l'événement pst:data-loaded.
