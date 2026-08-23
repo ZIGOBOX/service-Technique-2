@@ -1,4 +1,4 @@
-V147.122 — Voyant Supabase : orange persistant corrigé
+V147.123 — Voyant Supabase : orange persistant corrigé
 
 - Le voyant distingue maintenant exactement :
   * localDirty = vraie modification locale non confirmée ;
