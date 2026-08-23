@@ -1,0 +1,14 @@
+V147.126 — Correctif ciblé écart 0 h
+
+SEULE RÈGLE MODIFIÉE
+- Si les heures comptabilisées d'une journée sont à 0 h, l'écart affiché est 0 h.
+- Le théorique reste visible mais n'est plus déduit.
+- Le total mensuel des écarts utilise la même règle.
+
+EXEMPLES
+- Congé avec 5 h théoriques et 0 h comptabilisées : écart 0 h (au lieu de -5 h).
+- RTT avec 5 h théoriques et 0 h comptabilisées : écart 0 h.
+- Présence avec 6 h réalisées pour 5 h théoriques : écart +1 h.
+- Présence avec 4 h réalisées pour 5 h théoriques : écart -1 h.
+
+AUCUN AUTRE MODULE MODIFIÉ.
