@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.122';
+const APP_VERSION='147.123';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -474,6 +474,7 @@ function refreshDashboardSyncIndicator(){
    const reasons=[];
    if(diag.dirty)reasons.push('modification locale non confirmée');
    if(diag.pending)reasons.push('file hors-ligne encore présente');
+   if(diag.pendingSavedAt)reasons.push(`file du ${new Date(diag.pendingSavedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`);
    setDashboardSyncIndicator('orange','Données à synchroniser',reasons.join(' · '));
    return;
  }
@@ -1018,7 +1019,13 @@ window.PSTMainState={
    }
 
    const ok=await cloudSaveNow({silent:false,mergeRemote:true});
-   if(ok)return {ok:true,offline:false};
+   if(ok){
+     localDirty=false;
+     clearOfflinePending();
+     lastConfirmedSupabaseAt=Date.now();
+     refreshDashboardSyncIndicator();
+     return {ok:true,offline:false};
+   }
    // Échec serveur ≠ absence de Wi‑Fi.
    const queued=!!readOfflinePending();
    return {ok:queued,offline:false,pending:queued,error:lastCloudError||'Synchronisation Supabase impossible'};
@@ -2173,7 +2180,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.122 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.123 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2241,7 +2248,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.122 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.123 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2585,7 +2592,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.122 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.123 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2637,7 +2644,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.122 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.123 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2692,7 +2699,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.122 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.123 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -3142,7 +3149,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.122 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.123 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -4774,6 +4781,16 @@ function pushModificationHistory({
  try{
    if(document.querySelector('.view.active')?.id==='archives')renderChangeHistory();
  }catch(_){}
+
+ // Si l'historique est créé hors d'un formulaire alors qu'Internet est présent,
+ // programmer son envoi automatique. Le submit des formulaires fait sa propre
+ // confirmation immédiate ci-dessus.
+ if(currentUser&&navigator.onLine){
+   clearTimeout(cloudSaveTimer);
+   cloudSaveTimer=setTimeout(()=>{
+     if(localDirty&&!cloudBusy)cloudSaveNow({silent:true,mergeRemote:true});
+   },900);
+ }
 }
 function bindEvents(){
  $('#modalForm').addEventListener('submit',async e=>{
@@ -4820,6 +4837,16 @@ function bindEvents(){
           title:auditTitle||auditEntity,
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
+
+        // V147.123 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
+        // reste vrai et le voyant reste orange indéfiniment.
+        if(currentUser&&navigator.onLine){
+          const auditSync=await window.PSTMainState.persistNow();
+          if(!auditSync?.ok||auditSync?.offline||auditSync?.pending){
+            console.warn('Historique créé mais synchronisation Supabase en attente',auditSync);
+          }
+        }
       }catch(auditWriteError){
         console.error('Historique non bloquant',auditWriteError);
       }

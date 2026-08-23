@@ -1,0 +1,16 @@
+V147.123 — Correction cause réelle du voyant orange permanent
+
+CAUSE TROUVÉE
+Le formulaire était d'abord synchronisé avec Supabase.
+Ensuite seulement, le gestionnaire générique ajoutait la modification dans Archives via pushModificationHistory().
+pushModificationHistory() mettait localDirty=true et écrivait une nouvelle file hors-ligne.
+Cette nouvelle écriture arrivait APRÈS la synchronisation réussie et pouvait donc maintenir la LED orange.
+
+CORRECTION
+- Après création de l'historique d'une modification de formulaire, une deuxième confirmation Supabase est effectuée automatiquement.
+- Les historiques créés hors formulaire déclenchent aussi une synchronisation automatique si Internet est présent.
+- Après persistNow réussi : localDirty=false, file offline supprimée, confirmation Supabase horodatée.
+- Si le voyant reste orange, l'heure exacte de la file locale est affichée pour diagnostic.
+
+RÉSULTAT ATTENDU
+Formulaire modifié -> fiche Supabase -> historique Archives -> historique Supabase -> aucune file locale -> LED VERTE.
