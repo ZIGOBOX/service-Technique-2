@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.114';
+const APP_VERSION='147.116';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -345,7 +345,10 @@ function migrate(raw){
  ensureCanonicalFacilitySpaces(d);
  d.agentDays=normalizeAgentDaysStable(d.agentDays);
  d.maintenance=normalizeMaintenanceStable(d.maintenance);
- for(const c of STABLE_FORM_COLLECTIONS)d[c]=normalizeStableCollection(d[c]);
+ ensureDeletedRecordsStore(d);
+ for(const c of STABLE_FORM_COLLECTIONS){
+   d[c]=applyDeletedRecordsToCollection(c,normalizeStableCollection(d[c]),d);
+ }
  if(!Array.isArray(d.cleaningRoomChecks))d.cleaningRoomChecks=[];
  if(!Array.isArray(d.cleaningDeletedIds))d.cleaningDeletedIds=[];
  mergeBundledControlReports(d);
@@ -418,7 +421,23 @@ let db=defaultData(); let teamWeek=startOfWeek(todayISO()),personalWeek=startOfW
 let supabaseClient=null,currentUser=null,cloudReady=false,cloudSaveTimer=null,cloudRetryTimer=null,cloudBusy=false,cloudPollTimer=null,lastCloudUpdatedAt='',localDirty=false,lastCloudData=null,lastCloudError='';
 const OFFLINE_CACHE_KEY='pst_offline_pending_v130';
 const OFFLINE_MIRROR_KEY='pst_offline_mirror_v130';
-function setSaveState(text,state=''){const s=$('#saveState');if(!s)return;s.textContent=text;s.dataset.state=state}
+let saveStateChangedAt=0;
+function setSaveState(text,state=''){
+ const el=$('#saveState');if(!el)return;
+ el.textContent=text;el.dataset.state=state;saveStateChangedAt=Date.now();
+}
+function syncStatusText(){
+ const pending=readOfflinePending();
+ if(localDirty||pending)return {text:'Synchronisation en attente','state':'local'};
+ return {text:`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'state':'cloud'};
+}
+function ensureSaveStateNotStuck(){
+ const el=$('#saveState');if(!el)return;
+ if(el.dataset.state!=='loading')return;
+ if(Date.now()-saveStateChangedAt<18000)return;
+ const st=syncStatusText();
+ setSaveState(st.text,st.state);
+}
 function classifyCloudError(message=''){
  const m=String(message||'').toLowerCase();
  if(!navigator.onLine)return 'internet';
@@ -517,7 +536,7 @@ async function syncOfflinePending(){
  if(!supabaseClient||!currentUser||!navigator.onLine)return false;
  const pending=readOfflinePending();
  if(pending?.userId&&pending.userId!==currentUser.id)return false;
- if(pending?.data){const currentAgentDays=deepClone(db.agentDays||[]),currentMaintenance=deepClone(db.maintenance||[]),currentStable=stableCollectionSnapshots();db=migrate(pending.data);db.agentDays=mergeAgentDaysSafe(db.agentDays,currentAgentDays);db.maintenance=mergeMaintenanceSafe(db.maintenance,currentMaintenance);mergeStableCollectionsInto(db,currentStable);lastCloudData=pending.baseData?migrate(pending.baseData):lastCloudData;localDirty=true}
+ if(pending?.data){const currentAgentDays=deepClone(db.agentDays||[]),currentMaintenance=deepClone(db.maintenance||[]),currentStable=stableCollectionSnapshots(),currentDeleted=deepClone(ensureDeletedRecordsStore(db));db=migrate(pending.data);db.deletedRecords=mergeDeletedRecordsSafe(db.deletedRecords,currentDeleted);db.agentDays=mergeAgentDaysSafe(db.agentDays,currentAgentDays);db.maintenance=mergeMaintenanceSafe(db.maintenance,currentMaintenance);mergeStableCollectionsInto(db,currentStable,currentDeleted);lastCloudData=pending.baseData?migrate(pending.baseData):lastCloudData;localDirty=true}
  if(!localDirty)return true;
  setSaveState('Connexion revenue — fusion et synchronisation…','loading');
  const ok=await cloudSaveNow({silent:true,mergeRemote:true});
@@ -538,7 +557,7 @@ async function cloudLoad({silent=false}={}){
    cloudBusy=false;
    if(localDirty){const ok=await cloudSaveNow({silent:true,mergeRemote:true});if(!ok)return false}
    cloudReady=true;writeMirror();renderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
-   setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');clearTimeout(cloudRetryTimer);return true;
+   setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);clearTimeout(cloudRetryTimer);return true;
  }catch(error){console.error('Supabase indisponible :',error);useLocalMode(error?.message||String(error));try{window.dispatchEvent(new CustomEvent('pst:cloud-error',{detail:{message:error?.message||String(error)}}))}catch(_){ }return false}
  finally{cloudBusy=false}
 }
@@ -547,10 +566,14 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
  if(cloudBusy){
    clearTimeout(cloudSaveTimer);
    cloudSaveTimer=setTimeout(()=>{if(localDirty&&currentUser){if(navigator.onLine)cloudSaveNow({silent:true,mergeRemote:true});else writeOfflinePending('appareil hors connexion')}},700);
+   if($('#saveState')?.dataset?.state==='loading' && !localDirty){
+     const st=syncStatusText();setSaveState(st.text,st.state);
+   }
    return false;
  }
  cloudBusy=true;
  try{
+   if(!silent)setSaveState('Envoi au serveur…','loading');
    let toSave=deepClone(db),remoteRow=null;
    if(mergeRemote){
      remoteRow=await fetchRemote();
@@ -560,19 +583,19 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
        toSave.changeHistory=mergeChangeHistorySafe(remote.changeHistory,db.changeHistory);
        toSave.agentDays=mergeAgentDaysSafe(remote.agentDays,db.agentDays);
        toSave.maintenance=mergeMaintenanceSafe(remote.maintenance,db.maintenance);
-       mergeStableCollectionsInto(toSave,stableCollectionSnapshots());
+       mergeStableCollectionsInto(toSave,stableCollectionSnapshots(),deepClone(ensureDeletedRecordsStore(db)));
      }else{
        toSave.changeHistory=mergeChangeHistorySafe(toSave.changeHistory,db.changeHistory);
        toSave.agentDays=mergeAgentDaysSafe(toSave.agentDays,db.agentDays);
        toSave.maintenance=mergeMaintenanceSafe(toSave.maintenance,db.maintenance);
-       mergeStableCollectionsInto(toSave,stableCollectionSnapshots());
+       mergeStableCollectionsInto(toSave,stableCollectionSnapshots(),deepClone(ensureDeletedRecordsStore(db)));
      }
    }
    const stamp=new Date().toISOString();
    const payload={user_id:currentUser.id,data:toSave,updated_at:stamp};
    const {error}=await withTimeout(supabaseClient.from('app_state').upsert(payload,{onConflict:'user_id'}));if(error)throw error;
    db=toSave;lastCloudData=deepClone(toSave);lastCloudUpdatedAt=stamp;localDirty=false;cloudReady=true;lastCloudError='';clearOfflinePending();writeMirror();
-   setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');clearTimeout(cloudRetryTimer);safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}return true;
+   setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);clearTimeout(cloudRetryTimer);safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}return true;
   }catch(error){
     lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue';
     console.error('Sauvegarde cloud différée :',error);
@@ -590,8 +613,9 @@ function save(render=true){
  localDirty=true;
  if(!currentUser){setSaveState('Non connecté — non enregistré','error');if(render)safeRenderAll();return false}
  if(!navigator.onLine){writeOfflinePending('appareil hors connexion');if(render)safeRenderAll();return true}
- setSaveState('Envoi au serveur…','loading');clearTimeout(cloudSaveTimer);
- cloudSaveTimer=setTimeout(()=>{if(localDirty&&currentUser){if(navigator.onLine)cloudSaveNow({silent:true,mergeRemote:true});else writeOfflinePending('appareil hors connexion')}},350);
+ if(render)setSaveState('Envoi au serveur…','loading');
+ clearTimeout(cloudSaveTimer);
+ cloudSaveTimer=setTimeout(()=>{if(localDirty&&currentUser){if(navigator.onLine)cloudSaveNow({silent:!render,mergeRemote:true});else writeOfflinePending('appareil hors connexion')}},350);
  if(render)safeRenderAll();return true;
 }
 
@@ -709,6 +733,48 @@ function enforceMaintenanceStable(reason=''){
  }
 }
 
+
+function ensureDeletedRecordsStore(target=db){
+ if(!target.deletedRecords||typeof target.deletedRecords!=='object'||Array.isArray(target.deletedRecords))target.deletedRecords={};
+ return target.deletedRecords;
+}
+function deletedIdsFor(collection,target=db){
+ const store=ensureDeletedRecordsStore(target);
+ const arr=Array.isArray(store[collection])?store[collection]:[];
+ return new Set(arr.map(x=>String(typeof x==='object'?x.id:x)));
+}
+function markRecordDeleted(collection,id){
+ if(!collection||id===null||id===undefined)return;
+ const store=ensureDeletedRecordsStore(db);
+ const arr=Array.isArray(store[collection])?store[collection]:[];
+ const sid=String(id),now=new Date().toISOString();
+ const existing=arr.find(x=>String(typeof x==='object'?x.id:x)===sid);
+ if(existing&&typeof existing==='object')existing.deletedAt=now;
+ else arr.push({id:sid,deletedAt:now});
+ store[collection]=arr;
+}
+function mergeDeletedRecordsSafe(remoteDeleted,localDeleted){
+ const out={};
+ const cols=new Set([...Object.keys(remoteDeleted||{}),...Object.keys(localDeleted||{})]);
+ for(const c of cols){
+   const map=new Map();
+   for(const src of [remoteDeleted?.[c]||[],localDeleted?.[c]||[]]){
+     for(const item of src){
+       const obj=typeof item==='object'&&item?item:{id:item,deletedAt:''};
+       if(obj.id===null||obj.id===undefined)continue;
+       const id=String(obj.id),cur=map.get(id);
+       const ct=Date.parse(cur?.deletedAt||'')||0,nt=Date.parse(obj.deletedAt||'')||0;
+       if(!cur||nt>=ct)map.set(id,{id,deletedAt:obj.deletedAt||cur?.deletedAt||''});
+     }
+   }
+   out[c]=[...map.values()];
+ }
+ return out;
+}
+function applyDeletedRecordsToCollection(collection,rows,target=db){
+ const deleted=deletedIdsFor(collection,target);
+ return (Array.isArray(rows)?rows:[]).filter(r=>!deleted.has(String(r?.id)));
+}
 const STABLE_FORM_COLLECTIONS=['requests','works','meetings','notes','issues','periodic','cleaning','vacations','personalEvents','documents','agents','rotations','weeklyPlans','spaces'];
 
 function stableRecordTime(r){
@@ -751,10 +817,14 @@ function stableCollectionSnapshots(){
  for(const c of STABLE_FORM_COLLECTIONS)out[c]=deepClone(db[c]||[]);
  return out;
 }
-function mergeStableCollectionsInto(target,snapshots){
+function mergeStableCollectionsInto(target,snapshots,deletedSnapshot=null){
  if(!target||typeof target!=='object')return target;
+ if(deletedSnapshot)target.deletedRecords=mergeDeletedRecordsSafe(target.deletedRecords,deletedSnapshot);
+ ensureDeletedRecordsStore(target);
  for(const c of STABLE_FORM_COLLECTIONS){
-   target[c]=mergeRecordsByIdSafe(target[c],snapshots?.[c]||[]);
+   const remoteRows=applyDeletedRecordsToCollection(c,target[c],target);
+   const localRows=applyDeletedRecordsToCollection(c,snapshots?.[c]||[],target);
+   target[c]=applyDeletedRecordsToCollection(c,mergeRecordsByIdSafe(remoteRows,localRows),target);
  }
  return target;
 }
@@ -791,10 +861,11 @@ window.PSTMainState={
       const localAgentDaysSnapshot=deepClone(db.agentDays||[]);
       const localMaintenanceSnapshot=deepClone(db.maintenance||[]);
       const localStableSnapshots=stableCollectionSnapshots();
+      const localDeletedSnapshot=deepClone(ensureDeletedRecordsStore(db));
       const payload=migrate(deepClone(db));
       payload.agentDays=mergeAgentDaysSafe(payload.agentDays,localAgentDaysSnapshot);
       payload.maintenance=mergeMaintenanceSafe(payload.maintenance,localMaintenanceSnapshot);
-      mergeStableCollectionsInto(payload,localStableSnapshots);
+      mergeStableCollectionsInto(payload,localStableSnapshots,localDeletedSnapshot);
       payload.changeHistory=mergeChangeHistorySafe(payload.changeHistory,localHistorySnapshot);
       const nowIso=new Date().toISOString();
       const write=await withTimeout(
@@ -818,7 +889,7 @@ window.PSTMainState={
       remote.agentDays=normalizeAgentDaysStable(remote.agentDays);
       remote.maintenance=mergeMaintenanceSafe(remote.maintenance,localMaintenanceSnapshot);
       remote.maintenance=normalizeMaintenanceStable(remote.maintenance);
-      mergeStableCollectionsInto(remote,localStableSnapshots);
+      mergeStableCollectionsInto(remote,localStableSnapshots,localDeletedSnapshot);
       if(typeof verify==='function' && !verify(remote)){
         throw new Error(`${label} écrit mais non retrouvé lors de la relecture Supabase.`);
       }
@@ -851,7 +922,7 @@ window.PSTMainState={
       writeMirror();
       safeRenderAll();
       try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}
-      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);
       return {ok:true,offline:false};
     }catch(error){
       lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue';
@@ -882,7 +953,7 @@ window.PSTMainState={
       if(!found)throw new Error('Écriture réussie mais nouvel import absent lors de la relecture Supabase.');
       lastCloudData=deepClone(remote); lastCloudUpdatedAt=read?.data?.updated_at||nowIso; lastCloudError=''; localDirty=false; cloudReady=true;
       clearOfflinePending(); writeMirror();
-      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);
       return {ok:true,offline:false,found:true};
     }catch(error){
       lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue'; localDirty=true; writeOfflinePending(lastCloudError);
@@ -908,7 +979,7 @@ window.PSTMainState={
         cloudReady=true;
         clearOfflinePending();
         writeMirror();
-        setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+        setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);
         return {ok:true,found:true};
       }
       localDirty=true;
@@ -931,11 +1002,13 @@ async function pollCloudChanges(){
      const localAgentDaysSnapshot=deepClone(db.agentDays||[]);
      const localMaintenanceSnapshot=deepClone(db.maintenance||[]);
      const localStableSnapshots=stableCollectionSnapshots();
+     const localDeletedSnapshot=deepClone(ensureDeletedRecordsStore(db));
      db=migrate(data.data);
+     db.deletedRecords=mergeDeletedRecordsSafe(db.deletedRecords,localDeletedSnapshot);
      db.changeHistory=mergeChangeHistorySafe(db.changeHistory,localHistorySnapshot);
      db.agentDays=mergeAgentDaysSafe(db.agentDays,localAgentDaysSnapshot);
      db.maintenance=mergeMaintenanceSafe(db.maintenance,localMaintenanceSnapshot);
-     mergeStableCollectionsInto(db,localStableSnapshots);
+     mergeStableCollectionsInto(db,localStableSnapshots,localDeletedSnapshot);
      enforceAgentDaysStable('poll Supabase');
      enforceMaintenanceStable('poll Supabase');
      for(const c of STABLE_FORM_COLLECTIONS)enforceStableCollection(c,'poll Supabase');
@@ -946,6 +1019,7 @@ async function pollCloudChanges(){
  }catch(error){console.warn('Vérification cloud différée',error);scheduleCloudRetry()}
 }
 function startCloudPolling(){clearInterval(cloudPollTimer);cloudPollTimer=setInterval(pollCloudChanges,8000)}
+setInterval(ensureSaveStateNotStuck,3000);
 function safeRenderAll(){
  clearTheoreticalScheduleCache();
  capturePlanningScroll();
@@ -1490,14 +1564,26 @@ function textareaField(label,name,value='',rows=3,extra=''){return `<label class
 function formDataObj(form){return Object.fromEntries(new FormData(form).entries())}
 async function deleteRecord(type,id,label='élément'){
  if(!confirm(`Supprimer cet ${label} ?`))return;
- db[type]=db[type].filter(x=>String(x.id)!==String(id));
+ markRecordDeleted(type,id);
+ db[type]=(db[type]||[]).filter(x=>String(x.id)!==String(id));
+ if(STABLE_FORM_COLLECTIONS.includes(type))enforceStableCollection(type,'suppression');
+ localDirty=true;
+ try{writeMirror()}catch(_){}
+ try{writeOfflinePending(`suppression ${label} à synchroniser`)}catch(_){}
  closeModal();
- safeRenderAll();
+ refreshCollectionView(type);
  setSaveState('Suppression en cours…','loading');
+
  let res={ok:true,offline:false};
  try{res=await window.PSTMainState.persistNow()}catch(error){console.error('Suppression',error);res={ok:false,offline:!navigator.onLine}}
- if(res?.ok){toast(res.offline?'Supprimé sur cet appareil — synchronisation automatique au retour du réseau':'Rendez-vous supprimé et synchronisé')}
- else{toast('Suppression gardée localement — elle sera renvoyée automatiquement vers Supabase')}
+
+ if(res?.ok){
+   refreshCollectionView(type);
+   toast(res.offline?'Supprimé sur cet appareil — synchronisation automatique au retour du réseau':`${label} supprimé et synchronisé`);
+ }else{
+   refreshCollectionView(type);
+   toast('Suppression gardée localement — elle sera renvoyée automatiquement vers Supabase');
+ }
 }
 
 /* ---------- Navigation ---------- */
@@ -1753,7 +1839,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.114 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.116 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -1821,7 +1907,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.114 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.116 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2165,7 +2251,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.114 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.116 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2217,7 +2303,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.114 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.116 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2272,7 +2358,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.114 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.116 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2722,7 +2808,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.114 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.116 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();

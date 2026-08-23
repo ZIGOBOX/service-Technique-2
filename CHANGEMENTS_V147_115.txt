@@ -1,0 +1,9 @@
+V147.115 — État de synchronisation fiable
+
+- Les sauvegardes de fond save(false) n'affichent plus « Envoi au serveur… ».
+- Seules les synchronisations visibles lancées au premier plan affichent l'état loading.
+- Après succès : affichage forcé « Synchronisé à HH:MM ».
+- Si une synchronisation reste bloquée plus de 18 secondes :
+  * données encore en attente -> « Synchronisation en attente »
+  * aucune donnée en attente -> « Synchronisé à HH:MM »
+- Le polling, Chronotime et les sauvegardes de fond ne peuvent plus écraser l'état vert avec un faux « Envoi au serveur… ».

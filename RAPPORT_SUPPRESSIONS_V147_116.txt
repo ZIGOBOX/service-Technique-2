@@ -1,0 +1,28 @@
+V147.116 — Suppressions persistantes
+
+PROBLÈME CORRIGÉ
+- Une suppression (notamment contrôle périodique) disparaissait à l'écran puis pouvait revenir
+  après fusion/relecture Supabase, car l'absence locale n'était pas mémorisée comme suppression.
+
+NOUVELLE RÈGLE
+- Toute suppression crée un tombstone persistant : collection + id + date de suppression.
+- Les fusions Supabase/polling/hors-ligne filtrent les enregistrements marqués supprimés.
+- Une ancienne copie distante ne peut plus recréer un élément supprimé.
+
+APPLIQUÉ À
+- contrôles périodiques,
+- ménage,
+- demandes,
+- chantiers,
+- réunions,
+- notes,
+- sécurité,
+- vacances,
+- agenda,
+- documents,
+- agents,
+- roulements,
+- plannings hebdomadaires,
+- locaux/espaces.
+
+La suppression n'est toujours pas ajoutée dans le tableau d'historique Archives, conformément à la règle validée.
