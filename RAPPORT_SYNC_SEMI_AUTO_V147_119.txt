@@ -1,0 +1,22 @@
+V147.119 — Mode offline-first + synchronisation semi-automatique
+
+OBJECTIF
+Utilisation dans les bâtiments sans réseau, puis synchronisation lisible et vérifiable dès le retour d'Internet.
+
+TABLEAU DE BORD
+- LED ROUGE : pas de réseau ou Supabase non confirmé.
+- LED ORANGE : données locales en attente ou synchronisation en cours.
+- LED VERTE : Supabase est joignable et aucune donnée locale n'attend de synchronisation.
+- Heure de dernière confirmation Supabase affichée.
+- Bouton « Synchroniser maintenant ».
+
+FONCTIONNEMENT
+- Sans réseau : toutes les saisies restent locales et l'application continue de fonctionner.
+- Retour du réseau : la synchronisation automatique existante est conservée.
+- Le bouton permet de forcer l'envoi et la vérification à tout moment.
+- La LED ne passe au vert qu'après confirmation réelle de Supabase et absence de données locales en attente.
+- Le simple fait d'avoir du Wi-Fi ne suffit pas à afficher vert : Supabase doit réellement répondre.
+
+SUPPRESSIONS / MODIFICATIONS / CRÉATIONS
+- Restent offline-first : local d'abord, synchronisation ensuite.
+- Les protections déjà ajoutées contre les retours arrière Supabase sont conservées.

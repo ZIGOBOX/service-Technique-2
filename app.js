@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.117';
+const APP_VERSION='147.120';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -422,10 +422,106 @@ let supabaseClient=null,currentUser=null,cloudReady=false,cloudSaveTimer=null,cl
 const OFFLINE_CACHE_KEY='pst_offline_pending_v130';
 const OFFLINE_MIRROR_KEY='pst_offline_mirror_v130';
 let saveStateChangedAt=0;
+
+let lastConfirmedSupabaseAt=0;
+let dashboardSyncBusy=false;
+
+function hasLocalSyncPending(){
+ try{return !!localDirty || !!readOfflinePending()}catch(_){return !!localDirty}
+}
+function setDashboardSyncIndicator(state,title,detail=''){
+ const panel=$('#dashboardSyncPanel'),led=$('#dashboardSyncLed'),t=$('#dashboardSyncTitle'),d=$('#dashboardSyncDetail');
+ if(panel)panel.dataset.state=state;
+ if(led)led.className=`sync-led ${state}`;
+ if(t)t.textContent=title;
+ if(d)d.textContent=detail;
+}
+function refreshDashboardSyncIndicator(){
+ const pending=hasLocalSyncPending();
+ if(!navigator.onLine){
+   setDashboardSyncIndicator('red','Hors connexion','Les données restent enregistrées sur cet appareil. Elles seront synchronisées au retour du réseau.');
+   return;
+ }
+ if(dashboardSyncBusy||cloudBusy){
+   setDashboardSyncIndicator('orange','Synchronisation en cours','Envoi et vérification des données avec Supabase…');
+   return;
+ }
+ if(pending){
+   setDashboardSyncIndicator('orange','Données à synchroniser','Des modifications locales attendent encore leur confirmation Supabase.');
+   return;
+ }
+ if(lastConfirmedSupabaseAt){
+   setDashboardSyncIndicator('green','Tout est synchronisé',`Supabase confirmé à ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}.`);
+   return;
+ }
+ setDashboardSyncIndicator('red','Supabase non confirmé','Aucune synchronisation Supabase confirmée depuis l’ouverture de l’application.');
+}
+async function confirmSupabaseReachable(){
+ if(!navigator.onLine||!supabaseClient||!currentUser)return false;
+ try{
+   const row=await fetchRemote();
+   if(!row)return false;
+   lastConfirmedSupabaseAt=Date.now();
+   return true;
+ }catch(error){
+   console.warn('Vérification Supabase tableau de bord',error);
+   return false;
+ }
+}
+async function dashboardSyncNow(){
+ if(dashboardSyncBusy)return;
+ dashboardSyncBusy=true;
+ refreshDashboardSyncIndicator();
+ const btn=$('#dashboardSyncNow');
+ const oldText=btn?.textContent||'↻ Synchroniser maintenant';
+ if(btn){btn.disabled=true;btn.textContent='Synchronisation…'}
+ try{
+   if(!currentUser){
+     setDashboardSyncIndicator('red','Non connecté','Connectez-vous à l’application pour synchroniser avec Supabase.');
+     return;
+   }
+   if(!navigator.onLine){
+     try{writeOfflinePending('appareil hors connexion')}catch(_){}
+     setDashboardSyncIndicator('red','Hors connexion','Les données sont conservées sur cet appareil.');
+     return;
+   }
+
+   // S'il existe des données locales, on les envoie. Sinon on vérifie quand même Supabase.
+   if(hasLocalSyncPending()){
+     const result=await window.PSTMainState.persistNow();
+     if(!result?.ok||result?.offline||result?.pending){
+       setDashboardSyncIndicator('orange','Synchronisation en attente',result?.error||'Les données restent conservées localement.');
+       return;
+     }
+   }
+
+   const reachable=await confirmSupabaseReachable();
+   if(!reachable){
+     setDashboardSyncIndicator('red','Supabase inaccessible','Le réseau est présent mais Supabase ne répond pas correctement.');
+     return;
+   }
+
+   if(hasLocalSyncPending()){
+     setDashboardSyncIndicator('orange','Synchronisation incomplète','Il reste encore des données locales à envoyer.');
+     return;
+   }
+
+   setDashboardSyncIndicator('green','Tout est synchronisé',`Supabase confirmé à ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}.`);
+   setSaveState(`Synchronisé à ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+   toast('✅ Données synchronisées avec Supabase');
+ }catch(error){
+   console.error('Synchronisation manuelle tableau de bord',error);
+   setDashboardSyncIndicator(hasLocalSyncPending()?'orange':'red',hasLocalSyncPending()?'Synchronisation en attente':'Erreur Supabase',error?.message||String(error));
+ }finally{
+   dashboardSyncBusy=false;
+   if(btn){btn.disabled=false;btn.textContent=oldText}
+   refreshDashboardSyncIndicator();
+ }
+}
 function setSaveState(text,state=''){
  const el=$('#saveState');if(!el)return;
  el.textContent=text;el.dataset.state=state;saveStateChangedAt=Date.now();
-}
+;setTimeout(refreshDashboardSyncIndicator,0)}
 function syncStatusText(){
  const pending=readOfflinePending();
  if(localDirty||pending)return {text:'Synchronisation en attente','state':'local'};
@@ -601,7 +697,7 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
    toSave.maintenance=applyDeletedRecordsToCollection('maintenance',toSave.maintenance,toSave);
    db=toSave;
    enforceAllDeletedRecords('fin cloudSaveNow');
-   lastCloudData=deepClone(db);lastCloudUpdatedAt=stamp;localDirty=false;cloudReady=true;lastCloudError='';clearOfflinePending();writeMirror();
+   lastCloudData=deepClone(db);lastCloudUpdatedAt=stamp;localDirty=false;cloudReady=true;lastCloudError='';lastConfirmedSupabaseAt=Date.now();clearOfflinePending();writeMirror();
    setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);clearTimeout(cloudRetryTimer);safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}return true;
   }catch(error){
     lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue';
@@ -958,6 +1054,7 @@ window.PSTMainState={
       lastCloudData=deepClone(db);
       lastCloudUpdatedAt=read?.data?.updated_at||write?.data?.updated_at||nowIso;
       lastCloudError='';
+      lastConfirmedSupabaseAt=Date.now();
       localDirty=false;
       cloudReady=true;
       clearOfflinePending();
@@ -1062,6 +1159,12 @@ async function pollCloudChanges(){
  }catch(error){console.warn('Vérification cloud différée',error);scheduleCloudRetry()}
 }
 function startCloudPolling(){clearInterval(cloudPollTimer);cloudPollTimer=setInterval(pollCloudChanges,8000)}
+setInterval(()=>{
+ refreshDashboardSyncIndicator();
+ if(navigator.onLine&&currentUser&&!hasLocalSyncPending()&&!cloudBusy&&!dashboardSyncBusy&&(!lastConfirmedSupabaseAt||Date.now()-lastConfirmedSupabaseAt>30000)){
+   confirmSupabaseReachable().then(()=>refreshDashboardSyncIndicator());
+ }
+},4000);
 setInterval(ensureSaveStateNotStuck,3000);
 function safeRenderAll(){
  clearTheoreticalScheduleCache();
@@ -1191,9 +1294,70 @@ async function manualSupabasePing(){
  }catch(e){console.error('Requête Supabase',e);setSaveState(`Supabase : ${e?.message||e}`,'error');toast(`Supabase : ${e?.message||e}`);return false}
  finally{if(b){b.disabled=false;b.textContent='↻ Requête Supabase'}}
 }
-window.addEventListener('online',()=>{if(!currentUser)return;syncOfflinePending().then(ok=>{if(ok&&!localDirty)pollCloudChanges()});startCloudPolling()});
-window.addEventListener('offline',()=>{if(currentUser){writeMirror();if(localDirty)writeOfflinePending('appareil hors connexion');setSaveState('Hors ligne — données disponibles sur cet appareil','local')}});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser){if(navigator.onLine){if(localDirty||readOfflinePending())syncOfflinePending();else pollCloudChanges()}else writeMirror()}});
+
+let autoReconnectSyncTimer=null;
+async function autoSyncWhenNetworkReturns(reason='retour réseau'){
+ clearTimeout(autoReconnectSyncTimer);
+ autoReconnectSyncTimer=setTimeout(async()=>{
+   if(!currentUser)return;
+   if(!navigator.onLine){refreshDashboardSyncIndicator();return}
+
+   try{
+     dashboardSyncBusy=true;
+     refreshDashboardSyncIndicator();
+
+     if(hasLocalSyncPending()){
+       const ok=await syncOfflinePending();
+       if(!ok && hasLocalSyncPending()){
+         const forced=await window.PSTMainState.persistNow();
+         if(!forced?.ok){
+           setDashboardSyncIndicator('orange','Synchronisation en attente','Le réseau est revenu mais Supabase n’a pas encore confirmé les données.');
+           return;
+         }
+       }
+     }
+
+     if(!hasLocalSyncPending()){
+       await pollCloudChanges();
+       const reachable=await confirmSupabaseReachable();
+       if(reachable&&!hasLocalSyncPending()){
+         setDashboardSyncIndicator('green','Tout est synchronisé',`Supabase confirmé à ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}.`);
+         setSaveState(`Synchronisé à ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
+       }
+     }
+   }catch(error){
+     console.warn(`Synchronisation automatique (${reason})`,error);
+   }finally{
+     dashboardSyncBusy=false;
+     refreshDashboardSyncIndicator();
+   }
+ },250);
+}
+window.addEventListener('online',()=>{
+ refreshDashboardSyncIndicator();
+ autoSyncWhenNetworkReturns('événement online');
+ startCloudPolling()
+});
+try{
+ const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+ if(connection?.addEventListener){
+   connection.addEventListener('change',()=>{
+     refreshDashboardSyncIndicator();
+     if(navigator.onLine)autoSyncWhenNetworkReturns(`changement réseau ${connection.type||connection.effectiveType||''}`.trim());
+   });
+ }
+}catch(_){}
+
+window.addEventListener('offline',()=>{
+ if(currentUser){writeMirror();if(localDirty)writeOfflinePending('appareil hors connexion');setSaveState('Hors ligne — données disponibles sur cet appareil','local')}
+ refreshDashboardSyncIndicator();
+});
+document.addEventListener('visibilitychange',()=>{
+ if(!document.hidden&&currentUser){
+   if(navigator.onLine)autoSyncWhenNetworkReturns('retour application au premier plan');
+   else{try{writeMirror()}catch(_){}refreshDashboardSyncIndicator()}
+ }
+});
 function nextNo(type,prefix){db.settings.counters[type]=(db.settings.counters[type]||0)+1;return `${prefix}-${new Date().getFullYear()}-${String(db.settings.counters[type]).padStart(4,'0')}`}
 function toast(msg){const e=$('#toast');e.textContent=msg;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2200)}
 function byId(type,id){return db[type]?.find(x=>x.id===id)} function agentById(id){
@@ -1941,7 +2105,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.117 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.120 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2009,7 +2173,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.117 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.120 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2353,7 +2517,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.117 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.120 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2405,7 +2569,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.117 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.120 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2460,7 +2624,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.117 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.120 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -2910,7 +3074,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.117 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.120 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -4632,7 +4796,10 @@ function bindEvents(){
  $('#prevTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,-7);renderTeamCalendar()};$('#nextTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,7);renderTeamCalendar()};$('#prevTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,-1));renderTeamCalendar()};$('#nextTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,1));renderTeamCalendar()};$('#todayTeamWeek').onclick=()=>{teamWeek=startOfWeek(todayISO());renderTeamCalendar()};$('#teamDateJump').onchange=e=>{teamWeek=startOfWeek(e.target.value);renderTeamCalendar()};$('#prevPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,-7);renderPersonalCalendar()};$('#nextPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,7);renderPersonalCalendar()};$('#todayPersonalWeek').onclick=()=>{personalWeek=startOfWeek(todayISO());renderPersonalCalendar()};
  $('#saveSettings').onclick=saveSettings;const wizardOpen=$('#openAutoReportWizard');if(wizardOpen)wizardOpen.onclick=openAutoReportWizard;const wizardClose=$('#autoReportWizardClose');if(wizardClose)wizardClose.onclick=()=>wizardEl().close();const wizardBack=$('#autoReportWizardBack');if(wizardBack)wizardBack.onclick=()=>{saveWizardStep();autoReportWizardStep=Math.max(0,autoReportWizardStep-1);renderAutoReportWizard()};const wizardNext=$('#autoReportWizardNext');if(wizardNext)wizardNext.onclick=()=>{saveWizardStep();if(autoReportWizardStep===3){wizardEl().close();return}autoReportWizardStep=Math.min(3,autoReportWizardStep+1);renderAutoReportWizard()};document.addEventListener('click',e=>{const p=e.target.closest('[data-wizard-provider]');if(p){autoReportWizardData.provider=p.dataset.wizardProvider;renderAutoReportWizard()}});const sart=$('#sendAutomaticReportTest');if(sart)sart.onclick=sendAutomaticReportTest;function openNotificationCenter(){window.PSTNotificationCenter?.open?.()}
 function closeNotificationCenter(){window.PSTNotificationCenter?.close?.()}
-const chr=$('#changeHistoryReset');if(chr)chr.onclick=()=>{const y=$('#changeHistoryYear'),t=$('#changeHistoryType'),q=$('#changeHistorySearch');if(y)y.value=activeAcademicYear();if(t)t.value='';if(q)q.value='';renderChangeHistory()};
+const dsn=$('#dashboardSyncNow');if(dsn)dsn.onclick=dashboardSyncNow;
+ refreshDashboardSyncIndicator();
+ if(navigator.onLine&&currentUser)setTimeout(()=>autoSyncWhenNetworkReturns('ouverture application'),600);
+ const chr=$('#changeHistoryReset');if(chr)chr.onclick=()=>{const y=$('#changeHistoryYear'),t=$('#changeHistoryType'),q=$('#changeHistorySearch');if(y)y.value=activeAcademicYear();if(t)t.value='';if(q)q.value='';renderChangeHistory()};
  const chp=$('#changeHistoryPrint');if(chp)chp.onclick=printChangeHistory;
  const chc=$('#changeHistoryClean');if(chc)chc.onclick=()=>{
    const before=(db.changeHistory||[]).length;
