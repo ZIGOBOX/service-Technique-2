@@ -1,0 +1,21 @@
+V147.130 — Maladie = 7 h réalisées, 0 h d'écart
+
+MODIFICATION UNIQUE
+- Une journée « Maladie » compte 7 h dans la colonne Réalisé.
+- Une journée « Maladie » génère toujours 0 h d'écart.
+- Les 7 h ne sont jamais ajoutées à l'horaire théorique : elles représentent le total de la journée.
+
+EXEMPLE
+Théorique 5 h + Maladie :
+Prévu = 5 h
+Réalisé = 7 h
+Écart = 0 h
+
+CONSERVÉ
+- Congé/RTT à 0 h : écart 0 h.
+- Présence sans modification : Réalisé = Théorique.
+- Horaire réel différent : écart normal.
+- Tableau Réalisé de V147.129.
+- OneDrive contrôles périodiques.
+- Nettoyage doublons horaires théoriques.
+- Aucun calcul entre deux dates ajouté.

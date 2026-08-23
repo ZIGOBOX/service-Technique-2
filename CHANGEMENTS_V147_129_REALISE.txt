@@ -1,0 +1,14 @@
+V147.129 — Affichage Réalisé dans Pilotage des horaires
+
+MODIFICATION UNIQUE
+La colonne « Réalisé » affiche désormais TOUJOURS le nombre d'heures comptabilisées pour la journée.
+
+- aucune information particulière : Réalisé = Théorique ;
+- horaire réel saisi : Réalisé = durée réellement saisie ;
+- Congé / RTT à 0 h : Réalisé = 0 h ;
+- Maladie : Réalisé = 7 h ;
+- l'Écart reste calculé séparément ;
+- les horaires réels différents restent affichés avec leur plage horaire.
+
+AUCUNE AUTRE LOGIQUE MODIFIÉE.
+Les règles de calcul existantes, Supabase, doublons théoriques, OneDrive et tous les autres modules sont conservés.

@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.128';
+const APP_VERSION='147.130';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -2180,7 +2180,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.128 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.130 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2248,7 +2248,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.128 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.130 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2323,12 +2323,12 @@ function dayHours(info){
  if(rule?.mode==='fixed')actual=Math.max(0,Number(rule.hours||0));
  else if(rule?.mode==='zero')actual=0;
  else actual=(info.actualStart&&info.actualEnd)?hoursBetween(info.actualStart,info.actualEnd,info.pause):planned;
- // Règle métier immuable : une journée Maladie compte 7 h.
+ // Règle métier : une journée Maladie compte 7 h au total dans « Réalisé ».
  if(info.dayType==='Maladie')actual=7;
  const total=actual+Number(info.overtime||0);
- // V147.128 — Une journée comptabilisée à 0 h ne doit jamais créer un débit
- // simplement parce qu'un horaire théorique existe.
- const delta=Math.abs(total)<0.001?0:total-planned;
+ // Une journée à 0 h ne crée pas de débit.
+ // Une journée Maladie compte 7 h dans Réalisé mais ne génère AUCUN écart.
+ const delta=info.dayType==='Maladie'?0:(Math.abs(total)<0.001?0:total-planned);
  return {planned,actual,total,delta}
 }
 function agentState(agent,date=todayISO()){const info=dayInfo(agent.id,date);if(isAbsenceType(info.dayType)||info.dayType==='Repos')return {label:info.dayType,kind:'absent',info};if(info.dayType==='Formation')return {label:'Formation',kind:'info',info};if(!info.plannedStart||!info.plannedEnd)return {label:'Non planifié',kind:'info',info};return {label:`${info.plannedStart}–${info.plannedEnd}`,kind:'present',info}}
@@ -2396,7 +2396,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.128 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.130 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2632,7 +2632,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.128 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.130 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2684,7 +2684,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.128 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.130 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2739,7 +2739,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.128 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.130 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -3195,7 +3195,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.128 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.130 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -3630,7 +3630,7 @@ function openWeeklyPlan(i=null,agentId=''){
  },
  {onDelete:old?()=>deleteWeeklyPlanById(old.id):null});
 }
-function renderPlanning(){renderWeeklyPlans();const month=$('#planningMonth').value||monthISO(),agent=$('#planningAgent').value,signal=$('#planningSignal').value;const start=`${month}-01`,end=localISO(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0));const rows=[];for(const a of db.agents.filter(x=>x.status==='Actif'&&(!agent||x.id===agent))){let d=start;while(d<=end){if(![0,6].includes(parseDate(d).getDay())){const info=dayInfo(a.id,d),h=dayHours(info);let sig=isAbsenceType(info.dayType)?'Absence':h.delta>0.01?'Heures supplémentaires':h.delta<-0.01?'Heures manquantes':'Conforme';if(!signal||sig===signal)rows.push({a,d,info,h,sig})}d=addDays(d,1)}}const sums=rows.reduce((s,r)=>{s.p+=r.h.planned;s.a+=r.h.total;s.o+=Number(r.info.overtime||0);s.d+=Number(r.h.delta||0);return s},{p:0,a:0,o:0,d:0});$('#planningSummary').innerHTML=`<article><span>Prévu</span><strong>${fmtHours(sums.p)}</strong></article><article><span>Réalisé</span><strong>${fmtHours(sums.a)}</strong></article><article><span>Écart</span><strong>${sums.d>=0?'+':''}${fmtHours(sums.d)}</strong></article><article><span>Heures ajoutées</span><strong>${fmtHours(sums.o)}</strong></article>`;$('#planningTable').innerHTML=rows.length?rows.map(r=>{const disp=planningDisplayFor(r.a,r.d);return `<tr><td>${fmtDate(r.d)}</td><td>${esc(agentName(r.a))}</td><td>${r.info.dayType==='Présence'?`${r.info.plannedStart||'—'}–${r.info.plannedEnd||'—'} (${fmtHours(r.h.planned)})`:badge(r.info.dayType)}</td><td>${r.info.dayType==='Présence'&&disp.realChanged?`${esc(disp.real)} (${fmtHours(r.h.total)})`:r.info.dayType!=='Présence'?badge(r.info.dayType):'—'}</td><td>${r.h.delta>=0?'+':''}${fmtHours(r.h.delta)}</td><td>${badge(r.sig)}</td><td>${r.info.source==='manual'&&r.info.note?`<button class="icon-btn manual-info-trigger" type="button" data-show-day-info="${r.a.id}" data-date="${r.d}" title="${esc(r.info.note)}">ⓘ</button>`:''}<button class="icon-btn" data-agent-day="${r.a.id}" data-date="${r.d}">✎</button></td></tr>`}).join(''):emptyRow(7)}
+function renderPlanning(){renderWeeklyPlans();const month=$('#planningMonth').value||monthISO(),agent=$('#planningAgent').value,signal=$('#planningSignal').value;const start=`${month}-01`,end=localISO(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0));const rows=[];for(const a of db.agents.filter(x=>x.status==='Actif'&&(!agent||x.id===agent))){let d=start;while(d<=end){if(![0,6].includes(parseDate(d).getDay())){const info=dayInfo(a.id,d),h=dayHours(info);let sig=isAbsenceType(info.dayType)?'Absence':h.delta>0.01?'Heures supplémentaires':h.delta<-0.01?'Heures manquantes':'Conforme';if(!signal||sig===signal)rows.push({a,d,info,h,sig})}d=addDays(d,1)}}const sums=rows.reduce((s,r)=>{s.p+=r.h.planned;s.a+=r.h.total;s.o+=Number(r.info.overtime||0);s.d+=Number(r.h.delta||0);return s},{p:0,a:0,o:0,d:0});$('#planningSummary').innerHTML=`<article><span>Prévu</span><strong>${fmtHours(sums.p)}</strong></article><article><span>Réalisé</span><strong>${fmtHours(sums.a)}</strong></article><article><span>Écart</span><strong>${sums.d>=0?'+':''}${fmtHours(sums.d)}</strong></article><article><span>Heures ajoutées</span><strong>${fmtHours(sums.o)}</strong></article>`;$('#planningTable').innerHTML=rows.length?rows.map(r=>{const disp=planningDisplayFor(r.a,r.d);return `<tr><td>${fmtDate(r.d)}</td><td>${esc(agentName(r.a))}</td><td>${r.info.dayType==='Présence'?`${r.info.plannedStart||'—'}–${r.info.plannedEnd||'—'} (${fmtHours(r.h.planned)})`:badge(r.info.dayType)}</td><td>${r.info.dayType==='Présence'&&disp.realChanged?`${esc(disp.real)} · <strong>${fmtHours(r.h.total)}</strong>`:r.info.dayType!=='Présence'?`${badge(r.info.dayType)} · <strong>${fmtHours(r.h.total)}</strong>`:`<strong>${fmtHours(r.h.total)}</strong>`}</td><td>${r.h.delta>=0?'+':''}${fmtHours(r.h.delta)}</td><td>${badge(r.sig)}</td><td>${r.info.source==='manual'&&r.info.note?`<button class="icon-btn manual-info-trigger" type="button" data-show-day-info="${r.a.id}" data-date="${r.d}" title="${esc(r.info.note)}">ⓘ</button>`:''}<button class="icon-btn" data-agent-day="${r.a.id}" data-date="${r.d}">✎</button></td></tr>`}).join(''):emptyRow(7)}
 function renderAbsences(){renderAbsenceBoard();const month=$('#absenceMonth').value||monthISO(),agent=$('#absenceAgent').value,type=$('#absenceType').value,status=$('#absenceStatus').value;const rows=db.agentDays.filter(x=>dateMonthMatch(x.date,month)&&isAbsenceType(x.dayType)&&(!agent||x.agentId===agent)&&(!type||x.dayType===type)&&(!status||x.status===status));const groups=new Map();for(const x of rows){const key=x.periodId||x.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)}const arr=[...groups.values()].map(g=>g.sort((a,b)=>a.date.localeCompare(b.date))).sort((a,b)=>a[0].date.localeCompare(b[0].date));$('#absencesTable').innerHTML=arr.length?arr.map(g=>{const x=g[0],from=g[0].date,to=g.at(-1).date;return `<tr><td>${esc(agentName(agentById(x.agentId)))}</td><td>${fmtDate(from)}</td><td>${fmtDate(to)}</td><td>${badge(x.dayType)}</td><td>${g.length} jour${g.length>1?'s':''}</td><td>${badge(x.status||'Validée')}</td><td>${x.noReplacementNeeded?'<span class="badge good">Sans remplacement</span>':esc(x.replacement||'À décider')}</td><td><button class="icon-btn" data-agent-day="${x.agentId}" data-date="${from}">✎</button></td></tr>`}).join(''):emptyRow(8);renderAbsenceCounters(month)}
 function renderAbsenceCounters(month){const agents=db.agents.filter(a=>a.status==='Actif');const types=db.lists.dayTypes.filter(isAbsenceType);const used=types.filter(t=>db.agentDays.some(x=>dateMonthMatch(x.date,month)&&x.dayType===t));const cols=used.length?used:types.slice(0,5);const head=`<table><thead><tr><th>Agent</th>${cols.map(t=>`<th>${esc(t)}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;const body=agents.map(a=>{const rs=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)&&isAbsenceType(x.dayType));return `<tr><td><strong>${esc(agentName(a))}</strong></td>${cols.map(t=>`<td>${rs.filter(x=>x.dayType===t).length}</td>`).join('')}<td><strong>${rs.length}</strong></td></tr>`}).join('');$('#absenceCounters').innerHTML=head+body+'</tbody></table>'}
 function renderVacations(){
@@ -5187,7 +5187,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.128 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.130 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
