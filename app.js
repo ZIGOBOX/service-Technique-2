@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.120';
+const APP_VERSION='147.121';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -459,11 +459,14 @@ function refreshDashboardSyncIndicator(){
 async function confirmSupabaseReachable(){
  if(!navigator.onLine||!supabaseClient||!currentUser)return false;
  try{
-   const row=await fetchRemote();
-   if(!row)return false;
+   // fetchRemote peut renvoyer null si aucune ligne n'existe encore.
+   // Ce n'est pas une panne Supabase : l'absence de ligne est une réponse serveur valide.
+   await fetchRemote();
+   lastCloudError='';
    lastConfirmedSupabaseAt=Date.now();
    return true;
  }catch(error){
+   lastCloudError=error?.message||String(error)||'Erreur Supabase inconnue';
    console.warn('Vérification Supabase tableau de bord',error);
    return false;
  }
@@ -497,7 +500,7 @@ async function dashboardSyncNow(){
 
    const reachable=await confirmSupabaseReachable();
    if(!reachable){
-     setDashboardSyncIndicator('red','Supabase inaccessible','Le réseau est présent mais Supabase ne répond pas correctement.');
+     setDashboardSyncIndicator('red','Supabase inaccessible',lastCloudError?`Erreur : ${lastCloudError}`:'Le réseau est présent mais Supabase ne répond pas correctement.');
      return;
    }
 
@@ -652,7 +655,7 @@ async function cloudLoad({silent=false}={}){
    }
    cloudBusy=false;
    if(localDirty){const ok=await cloudSaveNow({silent:true,mergeRemote:true});if(!ok)return false}
-   cloudReady=true;writeMirror();renderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
+   cloudReady=true;lastConfirmedSupabaseAt=Date.now();lastCloudError='';writeMirror();renderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
    setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');setTimeout(()=>{if(!localDirty&&!readOfflinePending()){const st=syncStatusText();setSaveState(st.text,st.state)}},600);clearTimeout(cloudRetryTimer);return true;
  }catch(error){console.error('Supabase indisponible :',error);useLocalMode(error?.message||String(error));try{window.dispatchEvent(new CustomEvent('pst:cloud-error',{detail:{message:error?.message||String(error)}}))}catch(_){ }return false}
  finally{cloudBusy=false}
@@ -1133,7 +1136,9 @@ window.PSTMainState={
 async function pollCloudChanges(){
  if(!supabaseClient||!currentUser||!navigator.onLine||cloudBusy||localDirty)return;
  try{
-   const data=await fetchRemote();if(!data?.data)return;
+   const data=await fetchRemote();
+   lastConfirmedSupabaseAt=Date.now();lastCloudError='';
+   if(!data?.data){refreshDashboardSyncIndicator();return}
    const remoteStamp=data.updated_at||'';
    if(remoteStamp&&remoteStamp!==lastCloudUpdatedAt){
      clearTheoreticalScheduleCache();
@@ -2105,7 +2110,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.120 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.121 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2173,7 +2178,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.120 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.121 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2517,7 +2522,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.120 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.121 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2569,7 +2574,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.120 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.121 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2624,7 +2629,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     // V147.120 : le délai volontaire laisse d'abord le gestionnaire du formulaire
+     // V147.121 : le délai volontaire laisse d'abord le gestionnaire du formulaire
      // inscrire la modification dans changeHistory + miroir local.
      const persisted=await window.PSTMainState.persistStateDirect({
        label:'Planning agent',
@@ -3074,7 +3079,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.120 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.121 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -5036,8 +5041,17 @@ window.addEventListener('pst:data-loaded',()=>{
     const n=syncStoredChronotimePastilles();
     enforceAgentDaysStable('relecture données / Chronotime');
     syncRotationYearWithDashboard();
-    if(n>0)save(false);
+
+    // IMPORTANT : pst:data-loaded est déclenché après une synchro Supabase réussie.
+    // Ne jamais rappeler save(false) ici : save() remet localDirty=true et créait
+    // une boucle "synchronisé -> données en attente -> resynchronisation".
+    // Les pastilles Chronotime reconstruites sont conservées dans le miroir local.
+    if(n>0){
+      try{writeMirror()}catch(_){}
+      console.info(`Chronotime : ${n} pastille(s) reconstruite(s) sans relancer une sauvegarde cloud`);
+    }
     safeRenderAll();
+    refreshDashboardSyncIndicator();
   }catch(e){console.warn('Reconstruction pastilles Chronotime',e)}
 });
 

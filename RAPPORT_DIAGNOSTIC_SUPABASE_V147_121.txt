@@ -1,0 +1,21 @@
+V147.121 — Correction de la boucle réelle de synchronisation Supabase
+
+CAUSE IDENTIFIÉE DANS LE CODE
+Après chaque synchronisation réussie, l'application déclenchait l'événement pst:data-loaded.
+Ce gestionnaire reconstruisait les pastilles Chronotime puis exécutait save(false) si n>0.
+Or save(false) remet systématiquement localDirty=true.
+Résultat possible :
+  Supabase OK -> localDirty=false -> pst:data-loaded -> save(false) -> localDirty=true
+Donc l'application pouvait rester orange / en attente et ne jamais tenir au vert.
+
+CORRECTION
+- pst:data-loaded ne déclenche plus de nouvelle sauvegarde cloud.
+- Les pastilles reconstruites sont seulement conservées dans le miroir local.
+- Une lecture Supabase réussie compte maintenant comme confirmation réelle.
+- Une réponse Supabase valide sans ligne app_state n'est plus traitée comme une panne réseau.
+- En cas de vraie erreur Supabase, le tableau de bord affiche désormais le message d'erreur exact.
+
+RÈGLE LED
+Rouge : hors connexion ou vraie erreur Supabase.
+Orange : données locales réellement en attente / envoi en cours.
+Vert : Supabase a répondu et localDirty + file offline sont vides.
