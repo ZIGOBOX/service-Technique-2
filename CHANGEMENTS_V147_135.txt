@@ -1,0 +1,40 @@
+V147.135 — HORAIRES MAMESSIER/THELLY + ANALYSE IA + CONTRÔLE FORMULAIRES AGENTS
+
+HORAIRES 2026-2027
+Agents ciblés par nom : Mamessier et Thelly.
+Deux profils, sans doublon :
+- Matin
+  Lundi à jeudi : 07:00–16:00, pause 10 min (12:00–12:10)
+  Vendredi : 07:00–13:00, pause 0
+- Soir
+  Lundi, mardi, jeudi : 08:30–18:00, pause 10 min (12:00–12:10)
+  Mercredi : 07:00–16:00, pause 10 min
+  Vendredi : 13:00–18:00, pause 0
+Période : 01/09/2026 au 31/08/2027.
+
+FORMULAIRES AGENTS VÉRIFIÉS / RENFORCÉS
+- Présence, Congé, RTT, Maladie.
+- Horaire réel arrivée + départ.
+- Réinitialisation horaire réel.
+- Pause.
+- Heures ajoutées / retirées.
+- Remplacement.
+- Motif / Informations.
+- Période Du / Au.
+- Source manuelle + priorité manuelle.
+- Enregistrement local immédiat.
+- Synchronisation Supabase en arrière-plan sans remplacement de db.
+- Contrôle local étendu avant fermeture.
+- Horaires réels et heures +/- : une seule journée, pour éviter une application silencieuse uniquement au premier jour.
+
+ANALYSE IA PHOTO / PDF
+- Photo manuscrite : IA en priorité.
+- PDF : parseur métier existant + IA complémentaire.
+- Zones incertaines signalées, jamais inventées volontairement.
+- Validation humaine obligatoire avant enregistrement.
+- OCR local conservé comme secours.
+- Chronotime structuré reste prioritaire.
+- L1/M1/D1 etc. restent ignorés comme codes métier.
+- Clé OpenAI uniquement dans une Edge Function Supabase.
+
+AUCUN AUTRE MODULE MÉTIER MODIFIÉ.

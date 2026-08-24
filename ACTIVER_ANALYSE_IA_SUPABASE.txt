@@ -1,0 +1,32 @@
+ACTIVER L'ANALYSE IA — V147.135
+
+L'application contient maintenant l'appel à la fonction Supabase :
+  analyze-document
+
+Pourquoi cette architecture :
+- la clé OpenAI ne doit jamais être placée dans app.js ou dans le navigateur ;
+- la clé reste dans les secrets de l'Edge Function Supabase ;
+- l'utilisateur connecté appelle la fonction via supabase.functions.invoke.
+
+À FAIRE UNE SEULE FOIS DANS SUPABASE
+1. Ouvrir votre projet Supabase.
+2. Edge Functions > créer/déployer la fonction "analyze-document"
+   en utilisant le fichier :
+   supabase/functions/analyze-document/index.ts
+3. Ajouter le secret :
+   OPENAI_API_KEY = votre clé API OpenAI
+4. Facultatif :
+   OPENAI_DOCUMENT_MODEL = gpt-5-mini
+5. Garder la vérification JWT activée (fonction réservée aux utilisateurs connectés).
+
+APRÈS ACTIVATION
+- Photo manuscrite : IA en priorité, OCR local en secours.
+- PDF : moteur métier existant + analyse IA complémentaire.
+- Chronotime : le parseur structuré reste prioritaire.
+- L1/M1/D1 etc. restent ignorés comme codes métier.
+- Les zones incertaines sont montrées à l'utilisateur avant validation.
+
+SANS EDGE FUNCTION / SANS CLÉ
+L'application continue de fonctionner :
+- scanner : OCR local de secours ;
+- PDF : analyse métier classique existante.

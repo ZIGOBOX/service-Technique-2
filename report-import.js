@@ -153,7 +153,7 @@
   }
   function monthSequence(start){const y=Number(start.slice(0,4));return Array.from({length:12},(_,i)=>{const n=8+i;return {year:y+Math.floor(n/12),month:(n%12)+1}})}
   function validDate(y,m,d,letter){const dt=new Date(y,m-1,d);return dt.getFullYear()===y&&dt.getMonth()===m-1&&dt.getDate()===d&&DAY_LETTER[dt.getDay()]===letter}
-  // V147.134 — L1/M1/J1/V1/S1/D1 etc. are calendar labels, never business codes.
+  // V147.135 — L1/M1/J1/V1/S1/D1 etc. are calendar labels, never business codes.
   function isChronotimeCalendarMarker(value){
     return /^[LMSJVD]\s*(?:[1-9]|[12]\d|3[01])$/i.test(String(value||'').trim());
   }

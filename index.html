@@ -643,6 +643,13 @@
   overscroll-behavior:contain;
 }
 </style>
+
+<style id="v147135-ai-import">
+.ai-review-box{display:grid;gap:7px;margin:10px 0;padding:12px;border:1px solid #93c5fd;border-radius:12px;background:#eff6ff}
+.ai-review-box>strong{color:#1d4ed8;font-size:1rem}
+.ai-review-box details{padding:8px;border-radius:9px;background:#fff7ed;border:1px solid #fed7aa}
+.ai-review-box ul{margin:6px 0 0 20px}
+</style>
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -689,7 +696,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.134 — 24/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.135 — 24/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -1224,7 +1231,7 @@
     <div class="modal-head"><div><h3>📥 Importer / Scanner</h3><p class="muted">Un seul point d’entrée pour tous les documents.</p></div><button type="button" class="icon-btn" id="centralImportClose">×</button></div>
     <div class="central-import-body">
       <div id="centralImportStart" class="central-import-choices">
-        <button type="button" class="central-choice" id="centralScanChoice"><span>📷</span><strong>Scanner un document</strong><small>Ouvre directement l’appareil photo → OCR → correction → destination à confirmer</small></button>
+        <button type="button" class="central-choice" id="centralScanChoice"><span>📷</span><strong>Scanner un document</strong><small>Photo / PDF → analyse IA → texte modifiable → validation humaine</small></button>
         <input type="file" id="scanCameraInput" accept="image/*" capture="environment" hidden>
         <input type="file" id="scanGalleryInput" accept="image/*" hidden>
         <input type="file" id="scanPdfInput" accept="application/pdf" hidden>
@@ -1243,7 +1250,7 @@
     <div class="modal-actions"><button type="button" class="ghost" id="centralImportBack">Retour</button><button type="button" class="primary hidden" id="centralImportConfirm">Continuer vers la validation</button></div>
   </dialog>
   <dialog id="scanNoteModal" class="modal scan-note-modal">
-    <div class="modal-head"><div><h3>📷 Scanner un document</h3><p class="muted">Photo, scan Oxford, image ou PDF → texte informatique → destination à confirmer</p></div><button type="button" class="icon-btn" id="scanNoteClose">×</button></div>
+    <div class="modal-head"><div><h3>📷 Scanner un document</h3><p class="muted">Photo, écriture manuscrite ou PDF → analyse IA sécurisée → vérification → enregistrement</p></div><button type="button" class="icon-btn" id="scanNoteClose">×</button></div>
     <div class="scan-note-body">
       <div class="scan-source">
         <label class="primary file-label scan-file-label">📷 Choisir / photographier un document<input id="scanNoteFile" type="file" accept="image/*,application/pdf" capture="environment"></label>
@@ -1259,7 +1266,7 @@
         <label class="span2">Texte reconnu<textarea id="scanNoteText" rows="14" spellcheck="true" placeholder="Le texte reconnu apparaîtra ici. Vous pourrez le relire avant l’enregistrement."></textarea></label>
       </div>
       <div class="scan-quality" id="scanQuality"></div>
-      <p class="hint">La reconnaissance manuscrite dépend de la lisibilité de l’écriture et de la qualité du scan. Le logiciel ne valide jamais la note sans vous montrer le texte obtenu.</p>
+      <p class="hint">L’IA signale les zones incertaines au lieu d’inventer. Le logiciel ne valide jamais la note sans vous montrer le texte obtenu. Hors ligne, l’OCR local reste disponible en secours.</p>
     </div>
     <div class="modal-actions"><button type="button" class="ghost" id="scanRetry">Recommencer</button><button type="button" class="ghost" id="scanCorrect">✨ Corriger et mettre en forme</button><button type="button" class="primary" id="scanSaveNote">Valider et enregistrer</button></div>
   </dialog>

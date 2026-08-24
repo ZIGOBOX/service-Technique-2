@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.134';
+const APP_VERSION='147.135';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -377,6 +377,7 @@ function migrate(raw){
    if(!Array.isArray(a.workdays)||!a.workdays.length)a.workdays=[1,2,3,4,5];
    else a.workdays=[...new Set(a.workdays.map(Number).filter(n=>n>=0&&n<=6))];
  }
+ ensureMamessierThellyShiftProfiles(d);
  // Conversion uniquement pour les très anciennes sauvegardes. Aucun agent, planning ou intervention supprimé n'est recréé automatiquement.
  if(!d.agentDays.length){
    (raw.shifts||[]).forEach(s=>d.agentDays.push({id:s.id||uid(),agentId:s.agentId,date:s.date,dayType:'Présence',plannedStart:s.plannedStart,plannedEnd:s.plannedEnd,actualStart:s.actualStart,actualEnd:s.actualEnd,pause:s.pause,overtime:s.overtime||0,note:s.notes||''}));
@@ -385,6 +386,63 @@ function migrate(raw){
  d.version=32;
  return d;
 }
+
+// V147.135 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
+// Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
+function ensureMamessierThellyShiftProfiles(target=db){
+  if(!target||!Array.isArray(target.agents))return 0;
+  target.weeklyPlans=Array.isArray(target.weeklyPlans)?target.weeklyPlans:[];
+  const from='2026-09-01',to='2027-08-31',marker='photo-horaires-2026-08-24';
+  const targets=target.agents.filter(a=>{
+    const n=normalizeText(agentName(a)||`${a.firstName||''} ${a.lastName||''}`);
+    return n.includes('mamessier')||n.includes('thelly');
+  });
+  if(!targets.length)return 0;
+
+  const profiles={
+    Matin:{
+      1:{start:'07:00',end:'16:00',pause:10,missions:'Horaire Matin',segments:[{start:'07:00',end:'12:00',task:'Présence'},{start:'12:10',end:'16:00',task:'Présence'}]},
+      2:{start:'07:00',end:'16:00',pause:10,missions:'Horaire Matin',segments:[{start:'07:00',end:'12:00',task:'Présence'},{start:'12:10',end:'16:00',task:'Présence'}]},
+      3:{start:'07:00',end:'16:00',pause:10,missions:'Horaire Matin',segments:[{start:'07:00',end:'12:00',task:'Présence'},{start:'12:10',end:'16:00',task:'Présence'}]},
+      4:{start:'07:00',end:'16:00',pause:10,missions:'Horaire Matin',segments:[{start:'07:00',end:'12:00',task:'Présence'},{start:'12:10',end:'16:00',task:'Présence'}]},
+      5:{start:'07:00',end:'13:00',pause:0,missions:'Horaire Matin',segments:[{start:'07:00',end:'13:00',task:'Présence'}]},
+      6:{start:'',end:'',pause:0,missions:'',segments:[]},0:{start:'',end:'',pause:0,missions:'',segments:[]}
+    },
+    Soir:{
+      1:{start:'08:30',end:'18:00',pause:10,missions:'Horaire Soir',segments:[{start:'08:30',end:'12:00',task:'Présence'},{start:'12:10',end:'18:00',task:'Présence'}]},
+      2:{start:'08:30',end:'18:00',pause:10,missions:'Horaire Soir',segments:[{start:'08:30',end:'12:00',task:'Présence'},{start:'12:10',end:'18:00',task:'Présence'}]},
+      3:{start:'07:00',end:'16:00',pause:10,missions:'Horaire Soir',segments:[{start:'07:00',end:'12:00',task:'Présence'},{start:'12:10',end:'16:00',task:'Présence'}]},
+      4:{start:'08:30',end:'18:00',pause:10,missions:'Horaire Soir',segments:[{start:'08:30',end:'12:00',task:'Présence'},{start:'12:10',end:'18:00',task:'Présence'}]},
+      5:{start:'13:00',end:'18:00',pause:0,missions:'Horaire Soir',segments:[{start:'13:00',end:'18:00',task:'Présence'}]},
+      6:{start:'',end:'',pause:0,missions:'',segments:[]},0:{start:'',end:'',pause:0,missions:'',segments:[]}
+    }
+  };
+
+  let changed=0;
+  for(const agent of targets){
+    for(const shift of ['Matin','Soir']){
+      let p=target.weeklyPlans.find(x=>
+        String(x.agentId)===String(agent.id)&&x.shift===shift&&x.effectiveFrom===from
+      );
+      const next={
+        agentId:agent.id,agent:agentName(agent),shift,effectiveFrom:from,effectiveTo:to,
+        dayProfiles:deepClone(profiles[shift]),rows:[],source:marker,userProvided:true
+      };
+      if(!p){
+        target.weeklyPlans.push({id:uid(),...next,createdAt:new Date().toISOString()});
+        changed++;
+      }else{
+        const before=JSON.stringify([p.agent,p.shift,p.effectiveFrom,p.effectiveTo,p.dayProfiles,p.source]);
+        Object.assign(p,next,{id:p.id||uid(),updatedAt:new Date().toISOString()});
+        const after=JSON.stringify([p.agent,p.shift,p.effectiveFrom,p.effectiveTo,p.dayProfiles,p.source]);
+        if(before!==after)changed++;
+      }
+    }
+  }
+  return changed;
+}
+
 function restoreSuppliedData(showMessage=true){
  const base=defaultData();
  // Agents fournis : ajout uniquement s'ils n'existent pas déjà.
@@ -392,6 +450,7 @@ function restoreSuppliedData(showMessage=true){
    const key=agentName(sa).toLowerCase().replace(/\s+/g,' ').trim();
    if(!db.agents.some(a=>agentName(a).toLowerCase().replace(/\s+/g,' ').trim()===key)) db.agents.push(sa);
  }
+ ensureMamessierThellyShiftProfiles(db);
  // Horaires hebdomadaires fournis : restaure chaque fiche absente sans écraser les modifications existantes.
  for(const sp of clone(IMPORTED_WEEKLY_PLANS)){
    const key=String(sp.agent||'').toLowerCase().replace(/\s+/g,' ').trim();
@@ -2180,7 +2239,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.134 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.135 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2250,7 +2309,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.134 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.135 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2398,7 +2457,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.134 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.135 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2602,12 +2661,24 @@ function removeAgentDayHistoryForReset(agentId,date){
 function verifyAgentDaySaved(agentId,date,expected={}){
  const rec=dayRecord(agentId,date,expected.dayType||'');
  if(!rec)return {ok:false,reason:'Journée introuvable après enregistrement'};
- const fields=['dayType','actualStart','actualEnd','note','status'];
+ const fields=['dayType','plannedStart','plannedEnd','actualStart','actualEnd','note','status','replacement'];
  for(const f of fields){
    if(expected[f]!==undefined && String(rec[f]??'')!==String(expected[f]??'')){
      return {ok:false,reason:`${f} non conservé`};
    }
  }
+ for(const f of ['pause','overtime']){
+   if(expected[f]!==undefined && Math.abs(Number(rec[f]||0)-Number(expected[f]||0))>0.0001){
+     return {ok:false,reason:`${f} non conservé`};
+   }
+ }
+ if(expected.manualOverride!==undefined && Boolean(rec.manualOverride)!==Boolean(expected.manualOverride)){
+   return {ok:false,reason:'priorité manuelle non conservée'};
+ }
+ if(expected.realScheduleReset!==undefined && Boolean(rec.realScheduleReset)!==Boolean(expected.realScheduleReset)){
+   return {ok:false,reason:'réinitialisation horaire réel non conservée'};
+ }
+ if(String(rec.source||'').toLowerCase()!=='manual')return {ok:false,reason:'source manuelle non conservée'};
  return {ok:true,record:rec};
 }
 function openAgentDay(agentId,date,id,preferredDayType=''){
@@ -2628,13 +2699,17 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  if(!o.agentId){toast('Choisissez un agent');return}
  if(!from||!to){toast('Renseignez les dates du et au');return}
  if(to<from){toast('La date de fin doit être après la date de début');return}
+ if(from!==to && (o.actualStart||o.actualEnd||Math.abs(Number(o.overtime||0))>0.0001)){
+   toast('Les horaires réels et heures ajoutées/retirées se saisissent sur une seule journée. Choisissez la même date dans Du et Au.');
+   return;
+ }
  const activeYear=activeAcademicYear();
  if(!academicYearContains(activeYear,from)||!academicYearContains(activeYear,to)){
    toast(`⚠️ Cette période n’appartient pas à l’année scolaire ${activeYear}. Changez l’année scolaire du tableau de bord avant de l’enregistrer.`);
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.134 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.135 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2686,7 +2761,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.134 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.135 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2727,7 +2802,16 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
 
  enforceAgentDaysStable('enregistrement formulaire agent');
  const savedIntegrity=verifyAgentDaySaved(o.agentId,from,{
-   dayType:o.dayType,actualStart:o.actualStart||'',actualEnd:o.actualEnd||'',note:o.note||'',status:o.status||'Validée'
+   dayType:o.dayType,
+   plannedStart:expectedDays.find(r=>r.date===from)?.plannedStart||'',
+   plannedEnd:expectedDays.find(r=>r.date===from)?.plannedEnd||'',
+   actualStart:o.actualStart||'',actualEnd:o.actualEnd||'',
+   pause:Number(expectedDays.find(r=>r.date===from)?.pause||0),
+   overtime:Number(o.overtime||0),
+   note:o.note||'',status:o.status||'Validée',
+   replacement:o.noReplacementNeeded?'':(o.replacement||''),
+   manualOverride:true,
+   realScheduleReset:(!o.actualStart&&!o.actualEnd)
  });
  if(!savedIntegrity.ok){
    console.error('Contrôle sauvegarde journée agent',savedIntegrity);
@@ -3314,7 +3398,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.134 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.135 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -5351,7 +5435,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.134 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.135 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -5671,7 +5755,63 @@ function bindCentralImportV80(){
  $('#centralImportBack')?.addEventListener('click',resetCentralImport);
  $('#centralScanChoice')?.addEventListener('click',()=>{$('#centralImportModal').close();openScanCameraDirect()});
  $('#centralImportType')?.addEventListener('change',refreshCentralImportValidation);
- $('#centralPdfFile')?.addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;centralImportDuplicateInfo=await inspectImportDuplicate(file);$('#centralImportStart').classList.add('hidden');$('#centralImportAnalysis').classList.remove('hidden');$('#centralImportProgress').textContent='Analyse du PDF en cours…';$('#centralImportConfirm').classList.add('hidden');try{if(!window.PDFImportModule?.centralAnalyze)throw new Error('Moteur PDF indisponible');centralImportAnalysis=await window.PDFImportModule.centralAnalyze(file);const a=centralImportAnalysis;$('#centralImportType').value=a.detectedType;refreshCentralImportValidation();const url=URL.createObjectURL(file);$('#centralImportPreview').innerHTML=`<details open><summary>📄 Aperçu du PDF original</summary><iframe src="${url}" title="Aperçu PDF" style="width:100%;height:360px;border:1px solid #d9e2ec;border-radius:12px;background:#fff"></iframe></details>`;$('#centralImportProgress').textContent='Analyse terminée — vérifiez toutes les informations avant de continuer.';$('#centralImportConfirm').classList.remove('hidden');updateCentralOneDriveValidationState()}catch(err){console.error(err);$('#centralImportProgress').textContent='Impossible d’analyser ce PDF. Vous pouvez le classer manuellement comme document.';centralImportAnalysis={file,detectedType:'other',detectedLabel:'Autre document',chronoConfidence:0,controlConfidence:0};$('#centralImportType').value='other';refreshCentralImportValidation();$('#centralImportConfirm').classList.remove('hidden');updateCentralOneDriveValidationState()}});
+ $('#centralPdfFile')?.addEventListener('change',async e=>{
+   const file=e.target.files?.[0];if(!file)return;
+   centralImportDuplicateInfo=await inspectImportDuplicate(file);
+   $('#centralImportStart').classList.add('hidden');
+   $('#centralImportAnalysis').classList.remove('hidden');
+   $('#centralImportProgress').textContent='Analyse du PDF en cours…';
+   $('#centralImportConfirm').classList.add('hidden');
+   try{
+     if(!window.PDFImportModule?.centralAnalyze)throw new Error('Moteur PDF indisponible');
+
+     // Analyse métier déterministe en premier (notamment Chronotime).
+     centralImportAnalysis=await window.PDFImportModule.centralAnalyze(file);
+     const a=centralImportAnalysis;
+
+     // Analyse IA en complément. Elle ne remplace jamais les données Chronotime structurées :
+     // elle sert à comprendre le document, les notes, dates, noms, tableaux et zones incertaines.
+     try{
+       $('#centralImportProgress').textContent='Analyse métier terminée — lecture IA du PDF…';
+       const ai=await analyzeDocumentWithAI(file,{mode:a.detectedType==='chronotime'?'chronotime_pdf':'document'});
+       a.aiAnalysis=ai;
+       if(a.detectedType!=='chronotime' && ai?.documentType){
+         const t=normalizeText(ai.documentType);
+         if(t.includes('controle'))a.detectedType='control';
+         else if(t.includes('administr'))a.detectedType='administrative';
+       }
+     }catch(aiError){
+       console.warn('Analyse IA PDF indisponible',aiError);
+       a.aiError=aiError?.message||String(aiError);
+     }
+
+     $('#centralImportType').value=a.detectedType;
+     refreshCentralImportValidation();
+     const url=URL.createObjectURL(file);
+     const aiBlock=a.aiAnalysis?aiReviewHtml(a.aiAnalysis):(a.aiError?`<div class="import-message warning">Analyse IA non disponible : ${esc(a.aiError)}. Le moteur PDF classique reste actif.</div>`:'');
+     $('#centralImportPreview').innerHTML=`${aiBlock}<details open><summary>📄 Aperçu du PDF original</summary><iframe src="${url}" title="Aperçu PDF" style="width:100%;height:360px;border:1px solid #d9e2ec;border-radius:12px;background:#fff"></iframe></details>`;
+     $('#centralImportProgress').textContent='Analyse terminée — vérifiez toutes les informations avant de continuer.';
+     $('#centralImportConfirm').classList.remove('hidden');
+     updateCentralOneDriveValidationState();
+   }catch(err){
+     console.error(err);
+     // Même si le parseur classique échoue, essayer l'IA avant de rendre la main.
+     let ai=null,aiError='';
+     try{ai=await analyzeDocumentWithAI(file,{mode:'document'})}catch(e2){aiError=e2?.message||String(e2)}
+     centralImportAnalysis={file,detectedType:'other',detectedLabel:'Autre document',chronoConfidence:0,controlConfidence:0,aiAnalysis:ai,aiError};
+     if(ai?.documentType){
+       const t=normalizeText(ai.documentType);
+       if(t.includes('controle'))centralImportAnalysis.detectedType='control';
+       else if(t.includes('administr'))centralImportAnalysis.detectedType='administrative';
+     }
+     $('#centralImportType').value=centralImportAnalysis.detectedType;
+     refreshCentralImportValidation();
+     $('#centralImportPreview').innerHTML=ai?aiReviewHtml(ai):`<div class="import-message warning">Analyse automatique limitée. Classement manuel possible.</div>`;
+     $('#centralImportProgress').textContent=ai?'Lecture IA terminée — vérifiez avant validation.':'Impossible d’analyser automatiquement ce PDF. Classement manuel disponible.';
+     $('#centralImportConfirm').classList.remove('hidden');
+     updateCentralOneDriveValidationState();
+   }
+ });
  $('#centralImportConfirm')?.addEventListener('click',async()=>{if(!centralImportAnalysis)return;if(!confirmDuplicateImport(centralImportDuplicateInfo))return;const type=$('#centralImportType').value,file=centralImportAnalysis.file;if(type!=='chronotime'&&!centralImportAnalysis.oneDriveLinkId){toast('Lien OneDrive obligatoire : enregistrez d’abord le lien du fichier');updateCentralOneDriveValidationState();$('#centralOneDriveUrl')?.focus();return}const oneDriveSaved=captureCentralOneDriveLink(type,file);if(oneDriveSaved===false)return;centralImportAnalysis.oneDriveLinkId=oneDriveSaved?.id||'';centralImportAnalysis.fileHash=centralImportDuplicateInfo?.fileHash||'';centralImportAnalysis.duplicateConfirmed=true;if(centralImportAnalysis.chrono)centralImportAnalysis.chrono.duplicateConfirmed=true;if(centralImportAnalysis.control)centralImportAnalysis.control.duplicateConfirmed=true;$('#centralImportModal').close();if(['chronotime','periodic','control'].includes(type)){window.PDFImportModule?.routeCentral?.(centralImportAnalysis,type);if(type==='control'||type==='periodic')toast('Étape 2/2 : validez maintenant le rapport dans Contrôles périodiques');return}if(await genericImportedDocument(file,type)){setView('archives');toast('Document importé et archivé')}});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindCentralImportV80);else bindCentralImportV80();
@@ -5696,6 +5836,64 @@ window.addEventListener('pst:data-loaded',()=>{
     refreshDashboardSyncIndicator();
   }catch(e){console.warn('Reconstruction pastilles Chronotime',e)}
 });
+
+
+// ===== V147.135 — Analyse IA sécurisée photo/PDF =====
+// Aucune clé OpenAI n'est stockée dans le navigateur.
+// L'application appelle une Edge Function Supabase authentifiée.
+async function fileToBase64Payload(file){
+  const data=await file.arrayBuffer();
+  const bytes=new Uint8Array(data);
+  let binary='';
+  const chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+  return btoa(binary);
+}
+function aiDestinationValue(v=''){
+  const n=normalizeText(v);
+  const map={
+    'bloc notes':'notes','bloc-notes':'notes','notes':'notes',
+    'securite qualite':'issues','securite':'issues','qualite':'issues',
+    'maintenance':'maintenance','intervention':'maintenance',
+    'demandes direction':'requests','demande direction':'requests','requests':'requests',
+    'chantiers gpa':'works','chantier':'works','travaux':'works',
+    'reunions rendez vous':'meetings','reunion':'meetings','rendez vous':'meetings',
+    'controles periodiques':'periodic','controle periodique':'periodic',
+    'documents':'documents','document':'documents'
+  };
+  return map[n]||'notes';
+}
+async function analyzeDocumentWithAI(file,{mode='document'}={}){
+  if(!file)throw new Error('Document absent');
+  if(!navigator.onLine)throw new Error('Analyse IA disponible lorsque le réseau est revenu');
+  if(!supabaseClient||!currentUser)throw new Error('Connexion Supabase requise pour l’analyse IA');
+
+  const maxBytes=18*1024*1024;
+  if(Number(file.size||0)>maxBytes)throw new Error('Document trop volumineux pour l’analyse IA (18 Mo maximum)');
+  const base64=await fileToBase64Payload(file);
+  const {data,error}=await supabaseClient.functions.invoke('analyze-document',{
+    body:{
+      fileName:file.name||'document',
+      mimeType:file.type||(/\.pdf$/i.test(file.name||'')?'application/pdf':'application/octet-stream'),
+      base64,
+      mode
+    }
+  });
+  if(error)throw error;
+  if(!data?.ok)throw new Error(data?.error||'Analyse IA non disponible');
+  return data.analysis||{};
+}
+function aiReviewHtml(ai){
+  if(!ai||typeof ai!=='object')return '';
+  const uncertain=Array.isArray(ai.uncertain)?ai.uncertain:[];
+  const items=uncertain.map(x=>`<li>${esc(typeof x==='string'?x:(x.text||x.value||'Zone incertaine'))}</li>`).join('');
+  return `<div class="ai-review-box"><strong>✨ Analyse IA</strong>
+    <span>Confiance : <b>${Number.isFinite(Number(ai.confidence))?Math.round(Number(ai.confidence)):'—'}%</b></span>
+    ${ai.date?`<span>Date détectée : <b>${esc(ai.date)}</b></span>`:''}
+    ${ai.title?`<span>Objet proposé : <b>${esc(ai.title)}</b></span>`:''}
+    ${items?`<details open><summary>⚠️ À vérifier (${uncertain.length})</summary><ul>${items}</ul></details>`:'<span class="badge good">Aucune zone incertaine signalée</span>'}
+  </div>`;
+}
 
 // ===== V81 — Scanner / OCR avec destination métier configurable =====
 let scannedNoteAttachment=null;
@@ -5794,33 +5992,73 @@ async function recognizeScannedNote(file){
  if(!file)return;
  $('#scanPreviewWrap')?.classList.remove('hidden');
  scanSetProgress(5,'Préparation du document',file.name||'Document');
+ scannedNoteAttachment={name:file.name||`scan-${todayISO()}`,type:file.type||'application/octet-stream',file};
+
+ // 1) IA en priorité : photo OU PDF complet.
+ if(navigator.onLine&&supabaseClient&&currentUser){
+   try{
+     scanSetProgress(15,'Analyse IA du document','Lecture de l’écriture, de la structure, des dates, noms et échéances…');
+     const ai=await analyzeDocumentWithAI(file,{mode:'handwritten_note'});
+     const text=formatScannedNote(ai.transcription||ai.text||'');
+     if(text){
+       $('#scanNoteText').value=text;
+       const suggested=aiDestinationValue(ai.destination||suggestScannedDestination(text));
+       if($('#scanDestination'))$('#scanDestination').value=suggested;
+       if(!$('#scanNoteTitle').value)$('#scanNoteTitle').value=String(ai.title||text.split('\n').find(Boolean)||'Document scanné').slice(0,80);
+       $('#scanQuality').innerHTML=`${aiReviewHtml(ai)}<span class="badge">Lecture : IA</span><span class="badge">${text.trim()?text.trim().split(/\s+/).length:0} mots</span><p class="hint">Relisez les éléments signalés « à vérifier » avant d’enregistrer.</p>`;
+       scanSetProgress(100,'Analyse IA terminée','Le texte reste modifiable avant validation.');
+       setTimeout(()=>scanSetProgress(null),700);
+       return;
+     }
+   }catch(aiError){
+     console.warn('Analyse IA indisponible, repli OCR local',aiError);
+     if($('#scanQuality'))$('#scanQuality').innerHTML=`<div class="import-message warning">IA indisponible : ${esc(aiError?.message||String(aiError))}. Lecture locale OCR utilisée en secours.</div>`;
+   }
+ }
+
+ // 2) Secours hors ligne / IA indisponible : OCR local existant.
  try{
    const source=await imageSourceFromFile(file);
    if(!window.Tesseract)throw new Error('Moteur OCR indisponible');
-   scanSetProgress(10,'Lecture de la note','Initialisation de la reconnaissance française…');
+   scanSetProgress(10,'Lecture locale de secours','Initialisation de la reconnaissance française…');
    const result=await Tesseract.recognize(source,'fra',{logger:m=>{
-     if(m.status==='recognizing text')scanSetProgress(15+Math.round((m.progress||0)*80),'Reconnaissance du texte',`${Math.round((m.progress||0)*100)} %`);
+     if(m.status==='recognizing text')scanSetProgress(15+Math.round((m.progress||0)*80),'Reconnaissance locale du texte',`${Math.round((m.progress||0)*100)} %`);
      else if(m.status)scanSetProgress(10,'Préparation OCR',m.status);
    }});
    const raw=result?.data?.text||'', conf=Math.round(result?.data?.confidence||0);
    $('#scanNoteText').value=formatScannedNote(raw);
    const suggested=suggestScannedDestination(raw);if($('#scanDestination'))$('#scanDestination').value=suggested;
    const destLabel=$('#scanDestination')?.selectedOptions?.[0]?.textContent||'Bloc-notes';
-   $('#scanQuality').innerHTML=`<span class="badge">OCR : ${conf}% de confiance</span><span class="badge">${raw.trim()?raw.trim().split(/\s+/).length:0} mots détectés</span><span class="badge">Destination proposée : ${esc(destLabel)}</span>`;
+   const previous=$('#scanQuality')?.innerHTML||'';
+   $('#scanQuality').innerHTML=previous+`<span class="badge">OCR local : ${conf}%</span><span class="badge">${raw.trim()?raw.trim().split(/\s+/).length:0} mots détectés</span><span class="badge">Destination proposée : ${esc(destLabel)}</span>`;
    if(!$('#scanNoteTitle').value){const first=formatScannedNote(raw).split('\n').find(Boolean)||'Document scanné';$('#scanNoteTitle').value=first.slice(0,80)}
-   scannedNoteAttachment={name:file.name||`scan-${todayISO()}`,type:file.type||'application/octet-stream',file};
-   scanSetProgress(100,'Reconnaissance terminée','Relisez le texte, puis utilisez « Corriger et mettre en forme ».');
-   setTimeout(()=>scanSetProgress(null),1600);
- }catch(err){console.error(err);scanSetProgress(null);toast('Impossible de reconnaître ce document. Vous pouvez saisir/coller le texte manuellement.');}
+   scanSetProgress(100,'Reconnaissance terminée','Relisez le texte avant de l’enregistrer.');
+   setTimeout(()=>scanSetProgress(null),700);
+ }catch(error){
+   console.error(error);scanSetProgress(null);toast(`Lecture impossible : ${error?.message||error}`);
+ }
 }
 async function correctScannedNote(){
- const ta=$('#scanNoteText'), raw=ta?.value||''; if(!raw.trim())return toast('Aucun texte à corriger');
- scanSetProgress(15,'Correction du texte','Orthographe, accords, ponctuation et mise en forme…');
+ const box=$('#scanNoteText');if(!box||!box.value.trim())return toast('Aucun texte à corriger');
+ const file=scannedNoteAttachment?.file;
+ if(file&&navigator.onLine&&supabaseClient&&currentUser){
+   try{
+     scanSetProgress(20,'Relecture IA','Correction de forme sans inventer les mots incertains…');
+     const ai=await analyzeDocumentWithAI(file,{mode:'handwritten_note'});
+     const text=formatScannedNote(ai.transcription||ai.text||box.value);
+     if(text)box.value=text;
+     $('#scanQuality').innerHTML=aiReviewHtml(ai)+`<span class="badge good">Relecture IA terminée</span>`;
+     scanSetProgress(null);return;
+   }catch(e){console.warn('Relecture IA indisponible',e)}
+ }
  try{
-   ta.value=await languageToolCorrect(raw);
-   scanSetProgress(100,'Texte corrigé','Relisez le résultat avant l’enregistrement.');toast('Texte corrigé et mis en forme');
- }catch(err){console.warn('Correction avancée indisponible',err);ta.value=formatScannedNote(raw);scanSetProgress(100,'Mise en forme terminée','La correction en ligne est indisponible : nettoyage local appliqué.');toast('Mise en forme locale appliquée');}
- setTimeout(()=>scanSetProgress(null),1800);
+   scanSetProgress(25,'Correction du texte','Correction orthographique de secours…');
+   box.value=await languageToolCorrect(box.value);
+   scanSetProgress(null);
+   toast('Texte corrigé — relisez avant validation');
+ }catch(e){
+   console.warn(e);box.value=formatScannedNote(box.value);scanSetProgress(null);toast('Mise en forme locale appliquée');
+ }
 }
 async function saveScannedNote(){
  const text=($('#scanNoteText')?.value||'').trim(), title=($('#scanNoteTitle')?.value||'').trim(), destination=$('#scanDestination')?.value||'notes';
