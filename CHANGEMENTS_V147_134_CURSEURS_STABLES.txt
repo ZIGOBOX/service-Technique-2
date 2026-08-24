@@ -1,0 +1,15 @@
+V147.134 — CURSEURS / BARRES DE DÉFILEMENT STABLES
+
+MODIFICATION UNIQUE
+- Tous les défilements internes de la vue active mémorisent scrollLeft ET scrollTop.
+- Calendrier des agents : position horizontale et verticale conservée.
+- Calendrier personnel : position conservée.
+- Tableaux, listes, mois, roulements, absences et aperçus : position conservée.
+- La position de la page elle-même est également mémorisée.
+- Fonctionne après sauvegarde locale, rafraîchissement d'un formulaire et synchronisation Supabase.
+- Fonctionne aussi quand un composant reconstruit directement son HTML.
+
+AUCUNE LOGIQUE MÉTIER MODIFIÉE
+- correction Chronotime V147.133 conservée ;
+- formulaires agents V147.132 conservés ;
+- maladie 7 h / écart 0 h conservée.

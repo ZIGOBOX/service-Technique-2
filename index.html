@@ -636,6 +636,13 @@
   #dashboardSyncNow{width:100%}
 }
 </style>
+
+<style id="v147134-scroll-position-stability">
+.team-calendar,.personal-calendar,.table-wrap,#rotationPreview,#absenceMonthBoard,#weeklyPlansBoard{
+  scrollbar-gutter:stable;
+  overscroll-behavior:contain;
+}
+</style>
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -682,7 +689,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.133 — 24/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.134 — 24/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
