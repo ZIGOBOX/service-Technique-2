@@ -1,0 +1,36 @@
+V147.131 — FORMULAIRES AGENTS STABILISÉS
+
+PROBLÈME RACINE CORRIGÉ
+Une synchronisation cloud ancienne pouvait être encore en cours lorsqu'un formulaire Agent
+était enregistré. Sa réponse pouvait ensuite remplacer l'état local par une copie plus ancienne,
+d'où : la saisie apparaît → disparaît → revient / ou revient à l'ancien statut.
+
+CORRECTIONS
+- Toutes les écritures directes sont maintenant sérialisées avec le même verrou cloud.
+- Un formulaire Agent attend la fin d'une synchro précédente avant d'écrire.
+- Une réponse Supabase ancienne ne peut plus écraser une saisie locale faite pendant la requête.
+- Avant tout remplacement de db, les agentDays locaux les plus récents sont fusionnés.
+- Si une deuxième saisie est faite pendant un envoi, elle reste locale et repart automatiquement après.
+- La vérification d'un jour Agent se fait par agent + date + contenu manuel, pas uniquement par ID généré.
+- La suppression d'une saisie/période Agent utilise désormais le même chemin vérifié Supabase.
+
+FORMULAIRES / CAS CONTRÔLÉS
+- Présence
+- Congé / Congé annuel
+- RTT
+- Maladie
+- Formation / Repos
+- Horaire réel arrivée/départ
+- Réinitialisation de l'horaire réel
+- Heures ajoutées / retirées
+- Motif / informations
+- Périodes Du / Au
+- Suppression d'une saisie/période
+- Priorité saisie manuelle sur Chronotime
+- Permanence et horaires Agent via le moteur de sauvegarde direct
+
+INCHANGÉ
+- Maladie = 7 h Réalisé, 0 h Écart.
+- Journée à 0 h = pas de déduction.
+- OneDrive contrôles périodiques.
+- Tous les autres calculs métier.
