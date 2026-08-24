@@ -1,0 +1,23 @@
+V147.132 — FORMULAIRES AGENTS : ENREGISTREMENT IMMÉDIAT + SYNCHRO NON BLOQUANTE
+
+BASE
+Repart de V147.130, car son bouton Enregistrer fonctionnait.
+
+MODIFICATION CIBLÉE
+- Le formulaire Agent enregistre d'abord localement.
+- Le calendrier est mis à jour immédiatement.
+- Le formulaire se ferme immédiatement après validation.
+- Supabase est synchronisé ensuite en arrière-plan.
+- La relecture Supabase sert uniquement à vérifier.
+- La relecture Supabase ne remplace JAMAIS db et ne peut donc plus faire clignoter/revenir l'ancien état.
+- La vérification se fait par agent + date + contenu manuel, pas seulement par ID.
+- Suppression d'une saisie/période : même logique local-first puis confirmation serveur.
+
+CONSERVÉ
+- Présence / Congé / RTT / Maladie / Formation / Repos.
+- Horaire réel et réinitialisation.
+- Maladie = 7 h Réalisé, 0 h Écart.
+- 0 h = aucune déduction.
+- Priorité saisie manuelle sur Chronotime.
+- OneDrive contrôles périodiques.
+- Tous les autres modules inchangés.
