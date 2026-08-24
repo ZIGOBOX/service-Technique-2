@@ -1,0 +1,27 @@
+V147.137 — CONNEXIONS EN TEMPS RÉEL
+
+Le tableau de bord affiche maintenant 7 états séparés :
+1. Internet
+2. Session Supabase
+3. Lecture Supabase
+4. Écriture / synchronisation
+5. File locale de modifications
+6. Edge Function IA
+7. OpenAI
+
+Couleurs :
+- vert = confirmé ;
+- orange = en cours / en attente ;
+- rouge = panne ou non joignable ;
+- gris = pas encore contrôlé.
+
+Fréquences :
+- état local Internet/session/file : toutes les 2 secondes ;
+- lecture Supabase + Edge Function : toutes les 10 secondes lorsque le tableau de bord est ouvert ;
+- test réel OpenAI : au maximum une fois par minute pour éviter des appels inutiles ;
+- bouton « Tester maintenant » : force tous les tests immédiatement.
+
+IMPORTANT
+Pour que Edge Function et OpenAI deviennent verts, redéployer la fonction
+supabase/functions/analyze-document/index.ts de cette version.
+Elle répond désormais au ping de diagnostic et peut tester réellement OpenAI.

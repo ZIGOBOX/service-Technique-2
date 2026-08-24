@@ -650,6 +650,24 @@
 .ai-review-box details{padding:8px;border-radius:9px;background:#fff7ed;border:1px solid #fed7aa}
 .ai-review-box ul{margin:6px 0 0 20px}
 </style>
+
+<style id="v147137-live-connections">
+.live-connections-panel{margin-top:12px}
+.live-connections-head{align-items:flex-start}
+.live-connections-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:10px}
+.live-connection-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;min-width:0}
+.live-connection-item>div{min-width:0;display:grid;gap:2px}
+.live-connection-item strong{font-size:.88rem}
+.live-connection-item small{font-size:.75rem;color:#64748b;white-space:normal;overflow-wrap:anywhere}
+.live-dot{width:12px;height:12px;border-radius:50%;flex:0 0 12px;box-shadow:0 0 0 3px rgba(148,163,184,.14)}
+.live-dot.green{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.16)}
+.live-dot.orange{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.16)}
+.live-dot.red{background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.16)}
+.live-dot.gray{background:#94a3b8}
+.live-connections-error{margin-top:10px;padding:9px 11px;border-radius:9px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:.8rem}
+@media(max-width:900px){.live-connections-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.live-connections-grid{grid-template-columns:1fr}}
+</style>
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -696,7 +714,7 @@
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.136 — 24/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.137 — 24/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -730,6 +748,27 @@
           </div>
         </div>
         <button type="button" class="primary" id="dashboardSyncNow">↻ Synchroniser maintenant</button>
+      </article>
+
+      <article class="panel live-connections-panel no-print" id="liveConnectionsPanel" aria-live="polite">
+        <div class="panel-head live-connections-head">
+          <div>
+            <span class="calendar-kicker">CONNEXIONS</span>
+            <h3>État des connexions en temps réel</h3>
+            <p class="muted" id="liveConnectionsUpdated">Initialisation…</p>
+          </div>
+          <button type="button" class="ghost small" id="liveConnectionsTestNow">Tester maintenant</button>
+        </div>
+        <div class="live-connections-grid">
+          <div class="live-connection-item" data-live-connection="internet"><span class="live-dot gray"></span><div><strong>Internet</strong><small>Non vérifié</small></div></div>
+          <div class="live-connection-item" data-live-connection="auth"><span class="live-dot gray"></span><div><strong>Session Supabase</strong><small>Non vérifiée</small></div></div>
+          <div class="live-connection-item" data-live-connection="read"><span class="live-dot gray"></span><div><strong>Lecture Supabase</strong><small>Non vérifiée</small></div></div>
+          <div class="live-connection-item" data-live-connection="write"><span class="live-dot gray"></span><div><strong>Écriture / synchro</strong><small>Non vérifiée</small></div></div>
+          <div class="live-connection-item" data-live-connection="queue"><span class="live-dot gray"></span><div><strong>File locale</strong><small>Non vérifiée</small></div></div>
+          <div class="live-connection-item" data-live-connection="edge"><span class="live-dot gray"></span><div><strong>Edge Function IA</strong><small>Non vérifiée</small></div></div>
+          <div class="live-connection-item" data-live-connection="openai"><span class="live-dot gray"></span><div><strong>OpenAI</strong><small>Non vérifié</small></div></div>
+        </div>
+        <div id="liveConnectionsError" class="live-connections-error hidden"></div>
       </article>
 
       <div class="quick-actions" id="dashboardQuickActions">

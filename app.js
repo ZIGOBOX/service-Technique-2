@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.136';
+const APP_VERSION='147.137';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -387,7 +387,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.136 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.137 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -1346,7 +1346,7 @@ function safeRenderAll(){
  return errors;
 }
 
-// ===== V147.136 — moteur central de synchronisation =====
+// ===== V147.137 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -1461,6 +1461,8 @@ async function pstSyncQueueNow({silent=false}={}){
     pstSaveSyncQueue(still);
     lastCloudData=deepClone(confirmed);lastCloudUpdatedAt=check?.data?.updated_at||stamp;
     lastConfirmedSupabaseAt=Date.now();cloudReady=true;lastCloudError='';
+    pstSetLiveConnection('write','green','Écriture Supabase confirmée');
+
     localDirty=still.length>0;
     if(localDirty)try{writeOfflinePending(`${still.length} mutation(s) en attente`)}catch(_){}
     else clearOfflinePending();
@@ -1469,6 +1471,8 @@ async function pstSyncQueueNow({silent=false}={}){
     return {ok:!localDirty,pending:still.length};
   }catch(error){
     lastCloudError=error?.message||String(error);localDirty=true;
+    pstSetLiveConnection('write','red',lastCloudError||'Écriture Supabase non confirmée');
+
     try{writeOfflinePending(lastCloudError)}catch(_){}
     setSaveState(`Synchronisation en attente — ${pstPendingMutationCount()} modification(s)`,'local');
     console.error('pstSyncQueueNow',error);
@@ -2373,7 +2377,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.136 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.137 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2443,7 +2447,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.136 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.137 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2591,7 +2595,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.136 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.137 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2843,7 +2847,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.136 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.137 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2897,7 +2901,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.136 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.137 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3510,7 +3514,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.136 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.137 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -4723,7 +4727,7 @@ function collectLateDashboardActions(today=todayISO()){
  }
  return rows;
 }
-function renderDashboard(){
+function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnections();
  renderGlobalAcademicYear();
  const today=todayISO(),activeRange=academicYearRange(activeAcademicYear()),todayInActive=academicYearContains(activeAcademicYear(),today),refDate=todayInActive?today:activeRange.start,soon7=addDays(refDate,7);
  const activeAgents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif');
@@ -5384,6 +5388,126 @@ function restoreReferenceData(){if(!confirm('Restaurer les agents, horaires et i
 
 /* ---------- Événements ---------- */
 
+
+const pstLiveConnections={
+  internet:{state:'gray',detail:'Non vérifié'},
+  auth:{state:'gray',detail:'Non vérifiée'},
+  read:{state:'gray',detail:'Non vérifiée'},
+  write:{state:'gray',detail:'Aucune confirmation récente'},
+  queue:{state:'gray',detail:'Non vérifiée'},
+  edge:{state:'gray',detail:'Non vérifiée'},
+  openai:{state:'gray',detail:'Non vérifié'},
+  lastProbeAt:0,lastOpenAIProbeAt:0,busy:false,errors:[]
+};
+function pstSetLiveConnection(key,state,detail=''){
+  pstLiveConnections[key]={state,detail};
+  const row=document.querySelector(`[data-live-connection="${key}"]`);
+  if(row){
+    const dot=row.querySelector('.live-dot'),small=row.querySelector('small');
+    if(dot)dot.className=`live-dot ${state}`;
+    if(small)small.textContent=detail;
+  }
+}
+function renderLiveConnections(){
+  for(const key of ['internet','auth','read','write','queue','edge','openai']){
+    const x=pstLiveConnections[key]||{};
+    pstSetLiveConnection(key,x.state||'gray',x.detail||'Non vérifié');
+  }
+  const updated=$('#liveConnectionsUpdated');
+  if(updated){
+    updated.textContent=pstLiveConnections.lastProbeAt
+      ? `Dernier contrôle : ${new Date(pstLiveConnections.lastProbeAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`
+      : 'Initialisation…';
+  }
+  const err=$('#liveConnectionsError');
+  if(err){
+    const txt=(pstLiveConnections.errors||[]).filter(Boolean).join(' · ');
+    err.textContent=txt;
+    err.classList.toggle('hidden',!txt);
+  }
+}
+function updateLiveConnectionLocalStates(){
+  pstSetLiveConnection('internet',navigator.onLine?'green':'red',navigator.onLine?'Réseau disponible':'Hors connexion');
+  pstSetLiveConnection('auth',currentUser&&supabaseClient?'green':(navigator.onLine?'red':'orange'),currentUser&&supabaseClient?`Connecté${currentUser.email?' : '+currentUser.email:''}`:'Session Supabase absente');
+  const pending=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
+  pstSetLiveConnection('queue',pending===0?'green':'orange',pending===0?'Aucune modification en attente':`${pending} modification(s) en attente`);
+  if(cloudBusy||dashboardSyncBusy){
+    pstSetLiveConnection('write','orange','Synchronisation en cours');
+  }else if(pending>0||localDirty){
+    pstSetLiveConnection('write','orange','Modifications locales non confirmées');
+  }else if(lastConfirmedSupabaseAt){
+    pstSetLiveConnection('write','green',`Dernière confirmation ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`);
+  }else{
+    pstSetLiveConnection('write','gray','Aucune confirmation depuis l’ouverture');
+  }
+}
+async function probeLiveConnections({forceOpenAI=false}={}){
+  if(pstLiveConnections.busy)return;
+  pstLiveConnections.busy=true;
+  pstLiveConnections.errors=[];
+  updateLiveConnectionLocalStates();
+  try{
+    if(!navigator.onLine){
+      pstSetLiveConnection('read','red','Impossible hors connexion');
+      pstSetLiveConnection('edge','red','Impossible hors connexion');
+      pstSetLiveConnection('openai','red','Impossible hors connexion');
+      return;
+    }
+    if(!currentUser||!supabaseClient){
+      pstSetLiveConnection('read','red','Session Supabase absente');
+      pstSetLiveConnection('edge','red','Session Supabase absente');
+      pstSetLiveConnection('openai','red','Session Supabase absente');
+      return;
+    }
+
+    try{
+      const read=await withTimeout(supabaseClient.from('app_state').select('updated_at').eq('user_id',currentUser.id).single(),8000);
+      if(read?.error)throw read.error;
+      pstSetLiveConnection('read','green',read?.data?.updated_at?`Réponse ${new Date(read.data.updated_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`:'Base joignable');
+    }catch(e){
+      pstSetLiveConnection('read','red',e?.message||'Lecture impossible');
+      pstLiveConnections.errors.push(`Base : ${e?.message||e}`);
+    }
+
+    const now=Date.now();
+    const shouldProbeOpenAI=forceOpenAI||!pstLiveConnections.lastOpenAIProbeAt||(now-pstLiveConnections.lastOpenAIProbeAt>60000);
+    try{
+      const {data,error}=await supabaseClient.functions.invoke('analyze-document',{body:{ping:true,probeOpenAI:shouldProbeOpenAI}});
+      if(error)throw error;
+      if(data?.edge===true||data?.pong===true||data?.ok===true){
+        pstSetLiveConnection('edge','green','Fonction joignable');
+      }else{
+        pstSetLiveConnection('edge','red',data?.error||'Réponse invalide');
+      }
+      if(shouldProbeOpenAI){
+        pstLiveConnections.lastOpenAIProbeAt=now;
+        if(data?.openai===true)pstSetLiveConnection('openai','green','API OpenAI joignable');
+        else if(data?.openai===false)pstSetLiveConnection('openai','red',data?.openaiError||'OpenAI non joignable');
+        else pstSetLiveConnection('openai','orange','État OpenAI non confirmé');
+      }
+    }catch(e){
+      pstSetLiveConnection('edge','red',e?.message||'Edge Function inaccessible');
+      pstSetLiveConnection('openai','red','Non testable : Edge Function inaccessible');
+      pstLiveConnections.errors.push(`IA : ${e?.message||e}`);
+    }
+  }finally{
+    pstLiveConnections.lastProbeAt=Date.now();
+    pstLiveConnections.busy=false;
+    updateLiveConnectionLocalStates();
+    renderLiveConnections();
+  }
+}
+function bindLiveConnectionsPanel(){
+  $('#liveConnectionsTestNow')?.addEventListener('click',()=>probeLiveConnections({forceOpenAI:true}));
+  updateLiveConnectionLocalStates();renderLiveConnections();
+}
+window.PSTLiveConnections={probe:probeLiveConnections,state:pstLiveConnections,render:renderLiveConnections};
+window.addEventListener('online',()=>{updateLiveConnectionLocalStates();probeLiveConnections({forceOpenAI:true})});
+window.addEventListener('offline',()=>{updateLiveConnectionLocalStates();renderLiveConnections()});
+document.addEventListener('DOMContentLoaded',bindLiveConnectionsPanel,{once:true});
+setInterval(()=>{updateLiveConnectionLocalStates();renderLiveConnections()},2000);
+setInterval(()=>{if(document.querySelector('#dashboard.view.active'))probeLiveConnections()},10000);
+
 async function runSupabaseConnectionDiagnostic(){
   const result={online:navigator.onLine,authenticated:Boolean(currentUser),databaseRead:false,databaseWrite:false,edgeFunction:false,pending:pstPendingMutationCount(),errors:[]};
   if(!navigator.onLine){result.errors.push('Appareil hors connexion');return result}
@@ -5570,7 +5694,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.136 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.137 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -5973,7 +6097,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.136 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.137 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){
