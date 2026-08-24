@@ -1,0 +1,13 @@
+V147.136 — REFONTE GLOBALE SYNCHRONISATION SUPABASE
+
+- Une file locale persistante reçoit les modifications.
+- Chaque enregistrement reçoit une version et un horodatage.
+- La dernière saisie locale reste prioritaire.
+- Une réponse Supabase tardive ne peut plus écraser une valeur locale plus récente.
+- Supabase confirme les modifications au lieu de réinjecter son état dans l'écran.
+- Reprise automatique à la reconnexion + nouvelle tentative toutes les 12 secondes si nécessaire.
+- Présence, congé, RTT, maladie, horaires réels, remise à zéro et suppressions utilisent le moteur central.
+- Les formulaires génériques utilisent également ce moteur.
+- Diagnostic séparé : session, lecture base, écriture base, Edge Function IA, mutations en attente.
+- L'IA reste indépendante des formulaires métier.
+- Horaires Mamessier/Thelly, Chronotime, curseurs et règles maladie conservés.

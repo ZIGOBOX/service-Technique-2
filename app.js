@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.135';
+const APP_VERSION='147.136';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -387,7 +387,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.135 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.136 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -797,7 +797,7 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
    toSave.deletedRecords=mergeDeletedRecordsSafe(toSave.deletedRecords,deepClone(ensureDeletedRecordsStore(db)));
    for(const c of STABLE_FORM_COLLECTIONS)toSave[c]=applyDeletedRecordsToCollection(c,toSave[c],toSave);
    toSave.maintenance=applyDeletedRecordsToCollection('maintenance',toSave.maintenance,toSave);
-   db=toSave;
+   db=pstMergeRemoteWithoutOverwritingLocal(toSave,db);
    enforceAllDeletedRecords('fin cloudSaveNow');
    lastCloudData=deepClone(db);lastCloudUpdatedAt=stamp;localDirty=false;cloudReady=true;lastCloudError='';clearOfflinePending();lastConfirmedSupabaseAt=Date.now();writeMirror();
    setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud');
@@ -1163,7 +1163,7 @@ window.PSTMainState={
       remote.deletedRecords=mergeDeletedRecordsSafe(remote.deletedRecords,deepClone(ensureDeletedRecordsStore(db)));
       for(const c of STABLE_FORM_COLLECTIONS)remote[c]=applyDeletedRecordsToCollection(c,remote[c],remote);
       remote.maintenance=applyDeletedRecordsToCollection('maintenance',remote.maintenance,remote);
-      db=remote;
+      db=pstMergeRemoteWithoutOverwritingLocal(remote,db);
       enforceAllDeletedRecords('fin persistStateDirect');
       lastCloudData=deepClone(db);
       lastCloudUpdatedAt=read?.data?.updated_at||write?.data?.updated_at||nowIso;
@@ -1345,6 +1345,140 @@ function safeRenderAll(){
  try{enhanceTableFilters(document.querySelector('.view.active')||document)}catch(error){console.warn('Filtres colonnes',error)}
  return errors;
 }
+
+// ===== V147.136 — moteur central de synchronisation =====
+const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
+const PST_DEVICE_ID_KEY='pst-device-id-v147136';
+
+function pstDeviceId(){
+  try{
+    let id=localStorage.getItem(PST_DEVICE_ID_KEY);
+    if(!id){id=`dev-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;localStorage.setItem(PST_DEVICE_ID_KEY,id)}
+    return id;
+  }catch(_){return 'dev-local'}
+}
+function pstLoadSyncQueue(){
+  try{const q=JSON.parse(localStorage.getItem(PST_SYNC_QUEUE_KEY)||'[]');return Array.isArray(q)?q:[]}catch(_){return []}
+}
+function pstSaveSyncQueue(q){
+  try{localStorage.setItem(PST_SYNC_QUEUE_KEY,JSON.stringify(Array.isArray(q)?q:[]));return true}catch(_){return false}
+}
+function pstRecordVersion(record){return Number(record?._pstVersion||0)||0}
+function pstMutationStamp(){
+  const now=Date.now();
+  lastLocalMutationAt=Math.max(Number(lastLocalMutationAt||0),now);
+  return lastLocalMutationAt;
+}
+function pstNormalizeMutationRecord(record,{source='manual'}={}){
+  if(!record||typeof record!=='object')return record;
+  record._pstVersion=Math.max(pstRecordVersion(record)+1,Date.now());
+  record._pstUpdatedAt=new Date().toISOString();
+  record._pstDeviceId=pstDeviceId();
+  record._pstSource=source;
+  return record;
+}
+function pstQueueMutation(collection,record,{deleted=false,label='Modification'}={}){
+  const q=pstLoadSyncQueue();
+  const recordId=String(record?.id||record?.recordId||'');
+  const item={
+    mutationId:`mut-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,
+    collection,recordId,deleted:Boolean(deleted),
+    version:Number(record?._pstVersion||Date.now()),
+    payload:deleted?null:deepClone(record),
+    createdAt:new Date().toISOString(),deviceId:pstDeviceId(),label,attempts:0
+  };
+  const filtered=q.filter(x=>!(x.collection===collection&&String(x.recordId)===recordId));
+  filtered.push(item);pstSaveSyncQueue(filtered);localDirty=true;return item;
+}
+function pstPendingMutationCount(){return pstLoadSyncQueue().length}
+function pstHasPendingMutation(collection,recordId){
+  return pstLoadSyncQueue().some(x=>x.collection===collection&&String(x.recordId)===String(recordId))
+}
+function pstApplyQueuedMutationsToPayload(payload){
+  const out=migrate(deepClone(payload||db));
+  for(const m of pstLoadSyncQueue()){
+    if(!m.collection)continue;
+    out[m.collection]=Array.isArray(out[m.collection])?out[m.collection]:[];
+    if(m.deleted){
+      out[m.collection]=out[m.collection].filter(r=>String(r.id)!==String(m.recordId));
+      continue;
+    }
+    const incoming=deepClone(m.payload);
+    const i=out[m.collection].findIndex(r=>String(r.id)===String(m.recordId));
+    if(i<0)out[m.collection].push(incoming);
+    else if(pstRecordVersion(incoming)>=pstRecordVersion(out[m.collection][i]))out[m.collection][i]=incoming;
+  }
+  return out;
+}
+function pstMergeRemoteWithoutOverwritingLocal(remote,local=db){
+  const out=migrate(deepClone(remote||{})),loc=migrate(deepClone(local||{}));
+  const collections=['agentDays','personalEvents','agents','rotations','weeklyPlans','vacations','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','documents','oneDriveLinks','spaces','roomPreps'];
+  for(const c of collections){
+    const map=new Map((Array.isArray(out[c])?out[c]:[]).map(r=>[String(r.id),r]));
+    for(const lr of (Array.isArray(loc[c])?loc[c]:[])){
+      const k=String(lr.id),rr=map.get(k);
+      if(!rr||pstRecordVersion(lr)>=pstRecordVersion(rr)||pstHasPendingMutation(c,k))map.set(k,deepClone(lr));
+    }
+    out[c]=[...map.values()];
+  }
+  for(const m of pstLoadSyncQueue()){
+    if(m.deleted&&Array.isArray(out[m.collection]))out[m.collection]=out[m.collection].filter(r=>String(r.id)!==String(m.recordId));
+  }
+  return out;
+}
+async function pstSyncQueueNow({silent=false}={}){
+  if(!currentUser||!supabaseClient||!navigator.onLine)return {ok:false,offline:true,pending:pstPendingMutationCount()};
+  const q=pstLoadSyncQueue();if(!q.length)return {ok:true,pending:0};
+  if(cloudBusy)return {ok:false,busy:true,pending:q.length};
+  cloudBusy=true;
+  try{
+    if(!silent)setSaveState(`Synchronisation de ${q.length} modification(s)…`,'loading');
+    const remoteRow=await fetchRemote();
+    let payload=pstMergeRemoteWithoutOverwritingLocal(remoteRow?.data||{},db);
+    payload=pstApplyQueuedMutationsToPayload(payload);
+    payload.changeHistory=mergeChangeHistorySafe(remoteRow?.data?.changeHistory,db.changeHistory);
+    payload.deletedRecords=mergeDeletedRecordsSafe(remoteRow?.data?.deletedRecords,deepClone(ensureDeletedRecordsStore(db)));
+    for(const c of STABLE_FORM_COLLECTIONS)payload[c]=applyDeletedRecordsToCollection(c,payload[c],payload);
+    payload.maintenance=applyDeletedRecordsToCollection('maintenance',payload.maintenance,payload);
+
+    const stamp=new Date().toISOString();
+    const write=await withTimeout(supabaseClient.from('app_state').upsert({user_id:currentUser.id,data:payload,updated_at:stamp},{onConflict:'user_id'}),18000);
+    if(write?.error)throw write.error;
+
+    const check=await withTimeout(supabaseClient.from('app_state').select('data,updated_at').eq('user_id',currentUser.id).single(),18000);
+    if(check?.error)throw check.error;
+    const confirmed=migrate(check?.data?.data||{});
+    const still=[];
+    for(const m of q){
+      const rows=Array.isArray(confirmed[m.collection])?confirmed[m.collection]:[];
+      if(m.deleted){
+        if(rows.some(r=>String(r.id)===String(m.recordId)))still.push(m);
+      }else{
+        const got=rows.find(r=>String(r.id)===String(m.recordId));
+        if(!got||pstRecordVersion(got)<Number(m.version||0))still.push(m);
+      }
+    }
+    pstSaveSyncQueue(still);
+    lastCloudData=deepClone(confirmed);lastCloudUpdatedAt=check?.data?.updated_at||stamp;
+    lastConfirmedSupabaseAt=Date.now();cloudReady=true;lastCloudError='';
+    localDirty=still.length>0;
+    if(localDirty)try{writeOfflinePending(`${still.length} mutation(s) en attente`)}catch(_){}
+    else clearOfflinePending();
+    refreshDashboardSyncIndicator();
+    setSaveState(localDirty?`${still.length} modification(s) encore en attente`:`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,localDirty?'local':'cloud');
+    return {ok:!localDirty,pending:still.length};
+  }catch(error){
+    lastCloudError=error?.message||String(error);localDirty=true;
+    try{writeOfflinePending(lastCloudError)}catch(_){}
+    setSaveState(`Synchronisation en attente — ${pstPendingMutationCount()} modification(s)`,'local');
+    console.error('pstSyncQueueNow',error);
+    return {ok:false,error:lastCloudError,pending:pstPendingMutationCount()};
+  }finally{cloudBusy=false;refreshDashboardSyncIndicator()}
+}
+window.PSTSyncEngine={queue:pstQueueMutation,sync:pstSyncQueueNow,pending:pstPendingMutationCount,mergeRemote:pstMergeRemoteWithoutOverwritingLocal};
+
+window.addEventListener('online',()=>setTimeout(()=>pstSyncQueueNow({silent:true}),600));
+setInterval(()=>{if(navigator.onLine&&currentUser&&pstPendingMutationCount()>0&&!cloudBusy)pstSyncQueueNow({silent:true})},12000);
 let authInitPromise=null;
 async function initAuth(){
  if(authInitPromise)return authInitPromise;
@@ -2239,7 +2373,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.135 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.136 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2309,7 +2443,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.135 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.136 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2457,7 +2591,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.135 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.136 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2709,7 +2843,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.135 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.136 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2740,7 +2874,8 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
      const rule=dayCountingRule(o.dayType);
      const pStart=rule.mode==='planned'?((from===to?o.plannedStart:'')||sc.start||o.plannedStart||''):(from===to?(o.plannedStart||''):'');
      const pEnd=rule.mode==='planned'?((from===to?o.plannedEnd:'')||sc.end||o.plannedEnd||''):(from===to?(o.plannedEnd||''):'');
-     db.agentDays.push({id:uid(),periodId:newPeriodId,agentId:o.agentId,date:d,dayType:o.dayType,plannedStart:pStart,plannedEnd:pEnd,actualStart:sameStart?(o.actualStart||''):'',actualEnd:sameStart?(o.actualEnd||''):'',pause:Number((from===to&&o.pause!==''?o.pause:sc.pause??o.pause)||0),overtime:Number(sameStart?o.overtime||0:0),status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',manualOverride:true,realScheduleReset:(!o.actualStart&&!o.actualEnd),academicYear:academicYearFor(d),updatedAt:new Date().toISOString()});
+     const rec={id:uid(),periodId:newPeriodId,agentId:o.agentId,date:d,dayType:o.dayType,plannedStart:pStart,plannedEnd:pEnd,actualStart:sameStart?(o.actualStart||''):'',actualEnd:sameStart?(o.actualEnd||''):'',pause:Number((from===to&&o.pause!==''?o.pause:sc.pause??o.pause)||0),overtime:Number(sameStart?o.overtime||0:0),status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',manualOverride:true,realScheduleReset:(!o.actualStart&&!o.actualEnd),academicYear:academicYearFor(d),updatedAt:new Date().toISOString()};
+     pstMutationStamp();pstNormalizeMutationRecord(rec,{source:'manual'});db.agentDays.push(rec);pstQueueMutation('agentDays',rec,{label:'Planning agent'});
      added++;
    }
    d=addDays(d,1);
@@ -2748,7 +2883,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  if(added===0 && from===to){
    const sc=resolvedTheoreticalSchedule(o.agentId,from,o.dayType);
    db.agentDays=db.agentDays.filter(r=>!(String(r.agentId)===String(o.agentId)&&r.date===from));
-   db.agentDays.push({
+   const rec={
      id:uid(),periodId:'',agentId:o.agentId,date:from,dayType:o.dayType,
      plannedStart:o.plannedStart||sc.start||'',plannedEnd:o.plannedEnd||sc.end||'',
      actualStart:o.actualStart||'',actualEnd:o.actualEnd||'',
@@ -2756,12 +2891,13 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
      status:o.status||'Validée',replacement:o.noReplacementNeeded?'':(o.replacement||''),
      noReplacementNeeded:!!o.noReplacementNeeded,note:o.note||'',source:'manual',manualOverride:true,realScheduleReset:(!o.actualStart&&!o.actualEnd),
      academicYear:academicYearFor(from),updatedAt:new Date().toISOString()
-   });
+   };
+   pstMutationStamp();pstNormalizeMutationRecord(rec,{source:'manual'});db.agentDays.push(rec);pstQueueMutation('agentDays',rec,{label:'Planning agent'});
    added=1;
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.135 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.136 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -2825,10 +2961,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  // Synchronisation serveur ensuite, sans bloquer le formulaire ni faire disparaître la saisie.
  setTimeout(async()=>{
    try{
-     const persisted=await persistAgentPlanningBackground({
-       label:'Planning agent',
-       expectedDays
-     });
+     const persisted=await pstSyncQueueNow({silent:true});
      if(persisted?.offline)setSaveState('Planning agent enregistré localement — synchronisation en attente','local');
    }catch(error){
      console.error('Synchronisation planning agent différée',error);
@@ -2840,7 +2973,9 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
   audit:{track:false,type:'Agent',recordId:x.id,agentId:x.agentId,agentName:agentName(agentById(x.agentId)),entity:(form)=>{const a=agentById(form?.elements?.agentId?.value||x.agentId);return a?agentName(a):agentName(agentById(x.agentId))},date:initialDate},
   onDelete:old?()=>{if(!confirm('Supprimer cette saisie ou toute la période associée ?'))return;const deletedDates=periodId?db.agentDays.filter(r=>r.periodId===periodId).map(r=>r.date):[old.date];
  const deletedAgentId=old.agentId;
+ const deletedRows=periodId?db.agentDays.filter(r=>r.periodId===periodId):db.agentDays.filter(r=>r.id===old.id);
  db.agentDays=periodId?db.agentDays.filter(r=>r.periodId!==periodId):db.agentDays.filter(r=>r.id!==old.id);
+ for(const dr of deletedRows){pstMutationStamp();pstQueueMutation('agentDays',{id:dr.id,_pstVersion:Date.now()},{deleted:true,label:'Suppression planning agent'})}
  db.changeHistory=(db.changeHistory||[]).filter(h=>!(h.title===modalAuditTitle&&(h.pastDates||[]).some(d=>deletedDates.includes(d))));
  enforceAgentDaysStable('suppression planning agent');
  localDirty=true;
@@ -2850,10 +2985,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  refreshCollectionView('agentDays');
  closeModal();
  toast('Saisie supprimée');
- setTimeout(()=>persistAgentPlanningBackground({
-   label:'Suppression planning agent',
-   deletedKeys:deletedDates.map(date=>({agentId:deletedAgentId,date}))
- }),0)}:null});
+ setTimeout(()=>pstSyncQueueNow({silent:true}),0)}:null});
  function refreshTheoretical(force=false){
    const f=$('#modalForm');if(!f)return;
    const aid=f.elements.agentId.value, d=f.elements.dateFrom.value||todayISO(), currentType=f.elements.dayType.value||'Présence', sc=resolvedTheoreticalSchedule(aid,d,currentType);
@@ -3106,7 +3238,10 @@ async function commitFormRecordVerified(label,collection,record){
  if(STABLE_FORM_COLLECTIONS.includes(collection) && !record.source)record.source='manual';
 
  // La copie locale devient immédiatement la référence.
+ pstMutationStamp();
+ pstNormalizeMutationRecord(record,{source:'manual'});
  upsertDbRecord(collection,record);
+ pstQueueMutation(collection,record,{label});
  if(STABLE_FORM_COLLECTIONS.includes(collection))enforceStableCollection(collection,`${label} local`);
  const expected=recordComparableSnapshot(record);
 
@@ -3122,34 +3257,11 @@ async function commitFormRecordVerified(label,collection,record){
      return {ok:true,offline:true};
    }
 
-   if(window.PSTMainState?.persistStateDirect){
-     const result=await window.PSTMainState.persistStateDirect({
-       label,
-       verify:remote=>{
-         const found=Array.isArray(remote?.[collection])
-           ? remote[collection].find(x=>String(x.id)===String(record.id))
-           : null;
-         return recordMatchesExpected(expected,found);
-       }
-     });
-     if(!result?.ok)throw new Error(result?.error||`${label} non confirmé par Supabase`);
-
-     if(STABLE_FORM_COLLECTIONS.includes(collection))enforceStableCollection(collection,`${label} relecture`);
-     const confirmed=Array.isArray(db?.[collection])
-       ? db[collection].find(x=>String(x.id)===String(record.id))
-       : null;
-
-     if(!recordMatchesExpected(expected,confirmed)){
-       throw new Error(`${label} relu mais les modifications ne correspondent pas`);
-     }
-
-     refreshCollectionView(collection);
-     return {ok:true,offline:false};
-   }
-
-   save(false);
+   const result=await pstSyncQueueNow({silent:true});
+   if(!result?.ok)setSaveState(`${label} enregistré localement — synchronisation en attente`,'local');
+   if(STABLE_FORM_COLLECTIONS.includes(collection))enforceStableCollection(collection,`${label} local final`);
    refreshCollectionView(collection);
-   return {ok:true,offline:false};
+   return {ok:true,offline:!result?.ok,pending:result?.pending||0};
  }catch(error){
    console.error(`${label} — commit direct impossible`,error);
    const reason=error?.message||String(error)||'Erreur Supabase';
@@ -3398,7 +3510,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.135 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.136 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -5271,6 +5383,29 @@ function resetData(){if(!confirm('Réinitialiser toute la base locale ? Cette ac
 function restoreReferenceData(){if(!confirm('Restaurer les agents, horaires et interventions fournis ? Vos saisies personnelles seront conservées.'))return;restoreSuppliedData(true)}
 
 /* ---------- Événements ---------- */
+
+async function runSupabaseConnectionDiagnostic(){
+  const result={online:navigator.onLine,authenticated:Boolean(currentUser),databaseRead:false,databaseWrite:false,edgeFunction:false,pending:pstPendingMutationCount(),errors:[]};
+  if(!navigator.onLine){result.errors.push('Appareil hors connexion');return result}
+  if(!currentUser||!supabaseClient){result.errors.push('Session Supabase absente');return result}
+  try{
+    const read=await withTimeout(supabaseClient.from('app_state').select('updated_at').eq('user_id',currentUser.id).single(),10000);
+    if(read?.error)throw read.error;result.databaseRead=true;
+  }catch(e){result.errors.push(`Lecture base : ${e?.message||e}`)}
+  try{
+    const payload=pstApplyQueuedMutationsToPayload(db);
+    const wr=await withTimeout(supabaseClient.from('app_state').upsert({user_id:currentUser.id,data:payload,updated_at:new Date().toISOString()},{onConflict:'user_id'}),12000);
+    if(wr?.error)throw wr.error;result.databaseWrite=true;
+  }catch(e){result.errors.push(`Écriture base : ${e?.message||e}`)}
+  try{
+    const {data,error}=await supabaseClient.functions.invoke('analyze-document',{body:{ping:true}});
+    if(error)throw error;result.edgeFunction=Boolean(data?.ok||data?.pong);
+    if(!result.edgeFunction)result.errors.push(data?.error||'Edge Function sans réponse valide');
+  }catch(e){result.errors.push(`IA Edge Function : ${e?.message||e}`)}
+  return result;
+}
+window.PSTSupabaseDiagnostic={run:runSupabaseConnectionDiagnostic};
+
 function runDiagnostic(){
  const critical=['nav','openMenu','closeMenu','menuBackdrop','modal','modalForm','newAgent','newRotation','newShift','newAbsence','teamWeekCalendar','agentsGrid','rotationsTable','planningTable','restoreReferenceData','notificationBell','notificationModal','notificationList','kpiAgents','kpiPresent','kpiUrgentActions','kpiLate','kpiMaintenance','kpiMaintenanceTodo','kpiCompliance','kpiCleaningWeak','kpiPeriodicLate','kpiPeriodicSoon','kpiNotes','kpiNotesDue','priorityList','dashboardNotes','maintenancePreview','maintenanceTodoPreview','cleaningWeakPreview','meetingPreview'];
  const missing=critical.filter(id=>!document.getElementById(id));
@@ -5435,7 +5570,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.135 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.136 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -5838,7 +5973,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.135 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.136 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){
