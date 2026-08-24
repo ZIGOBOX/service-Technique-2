@@ -1,0 +1,24 @@
+V147.138 — RÉPARATION EDGE FUNCTION IA + SYNCHRO ORANGE
+
+EDGE FUNCTION / IA
+- L'appel IA essaie d'abord le SDK Supabase.
+- Si le SDK échoue, l'application essaie automatiquement un appel HTTP direct authentifié.
+- Les erreurs sont maintenant explicites :
+  * fonction non déployée (404),
+  * session expirée / refusée (401/403),
+  * délai dépassé,
+  * erreur serveur.
+- Le diagnostic temps réel utilise le même mécanisme robuste.
+- Le scanner est désormais IA OBLIGATOIRE : aucun OCR de secours.
+
+ÉCRITURE / SYNCHRONISATION
+- Le voyant ne reste plus orange simplement parce qu'un ancien flag "busy" est resté bloqué.
+- Si la file locale est vide, le voyant peut repasser au vert.
+- Les flags dashboardSyncBusy/cloudBusy bloqués sont réinitialisés après délai lorsqu'il n'y a aucune mutation à envoyer.
+- La file locale V147.136 reste la référence des modifications réellement en attente.
+
+IMPORTANT POUR L'IA
+Si le voyant indique maintenant « Edge Function analyze-document non déployée dans Supabase »,
+il faut déployer le fichier :
+supabase/functions/analyze-document/index.ts
+La V147.138 permet justement de distinguer ce cas d'une vraie panne Internet/Supabase.

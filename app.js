@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.137';
+const APP_VERSION='147.138';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -387,7 +387,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.137 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.138 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -485,8 +485,26 @@ let saveStateChangedAt=0;
 let lastConfirmedSupabaseAt=0;
 let lastLocalMutationAt=0;
 let dashboardSyncBusy=false;
+let dashboardSyncBusySince=0;
+let cloudBusySince=0;
 
+
+function healStaleSyncBusyFlags(){
+  const now=Date.now();
+  const pending=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
+
+  // Un voyant "en cours" ne doit jamais rester figé si aucune mutation n'est en attente.
+  if(dashboardSyncBusy && dashboardSyncBusySince && now-dashboardSyncBusySince>15000 && pending===0){
+    console.warn('Réinitialisation dashboardSyncBusy figé');
+    dashboardSyncBusy=false;dashboardSyncBusySince=0;
+  }
+  if(cloudBusy && cloudBusySince && now-cloudBusySince>20000 && pending===0){
+    console.warn('Réinitialisation cloudBusy figé');
+    cloudBusy=false;cloudBusySince=0;
+  }
+}
 function pendingSyncDiagnostics(){
+ healStaleSyncBusyFlags();
  let pending=null;
  try{pending=readOfflinePending()}catch(_){}
  const pendingSavedAt=pending?.savedAt?Date.parse(pending.savedAt)||0:0;
@@ -525,7 +543,7 @@ function refreshDashboardSyncIndicator(){
    setDashboardSyncIndicator('red','Hors connexion','Les données restent enregistrées sur cet appareil. Elles seront synchronisées au retour du réseau.');
    return;
  }
- if(diag.dashboardBusy||diag.cloudBusy){
+ if((diag.dashboardBusy||diag.cloudBusy) && (diag.dirty||diag.pending||pstPendingMutationCount()>0)){
    setDashboardSyncIndicator('orange','Synchronisation en cours','Envoi et vérification des données avec Supabase…');
    return;
  }
@@ -561,6 +579,7 @@ async function confirmSupabaseReachable(){
 async function dashboardSyncNow(){
  if(dashboardSyncBusy)return;
  dashboardSyncBusy=true;
+ dashboardSyncBusySince=Date.now();
  refreshDashboardSyncIndicator();
  const btn=$('#dashboardSyncNow');
  const oldText=btn?.textContent||'↻ Synchroniser maintenant';
@@ -603,7 +622,7 @@ async function dashboardSyncNow(){
    console.error('Synchronisation manuelle tableau de bord',error);
    setDashboardSyncIndicator(hasLocalSyncPending()?'orange':'red',hasLocalSyncPending()?'Synchronisation en attente':'Erreur Supabase',error?.message||String(error));
  }finally{
-   dashboardSyncBusy=false;
+   dashboardSyncBusy=false;dashboardSyncBusySince=0;
    if(btn){btn.disabled=false;btn.textContent=oldText}
    const diag=pendingSyncDiagnostics();
    if(navigator.onLine&&lastConfirmedSupabaseAt&&!diag.dirty&&!diag.pending&&!cloudBusy){
@@ -769,7 +788,7 @@ async function cloudSaveNow({silent=false,mergeRemote=true}={}){
    }
    return false;
  }
- cloudBusy=true;
+ cloudBusy=true;cloudBusySince=Date.now();
  try{
    if(!silent)setSaveState('Envoi au serveur…','loading');
    let toSave=deepClone(db),remoteRow=null;
@@ -1346,7 +1365,7 @@ function safeRenderAll(){
  return errors;
 }
 
-// ===== V147.137 — moteur central de synchronisation =====
+// ===== V147.138 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -1430,7 +1449,7 @@ async function pstSyncQueueNow({silent=false}={}){
   if(!currentUser||!supabaseClient||!navigator.onLine)return {ok:false,offline:true,pending:pstPendingMutationCount()};
   const q=pstLoadSyncQueue();if(!q.length)return {ok:true,pending:0};
   if(cloudBusy)return {ok:false,busy:true,pending:q.length};
-  cloudBusy=true;
+  cloudBusy=true;cloudBusySince=Date.now();
   try{
     if(!silent)setSaveState(`Synchronisation de ${q.length} modification(s)…`,'loading');
     const remoteRow=await fetchRemote();
@@ -1477,7 +1496,7 @@ async function pstSyncQueueNow({silent=false}={}){
     setSaveState(`Synchronisation en attente — ${pstPendingMutationCount()} modification(s)`,'local');
     console.error('pstSyncQueueNow',error);
     return {ok:false,error:lastCloudError,pending:pstPendingMutationCount()};
-  }finally{cloudBusy=false;refreshDashboardSyncIndicator()}
+  }finally{cloudBusy=false;cloudBusySince=0;refreshDashboardSyncIndicator()}
 }
 window.PSTSyncEngine={queue:pstQueueMutation,sync:pstSyncQueueNow,pending:pstPendingMutationCount,mergeRemote:pstMergeRemoteWithoutOverwritingLocal};
 
@@ -2377,7 +2396,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.137 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.138 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2447,7 +2466,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.137 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.138 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2595,7 +2614,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.137 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.138 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2847,7 +2866,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.137 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.138 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2901,7 +2920,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.137 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.138 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3514,7 +3533,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.137 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.138 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -5431,12 +5450,15 @@ function updateLiveConnectionLocalStates(){
   pstSetLiveConnection('auth',currentUser&&supabaseClient?'green':(navigator.onLine?'red':'orange'),currentUser&&supabaseClient?`Connecté${currentUser.email?' : '+currentUser.email:''}`:'Session Supabase absente');
   const pending=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
   pstSetLiveConnection('queue',pending===0?'green':'orange',pending===0?'Aucune modification en attente':`${pending} modification(s) en attente`);
-  if(cloudBusy||dashboardSyncBusy){
+  healStaleSyncBusyFlags();
+  if((cloudBusy||dashboardSyncBusy) && pending>0){
     pstSetLiveConnection('write','orange','Synchronisation en cours');
   }else if(pending>0||localDirty){
-    pstSetLiveConnection('write','orange','Modifications locales non confirmées');
+    pstSetLiveConnection('write','orange',`${pending||1} modification(s) locale(s) non confirmée(s)`);
   }else if(lastConfirmedSupabaseAt){
-    pstSetLiveConnection('write','green',`Dernière confirmation ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`);
+    pstSetLiveConnection('write','green',`Synchronisé · confirmation ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`);
+  }else if(pstLiveConnections.read?.state==='green'){
+    pstSetLiveConnection('write','green','Aucune modification en attente');
   }else{
     pstSetLiveConnection('write','gray','Aucune confirmation depuis l’ouverture');
   }
@@ -5472,10 +5494,10 @@ async function probeLiveConnections({forceOpenAI=false}={}){
     const now=Date.now();
     const shouldProbeOpenAI=forceOpenAI||!pstLiveConnections.lastOpenAIProbeAt||(now-pstLiveConnections.lastOpenAIProbeAt>60000);
     try{
-      const {data,error}=await supabaseClient.functions.invoke('analyze-document',{body:{ping:true,probeOpenAI:shouldProbeOpenAI}});
-      if(error)throw error;
+      const call=await pstEdgeFunctionRequest('analyze-document',{ping:true,probeOpenAI:shouldProbeOpenAI},{timeoutMs:12000});
+      const data=call?.data||{};
       if(data?.edge===true||data?.pong===true||data?.ok===true){
-        pstSetLiveConnection('edge','green','Fonction joignable');
+        pstSetLiveConnection('edge','green',`Fonction joignable (${call.via==='direct'?'HTTP direct':'SDK'})`);
       }else{
         pstSetLiveConnection('edge','red',data?.error||'Réponse invalide');
       }
@@ -5486,9 +5508,10 @@ async function probeLiveConnections({forceOpenAI=false}={}){
         else pstSetLiveConnection('openai','orange','État OpenAI non confirmé');
       }
     }catch(e){
-      pstSetLiveConnection('edge','red',e?.message||'Edge Function inaccessible');
+      const msg=e?.message||String(e);
+      pstSetLiveConnection('edge','red',msg);
       pstSetLiveConnection('openai','red','Non testable : Edge Function inaccessible');
-      pstLiveConnections.errors.push(`IA : ${e?.message||e}`);
+      pstLiveConnections.errors.push(`IA : ${msg}`);
     }
   }finally{
     pstLiveConnections.lastProbeAt=Date.now();
@@ -5694,7 +5717,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.137 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.138 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -6097,7 +6120,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.137 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.138 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){
@@ -6122,6 +6145,61 @@ function aiDestinationValue(v=''){
   };
   return map[n]||'notes';
 }
+
+async function pstEdgeFunctionRequest(functionName,body,{timeoutMs=25000}={}){
+  if(!supabaseClient||!currentUser)throw new Error('Session Supabase absente');
+
+  // 1) Chemin SDK Supabase.
+  try{
+    const sdkPromise=supabaseClient.functions.invoke(functionName,{body});
+    const sdk=await withTimeout(sdkPromise,timeoutMs);
+    if(!sdk?.error){
+      return {data:sdk?.data||{},via:'sdk'};
+    }
+    console.warn(`Edge Function ${functionName} via SDK`,sdk.error);
+  }catch(error){
+    console.warn(`Edge Function ${functionName} via SDK indisponible`,error);
+  }
+
+  // 2) Secours : appel HTTP direct à l'URL officielle des Edge Functions.
+  const cfg=window.SUPABASE_CONFIG||{};
+  const base=String(cfg.url||'').replace(/\/+$/,'');
+  if(!base)throw new Error('URL Supabase absente');
+
+  const sessionResult=await supabaseClient.auth.getSession();
+  const token=sessionResult?.data?.session?.access_token;
+  if(!token)throw new Error('Session Supabase expirée : reconnectez-vous');
+
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{
+    const res=await fetch(`${base}/functions/v1/${encodeURIComponent(functionName)}`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${token}`,
+        'apikey':String(cfg.publishableKey||'')
+      },
+      body:JSON.stringify(body||{}),
+      signal:controller.signal
+    });
+    let data=null;
+    const raw=await res.text();
+    try{data=raw?JSON.parse(raw):{}}catch(_){data={raw}}
+    if(!res.ok){
+      if(res.status===404)throw new Error(`Edge Function "${functionName}" non déployée dans Supabase`);
+      if(res.status===401||res.status===403)throw new Error('Edge Function refusée : session ou autorisation Supabase invalide');
+      throw new Error(data?.error||data?.message||`Edge Function HTTP ${res.status}`);
+    }
+    return {data:data||{},via:'direct'};
+  }catch(error){
+    if(error?.name==='AbortError')throw new Error('Edge Function trop lente ou injoignable (délai dépassé)');
+    throw error;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
 async function analyzeDocumentWithAI(file,{mode='document'}={}){
   if(!file)throw new Error('Document absent');
   if(!navigator.onLine)throw new Error('Analyse IA disponible lorsque le réseau est revenu');
@@ -6130,16 +6208,19 @@ async function analyzeDocumentWithAI(file,{mode='document'}={}){
   const maxBytes=18*1024*1024;
   if(Number(file.size||0)>maxBytes)throw new Error('Document trop volumineux pour l’analyse IA (18 Mo maximum)');
   const base64=await fileToBase64Payload(file);
-  const {data,error}=await supabaseClient.functions.invoke('analyze-document',{
-    body:{
-      fileName:file.name||'document',
-      mimeType:file.type||(/\.pdf$/i.test(file.name||'')?'application/pdf':'application/octet-stream'),
-      base64,
-      mode
-    }
-  });
-  if(error)throw error;
+
+  const call=await pstEdgeFunctionRequest('analyze-document',{
+    fileName:file.name||'document',
+    mimeType:file.type||(/\.pdf$/i.test(file.name||'')?'application/pdf':'application/octet-stream'),
+    base64,
+    mode
+  },{timeoutMs:45000});
+
+  const data=call?.data||{};
   if(!data?.ok)throw new Error(data?.error||'Analyse IA non disponible');
+  if(data?.analysis&&typeof data.analysis==='object'){
+    data.analysis._transport=call.via;
+  }
   return data.analysis||{};
 }
 function aiReviewHtml(ai){
@@ -6253,70 +6334,54 @@ async function recognizeScannedNote(file){
  scanSetProgress(5,'Préparation du document',file.name||'Document');
  scannedNoteAttachment={name:file.name||`scan-${todayISO()}`,type:file.type||'application/octet-stream',file};
 
- // 1) IA en priorité : photo OU PDF complet.
- if(navigator.onLine&&supabaseClient&&currentUser){
-   try{
-     scanSetProgress(15,'Analyse IA du document','Lecture de l’écriture, de la structure, des dates, noms et échéances…');
-     const ai=await analyzeDocumentWithAI(file,{mode:'handwritten_note'});
-     const text=formatScannedNote(ai.transcription||ai.text||'');
-     if(text){
-       $('#scanNoteText').value=text;
-       const suggested=aiDestinationValue(ai.destination||suggestScannedDestination(text));
-       if($('#scanDestination'))$('#scanDestination').value=suggested;
-       if(!$('#scanNoteTitle').value)$('#scanNoteTitle').value=String(ai.title||text.split('\n').find(Boolean)||'Document scanné').slice(0,80);
-       $('#scanQuality').innerHTML=`${aiReviewHtml(ai)}<span class="badge">Lecture : IA</span><span class="badge">${text.trim()?text.trim().split(/\s+/).length:0} mots</span><p class="hint">Relisez les éléments signalés « à vérifier » avant d’enregistrer.</p>`;
-       scanSetProgress(100,'Analyse IA terminée','Le texte reste modifiable avant validation.');
-       setTimeout(()=>scanSetProgress(null),700);
-       return;
-     }
-   }catch(aiError){
-     console.warn('Analyse IA indisponible, repli OCR local',aiError);
-     if($('#scanQuality'))$('#scanQuality').innerHTML=`<div class="import-message warning">IA indisponible : ${esc(aiError?.message||String(aiError))}. Lecture locale OCR utilisée en secours.</div>`;
-   }
+ if(!navigator.onLine){
+   scanSetProgress(null);
+   $('#scanQuality').innerHTML='<div class="import-message warning">Analyse IA obligatoire : aucun réseau disponible. Le document n’est pas interprété.</div>';
+   return;
+ }
+ if(!supabaseClient||!currentUser){
+   scanSetProgress(null);
+   $('#scanQuality').innerHTML='<div class="import-message warning">Analyse IA obligatoire : session Supabase absente.</div>';
+   return;
  }
 
- // 2) Secours hors ligne / IA indisponible : OCR local existant.
  try{
-   const source=await imageSourceFromFile(file);
-   if(!window.Tesseract)throw new Error('Moteur OCR indisponible');
-   scanSetProgress(10,'Lecture locale de secours','Initialisation de la reconnaissance française…');
-   const result=await Tesseract.recognize(source,'fra',{logger:m=>{
-     if(m.status==='recognizing text')scanSetProgress(15+Math.round((m.progress||0)*80),'Reconnaissance locale du texte',`${Math.round((m.progress||0)*100)} %`);
-     else if(m.status)scanSetProgress(10,'Préparation OCR',m.status);
-   }});
-   const raw=result?.data?.text||'', conf=Math.round(result?.data?.confidence||0);
-   $('#scanNoteText').value=formatScannedNote(raw);
-   const suggested=suggestScannedDestination(raw);if($('#scanDestination'))$('#scanDestination').value=suggested;
-   const destLabel=$('#scanDestination')?.selectedOptions?.[0]?.textContent||'Bloc-notes';
-   const previous=$('#scanQuality')?.innerHTML||'';
-   $('#scanQuality').innerHTML=previous+`<span class="badge">OCR local : ${conf}%</span><span class="badge">${raw.trim()?raw.trim().split(/\s+/).length:0} mots détectés</span><span class="badge">Destination proposée : ${esc(destLabel)}</span>`;
-   if(!$('#scanNoteTitle').value){const first=formatScannedNote(raw).split('\n').find(Boolean)||'Document scanné';$('#scanNoteTitle').value=first.slice(0,80)}
-   scanSetProgress(100,'Reconnaissance terminée','Relisez le texte avant de l’enregistrer.');
+   scanSetProgress(15,'Analyse IA du document','Lecture de l’écriture, de la structure, des dates, noms et échéances…');
+   const ai=await analyzeDocumentWithAI(file,{mode:'handwritten_note'});
+   const text=formatScannedNote(ai.transcription||ai.text||'');
+   if(!text)throw new Error('L’IA n’a retourné aucun texte exploitable');
+   $('#scanNoteText').value=text;
+   const suggested=aiDestinationValue(ai.destination||suggestScannedDestination(text));
+   if($('#scanDestination'))$('#scanDestination').value=suggested;
+   if(!$('#scanNoteTitle').value)$('#scanNoteTitle').value=String(ai.title||text.split('\n').find(Boolean)||'Document scanné').slice(0,80);
+   $('#scanQuality').innerHTML=`${aiReviewHtml(ai)}<span class="badge good">Lecture : IA obligatoire</span><span class="badge">${text.trim()?text.trim().split(/\s+/).length:0} mots</span><p class="hint">Relisez les éléments signalés « à vérifier » avant d’enregistrer.</p>`;
+   scanSetProgress(100,'Analyse IA terminée','Le texte reste modifiable avant validation.');
    setTimeout(()=>scanSetProgress(null),700);
  }catch(error){
-   console.error(error);scanSetProgress(null);toast(`Lecture impossible : ${error?.message||error}`);
+   console.error('Analyse IA obligatoire',error);
+   scanSetProgress(null);
+   const msg=error?.message||String(error);
+   $('#scanQuality').innerHTML=`<div class="import-message warning"><strong>IA indisponible.</strong><br>${esc(msg)}<br><small>Aucun OCR de secours n’a été utilisé. Réessayez après correction de la connexion.</small></div>`;
+   pstSetLiveConnection?.('edge','red',msg);
+   renderLiveConnections?.();
  }
 }
 async function correctScannedNote(){
- const box=$('#scanNoteText');if(!box||!box.value.trim())return toast('Aucun texte à corriger');
+ const box=$('#scanNoteText');
  const file=scannedNoteAttachment?.file;
- if(file&&navigator.onLine&&supabaseClient&&currentUser){
-   try{
-     scanSetProgress(20,'Relecture IA','Correction de forme sans inventer les mots incertains…');
-     const ai=await analyzeDocumentWithAI(file,{mode:'handwritten_note'});
-     const text=formatScannedNote(ai.transcription||ai.text||box.value);
-     if(text)box.value=text;
-     $('#scanQuality').innerHTML=aiReviewHtml(ai)+`<span class="badge good">Relecture IA terminée</span>`;
-     scanSetProgress(null);return;
-   }catch(e){console.warn('Relecture IA indisponible',e)}
- }
+ if(!file)return toast('Aucun document à relire par l’IA');
+ if(!navigator.onLine||!supabaseClient||!currentUser)return toast('IA indisponible : vérifiez les voyants de connexion');
  try{
-   scanSetProgress(25,'Correction du texte','Correction orthographique de secours…');
-   box.value=await languageToolCorrect(box.value);
+   scanSetProgress(20,'Relecture IA','Correction de forme sans inventer les mots incertains…');
+   const ai=await analyzeDocumentWithAI(file,{mode:'handwritten_note'});
+   const text=formatScannedNote(ai.transcription||ai.text||'');
+   if(!text)throw new Error('Aucun texte retourné par l’IA');
+   if(box)box.value=text;
+   $('#scanQuality').innerHTML=aiReviewHtml(ai)+`<span class="badge good">Relecture IA terminée</span>`;
    scanSetProgress(null);
-   toast('Texte corrigé — relisez avant validation');
  }catch(e){
-   console.warn(e);box.value=formatScannedNote(box.value);scanSetProgress(null);toast('Mise en forme locale appliquée');
+   scanSetProgress(null);
+   toast(`IA indisponible : ${e?.message||e}`);
  }
 }
 async function saveScannedNote(){
