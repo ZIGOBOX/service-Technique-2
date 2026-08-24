@@ -1,0 +1,6 @@
+V147.133 — Import Chronotime
+Les repères calendaires L1..L31, M1..M31, J1..J31, V1..V31, S1..S31 et D1..D31 sont ignorés comme codes métier.
+Ils restent uniquement utilisés pour repérer les dates.
+CA, RTT, RH, RFE et les durées (9h50, 9h20, 7h00, etc.) restent lus normalement.
+Double protection : analyse du nouveau PDF + données Chronotime déjà stockées.
+Le reste de V147.132 est conservé.

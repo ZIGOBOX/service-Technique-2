@@ -153,6 +153,10 @@
   }
   function monthSequence(start){const y=Number(start.slice(0,4));return Array.from({length:12},(_,i)=>{const n=8+i;return {year:y+Math.floor(n/12),month:(n%12)+1}})}
   function validDate(y,m,d,letter){const dt=new Date(y,m-1,d);return dt.getFullYear()===y&&dt.getMonth()===m-1&&dt.getDate()===d&&DAY_LETTER[dt.getDay()]===letter}
+  // V147.133 — L1/M1/J1/V1/S1/D1 etc. are calendar labels, never business codes.
+  function isChronotimeCalendarMarker(value){
+    return /^[LMSJVD]\s*(?:[1-9]|[12]\d|3[01])$/i.test(String(value||'').trim());
+  }
   function parseChronotime(extracted,file){
     const text=extracted.text, allLines=extracted.pages.flatMap(p=>p.lines), nt=norm(text), nf=norm(file?.name||'');
     const isGfiAnnual=/gfi\s+chrono\s*time/i.test(text)&&/synoptique\s+annuel/i.test(text);
@@ -169,9 +173,9 @@
       const normalized=line.replace(/(\d)\s*[Hh]\s*(\d{2})/g,'$1h$2');
       const pairs=[...normalized.matchAll(/\b([LMSJVD])\s*(\d{1,2})\s+(\d{1,2}(?:h|:)\d{2}|[A-ZÀ-Ü][A-ZÀ-Ü0-9._-]{1,9})\b/g)];
       if(!pairs.length||!months.length)continue;let mi=0;
-      for(const p of pairs){const letter=p[1],day=Number(p[2]),rawValue=p[3].replace(':','h').toUpperCase(),value=/h/i.test(rawValue)?rawValue:canonicalChronoCode(rawValue);let found=-1;for(let k=mi;k<months.length;k++){const x=months[k];if(validDate(x.year,x.month,day,letter)){found=k;break}}if(found<0)continue;mi=found+1;const x=months[found],date=`${x.year}-${String(x.month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;const duration=/h/i.test(value)?durationToMinutes(value.toLowerCase()):null;if(duration==null)codes.add(value);if(!seenDates.has(date)){seenDates.add(date);records.push({date,value,duration});}}
+      for(const p of pairs){const letter=p[1],day=Number(p[2]),rawValue=p[3].replace(':','h').toUpperCase();if(isChronotimeCalendarMarker(rawValue))continue;const value=/h/i.test(rawValue)?rawValue:canonicalChronoCode(rawValue);if(isChronotimeCalendarMarker(value))continue;let found=-1;for(let k=mi;k<months.length;k++){const x=months[k];if(validDate(x.year,x.month,day,letter)){found=k;break}}if(found<0)continue;mi=found+1;const x=months[found],date=`${x.year}-${String(x.month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;const duration=/h/i.test(value)?durationToMinutes(value.toLowerCase()):null;if(duration==null)codes.add(value);if(!seenDates.has(date)){seenDates.add(date);records.push({date,value,duration});}}
     }
-    const ignored=new Set(['GFI','CHRONO','TIME','LYCEE','TOTAL','REFERENCE','ECART','TPS','NOM','AGENT','SOLDE','HEURE','HEURES','PRESENCE','MAT']);[...codes].forEach(c=>{if(ignored.has(c))codes.delete(c)});
+    const ignored=new Set(['GFI','CHRONO','TIME','LYCEE','TOTAL','REFERENCE','ECART','TPS','NOM','AGENT','SOLDE','HEURE','HEURES','PRESENCE','MAT']);[...codes].forEach(c=>{if(ignored.has(c)||isChronotimeCalendarMarker(c))codes.delete(c)});for(let i=records.length-1;i>=0;i--)if(records[i].duration==null&&isChronotimeCalendarMarker(records[i].value))records.splice(i,1);
 
     let expectedDays=0;
     if(start&&end){const a=new Date(start+'T12:00:00'),b=new Date(end+'T12:00:00');expectedDays=Math.round((b-a)/86400000)+1}
