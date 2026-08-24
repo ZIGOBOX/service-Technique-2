@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.138';
+const APP_VERSION='147.139';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -387,7 +387,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.138 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.139 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -1365,7 +1365,7 @@ function safeRenderAll(){
  return errors;
 }
 
-// ===== V147.138 — moteur central de synchronisation =====
+// ===== V147.139 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -2396,7 +2396,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.138 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.139 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2466,7 +2466,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.138 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.139 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2614,7 +2614,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.138 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.139 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2866,7 +2866,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.138 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.139 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2920,7 +2920,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.138 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.139 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3533,7 +3533,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.138 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.139 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -5494,7 +5494,7 @@ async function probeLiveConnections({forceOpenAI=false}={}){
     const now=Date.now();
     const shouldProbeOpenAI=forceOpenAI||!pstLiveConnections.lastOpenAIProbeAt||(now-pstLiveConnections.lastOpenAIProbeAt>60000);
     try{
-      const call=await pstEdgeFunctionRequest('analyze-document',{ping:true,probeOpenAI:shouldProbeOpenAI},{timeoutMs:12000});
+      const call=await pstEdgeFunctionRequest('swift-function',{ping:true,probeOpenAI:shouldProbeOpenAI},{timeoutMs:12000});
       const data=call?.data||{};
       if(data?.edge===true||data?.pong===true||data?.ok===true){
         pstSetLiveConnection('edge','green',`Fonction joignable (${call.via==='direct'?'HTTP direct':'SDK'})`);
@@ -5545,7 +5545,7 @@ async function runSupabaseConnectionDiagnostic(){
     if(wr?.error)throw wr.error;result.databaseWrite=true;
   }catch(e){result.errors.push(`Écriture base : ${e?.message||e}`)}
   try{
-    const {data,error}=await supabaseClient.functions.invoke('analyze-document',{body:{ping:true}});
+    const {data,error}=await supabaseClient.functions.invoke('swift-function',{body:{ping:true}});
     if(error)throw error;result.edgeFunction=Boolean(data?.ok||data?.pong);
     if(!result.edgeFunction)result.errors.push(data?.error||'Edge Function sans réponse valide');
   }catch(e){result.errors.push(`IA Edge Function : ${e?.message||e}`)}
@@ -5717,7 +5717,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.138 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.139 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -6120,7 +6120,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.138 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.139 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){
@@ -6209,7 +6209,7 @@ async function analyzeDocumentWithAI(file,{mode='document'}={}){
   if(Number(file.size||0)>maxBytes)throw new Error('Document trop volumineux pour l’analyse IA (18 Mo maximum)');
   const base64=await fileToBase64Payload(file);
 
-  const call=await pstEdgeFunctionRequest('analyze-document',{
+  const call=await pstEdgeFunctionRequest('swift-function',{
     fileName:file.name||'document',
     mimeType:file.type||(/\.pdf$/i.test(file.name||'')?'application/pdf':'application/octet-stream'),
     base64,

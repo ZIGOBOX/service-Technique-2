@@ -1,0 +1,6 @@
+V147.139 — CORRECTION ENDPOINT EDGE FUNCTION
+
+- L'application appelle désormais le véritable slug Supabase : swift-function.
+- Le nom affiché dans Supabase peut rester analyze-document : Supabase conserve le slug/endpoint d'origine swift-function après renommage.
+- Les trois appels applicatifs concernés ont été corrigés : diagnostic temps réel, test Edge Function et analyse IA des documents.
+- Aucun autre comportement métier n'a été modifié.
