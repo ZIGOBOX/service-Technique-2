@@ -1,0 +1,9 @@
+V147.140 — CORRECTION ÉCRITURE / SYNCHRO
+
+- La file centrale de mutations est désormais l'unique référence pour savoir s'il reste quelque chose à envoyer.
+- Si la file locale est vide, localDirty et l'ancienne file offline résiduelle sont nettoyés.
+- Le voyant Écriture / synchro passe au vert quand aucune mutation n'est en attente.
+- Le voyant orange n'apparaît plus pour une "modification fantôme".
+- Lecture Supabase reste indépendante : si elle est lente ou en erreur, cela ne fabrique plus artificiellement une écriture en attente.
+- Endpoint IA swift-function conservé.
+- Aucune règle métier modifiée.

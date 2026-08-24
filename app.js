@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.139';
+const APP_VERSION='147.140';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -387,7 +387,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.139 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.140 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -509,17 +509,26 @@ function pendingSyncDiagnostics(){
  try{pending=readOfflinePending()}catch(_){}
  const pendingSavedAt=pending?.savedAt?Date.parse(pending.savedAt)||0:0;
  const confirmedAt=Number(lastConfirmedSupabaseAt||0);
+ const queueCount=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
 
- // Une ancienne file locale antérieure à une confirmation Supabase réussie est obsolète.
- const stalePending=!!pending && confirmedAt>0 && pendingSavedAt>0 && pendingSavedAt<=confirmedAt && !localDirty;
- if(stalePending){
-   try{clearOfflinePending()}catch(_){}
-   pending=null;
+ // V147.140 — la file centrale de mutations est la référence absolue.
+ // Si elle est vide, un ancien localDirty/offlinePending ne doit plus afficher
+ // une modification fantôme "non confirmée".
+ if(queueCount===0){
+   if(localDirty){
+     console.warn('Nettoyage localDirty fantôme : file centrale vide');
+     localDirty=false;
+   }
+   if(pending){
+     try{clearOfflinePending()}catch(_){}
+     pending=null;
+   }
  }
 
  return {
-   dirty:!!localDirty,
-   pending:!!pending,
+   dirty:queueCount>0,
+   pending:queueCount>0,
+   queueCount,
    pendingSavedAt,
    confirmedAt,
    cloudBusy:!!cloudBusy,
@@ -528,7 +537,7 @@ function pendingSyncDiagnostics(){
 }
 function hasLocalSyncPending(){
  const d=pendingSyncDiagnostics();
- return d.dirty||d.pending;
+ return Number(d.queueCount||0)>0;
 }
 function setDashboardSyncIndicator(state,title,detail=''){
  const panel=$('#dashboardSyncPanel'),led=$('#dashboardSyncLed'),t=$('#dashboardSyncTitle'),d=$('#dashboardSyncDetail');
@@ -547,12 +556,8 @@ function refreshDashboardSyncIndicator(){
    setDashboardSyncIndicator('orange','Synchronisation en cours','Envoi et vérification des données avec Supabase…');
    return;
  }
- if(diag.dirty||diag.pending){
-   const reasons=[];
-   if(diag.dirty)reasons.push('modification locale non confirmée');
-   if(diag.pending)reasons.push('file hors-ligne encore présente');
-   if(diag.pendingSavedAt)reasons.push(`file du ${new Date(diag.pendingSavedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`);
-   setDashboardSyncIndicator('orange','Données à synchroniser',reasons.join(' · '));
+ if(Number(diag.queueCount||0)>0){
+   setDashboardSyncIndicator('orange','Données à synchroniser',`${diag.queueCount} modification(s) locale(s) en attente de confirmation Supabase.`);
    return;
  }
  if(lastConfirmedSupabaseAt){
@@ -595,7 +600,7 @@ async function dashboardSyncNow(){
      return;
    }
 
-   // S'il existe des données locales, on les envoie. Sinon on vérifie quand même Supabase.
+   // La file centrale est l'unique source de vérité pour les données à envoyer.
    if(hasLocalSyncPending()){
      const result=await window.PSTMainState.persistNow();
      if(!result?.ok||result?.offline||result?.pending){
@@ -1365,7 +1370,7 @@ function safeRenderAll(){
  return errors;
 }
 
-// ===== V147.139 — moteur central de synchronisation =====
+// ===== V147.140 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -2396,7 +2401,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.139 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.140 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2466,7 +2471,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.139 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.140 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2614,7 +2619,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.139 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.140 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2866,7 +2871,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.139 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.140 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2920,7 +2925,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.139 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.140 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3533,7 +3538,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.139 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.140 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -5451,16 +5456,16 @@ function updateLiveConnectionLocalStates(){
   const pending=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
   pstSetLiveConnection('queue',pending===0?'green':'orange',pending===0?'Aucune modification en attente':`${pending} modification(s) en attente`);
   healStaleSyncBusyFlags();
-  if((cloudBusy||dashboardSyncBusy) && pending>0){
-    pstSetLiveConnection('write','orange','Synchronisation en cours');
-  }else if(pending>0||localDirty){
-    pstSetLiveConnection('write','orange',`${pending||1} modification(s) locale(s) non confirmée(s)`);
+
+  if(pending>0){
+    pstSetLiveConnection('write',(cloudBusy||dashboardSyncBusy)?'orange':'orange',
+      (cloudBusy||dashboardSyncBusy)?`Synchronisation de ${pending} modification(s)…`:`${pending} modification(s) en attente de confirmation`);
   }else if(lastConfirmedSupabaseAt){
-    pstSetLiveConnection('write','green',`Synchronisé · confirmation ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`);
+    pstSetLiveConnection('write','green',`Aucune modification en attente · dernière confirmation ${new Date(lastConfirmedSupabaseAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`);
   }else if(pstLiveConnections.read?.state==='green'){
     pstSetLiveConnection('write','green','Aucune modification en attente');
   }else{
-    pstSetLiveConnection('write','gray','Aucune confirmation depuis l’ouverture');
+    pstSetLiveConnection('write','green','Aucune modification en attente');
   }
 }
 async function probeLiveConnections({forceOpenAI=false}={}){
@@ -5486,6 +5491,10 @@ async function probeLiveConnections({forceOpenAI=false}={}){
       const read=await withTimeout(supabaseClient.from('app_state').select('updated_at').eq('user_id',currentUser.id).single(),8000);
       if(read?.error)throw read.error;
       pstSetLiveConnection('read','green',read?.data?.updated_at?`Réponse ${new Date(read.data.updated_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`:'Base joignable');
+      if(typeof pstPendingMutationCount==='function'&&pstPendingMutationCount()===0){
+        localDirty=false;
+        try{clearOfflinePending()}catch(_){}
+      }
     }catch(e){
       pstSetLiveConnection('read','red',e?.message||'Lecture impossible');
       pstLiveConnections.errors.push(`Base : ${e?.message||e}`);
@@ -5717,7 +5726,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.139 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.140 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -6120,7 +6129,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.139 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.140 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){
