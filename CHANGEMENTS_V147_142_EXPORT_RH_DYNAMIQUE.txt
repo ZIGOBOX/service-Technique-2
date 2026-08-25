@@ -1,0 +1,22 @@
+V147.142 — EXPORT EXCEL : NON-CONFORMITÉS RH DYNAMIQUES
+
+Base stricte : V147.141.
+
+L'onglet "Horaires annuels" recalcule désormais automatiquement après toute modification :
+Heure début/fin, Type RH, Temps effectif, Amplitude, Avertissement RH et Contrôle.
+
+Les warnings RH affichent notamment :
+- plages incomplètes ;
+- ordre chronologique incorrect ;
+- amplitude > 12 h ;
+- temps effectif > 10 h ;
+- durée < 3 h ;
+- pause méridienne 30 min si l'horaire couvre 11h30–14h00 ;
+- régime de pause pour une plage >= 6 h ;
+- pause >= amplitude ;
+- doublon agent / période / profil / jour ;
+- horaire à compléter.
+
+Toutes les non-conformités d'une même ligne peuvent apparaître ensemble.
+WARNING uniquement : aucune restriction, aucun blocage.
+Aucune autre logique du logiciel n'a été modifiée.

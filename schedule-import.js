@@ -1,4 +1,4 @@
-/* Pilotage Service Technique V51 — import/export des horaires */
+/* Pilotage Service Technique V147.142 — import/export horaires + contrôles RH non bloquants */
 (() => {
   'use strict';
 
@@ -31,6 +31,19 @@
     const s=String(v).trim();const m=s.match(/^(\d{1,2})[:hH](\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:'';
   };
   const minutes=t=>{const m=timeText(t).match(/^(\d{2}):(\d{2})$/);return m?Number(m[1])*60+Number(m[2]):null};
+  const rhCheck=({start='',end='',pause=0,segments=[]}={})=>{
+    const warnings=[];pause=Math.max(0,Number(pause||0));let segs=Array.isArray(segments)?segments.filter(x=>x?.start&&x?.end):[];if(!segs.length&&start&&end)segs=[{start,end}];
+    const p=segs.map(x=>({s:minutes(x.start),e:minutes(x.end)})).filter(x=>x.s!==null&&x.e!==null&&x.e>=x.s);if(!p.length)return {warnings,effective:0,amplitude:0,type:'Repos'};
+    const first=Math.min(...p.map(x=>x.s)),last=Math.max(...p.map(x=>x.e)),raw=p.reduce((n,x)=>n+x.e-x.s,0),effective=Math.max(0,(raw-pause)/60),amplitude=(last-first)/60;
+    const type=effective>=6?'Journée':effective>=3?'Demi-journée':'Durée courte';
+    if(amplitude>12)warnings.push('Amplitude supérieure à 12 h');
+    if(effective>10)warnings.push('Temps de travail effectif supérieur à 10 h');
+    if(effective>0&&effective<3)warnings.push('Durée inférieure à 3 h : repère RH demi-journée non atteint');
+    if(first<690&&last>840&&pause<30)warnings.push('Pause méridienne de 30 min prévue lorsque l’horaire couvre 11h30–14h00');
+    return {warnings,effective,amplitude,type};
+  };
+  const excelHhmm=t=>{const m=String(t||'').match(/^(\d{1,2}):(\d{2})$/);return m?Number(m[1])*100+Number(m[2]):''};
+
   const agentLabel=a=>[a?.title,a?.firstName,a?.lastName].filter(Boolean).join(' ').trim()||a?.name||a?.agent||'';
   const agentMap=()=>{
     const byId=new Map(),byName=new Map();
@@ -63,17 +76,83 @@
     active.forEach(a=>{
       const workdays=(Array.isArray(a.workdays)&&a.workdays.length?a.workdays:[1,2,3,4,5]).map(Number);
       const plans=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(a.id));
-      if(!plans.length){DAYS.forEach((day,i)=>{const key=DAY_KEYS[i],working=workdays.includes(key);hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':activeSchoolRange().start,'Date fin':activeSchoolRange().end,'Profil horaire':'Standard','Jour':day,'Type de journée':working?'Travaillé':'Repos','Heure début':'','Heure fin':'','Pause (minutes)':0,'Mission principale':'','Commentaire':'','Contrôle':working?'À compléter':'OK'})});return}
-      plans.forEach(p=>DAYS.forEach((day,i)=>{const key=DAY_KEYS[i],x=p.dayProfiles?.[key]||{},working=workdays.includes(key)&&!!(x.start&&x.end);hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':p.effectiveFrom||activeSchoolRange().start,'Date fin':p.effectiveTo||activeSchoolRange().end,'Profil horaire':p.shift||'Standard','Jour':day,'Type de journée':working?'Travaillé':'Repos','Heure début':working?x.start||'':'','Heure fin':working?x.end||'':'','Pause (minutes)':working?Number(x.pause||0):0,'Mission principale':working?x.missions||'':'','Commentaire':'','Contrôle':'OK'})}));
+      if(!plans.length){DAYS.forEach((day,i)=>{const key=DAY_KEYS[i],working=workdays.includes(key);hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':activeSchoolRange().start,'Date fin':activeSchoolRange().end,'Profil horaire':'Standard','Jour':day,'Type de journée':working?'Travaillé':'Repos','Heure début':'','Heure fin':'','Pause (minutes)':0,'Plage 1 début':'','Plage 1 fin':'','Plage 2 début':'','Plage 2 fin':'','Interruption non comptabilisée (min)':0,'Type RH':'','Temps effectif (h)':'','Amplitude (h)':'','Avertissement RH':working?'Horaire à compléter':'','Mission principale':'','Commentaire':'','Contrôle':working?'À compléter':'OK'})});return}
+      plans.forEach(p=>DAYS.forEach((day,i)=>{const key=DAY_KEYS[i],x=p.dayProfiles?.[key]||{},working=workdays.includes(key)&&!!(x.start&&x.end);(()=>{const seg=(x.segments||[]).filter(z=>z?.start&&z?.end),s1=seg[0]||{start:x.start||'',end:seg.length>1?seg[0]?.end||'':x.end||''},s2=seg[1]||null,rh=working?rhCheck({start:x.start,end:x.end,pause:Number(x.pause||0),segments:seg}):{warnings:[],effective:0,amplitude:0,type:'Repos'};hrows.push({'Identifiant agent':a.id,'Nom de l’agent':agentLabel(a),'Date début':p.effectiveFrom||activeSchoolRange().start,'Date fin':p.effectiveTo||activeSchoolRange().end,'Profil horaire':p.shift||'Standard','Jour':day,'Type de journée':working?'Travaillé':'Repos','Heure début':working?x.start||'':'','Heure fin':working?x.end||'':'','Pause (minutes)':working?Number(x.pause||0):0,'Plage 1 début':working?s1.start||x.start||'':'','Plage 1 fin':working?s1.end||x.end||'':'','Plage 2 début':working?(s2?.start||''):'','Plage 2 fin':working?(s2?.end||''):'','Interruption non comptabilisée (min)':working?Number(x.pause||0):0,'Type RH':working?rh.type:'Repos','Temps effectif (h)':working?Number(rh.effective.toFixed(2)):0,'Amplitude (h)':working?Number(rh.amplitude.toFixed(2)):0,'Avertissement RH':rh.warnings.join(' · '),'Mission principale':working?x.missions||'':'','Commentaire':'','Contrôle':'OK'})})()}));
     });
     const wsH=XLSX.utils.json_to_sheet(hrows);
-    const hHeaders=Object.keys(hrows[0]||{});setWidths(wsH,[25,28,13,13,16,13,16,12,12,16,30,28,34]);addAutoFilter(wsH,wsH['!ref']);styleSheet(wsH,hHeaders.length,hrows.length+1);
-    // Formules de contrôle Excel, calculées à l'ouverture du fichier.
-    const col={id:'A',name:'B',from:'C',to:'D',profile:'E',day:'F',type:'G',start:'H',end:'I',pause:'J',control:'M'};
+    const hHeaders=Object.keys(hrows[0]||{});setWidths(wsH,[25,28,13,13,16,13,16,12,12,14,14,14,14,18,14,16,14,16,36,30,28,34]);addAutoFilter(wsH,wsH['!ref']);styleSheet(wsH,hHeaders.length,hrows.length+1);
+    // V147.142 — Matrice RH dynamique.
+    // Les cellules de calcul se recalculent dans Excel à chaque modification d'horaire.
+    // Les anomalies sont des WARNING uniquement : jamais de blocage.
+    const idx=Object.fromEntries(hHeaders.map((h,i)=>[h,XLSX.utils.encode_col(i)]));
+    const col=name=>idx[name];
+
     for(let r=2;r<=hrows.length+1;r++){
-      wsH[`${col.control}${r}`]={t:'s',f:`IF(AND(${col.id}${r}="",${col.name}${r}=""),"ERREUR : agent manquant",IF(OR(${col.from}${r}="",${col.to}${r}=""),"ERREUR : période incomplète",IF(${col.to}${r}<${col.from}${r},"ERREUR : fin de période avant début",IF(OR(${col.profile}${r}="",${col.day}${r}=""),"ERREUR : profil ou jour manquant",IF(${col.type}${r}="Repos","OK",IF(OR(AND(${col.start}${r}="",${col.end}${r}<>""),AND(${col.start}${r}<>"",${col.end}${r}="")),"ERREUR : début/fin incomplet",IF(AND(${col.start}${r}<>"",${col.end}${r}<>"",TIMEVALUE(${col.end}${r})<=TIMEVALUE(${col.start}${r})),"ERREUR : fin avant début",IF(AND(${col.start}${r}<>"",${col.end}${r}<>"",${col.pause}${r}>=(TIMEVALUE(${col.end}${r})-TIMEVALUE(${col.start}${r}))*1440),"ERREUR : pause trop longue","OK")))))))`};
+      const typeDay=col('Type de journée');
+      const start=col('Heure début'),end=col('Heure fin'),pause=col('Pause (minutes)');
+      const p1s=col('Plage 1 début'),p1e=col('Plage 1 fin'),p2s=col('Plage 2 début'),p2e=col('Plage 2 fin');
+      const interrupt=col('Interruption non comptabilisée (min)');
+      const typeRh=col('Type RH'),effective=col('Temps effectif (h)'),amplitude=col('Amplitude (h)');
+      const warning=col('Avertissement RH'),control=col('Contrôle');
+      const current=hrows[r-2]||{};
+
+      wsH[`${start}${r}`]={
+        t:'s',v:String(current['Heure début']||''),
+        f:`IF(${typeDay}${r}="Repos","",IF(${p1s}${r}<>"",${p1s}${r},${p2s}${r}))`
+      };
+      wsH[`${end}${r}`]={
+        t:'s',v:String(current['Heure fin']||''),
+        f:`IF(${typeDay}${r}="Repos","",IF(${p2e}${r}<>"",${p2e}${r},${p1e}${r}))`
+      };
+
+      const pauseUsed=`IF(${interrupt}${r}<>"",N(${interrupt}${r}),N(${pause}${r}))`;
+
+      wsH[`${effective}${r}`]={
+        t:'n',v:Number(current['Temps effectif (h)']||0),
+        f:`IF(${typeDay}${r}="Repos",0,IF(AND(${start}${r}<>"",${end}${r}<>""),MAX(0,(TIMEVALUE(${end}${r})-TIMEVALUE(${start}${r}))*24-${pauseUsed}/60),""))`
+      };
+      wsH[`${amplitude}${r}`]={
+        t:'n',v:Number(current['Amplitude (h)']||0),
+        f:`IF(${typeDay}${r}="Repos",0,IF(AND(${start}${r}<>"",${end}${r}<>""),(TIMEVALUE(${end}${r})-TIMEVALUE(${start}${r}))*24,""))`
+      };
+      wsH[`${typeRh}${r}`]={
+        t:'s',v:String(current['Type RH']||''),
+        f:`IF(${typeDay}${r}="Repos","Repos",IF(${effective}${r}="","À compléter",IF(${effective}${r}<3,"Durée courte",IF(${effective}${r}<6,"Demi-journée","Journée"))))`
+      };
+
+      const incomplete=`OR(AND(${p1s}${r}<>"",${p1e}${r}=""),AND(${p1s}${r}="",${p1e}${r}<>""),AND(${p2s}${r}<>"",${p2e}${r}=""),AND(${p2s}${r}="",${p2e}${r}<>""))`;
+      const chronology=`OR(AND(${p1s}${r}<>"",${p1e}${r}<>"",TIMEVALUE(${p1e}${r})<TIMEVALUE(${p1s}${r})),AND(${p2s}${r}<>"",${p2e}${r}<>"",TIMEVALUE(${p2e}${r})<TIMEVALUE(${p2s}${r})),AND(${p1e}${r}<>"",${p2s}${r}<>"",TIMEVALUE(${p2s}${r})<TIMEVALUE(${p1e}${r})))`;
+      const coversLunch=`AND(${start}${r}<>"",${end}${r}<>"",TIMEVALUE(${start}${r})<TIME(11,30,0),TIMEVALUE(${end}${r})>TIME(14,0,0))`;
+      const lunchGap=`IF(AND(${p1e}${r}<>"",${p2s}${r}<>""),MAX(0,(TIMEVALUE(${p2s}${r})-TIMEVALUE(${p1e}${r}))*1440),${pauseUsed})`;
+      const morningDuration=`IF(AND(${p1s}${r}<>"",${p1e}${r}<>""),(TIMEVALUE(${p1e}${r})-TIMEVALUE(${p1s}${r}))*24,0)`;
+      const afternoonDuration=`IF(AND(${p2s}${r}<>"",${p2e}${r}<>""),(TIMEVALUE(${p2e}${r})-TIMEVALUE(${p2s}${r}))*24,0)`;
+
+      // Toutes les anomalies de la ligne sont concaténées pour être visibles en même temps.
+      const parts=[
+        `IF(${incomplete},"⚠ Plages fixes incomplètes · ","")`,
+        `IF(${chronology},"⚠ Ordre chronologique des plages à vérifier · ","")`,
+        `IF(AND(${amplitude}${r}<>"",${amplitude}${r}>12),"⚠ Amplitude supérieure à 12 h · ","")`,
+        `IF(AND(${effective}${r}<>"",${effective}${r}>10),"⚠ Temps de travail effectif supérieur à 10 h · ","")`,
+        `IF(AND(${effective}${r}>0,${effective}${r}<3),"⚠ Durée inférieure à 3 h : minimum RH demi-journée non atteint · ","")`,
+        `IF(AND(${coversLunch},${lunchGap}<30,${morningDuration}>=6),"⚠ Pause méridienne 30 min obligatoire ; plage du matin ≥ 6 h : pause journalière 20 min à prévoir dans la plage · ","")`,
+        `IF(AND(${coversLunch},${lunchGap}<30,${afternoonDuration}>=6),"⚠ Pause méridienne 30 min obligatoire ; plage de l’après-midi ≥ 6 h : pause journalière 20 min à prévoir dans la plage · ","")`,
+        `IF(AND(${coversLunch},${lunchGap}<30,${morningDuration}<6,${afternoonDuration}<6),"⚠ Pause méridienne de 30 min minimum à prévoir · ","")`,
+        `IF(AND(${start}${r}<>"",${end}${r}<>"",${pauseUsed}>=(TIMEVALUE(${end}${r})-TIMEVALUE(${start}${r}))*1440),"⚠ Pause supérieure ou égale à l’amplitude · ","")`,
+        `IF(COUNTIFS($A:$A,A${r},$C:$C,C${r},$D:$D,D${r},$E:$E,E${r},$F:$F,F${r})>1,"⚠ Doublon agent / période / profil / jour · ","")`
+      ];
+      const joined=parts.join('&');
+      const warnFormula=`IF(${typeDay}${r}="Repos","",IF(AND(${start}${r}="",${end}${r}=""),"⚠ Horaire à compléter",IFERROR(IF(RIGHT(${joined},3)=" · ",LEFT(${joined},LEN(${joined})-3),${joined}),"")))`;
+
+      wsH[`${warning}${r}`]={t:'s',v:String(current['Avertissement RH']||''),f:warnFormula};
+      wsH[`${control}${r}`]={
+        t:'s',v:current['Avertissement RH']?'WARNING':'OK',
+        f:`IF(${typeDay}${r}="Repos","OK",IF(${warning}${r}<>"","WARNING — À vérifier","OK — Conforme RH"))`
+      };
     }
-    // Les contrôles restent dans la colonne M. La couleur est appliquée dans l'application après import.
+
+    wb.Workbook=wb.Workbook||{};
+    wb.Workbook.CalcPr={calcMode:'auto',fullCalcOnLoad:true,forceFullCalc:true};
+
     XLSX.utils.book_append_sheet(wb,wsH,'Horaires annuels');
 
     const rrows=(db.rotations||[]).map(r=>{const a=(db.agents||[]).find(x=>String(x.id)===String(r.agentId));return {'Identifiant roulement':r.id,'Identifiant agent':r.agentId,'Nom de l’agent':agentLabel(a),'Date d’effet':r.effectiveFrom||'','Date de fin':r.effectiveTo||'','Nom du roulement':r.no||'','Semaines Matin':Number(r.morningWeeks||2),'Semaines Soir':Number(r.eveningWeeks||2),'Commence par':r.startShift||'Matin','Heure matin début':r.morningStart||'','Heure matin fin':r.morningEnd||'','Heure soir début':r.eveningStart||'','Heure soir fin':r.eveningEnd||'','Pause (minutes)':Number(r.pause||0),'Jours travaillés':(r.weekdays||((a&&Array.isArray(a.workdays))?a.workdays:[1,2,3,4,5])).join(','),'Commentaire':r.notes||'','Contrôle':'OK'}});
@@ -84,9 +163,9 @@
       ['MATRICE HORAIRES ET ROULEMENTS — PILOTAGE SERVICE TECHNIQUE'],
       ['1. Les agents, horaires et roulements actuels sont déjà présents.'],
       ['2. Modifiez les heures, périodes, missions ou cycles. Ne modifiez pas les identifiants.'],
-      ['3. La colonne Contrôle indique les erreurs dans Excel.'],
+      ['3. Modifiez principalement Plage 1 / Plage 2 et les pauses : Heure début/fin, Type RH, Temps effectif, Amplitude, Avertissement RH et Contrôle se recalculent automatiquement.'],
       ['4. Réimportez ensuite ce même fichier dans l’application.'],
-      ['5. Le logiciel affiche une comparaison avant d’enregistrer.'],
+      ['5. Toute non-conformité RH apparaît automatiquement en WARNING dans Excel. Les warnings restent informatifs et ne bloquent jamais le réimport dans Pilotage.'],
       ['6. Les congés, RTT, absences et modifications ponctuelles ne sont pas supprimés.'],
       ['7. Dans l’onglet Agents, indiquez Oui/Non pour le samedi et le dimanche : ces valeurs mettent à jour les jours travaillés.'],['8. Renseignez aussi Permanence début, Permanence fin et Permanence pause (minutes).']
     ];
@@ -115,15 +194,18 @@
       if(Object.values(row).every(v=>String(v).trim()===''))return;
       const aid=String(get(row,'Identifiant agent','Agent ID')).trim(),name=String(get(row,"Nom de l’agent",'Nom agent','Agent')).trim();
       const agent=maps.byId.get(aid)||maps.byName.get(norm(name)); const errors=[], warnings=[];
-      const from=isoDate(get(row,'Date début','Début')),to=isoDate(get(row,'Date fin','Fin')),profile=String(get(row,'Profil horaire','Profil')).trim(),day=String(get(row,'Jour')).trim(),type=String(get(row,'Type de journée','Type')).trim()||'Travaillé',start=timeText(get(row,'Heure début','Début horaire')),end=timeText(get(row,'Heure fin','Fin horaire')),pause=Number(get(row,'Pause (minutes)','Pause')||0),mission=String(get(row,'Mission principale','Mission')).trim();
+      const from=isoDate(get(row,'Date début','Début')),to=isoDate(get(row,'Date fin','Fin')),profile=String(get(row,'Profil horaire','Profil')).trim(),day=String(get(row,'Jour')).trim(),type=String(get(row,'Type de journée','Type')).trim()||'Travaillé';
+      const p1s=timeText(get(row,'Plage 1 début')),p1e=timeText(get(row,'Plage 1 fin')),p2s=timeText(get(row,'Plage 2 début')),p2e=timeText(get(row,'Plage 2 fin'));
+      const start=timeText(get(row,'Heure début','Début horaire'))||p1s,end=timeText(get(row,'Heure fin','Fin horaire'))||p2e||p1e,pause=Number(get(row,'Interruption non comptabilisée (min)','Pause (minutes)','Pause')||0),mission=String(get(row,'Mission principale','Mission')||'');
+      const segments=[];if(p1s&&p1e)segments.push({start:p1s,end:p1e,task:'Présence'});if(p2s&&p2e)segments.push({start:p2s,end:p2e,task:'Présence'});
       if(!agent)errors.push('Agent inconnu');if(!from||!to)errors.push('Période invalide');else if(to<from)errors.push('Fin de période avant le début');if(!PROFILES.includes(profile))errors.push('Profil invalide');if(!DAYS.includes(day))errors.push('Jour invalide');
       if(norm(type)!=='repos'){
         if((start&&!end)||(!start&&end))errors.push('Début/fin incomplet');
         if(!start&&!end)warnings.push('Horaire vide : la journée deviendra repos');
-        const sm=minutes(start),em=minutes(end);if(sm!==null&&em!==null&&em<=sm)errors.push('Heure de fin avant le début');if(sm!==null&&em!==null&&pause>=em-sm)errors.push('Pause trop longue');
+        const sm=minutes(start),em=minutes(end);if(sm!==null&&em!==null&&em<=sm)errors.push('Heure de fin avant le début');if(sm!==null&&em!==null&&pause>=em-sm)warnings.push('Pause supérieure ou égale à l’amplitude : à vérifier');const rh=rhCheck({start,end,pause,segments});warnings.push(...rh.warnings.map(x=>`RH : ${x}`));
       }
-      const key=agent?`${agent.id}|${from}|${to}|${profile}|${day}`:`row-${index}`;if(duplicate.has(key))errors.push('Doublon agent / période / profil / jour');duplicate.add(key);
-      const item={kind:'Horaire',line:index+2,agent,name:agent?agentLabel(agent):name,from,to,profile,day,type,start,end,pause,mission,errors,warnings,row};results.push(item);if(!errors.length)validHours.push(item);
+      const key=agent?`${agent.id}|${from}|${to}|${profile}|${day}`:`row-${index}`;if(duplicate.has(key))warnings.push('Doublon dans le fichier : la dernière ligne sera retenue sans créer de doublon dans Pilotage');duplicate.add(key);
+      const item={kind:'Horaire',line:index+2,agent,name:agent?agentLabel(agent):name,from,to,profile,day,type,start,end,pause,segments,mission,errors,warnings,row};results.push(item);if(!errors.length)validHours.push(item);
     });
     rotations.forEach((row,index)=>{
       if(Object.values(row).every(v=>String(v).trim()===''))return;
@@ -155,7 +237,7 @@
        if(item.permanenceStart||item.permanenceEnd||Number(item.permanencePause||0)){a.permanenceSchedule={start:item.permanenceStart||'',end:item.permanenceEnd||'',pause:Number(item.permanencePause||0)};a.permanenceStart=a.permanenceSchedule.start;a.permanenceEnd=a.permanenceSchedule.end;a.permanencePause=a.permanenceSchedule.pause}
     }
     const groups=new Map();
-    pending.validHours.forEach(x=>{const key=`${x.agent.id}|${x.from}|${x.to}|${x.profile}`;if(!groups.has(key))groups.set(key,{id:null,agentId:x.agent.id,agent:agentLabel(x.agent),shift:x.profile,effectiveFrom:x.from,effectiveTo:x.to,dayProfiles:{},rows:[]});const p=groups.get(key),dayIndex=DAY_KEYS[DAYS.indexOf(x.day)],working=norm(x.type)!=='repos'&&x.start&&x.end;p.dayProfiles[dayIndex]={start:working?x.start:'',end:working?x.end:'',pause:working?x.pause:0,missions:x.mission||'',segments:[]};});
+    pending.validHours.forEach(x=>{const key=`${x.agent.id}|${x.from}|${x.to}|${x.profile}`;if(!groups.has(key))groups.set(key,{id:null,agentId:x.agent.id,agent:agentLabel(x.agent),shift:x.profile,effectiveFrom:x.from,effectiveTo:x.to,dayProfiles:{},rows:[]});const p=groups.get(key),dayIndex=DAY_KEYS[DAYS.indexOf(x.day)],working=norm(x.type)!=='repos'&&x.start&&x.end;p.dayProfiles[dayIndex]={start:working?x.start:'',end:working?x.end:'',pause:working?x.pause:0,missions:x.mission||'',segments:working?(x.segments||[]):[]};});
     let created=0,updated=0;
     groups.forEach(p=>{const idx=(db.weeklyPlans||[]).findIndex(old=>String(old.agentId)===String(p.agentId)&&old.shift===p.shift&&old.effectiveFrom===p.effectiveFrom&&old.effectiveTo===p.effectiveTo);if(idx>=0){p.id=db.weeklyPlans[idx].id||uid();db.weeklyPlans[idx]=p;updated++}else{p.id=uid();db.weeklyPlans.push(p);created++}});
     let rotCreated=0,rotUpdated=0;

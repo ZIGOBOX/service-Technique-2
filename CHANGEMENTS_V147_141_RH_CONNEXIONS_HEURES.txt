@@ -1,0 +1,23 @@
+V147.141 — BASE V147.140
+
+1. PROTOCOLE RH — AVERTISSEMENTS UNIQUEMENT
+- Contrôles inspirés de la matrice entreprise : demi-journée 3h–5h59, journée >=6h, travail effectif >10h, amplitude >12h, pause méridienne 30 min si couverture intégrale 11h30–14h.
+- Aucun contrôle RH ne bloque l'enregistrement.
+- Les avertissements sont visibles dans la saisie des horaires et dans l'import Excel.
+
+2. MATRICE IMPORT / EXPORT HORAIRES
+- Export enrichi avec : plages 1/2, interruption non comptabilisée, type RH, temps effectif, amplitude, avertissement RH.
+- Les contrôles Excel sont des WARNING et restent modifiables.
+- Réimport des plages 1/2 et conservation des segments.
+- Les doublons de fichier sont signalés ; Pilotage ne crée pas de doublon d'horaire.
+- Code établissement non utilisé.
+
+3. ONGLET CONNEXIONS
+- Tous les panneaux/LED Internet, Supabase, synchro, Edge Function et IA ont été retirés du tableau de bord et regroupés dans un onglet Connexions.
+
+4. HEURES ENTRE DEUX DATES
+- Ajout dans Pilotage des horaires d'un calcul par agent entre deux dates.
+- Affiche Réalisé, Prévu, Écart et nombre de jours comptabilisés.
+- Utilise exactement dayInfo/dayHours, donc les règles déjà validées : horaire théorique par défaut, horaire réel, congés, maladie 7h/écart 0, Chronotime, heures +/-.
+
+AUCUN AUTRE MODULE MÉTIER MODIFIÉ.

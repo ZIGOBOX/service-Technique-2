@@ -668,6 +668,10 @@
 @media(max-width:900px){.live-connections-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.live-connections-grid{grid-template-columns:1fr}}
 </style>
+
+<style id="v147141-rh">
+.rh-warning-box{margin:12px 0;padding:12px 14px;border:1px solid #f59e0b;border-radius:12px;background:#fffbeb;color:#92400e}.rh-warning-box strong{display:block;margin-bottom:6px}.rh-warning-box ul{margin:6px 0 8px 20px}.agent-hours-range-panel{margin-bottom:14px}#connections .sync-panel,#connections .live-connections-panel{margin-top:12px}
+</style>
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -712,9 +716,10 @@
       <button class="nav-btn" data-view="weather"><span>☁️</span>Météo</button>
       <button class="nav-btn" data-view="waste"><span>🗑️</span>Poubelles</button>
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
+      <button class="nav-btn" data-view="connections"><span>●</span>Connexions</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.140 — 24/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.142 — 25/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -738,38 +743,6 @@
         <div class="academic-year-control dashboard-academic-year" id="globalAcademicYearWrap"><button type="button" class="ghost year-step" id="prevAcademicYear" aria-label="Année scolaire précédente">‹</button><label>Année scolaire<select id="globalAcademicYear" aria-label="Année scolaire active"></select></label><button type="button" class="ghost year-step" id="nextAcademicYear" aria-label="Année scolaire suivante">›</button></div>
         <p id="dailyMotivation" class="daily-motivation">Petit à petit, l’oiseau fait son nid.</p>
       </div>
-
-      <article class="panel sync-panel no-print" id="dashboardSyncPanel" aria-live="polite">
-        <div class="sync-panel-main">
-          <span class="sync-led red" id="dashboardSyncLed" aria-hidden="true"></span>
-          <div class="sync-panel-copy">
-            <strong id="dashboardSyncTitle">Supabase non vérifié</strong>
-            <small id="dashboardSyncDetail">Vérification de la synchronisation…</small>
-          </div>
-        </div>
-        <button type="button" class="primary" id="dashboardSyncNow">↻ Synchroniser maintenant</button>
-      </article>
-
-      <article class="panel live-connections-panel no-print" id="liveConnectionsPanel" aria-live="polite">
-        <div class="panel-head live-connections-head">
-          <div>
-            <span class="calendar-kicker">CONNEXIONS</span>
-            <h3>État des connexions en temps réel</h3>
-            <p class="muted" id="liveConnectionsUpdated">Initialisation…</p>
-          </div>
-          <button type="button" class="ghost small" id="liveConnectionsTestNow">Tester maintenant</button>
-        </div>
-        <div class="live-connections-grid">
-          <div class="live-connection-item" data-live-connection="internet"><span class="live-dot gray"></span><div><strong>Internet</strong><small>Non vérifié</small></div></div>
-          <div class="live-connection-item" data-live-connection="auth"><span class="live-dot gray"></span><div><strong>Session Supabase</strong><small>Non vérifiée</small></div></div>
-          <div class="live-connection-item" data-live-connection="read"><span class="live-dot gray"></span><div><strong>Lecture Supabase</strong><small>Non vérifiée</small></div></div>
-          <div class="live-connection-item" data-live-connection="write"><span class="live-dot gray"></span><div><strong>Écriture / synchro</strong><small>Non vérifiée</small></div></div>
-          <div class="live-connection-item" data-live-connection="queue"><span class="live-dot gray"></span><div><strong>File locale</strong><small>Non vérifiée</small></div></div>
-          <div class="live-connection-item" data-live-connection="edge"><span class="live-dot gray"></span><div><strong>Edge Function IA</strong><small>Non vérifiée</small></div></div>
-          <div class="live-connection-item" data-live-connection="openai"><span class="live-dot gray"></span><div><strong>OpenAI</strong><small>Non vérifié</small></div></div>
-        </div>
-        <div id="liveConnectionsError" class="live-connections-error hidden"></div>
-      </article>
 
       <div class="quick-actions" id="dashboardQuickActions">
         <button data-quick="agent-day">👤 Jour agent</button>
@@ -874,6 +847,7 @@
     <section class="view" id="planning">
       <div class="section-actions"><div><h3>Pilotage des horaires</h3><p>Heures prévues, arrivées, départs, heures supplémentaires et écarts.</p></div><button class="primary" id="newShift">＋ Saisie horaire</button></div>
       <article class="panel"><div class="panel-head"><div><h3>Base annuelle — horaires théoriques de référence</h3><p class="muted">Un profil Matin et/ou Soir par agent, avec des horaires différents chaque jour. Ces horaires alimentent automatiquement les roulements et le tableau de bord.</p></div><div class="panel-actions"><button class="ghost" id="addWeeklyAgent">＋ Agent</button><button class="ghost" id="exportWeeklyPlans">Excel</button><button class="primary" id="newWeeklyPlan">＋ Planning</button></div></div><div id="weeklyPlansBoard" class="weekly-plans-board"></div></article>
+      <article class="panel agent-hours-range-panel"><div class="panel-head"><div><h3>Heures d’un agent entre deux dates</h3><p class="muted">Calcul basé sur la colonne Réalisé : horaire théorique s’il n’y a aucune modification, puis congés, maladie, horaire réel et Chronotime selon les règles du logiciel.</p></div></div><div class="form-grid"><label>Agent<select id="hoursRangeAgent"></select></label><label>Du<input type="date" id="hoursRangeFrom"></label><label>Au<input type="date" id="hoursRangeTo"></label><div><button type="button" class="primary" id="calculateHoursRange">Calculer</button></div></div><div id="hoursRangeResult" class="summary-grid"><article><span>Réalisé</span><strong>—</strong></article></div></article>
       <div class="filters"><input type="month" id="planningMonth"><select id="planningAgent"><option value="">Tous les agents</option></select><select id="planningSignal"><option value="">Tous les écarts</option></select><button class="ghost" data-print="planning">Imprimer</button></div>
       <div id="planningSummary" class="summary-grid"></div>
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Agent</th><th>Prévu</th><th>Réalisé</th><th>Écart</th><th>Signal</th><th></th></tr></thead><tbody id="planningTable"></tbody></table></div>
@@ -883,11 +857,11 @@
       <div class="section-actions"><div><h3>Import / export des horaires</h3><p>Téléchargez les agents, horaires théoriques et roulements actuels, modifiez le tableur, puis réimportez-le.</p></div></div>
       <div class="import-kpi-grid">
         <article class="panel"><h3>1. Télécharger</h3><p>Le fichier contient automatiquement les agents déjà présents, leurs profils horaires et leurs roulements.</p><div class="button-stack"><button class="primary" id="downloadScheduleMatrix">📥 Télécharger la matrice préremplie</button><a class="ghost button-link" href="./Matrice_Horaires_Roulements_Agents.xlsx?v=68.0" download>📄 Télécharger un exemplaire vierge</a></div></article>
-        <article class="panel"><h3>2. Modifier dans Excel</h3><p>Modifiez uniquement les horaires, périodes, missions ou roulements. Ne changez pas l’identifiant de l’agent.</p><ul class="compact-list"><li>Vert : ligne correcte</li><li>Jaune : ligne à vérifier</li><li>Rouge : erreur bloquante</li></ul></article>
+        <article class="panel"><h3>2. Modifier dans Excel</h3><p>Modifiez uniquement les horaires, périodes, missions ou roulements. Ne changez pas l’identifiant de l’agent.</p><ul class="compact-list"><li>Vert : ligne correcte</li><li>Jaune : ligne à vérifier</li><li>Rouge : ligne techniquement inexploitable</li></ul></article>
         <article class="panel"><h3>3. Réimporter</h3><p>Le logiciel compare les données et vous montre les changements avant validation.</p><label class="primary file-label schedule-file-label">📤 Choisir le fichier Excel<input type="file" id="scheduleImportFile" accept=".xlsx,.xls"></label></article>
       </div>
-      <article class="panel"><div class="panel-head"><div><h3>Contrôle avant import</h3><p class="muted">Aucune donnée n’est enregistrée avant votre validation.</p></div><button class="primary hidden" id="confirmScheduleImport">Valider les lignes correctes</button></div><div id="scheduleImportSummary" class="import-summary empty">Choisissez un fichier Excel rempli.</div><div id="scheduleImportPreview" class="table-wrap"></div></article>
-      <article class="panel"><h3>Règles appliquées</h3><div class="rule-grid"><span>✓ Agent reconnu par identifiant ou nom</span><span>✓ Période valide</span><span>✓ Début et fin renseignés ensemble</span><span>✓ Fin après le début</span><span>✓ Pause inférieure à la présence</span><span>✓ Absence de doublon</span><span>✓ Profils Matin/Soir présents pour un roulement</span><span>✓ Aperçu des créations et modifications</span></div><p class="hint">L’import met à jour uniquement les horaires annuels et les roulements. Les congés, RTT, absences et modifications ponctuelles sont conservés.</p></article>
+      <article class="panel"><div class="panel-head"><div><h3>Contrôle avant import</h3><p class="muted">Aucune donnée n’est enregistrée avant votre validation.</p></div><button class="primary hidden" id="confirmScheduleImport">Valider les lignes exploitables</button></div><div id="scheduleImportSummary" class="import-summary empty">Choisissez un fichier Excel rempli.</div><div id="scheduleImportPreview" class="table-wrap"></div></article>
+      <article class="panel"><h3>Contrôles appliqués</h3><div class="rule-grid"><span>✓ Agent reconnu par identifiant ou nom</span><span>✓ Période et horaires techniquement exploitables</span><span>⚠ Demi-journée : repère 3 h à 5 h 59</span><span>⚠ Journée : repère 6 h à 10 h</span><span>⚠ Amplitude : repère 12 h maximum</span><span>⚠ Pause méridienne : 30 min si couverture 11h30–14h00</span><span>⚠ Doublons signalés sans création de doublon dans Pilotage</span><span>✓ Aperçu avant validation</span></div><p class="hint"><strong>Les règles RH sont des avertissements uniquement :</strong> elles ne bloquent jamais une saisie ou un import. Seules les lignes techniquement impossibles à interpréter (agent inconnu, date invalide, heure manquante) sont ignorées. Les congés, RTT, absences et modifications ponctuelles sont conservés.</p></article>
     </section>
 
     <section class="view" id="absences">
@@ -1210,6 +1184,44 @@
       <article class="panel"><div class="panel-head"><h3>Aperçu</h3></div><div id="reportPreview" class="report-preview"></div></article>
     </section>
 
+
+    <section class="view" id="connections">
+      <div class="section-actions"><div><h3>Connexions</h3><p>État en temps réel d’Internet, Supabase, synchronisation et services IA.</p></div></div>
+      <div class="notice"><strong>Diagnostic centralisé :</strong> tous les voyants techniques sont regroupés ici. Une panne IA n’empêche pas l’enregistrement des données métier.</div>
+      <article class="panel sync-panel no-print" id="dashboardSyncPanel" aria-live="polite">
+        <div class="sync-panel-main">
+          <span class="sync-led red" id="dashboardSyncLed" aria-hidden="true"></span>
+          <div class="sync-panel-copy">
+            <strong id="dashboardSyncTitle">Supabase non vérifié</strong>
+            <small id="dashboardSyncDetail">Vérification de la synchronisation…</small>
+          </div>
+        </div>
+        <button type="button" class="primary" id="dashboardSyncNow">↻ Synchroniser maintenant</button>
+      </article>
+
+      <article class="panel live-connections-panel no-print" id="liveConnectionsPanel" aria-live="polite">
+        <div class="panel-head live-connections-head">
+          <div>
+            <span class="calendar-kicker">CONNEXIONS</span>
+            <h3>État des connexions en temps réel</h3>
+            <p class="muted" id="liveConnectionsUpdated">Initialisation…</p>
+          </div>
+          <button type="button" class="ghost small" id="liveConnectionsTestNow">Tester maintenant</button>
+        </div>
+        <div class="live-connections-grid">
+          <div class="live-connection-item" data-live-connection="internet"><span class="live-dot gray"></span><div><strong>Internet</strong><small>Non vérifié</small></div></div>
+          <div class="live-connection-item" data-live-connection="auth"><span class="live-dot gray"></span><div><strong>Session Supabase</strong><small>Non vérifiée</small></div></div>
+          <div class="live-connection-item" data-live-connection="read"><span class="live-dot gray"></span><div><strong>Lecture Supabase</strong><small>Non vérifiée</small></div></div>
+          <div class="live-connection-item" data-live-connection="write"><span class="live-dot gray"></span><div><strong>Écriture / synchro</strong><small>Non vérifiée</small></div></div>
+          <div class="live-connection-item" data-live-connection="queue"><span class="live-dot gray"></span><div><strong>File locale</strong><small>Non vérifiée</small></div></div>
+          <div class="live-connection-item" data-live-connection="edge"><span class="live-dot gray"></span><div><strong>Edge Function IA</strong><small>Non vérifiée</small></div></div>
+          <div class="live-connection-item" data-live-connection="openai"><span class="live-dot gray"></span><div><strong>OpenAI</strong><small>Non vérifié</small></div></div>
+        </div>
+        <div id="liveConnectionsError" class="live-connections-error hidden"></div>
+      </article>
+
+      <article class="panel"><h3>Lecture des voyants</h3><div class="rule-grid"><span>🟢 Vert : connexion confirmée</span><span>🟠 Orange : opération en cours ou données en attente</span><span>🔴 Rouge : service non joignable ou erreur</span><span>⚪ Gris : contrôle pas encore effectué</span></div></article>
+    </section>
     <section class="view" id="settings">
       <article class="panel">
         <div class="panel-head"><div><h3>PRONOTE</h3><p class="muted">Adresse utilisée par le bouton « Ouvrir PRONOTE ».</p></div></div>

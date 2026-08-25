@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.140';
+const APP_VERSION='147.142';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -387,7 +387,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.140 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.142 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -511,7 +511,7 @@ function pendingSyncDiagnostics(){
  const confirmedAt=Number(lastConfirmedSupabaseAt||0);
  const queueCount=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
 
- // V147.140 — la file centrale de mutations est la référence absolue.
+ // V147.142 — la file centrale de mutations est la référence absolue.
  // Si elle est vide, un ancien localDirty/offlinePending ne doit plus afficher
  // une modification fantôme "non confirmée".
  if(queueCount===0){
@@ -1354,7 +1354,8 @@ function safeRenderAll(){
    documents:['Documents',renderDocuments],
    archives:['Archives',renderArchives],
    settings:['Paramètres',renderSettings],
-   reports:['Rapports',renderReportPreview]
+   reports:['Rapports',renderReportPreview],
+   connections:['Connexions',()=>{updateLiveConnectionLocalStates();renderLiveConnections();refreshDashboardSyncIndicator()}]
  };
  const errors=[];
  const active=document.querySelector('.view.active')?.id||((typeof currentView!=='undefined'&&currentView)?currentView:'dashboard');
@@ -1370,7 +1371,7 @@ function safeRenderAll(){
  return errors;
 }
 
-// ===== V147.140 — moteur central de synchronisation =====
+// ===== V147.142 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -2149,7 +2150,7 @@ async function deleteRecord(type,id,label='élément'){
 }
 
 /* ---------- Navigation ---------- */
-const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage','room-prep':'Préparation salle & café',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',settings:'Paramètres'};
+const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage','room-prep':'Préparation salle & café',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',connections:'Connexions',settings:'Paramètres'};
 function setView(view){if(!document.getElementById(view))return;currentView=view;$$('.view').forEach(v=>v.classList.toggle('active',v.id===view));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if($('#pageTitle'))$('#pageTitle').textContent=VIEW_TITLES[view]||view;document.body.classList.remove('menu-open');window.PSTNavigation?.closeMenu?.();window.scrollTo({top:0,behavior:'auto'});renderAll()}
 window.PSTSetView=setView;
 
@@ -2401,7 +2402,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.140 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.142 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2471,7 +2472,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.140 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.142 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2619,7 +2620,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.140 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.142 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2871,7 +2872,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.140 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.142 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2925,7 +2926,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.140 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.142 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3538,7 +3539,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.140 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.142 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -3860,6 +3861,30 @@ async function deleteWeeklyPlanById(planId){
  closeModal();
  toast('✅ Horaire théorique supprimé et confirmé dans Supabase');
 }
+function rhMinutes(t){const m=String(t||'').match(/^(\d{1,2}):(\d{2})$/);return m?Number(m[1])*60+Number(m[2]):null}
+function rhScheduleCheck({start='',end='',pause=0,segments=[]}={}){
+ const warnings=[];pause=Math.max(0,Number(pause||0));
+ let segs=Array.isArray(segments)?segments.filter(x=>x?.start&&x?.end):[];
+ if(!segs.length&&start&&end)segs=[{start,end}];
+ if(!segs.length)return {warnings,effective:0,amplitude:0,type:'Repos / non travaillé'};
+ const parsed=segs.map(x=>({s:rhMinutes(x.start),e:rhMinutes(x.end)})).filter(x=>x.s!==null&&x.e!==null&&x.e>=x.s);
+ if(!parsed.length)return {warnings:['Horaire à vérifier : format horaire incomplet.'],effective:0,amplitude:0,type:'À vérifier'};
+ const first=Math.min(...parsed.map(x=>x.s)),last=Math.max(...parsed.map(x=>x.e));
+ const raw=parsed.reduce((n,x)=>n+(x.e-x.s),0),effective=Math.max(0,(raw-pause)/60),amplitude=(last-first)/60;
+ const type=effective>=6?'Journée':effective>=3?'Demi-journée':'Durée courte';
+ if(amplitude>12)warnings.push(`Amplitude ${amplitude.toFixed(2).replace('.',',')} h : protocole RH à vérifier (> 12 h).`);
+ if(effective>10)warnings.push(`Travail effectif ${effective.toFixed(2).replace('.',',')} h : protocole RH à vérifier (> 10 h).`);
+ if(effective>0&&effective<3)warnings.push(`Travail effectif ${effective.toFixed(2).replace('.',',')} h : inférieur au repère RH de 3 h pour une demi-journée.`);
+ if(effective>=3&&effective<6)warnings.push(`Classification RH conseillée : demi-journée (${effective.toFixed(2).replace('.',',')} h).`);
+ if(effective>=6&&effective<=10)warnings.push(`Classification RH : journée (${effective.toFixed(2).replace('.',',')} h).`);
+ // La matrice entreprise exige une pause méridienne de 30 min quand la journée couvre toute la plage 11:30–14:00.
+ if(first<690&&last>840&&pause<30)warnings.push(`Pause méridienne : l’horaire couvre 11h30–14h00 ; le protocole prévoit 30 min. Saisie autorisée.`);
+ return {warnings,effective,amplitude,type};
+}
+function rhWarningsHtml(check){
+ if(!check?.warnings?.length)return '<div class="import-success"><strong>✓ Aucun avertissement RH</strong><span>La saisie reste toujours modifiable.</span></div>';
+ return `<div class="rh-warning-box"><strong>⚠ Avertissements RH — non bloquants</strong><ul>${check.warnings.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><small>Ces contrôles sont informatifs : Pilotage n’empêche jamais l’enregistrement pour une règle RH.</small></div>`;
+}
 function openWeeklyPlan(i=null,agentId=''){
  normalizeWeeklyPlans();
  const old=i!==null?db.weeklyPlans[i]:null;
@@ -3871,7 +3896,7 @@ function openWeeklyPlan(i=null,agentId=''){
  openModal(old?'Modifier les horaires théoriques':'Nouveaux horaires théoriques',
  `<div class="notice"><strong>Base annuelle théorique :</strong> la période proposée reprend automatiquement l’année scolaire active, puis les horaires de chaque jour. <strong>Un agent ne peut avoir qu’un seul horaire théorique par date.</strong> Si la période choisie chevauche un horaire existant, l’application vous demandera l’autorisation de le remplacer.</div>
  <div class="form-grid"><label>Agent<select name="agentId" required>${agentOptions(p.agentId)}</select></label><label>Profil<select name="shift">${selectOptions(['Standard','Matin','Soir'],p.shift||'Standard')}</select></label>${field('Valable du','effectiveFrom',p.effectiveFrom||activeRange.start,'date','required')}${field('Valable au','effectiveTo',p.effectiveTo||activeRange.end,'date','required')}</div>
- <div class="day-profile-editor">${days.map(([label,key])=>{const x=p.dayProfiles?.[key]||{};return `<fieldset><legend>${label}</legend><div class="form-grid"><label>Début<input type="time" name="start_${key}" value="${esc(x.start||'')}"></label><label>Fin<input type="time" name="end_${key}" value="${esc(x.end||'')}"></label><label>Pause (min)<input type="number" min="0" step="5" name="pause_${key}" value="${esc(x.pause||0)}"></label><label class="span2">Missions principales<input name="missions_${key}" value="${esc(x.missions||'')}"></label></div></fieldset>`}).join('')}</div>`,
+ <div class="day-profile-editor">${days.map(([label,key])=>{const x=p.dayProfiles?.[key]||{};return `<fieldset><legend>${label}</legend><div class="form-grid"><label>Début<input type="time" name="start_${key}" value="${esc(x.start||'')}"></label><label>Fin<input type="time" name="end_${key}" value="${esc(x.end||'')}"></label><label>Pause (min)<input type="number" min="0" step="5" name="pause_${key}" value="${esc(x.pause||0)}"></label><label class="span2">Missions principales<input name="missions_${key}" value="${esc(x.missions||'')}"></label></div></fieldset>`}).join('')}</div><div id="weeklyRhWarnings" class="span2"></div>`,
  async form=>{
    const o=formDataObj(form);
    if(!o.agentId){toast('Choisissez un agent');return {ok:false}}
@@ -3895,6 +3920,9 @@ function openWeeklyPlan(i=null,agentId=''){
      draft.dayProfiles[key]={start:st,end:en,pause:Number(o[`pause_${key}`]||0),missions:o[`missions_${key}`]||'',segments:[]};
    }
    draft.rows=[];
+   const rhAll=[];
+   for(const [label,key] of days){const x=draft.dayProfiles[key]||{};if(x.start&&x.end){const c=rhScheduleCheck(x);for(const w of c.warnings)rhAll.push(`${label} : ${w}`)}}
+   if(rhAll.length)toast(`⚠️ ${rhAll.length} avertissement(s) RH — enregistrement autorisé`);
 
    const conflicts=weeklyPlanConflicts(draft.agentId,draft.effectiveFrom,draft.effectiveTo,old?.id||'');
    if(conflicts.length){
@@ -3972,8 +4000,37 @@ function openWeeklyPlan(i=null,agentId=''){
    return {ok:true};
  },
  {onDelete:old?()=>deleteWeeklyPlanById(old.id):null});
+ const modalForm=$('#modalForm');
+ const refreshRh=()=>{
+   const box=$('#weeklyRhWarnings');if(!box||!modalForm)return;
+   const all=[];
+   for(const [label,key] of days){const st=modalForm.elements[`start_${key}`]?.value||'',en=modalForm.elements[`end_${key}`]?.value||'',pause=Number(modalForm.elements[`pause_${key}`]?.value||0);if(st&&en){const c=rhScheduleCheck({start:st,end:en,pause});for(const w of c.warnings)all.push(`${label} : ${w}`)}}
+   box.innerHTML=rhWarningsHtml({warnings:all});
+ };
+ modalForm?.addEventListener('input',refreshRh);modalForm?.addEventListener('change',refreshRh);refreshRh();
 }
-function renderPlanning(){renderWeeklyPlans();const month=$('#planningMonth').value||monthISO(),agent=$('#planningAgent').value,signal=$('#planningSignal').value;const start=`${month}-01`,end=localISO(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0));const rows=[];for(const a of db.agents.filter(x=>x.status==='Actif'&&(!agent||x.id===agent))){let d=start;while(d<=end){if(![0,6].includes(parseDate(d).getDay())){const info=dayInfo(a.id,d),h=dayHours(info);let sig=isAbsenceType(info.dayType)?'Absence':h.delta>0.01?'Heures supplémentaires':h.delta<-0.01?'Heures manquantes':'Conforme';if(!signal||sig===signal)rows.push({a,d,info,h,sig})}d=addDays(d,1)}}const sums=rows.reduce((s,r)=>{s.p+=r.h.planned;s.a+=r.h.total;s.o+=Number(r.info.overtime||0);s.d+=Number(r.h.delta||0);return s},{p:0,a:0,o:0,d:0});$('#planningSummary').innerHTML=`<article><span>Prévu</span><strong>${fmtHours(sums.p)}</strong></article><article><span>Réalisé</span><strong>${fmtHours(sums.a)}</strong></article><article><span>Écart</span><strong>${sums.d>=0?'+':''}${fmtHours(sums.d)}</strong></article><article><span>Heures ajoutées</span><strong>${fmtHours(sums.o)}</strong></article>`;$('#planningTable').innerHTML=rows.length?rows.map(r=>{const disp=planningDisplayFor(r.a,r.d);return `<tr><td>${fmtDate(r.d)}</td><td>${esc(agentName(r.a))}</td><td>${r.info.dayType==='Présence'?`${r.info.plannedStart||'—'}–${r.info.plannedEnd||'—'} (${fmtHours(r.h.planned)})`:badge(r.info.dayType)}</td><td>${r.info.dayType==='Présence'&&disp.realChanged?`${esc(disp.real)} · <strong>${fmtHours(r.h.total)}</strong>`:r.info.dayType!=='Présence'?`${badge(r.info.dayType)} · <strong>${fmtHours(r.h.total)}</strong>`:`<strong>${fmtHours(r.h.total)}</strong>`}</td><td>${r.h.delta>=0?'+':''}${fmtHours(r.h.delta)}</td><td>${badge(r.sig)}</td><td>${r.info.source==='manual'&&r.info.note?`<button class="icon-btn manual-info-trigger" type="button" data-show-day-info="${r.a.id}" data-date="${r.d}" title="${esc(r.info.note)}">ⓘ</button>`:''}<button class="icon-btn" data-agent-day="${r.a.id}" data-date="${r.d}">✎</button></td></tr>`}).join(''):emptyRow(7)}
+function calculateAgentHoursBetween(agentId,from,to){
+ if(!agentId||!from||!to||to<from)return null;
+ let d=from,planned=0,realized=0,delta=0,days=0,workedDays=0;
+ while(d<=to){
+  const info=dayInfo(agentId,d),h=dayHours(info);
+  planned+=Number(h.planned||0);realized+=Number(h.total||0);delta+=Number(h.delta||0);days++;
+  if(Math.abs(Number(h.total||0))>0.001)workedDays++;
+  d=addDays(d,1);
+ }
+ return {planned,realized,delta,days,workedDays};
+}
+function renderHoursRangeControls(){
+ const sel=$('#hoursRangeAgent');if(!sel)return;
+ const current=sel.value;sel.innerHTML=(db.agents||[]).filter(a=>a.status==='Actif').map(a=>`<option value="${a.id}">${esc(agentName(a))}</option>`).join('');if(current&&[...sel.options].some(o=>o.value===current))sel.value=current;
+ const range=academicYearRange(activeAcademicYear());if($('#hoursRangeFrom')&&!$('#hoursRangeFrom').value)$('#hoursRangeFrom').value=range.start;if($('#hoursRangeTo')&&!$('#hoursRangeTo').value)$('#hoursRangeTo').value=range.end;
+}
+function updateHoursRangeResult(){
+ const agentId=$('#hoursRangeAgent')?.value,from=$('#hoursRangeFrom')?.value,to=$('#hoursRangeTo')?.value,box=$('#hoursRangeResult');if(!box)return;
+ const r=calculateAgentHoursBetween(agentId,from,to);if(!r){box.innerHTML='<article><span>Résultat</span><strong>Dates à vérifier</strong></article>';return}
+ box.innerHTML=`<article><span>Réalisé</span><strong>${fmtHours(r.realized)}</strong></article><article><span>Prévu</span><strong>${fmtHours(r.planned)}</strong></article><article><span>Écart</span><strong>${r.delta>=0?'+':''}${fmtHours(r.delta)}</strong></article><article><span>Jours comptabilisés</span><strong>${r.workedDays}</strong><small>${r.days} jours calendaires analysés</small></article>`;
+}
+function renderPlanning(){renderWeeklyPlans();renderHoursRangeControls();const month=$('#planningMonth').value||monthISO(),agent=$('#planningAgent').value,signal=$('#planningSignal').value;const start=`${month}-01`,end=localISO(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0));const rows=[];for(const a of db.agents.filter(x=>x.status==='Actif'&&(!agent||x.id===agent))){let d=start;while(d<=end){if(![0,6].includes(parseDate(d).getDay())){const info=dayInfo(a.id,d),h=dayHours(info);let sig=isAbsenceType(info.dayType)?'Absence':h.delta>0.01?'Heures supplémentaires':h.delta<-0.01?'Heures manquantes':'Conforme';if(!signal||sig===signal)rows.push({a,d,info,h,sig})}d=addDays(d,1)}}const sums=rows.reduce((s,r)=>{s.p+=r.h.planned;s.a+=r.h.total;s.o+=Number(r.info.overtime||0);s.d+=Number(r.h.delta||0);return s},{p:0,a:0,o:0,d:0});$('#planningSummary').innerHTML=`<article><span>Prévu</span><strong>${fmtHours(sums.p)}</strong></article><article><span>Réalisé</span><strong>${fmtHours(sums.a)}</strong></article><article><span>Écart</span><strong>${sums.d>=0?'+':''}${fmtHours(sums.d)}</strong></article><article><span>Heures ajoutées</span><strong>${fmtHours(sums.o)}</strong></article>`;$('#planningTable').innerHTML=rows.length?rows.map(r=>{const disp=planningDisplayFor(r.a,r.d);return `<tr><td>${fmtDate(r.d)}</td><td>${esc(agentName(r.a))}</td><td>${r.info.dayType==='Présence'?`${r.info.plannedStart||'—'}–${r.info.plannedEnd||'—'} (${fmtHours(r.h.planned)})`:badge(r.info.dayType)}</td><td>${r.info.dayType==='Présence'&&disp.realChanged?`${esc(disp.real)} · <strong>${fmtHours(r.h.total)}</strong>`:r.info.dayType!=='Présence'?`${badge(r.info.dayType)} · <strong>${fmtHours(r.h.total)}</strong>`:`<strong>${fmtHours(r.h.total)}</strong>`}</td><td>${r.h.delta>=0?'+':''}${fmtHours(r.h.delta)}</td><td>${badge(r.sig)}</td><td>${r.info.source==='manual'&&r.info.note?`<button class="icon-btn manual-info-trigger" type="button" data-show-day-info="${r.a.id}" data-date="${r.d}" title="${esc(r.info.note)}">ⓘ</button>`:''}<button class="icon-btn" data-agent-day="${r.a.id}" data-date="${r.d}">✎</button></td></tr>`}).join(''):emptyRow(7)}
 function renderAbsences(){renderAbsenceBoard();const month=$('#absenceMonth').value||monthISO(),agent=$('#absenceAgent').value,type=$('#absenceType').value,status=$('#absenceStatus').value;const rows=db.agentDays.filter(x=>dateMonthMatch(x.date,month)&&isAbsenceType(x.dayType)&&(!agent||x.agentId===agent)&&(!type||x.dayType===type)&&(!status||x.status===status));const groups=new Map();for(const x of rows){const key=x.periodId||x.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)}const arr=[...groups.values()].map(g=>g.sort((a,b)=>a.date.localeCompare(b.date))).sort((a,b)=>a[0].date.localeCompare(b[0].date));$('#absencesTable').innerHTML=arr.length?arr.map(g=>{const x=g[0],from=g[0].date,to=g.at(-1).date;return `<tr><td>${esc(agentName(agentById(x.agentId)))}</td><td>${fmtDate(from)}</td><td>${fmtDate(to)}</td><td>${badge(x.dayType)}</td><td>${g.length} jour${g.length>1?'s':''}</td><td>${badge(x.status||'Validée')}</td><td>${x.noReplacementNeeded?'<span class="badge good">Sans remplacement</span>':esc(x.replacement||'À décider')}</td><td><button class="icon-btn" data-agent-day="${x.agentId}" data-date="${from}">✎</button></td></tr>`}).join(''):emptyRow(8);renderAbsenceCounters(month)}
 function renderAbsenceCounters(month){const agents=db.agents.filter(a=>a.status==='Actif');const types=db.lists.dayTypes.filter(isAbsenceType);const used=types.filter(t=>db.agentDays.some(x=>dateMonthMatch(x.date,month)&&x.dayType===t));const cols=used.length?used:types.slice(0,5);const head=`<table><thead><tr><th>Agent</th>${cols.map(t=>`<th>${esc(t)}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;const body=agents.map(a=>{const rs=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)&&isAbsenceType(x.dayType));return `<tr><td><strong>${esc(agentName(a))}</strong></td>${cols.map(t=>`<td>${rs.filter(x=>x.dayType===t).length}</td>`).join('')}<td><strong>${rs.length}</strong></td></tr>`}).join('');$('#absenceCounters').innerHTML=head+body+'</tbody></table>'}
 function renderVacations(){
@@ -5538,7 +5595,7 @@ window.addEventListener('online',()=>{updateLiveConnectionLocalStates();probeLiv
 window.addEventListener('offline',()=>{updateLiveConnectionLocalStates();renderLiveConnections()});
 document.addEventListener('DOMContentLoaded',bindLiveConnectionsPanel,{once:true});
 setInterval(()=>{updateLiveConnectionLocalStates();renderLiveConnections()},2000);
-setInterval(()=>{if(document.querySelector('#dashboard.view.active'))probeLiveConnections()},10000);
+setInterval(()=>{if(document.querySelector('#connections.view.active'))probeLiveConnections()},10000);
 
 async function runSupabaseConnectionDiagnostic(){
   const result={online:navigator.onLine,authenticated:Boolean(currentUser),databaseRead:false,databaseWrite:false,edgeFunction:false,pending:pstPendingMutationCount(),errors:[]};
@@ -5726,7 +5783,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.140 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.142 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -5799,7 +5856,7 @@ const dsn=$('#dashboardSyncNow');if(dsn)dsn.onclick=dashboardSyncNow;
  document.addEventListener('click',e=>{const b=e.target.closest('[data-new-weekly-agent]');if(b)openWeeklyPlan(null,b.dataset.newWeeklyAgent)});
  document.addEventListener('click',e=>{const b=e.target.closest('[data-delete-standard-period]');if(b){e.preventDefault();e.stopPropagation();deleteStandardSchedulePeriod(b.dataset.deleteStandardPeriod)}});
 
- document.addEventListener('click',e=>{const b=e.target.closest('[data-show-day-info]');if(!b)return;const rec=dayRecord(b.dataset.showDayInfo,b.dataset.date);if(!rec)return;openModal(`Informations — ${agentName(agentById(b.dataset.showDayInfo))} · ${fmtDate(b.dataset.date)}`,`<div class="manual-info-box"><strong>ⓘ Informations / Motif</strong><p>${esc(rec.note||'Aucune information renseignée.')}</p><small>Source : ${rec.source==='manual'?'Saisie manuelle':'Chronotime'}</small></div>`,()=>{});});
+ document.addEventListener('click',e=>{if(e.target.closest('#calculateHoursRange')){updateHoursRangeResult();return}const b=e.target.closest('[data-show-day-info]');if(!b)return;const rec=dayRecord(b.dataset.showDayInfo,b.dataset.date);if(!rec)return;openModal(`Informations — ${agentName(agentById(b.dataset.showDayInfo))} · ${fmtDate(b.dataset.date)}`,`<div class="manual-info-box"><strong>ⓘ Informations / Motif</strong><p>${esc(rec.note||'Aucune information renseignée.')}</p><small>Source : ${rec.source==='manual'?'Saisie manuelle':'Chronotime'}</small></div>`,()=>{});});
  const filterIds=['personalMonth','personalType','personalStatus','agentSearch','agentStatus','rotationAgent','rotationYear','rotationMonth','planningMonth','planningAgent','planningSignal','absenceMonth','absenceAgent','absenceType','absenceStatus','vacationZone','vacationStatus','issueMonth','issueAgent','issueCategory','issueStatus','periodicFamily','periodicStatus','periodicBuilding','cleanMonth','cleanBuilding','cleanRoomType','cleanStatus','cleaningGuideType','maintenanceStatus','maintenancePriority','maintenanceFamily','requestStatus','requestType','workStatus','workType','meetingMonth','meetingType','noteCategory','notePriority','noteStatus','noteSearch','documentCategory','documentSearch','archiveYear','archiveSearch','changeHistoryYear','changeHistoryType','changeHistorySearch','importArchiveType','importArchiveSearch'];for(const id of filterIds){const e=document.getElementById(id);if(e)e.addEventListener(e.tagName==='INPUT'&&e.type==='text'?'input':'change',()=>{if(id==='cleaningGuideType')renderCleaningGuide();else if(id.startsWith('personal'))renderPersonal();else if(id.startsWith('agent'))renderAgents();else if(id.startsWith('rotation'))renderRotations();else if(id.startsWith('planning'))renderPlanning();else if(id.startsWith('absence'))renderAbsences();else if(id.startsWith('vacation'))renderVacations();else if(id.startsWith('issue'))renderIssues();else if(id.startsWith('periodic'))renderPeriodic();else if(id.startsWith('clean'))renderCleaning();else if(id.startsWith('maintenance'))renderMaintenance();else if(id.startsWith('request'))renderRequests();else if(id.startsWith('work'))renderWorks();else if(id.startsWith('meeting'))renderMeetings();else if(id.startsWith('note'))renderNotes();else if(id.startsWith('document'))renderDocuments();else if(id.startsWith('archive')||id.startsWith('importArchive'))renderArchives()})}
  document.addEventListener('keydown',e=>{const go=e.target.closest?.('#dashboard [data-go]');if(go&&(e.key==='Enter'||e.key===' ')){e.preventDefault();dashboardShortcut(go.dataset.go)}});
  document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){if(go.closest('#dashboard'))dashboardShortcut(go.dataset.go);else setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ae=e.target.closest('[data-agenda-source]');if(ae){
@@ -6129,7 +6186,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.140 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.142 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){
