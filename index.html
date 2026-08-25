@@ -672,6 +672,57 @@
 <style id="v147141-rh">
 .rh-warning-box{margin:12px 0;padding:12px 14px;border:1px solid #f59e0b;border-radius:12px;background:#fffbeb;color:#92400e}.rh-warning-box strong{display:block;margin-bottom:6px}.rh-warning-box ul{margin:6px 0 8px 20px}.agent-hours-range-panel{margin-bottom:14px}#connections .sync-panel,#connections .live-connections-panel{margin-top:12px}
 </style>
+
+<style id="v147144-global-year">
+.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.top-academic-year{
+  display:flex;align-items:center;gap:5px;padding:4px 6px;border:1px solid #cbd5e1;
+  border-radius:11px;background:#fff;min-height:38px
+}
+.top-academic-year label{display:flex;align-items:center;gap:6px;margin:0}
+.top-academic-year label>span{font-size:.7rem;font-weight:800;color:#64748b;white-space:nowrap}
+.top-academic-year select{
+  min-width:112px;border:0;background:transparent;font-weight:800;color:#0f3e72;
+  padding:4px 2px;outline:none
+}
+.top-academic-year .year-step{min-width:30px;padding:5px 8px;font-size:1.15rem;line-height:1}
+.top-academic-year.mismatch{border-color:#f59e0b;background:#fffbeb}
+@media(max-width:900px){
+  .top-academic-year label>span{display:none}
+  .top-academic-year select{min-width:104px}
+  .top-actions{gap:5px}
+}
+</style>
+
+<style id="v147144-help">
+.pst-help-search-panel{margin-bottom:14px}
+.pst-help-search-row{display:grid;grid-template-columns:minmax(280px,1fr) 210px auto;gap:8px;align-items:center}
+.pst-help-search-row input,.pst-help-search-row select{width:100%;min-height:44px}
+.pst-help-suggestions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.pst-help-suggestions button{border:1px solid #cbd5e1;border-radius:999px;background:#fff;padding:7px 10px;color:#334155}
+.pst-help-result{margin-bottom:14px}
+.pst-help-answer{border-left:5px solid #2563eb;background:#eff6ff;border-radius:14px;padding:16px}
+.pst-help-answer h4{margin:0 0 8px;color:#0f3e72;font-size:1.05rem}
+.pst-help-answer .help-category{display:inline-flex;padding:3px 8px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:.72rem;font-weight:800;margin-bottom:8px}
+.pst-help-answer ol,.pst-help-answer ul{margin:7px 0 7px 20px}
+.pst-help-rule{margin-top:10px;padding:10px;border:1px solid #bfdbfe;background:#fff;border-radius:10px}
+.pst-help-faq-list{display:grid;gap:8px}
+.pst-help-faq-list details{border:1px solid #e2e8f0;border-radius:11px;background:#fff;padding:10px 12px}
+.pst-help-faq-list summary{cursor:pointer;font-weight:800;color:#1e3a5f}
+.pst-help-faq-list p{margin:8px 0 0;color:#475569}
+@media(max-width:800px){.pst-help-search-row{grid-template-columns:1fr}.pst-help-search-row button{width:100%}}
+</style>
+
+<style id="v147144-pc-scroll-stability">
+@media(min-width:901px){
+  html{scrollbar-gutter:stable}
+  main,.view.active,.table-wrap,.team-calendar,.personal-calendar,.month-grid,.card-list,
+  #teamWeekCalendar,#personalWeekCalendar,#rotationPreview,#absenceMonthBoard,#weeklyPlansBoard{
+    overflow-anchor:none;
+  }
+  .table-wrap,.team-calendar,.personal-calendar{scroll-behavior:auto!important}
+}
+</style>
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -717,9 +768,10 @@
       <button class="nav-btn" data-view="waste"><span>🗑️</span>Poubelles</button>
       <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
       <button class="nav-btn" data-view="connections"><span>●</span>Connexions</button>
+      <button class="nav-btn" data-view="help"><span>?</span>FAQ / Aide</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.143 — 25/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.144 — 25/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -731,6 +783,11 @@
         <select id="layoutMode" aria-label="Orientation de l'affichage"><option value="auto">Auto</option><option value="portrait">Portrait</option><option value="landscape">Paysage</option></select>
         <a class="notification-bell" id="notificationBell" href="#notificationModal" data-action="open-notifications" role="button" aria-label="Ouvrir les notifications" title="Notifications">🔔<span id="notificationCount" class="notification-count hidden">0</span></a>
         <button class="ghost compact" id="printCurrent">Imprimer</button>
+        <div class="top-academic-year" id="globalAcademicYearWrap" title="Année scolaire active pour tous les écrans">
+          <button type="button" class="ghost compact year-step" id="prevAcademicYear" aria-label="Année scolaire précédente">‹</button>
+          <label><span>Année scolaire</span><select id="globalAcademicYear" aria-label="Année scolaire active"></select></label>
+          <button type="button" class="ghost compact year-step" id="nextAcademicYear" aria-label="Année scolaire suivante">›</button>
+        </div>
         <button class="ghost compact supabase-top-btn" id="supabasePingBtn" type="button" title="Envoyer une requête légère à Supabase"><span class="supabase-btn-icon" aria-hidden="true">⚡</span><span>Requête Supabase</span></button>
       </div>
     </header>
@@ -740,7 +797,6 @@
       <div class="welcome-banner">
         <div class="welcome-copy"><span class="eyebrow">PILOTAGE EN TEMPS RÉEL</span><h3 id="welcomeTitle">Pilotage Service Technique</h3></div>
         <img src="./assets/logo-service-technique.png" alt="" class="welcome-logo" data-app-logo="1">
-        <div class="academic-year-control dashboard-academic-year" id="globalAcademicYearWrap"><button type="button" class="ghost year-step" id="prevAcademicYear" aria-label="Année scolaire précédente">‹</button><label>Année scolaire<select id="globalAcademicYear" aria-label="Année scolaire active"></select></label><button type="button" class="ghost year-step" id="nextAcademicYear" aria-label="Année scolaire suivante">›</button></div>
         <p id="dailyMotivation" class="daily-motivation">Petit à petit, l’oiseau fait son nid.</p>
       </div>
 
@@ -1222,7 +1278,42 @@
 
       <article class="panel"><h3>Lecture des voyants</h3><div class="rule-grid"><span>🟢 Vert : connexion confirmée</span><span>🟠 Orange : opération en cours ou données en attente</span><span>🔴 Rouge : service non joignable ou erreur</span><span>⚪ Gris : contrôle pas encore effectué</span></div></article>
     </section>
-    <section class="view" id="settings">
+    
+    <section class="view" id="help">
+      <div class="section-head">
+        <div><span class="eyebrow">CENTRE D’AIDE</span><h3>FAQ & diagnostic du logiciel</h3>
+          <p>Posez une question avec vos mots. L’aide explique la règle, les causes probables et où vérifier dans Pilotage.</p>
+        </div>
+      </div>
+
+      <article class="panel pst-help-search-panel">
+        <div class="pst-help-search-row">
+          <input id="pstHelpSearch" type="search" placeholder="Ex. Pourquoi mon contrôle ménage ne se voit pas dans l’historique ?" autocomplete="off">
+          <select id="pstHelpCategory" aria-label="Catégorie d’aide">
+            <option value="">Toutes les catégories</option>
+            <option>Horaires</option><option>Agents</option><option>Absences</option><option>Chronotime</option>
+            <option>Contrôle ménage</option><option>Maintenance</option><option>Contrôles périodiques</option>
+            <option>Import / export</option><option>Connexions</option><option>Archivage</option><option>Navigation</option>
+          </select>
+          <button type="button" class="primary" id="pstHelpSearchBtn">Rechercher</button>
+        </div>
+        <div class="pst-help-suggestions">
+          <button type="button" data-help-query="Pourquoi Prévu et Réalisé sont différents mais Écart vaut 0 h ?">Pourquoi l’écart est à 0 h ?</button>
+          <button type="button" data-help-query="Pourquoi mon contrôle ménage ne se voit pas dans l’historique ?">Contrôle ménage introuvable</button>
+          <button type="button" data-help-query="Pourquoi Chronotime ne remplace pas ma saisie manuelle ?">Chronotime / saisie manuelle</button>
+          <button type="button" data-help-query="Pourquoi Supabase est orange ou rouge ?">Connexion Supabase</button>
+        </div>
+      </article>
+
+      <div id="pstHelpResult" class="pst-help-result"></div>
+
+      <article class="panel">
+        <div class="panel-head"><div><span class="calendar-kicker">PAR THÈME</span><h3>Questions fréquentes</h3></div></div>
+        <div id="pstHelpFaqList" class="pst-help-faq-list"></div>
+      </article>
+    </section>
+
+<section class="view" id="settings">
       <article class="panel">
         <div class="panel-head"><div><h3>PRONOTE</h3><p class="muted">Adresse utilisée par le bouton « Ouvrir PRONOTE ».</p></div></div>
         <label>Adresse PRONOTE<input type="url" id="pronoteUrl" placeholder="https://..."></label>

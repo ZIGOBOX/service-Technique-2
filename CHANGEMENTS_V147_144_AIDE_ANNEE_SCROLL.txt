@@ -1,0 +1,28 @@
+V147.144 — FAQ / ANNÉE SCOLAIRE GLOBALE / SCROLL PC
+
+Base stricte : V147.143.
+
+1. CENTRE D'AIDE / FAQ
+- Nouvel onglet « FAQ / Aide ».
+- Recherche en langage naturel sans API payante.
+- Questions couvrant horaires, agents, absences, Chronotime, ménage, maintenance,
+  contrôles périodiques, import/export, connexions, archivage et navigation.
+- Chaque diagnostic présente : explication, points à vérifier et règle utilisée.
+- Boutons de questions rapides et FAQ par thème.
+
+2. ANNÉE SCOLAIRE
+- Le sélecteur d'année scolaire quitte le seul tableau de bord.
+- Il se trouve maintenant dans la barre du haut, au même niveau que « Requête Supabase ».
+- Il reste visible dans tous les écrans.
+- Les boutons année précédente / suivante sont conservés.
+- La logique existante de filtrage par année n'est pas modifiée.
+
+3. CURSEURS / BARRES DE DÉFILEMENT PC
+- Suppression du window.scrollTo(0) forcé lors de la navigation.
+- La position de page est mémorisée séparément pour chaque écran.
+- Les positions des tableaux et zones défilables restent mémorisées pendant les rendus.
+- Suppression du MutationObserver qui pouvait réimposer une ancienne position pendant le défilement.
+- Restauration uniquement lors d'un rendu explicite.
+- overflow-anchor désactivé sur PC dans les grandes zones dynamiques pour éviter les remontées automatiques.
+
+Aucune règle métier de calcul, planning, congé, maladie, Chronotime, RH ou synchronisation n'a été changée.

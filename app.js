@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.143';
+const APP_VERSION='147.144';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -392,7 +392,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.143 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.144 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -516,7 +516,7 @@ function pendingSyncDiagnostics(){
  const confirmedAt=Number(lastConfirmedSupabaseAt||0);
  const queueCount=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
 
- // V147.143 — la file centrale de mutations est la référence absolue.
+ // V147.144 — la file centrale de mutations est la référence absolue.
  // Si elle est vide, un ancien localDirty/offlinePending ne doit plus afficher
  // une modification fantôme "non confirmée".
  if(queueCount===0){
@@ -1360,7 +1360,8 @@ function safeRenderAll(){
    archives:['Archives',renderArchives],
    settings:['Paramètres',renderSettings],
    reports:['Rapports',renderReportPreview],
-   connections:['Connexions',()=>{updateLiveConnectionLocalStates();renderLiveConnections();refreshDashboardSyncIndicator()}]
+   connections:['Connexions',()=>{updateLiveConnectionLocalStates();renderLiveConnections();refreshDashboardSyncIndicator()}],
+   help:['FAQ / Aide',()=>{renderHelp();setTimeout(bindHelpCenter,0)}]
  };
  const errors=[];
  const active=document.querySelector('.view.active')?.id||((typeof currentView!=='undefined'&&currentView)?currentView:'dashboard');
@@ -1371,12 +1372,12 @@ function safeRenderAll(){
    try{fn()}catch(error){console.error(`Erreur d’affichage — ${name}`,error);errors.push(name)}
  }
  if(errors.length)setSaveState(`Enregistré — affichage partiel (${errors.join(', ')})`,'local');
- restorePlanningScroll();
  try{enhanceTableFilters(document.querySelector('.view.active')||document)}catch(error){console.warn('Filtres colonnes',error)}
+ restorePlanningScroll();
  return errors;
 }
 
-// ===== V147.143 — moteur central de synchronisation =====
+// ===== V147.144 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -2154,9 +2155,88 @@ async function deleteRecord(type,id,label='élément'){
  }
 }
 
+
+/* ---------- V147.144 : Centre d’aide / FAQ local ---------- */
+const PST_HELP_ENTRIES=[
+ {category:'Horaires',q:'Pourquoi Prévu et Réalisé sont différents mais Écart vaut 0 h ?',keys:'prévu réalisé différence écart zéro maladie congé 0h',answer:'Prévu et Réalisé sont deux totaux bruts. Écart comptabilisé applique les règles métier : certaines journées ne doivent pas créer de débit.',checks:['Regardez le type de journée concerné.','Une Maladie compte 7 h en Réalisé mais ne génère pas d’écart.','Une règle réglée à 0 h ne doit pas créer de débit.','Pour une Présence avec horaire réel différent, un écart doit en revanche apparaître.'],rule:'Écart comptabilisé ≠ forcément Réalisé − Prévu. Les exceptions métier restent à 0 h d’écart.'},
+ {category:'Horaires',q:'Comment sont calculées les heures d’un agent entre deux dates ?',keys:'calculette heures dates période total réalisé prévu',answer:'Dans Pilotage des horaires, choisissez l’agent, la date de début et la date de fin. Le calcul additionne jour par jour les règles réellement applicables.',checks:['Prévu vient de l’horaire théorique applicable à la date.','Réalisé reprend l’horaire réel lorsqu’il existe.','Sinon le réalisé suit la règle du type de journée.','Les heures ajoutées ou retirées sont intégrées.'],rule:'Le calcul utilise le moteur dayHours, identique à celui du tableau de Pilotage.'},
+ {category:'Horaires',q:'Pourquoi un horaire théorique est différent selon la date ?',keys:'horaire théorique date roulement standard matin soir permanence',answer:'L’horaire théorique est résolu selon la date et la priorité des profils.',checks:['Permanence si la journée est une permanence.','Sinon roulement Matin/Soir lorsqu’un roulement est actif.','Sinon horaire Standard applicable à la période.','Un jour non travaillé est Repos.'],rule:'Priorité : Permanence > Roulement > Standard > Repos / aucun.'},
+ {category:'Horaires',q:'Pourquoi un horaire RH affiche WARNING ?',keys:'rh warning non conforme amplitude pause 12h 10h 3h excel',answer:'WARNING signale une règle RH à vérifier mais ne bloque jamais la saisie.',checks:['Amplitude supérieure à 12 h.','Travail effectif supérieur à 10 h.','Durée inférieure à 3 h pour une demi-journée.','Pause méridienne / ordre des plages / plages incomplètes / doublon.'],rule:'Les contrôles RH sont informatifs uniquement, conformément au choix de Pilotage.'},
+ {category:'Agents',q:'Pourquoi un agent apparaît en Repos ?',keys:'agent repos jour travail weekend samedi dimanche horaire',answer:'Le calendrier personnel de l’agent est prioritaire. Un jour décoché dans ses jours travaillés habituels est automatiquement considéré comme Repos.',checks:['Ouvrez la fiche Agent.','Vérifiez les jours travaillés habituels.','Vérifiez ensuite le roulement et ses jours actifs.','Enfin vérifiez une éventuelle exception de roulement.'],rule:'Un jour non travaillé dans la fiche Agent ne reçoit pas automatiquement un horaire Standard.'},
+ {category:'Agents',q:'Pourquoi mon jour agent revient ou disparaît après enregistrement ?',keys:'formulaire agent congé présence revient disparaît supabase synchronisation',answer:'Une saisie agent doit rester locale immédiatement puis être confirmée par Supabase. Une réponse serveur ancienne ne doit pas l’écraser.',checks:['Regardez Connexions > File locale.','Vérifiez Écriture / synchro.','Si une mutation est en attente, laissez la synchronisation se terminer.','Une saisie manuelle reste prioritaire sur Chronotime.'],rule:'Depuis le moteur central de synchro, la dernière modification locale est prioritaire.'},
+ {category:'Absences',q:'Comment est comptée une Maladie ?',keys:'maladie 7 heures écart zéro',answer:'Une journée Maladie est comptabilisée à 7 h dans Réalisé. On n’ajoute pas 7 h à l’horaire initial : la journée vaut 7 h.',checks:['Le réalisé doit afficher 7 h.','L’écart comptabilisé doit rester à 0 h.','L’horaire théorique peut rester visible comme référence.'],rule:'Maladie = 7 h réalisées, écart comptabilisé = 0 h.'},
+ {category:'Absences',q:'Comment est compté un congé ou un RTT ?',keys:'congé rtt absence prévu heures',answer:'Le comportement dépend de la règle du type de journée. Lorsqu’elle est sur Horaires prévus, le logiciel reprend les heures théoriques applicables.',checks:['Vérifiez la date et l’horaire théorique.','Vérifiez le type exact de journée.','Une règle à 0 h ne doit pas produire un débit automatique.'],rule:'Les types sans règle spéciale utilisent par défaut les horaires prévus.'},
+ {category:'Chronotime',q:'Pourquoi Chronotime ne remplace pas ma saisie manuelle ?',keys:'chronotime manuel priorité écraser congé présence',answer:'C’est volontaire : une saisie manuelle explicitement différente est prioritaire sur une information Chronotime importée.',checks:['Vérifiez la journée dans le formulaire Agent.','Regardez la source de la journée.','Si Chronotime est différent, l’application doit signaler la différence sans écraser silencieusement le manuel.'],rule:'Saisie manuelle prioritaire sur Chronotime.'},
+ {category:'Chronotime',q:'Pourquoi L1 M1 D1 ne sont pas pris comme codes ?',keys:'l1 m1 d1 repère code chronotime',answer:'L1, M1, M2, J1, V1, S1, D1 sont traités comme repères calendaires, pas comme codes métier.',checks:['Les vrais codes peuvent être CA, RTT, RH, RFE, etc.','Les durées comme 7h00 ou 9h50 sont lues comme durées.'],rule:'Les repères de ligne/jour sont volontairement ignorés comme codes.'},
+ {category:'Contrôle ménage',q:'Pourquoi mon contrôle ménage ne se voit pas dans l’historique ?',keys:'contrôle ménage historique bâtiment étage secteur local invisible',answer:'L’historique dépend du rattachement du contrôle au bâtiment, à l’étage/secteur et au local sélectionné.',checks:['Vérifiez le bâtiment du contrôle.','Vérifiez l’étage / secteur : des libellés différents peuvent empêcher un rattachement direct.','Un contrôle Zone entière / Secteur entier doit être visible dans tous les locaux concernés.','Vérifiez les filtres de période et de local.'],rule:'Le contrôle est rattaché par bâtiment puis par zone/local ; les contrôles de zone doivent être propagés aux locaux concernés.'},
+ {category:'Maintenance',q:'Pourquoi une intervention ne se voit pas dans le tableau ?',keys:'maintenance intervention invisible filtre statut année',answer:'Le plus souvent, un filtre, le statut ou l’année scolaire active masque la fiche.',checks:['Videz les filtres du tableau.','Vérifiez l’année scolaire en haut de l’application.','Vérifiez le statut de l’intervention.','Contrôlez la date et la date d’échéance.'],rule:'Les écrans filtrent leurs données selon le contexte et l’année scolaire active.'},
+ {category:'Contrôles périodiques',q:'Pourquoi un contrôle périodique est en retard ?',keys:'contrôle périodique retard échéance date intervalle',answer:'Le statut dépend de la dernière date connue, de la périodicité et de la prochaine échéance calculée ou saisie.',checks:['Vérifiez Dernier contrôle.','Vérifiez la périodicité / intervalle.','Vérifiez Prochaine date.','Vérifiez si le contrôle est Non applicable ou clôturé.'],rule:'Une échéance passée non clôturée est signalée en retard.'},
+ {category:'Import / export',q:'Pourquoi l’Excel exporté affiche une non-conformité RH ?',keys:'excel export warning rh formule',answer:'L’Excel recalcule les contrôles RH quand vous modifiez les plages. Une alerte est informative et n’empêche pas le réimport.',checks:['Regardez Avertissement RH.','Regardez Contrôle.','Corrigez les plages si nécessaire ou conservez-les volontairement.'],rule:'WARNING uniquement, jamais bloquant.'},
+ {category:'Import / export',q:'Pourquoi un horaire importé n’est pas créé en double ?',keys:'import doublon horaire période remplacer',answer:'Pilotage évite volontairement deux horaires théoriques sur la même date/période pour un même agent.',checks:['Vérifiez l’horaire déjà applicable.','Si une période se chevauche, Pilotage doit demander avant remplacement.'],rule:'Pas de doublon silencieux d’horaire théorique.'},
+ {category:'Connexions',q:'Pourquoi Supabase est orange ou rouge ?',keys:'supabase orange rouge connexion écriture lecture file locale',answer:'Les voyants séparent Internet, session, lecture, écriture et file locale. Un voyant rouge indique précisément le maillon en échec.',checks:['Internet doit être vert.','Session Supabase doit être verte.','Lecture Supabase teste la base.','Écriture / synchro doit être verte si aucune mutation n’est en attente.','File locale indique le nombre réel de modifications à envoyer.'],rule:'La file centrale de mutations est la référence pour savoir s’il reste des données à synchroniser.'},
+ {category:'Connexions',q:'Pourquoi l’IA est rouge alors que Supabase est vert ?',keys:'ia edge function gemini openai rouge supabase vert',answer:'La base Supabase et l’IA sont deux chemins distincts. Supabase peut être joignable alors que l’Edge Function ou le fournisseur IA ne l’est pas.',checks:['Vérifiez Edge Function IA.','Vérifiez le fournisseur IA.','Une absence de crédits ou de clé API concerne l’IA, pas les formulaires métier.'],rule:'Une panne IA ne doit pas empêcher l’enregistrement des données métier.'},
+ {category:'Archivage',q:'Pourquoi un document importé ne se voit pas dans Archivage ?',keys:'document import archivage original cloud invisible',answer:'L’archivage a besoin de la fiche d’import et, selon le cas, du lien vers l’original cloud.',checks:['Vérifiez le type de document.','Vérifiez l’année scolaire.','Videz les filtres d’Archivage.','Vérifiez si l’original cloud est rattaché.'],rule:'La fiche peut exister même si l’original cloud est à vérifier ; les deux états sont affichés séparément.'},
+ {category:'Navigation',q:'Pourquoi l’année scolaire change les données visibles ?',keys:'année scolaire filtre haut global écran',answer:'L’année scolaire affichée dans la barre du haut est le contexte global de Pilotage. Elle s’applique aux écrans qui utilisent une période scolaire.',checks:['Regardez le sélecteur en haut.','Changez l’année si vous cherchez une donnée ancienne.','Les filtres mensuels sont replacés dans l’année sélectionnée si nécessaire.'],rule:'Le sélecteur global est la source unique du contexte scolaire.'},
+ {category:'Navigation',q:'Pourquoi la barre de défilement remonte pendant que je travaille ?',keys:'curseur scroll barre défilement remonte pc',answer:'Ce comportement ne doit plus se produire. Pilotage mémorise maintenant la position de chaque écran et de chaque tableau pendant les rafraîchissements.',checks:['Si le problème réapparaît, notez l’écran précis.','Vérifiez s’il s’agit de la page entière ou d’un tableau horizontal/vertical.'],rule:'Un rafraîchissement de données ne doit pas modifier la position de lecture sur PC.'}
+];
+
+function normalizeHelpText(v){return normalizeText(String(v||'')).replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim()}
+function helpScore(entry,query){
+ const q=normalizeHelpText(query);if(!q)return 0;
+ const words=q.split(' ').filter(w=>w.length>2);
+ const hay=normalizeHelpText(`${entry.q} ${entry.keys||''} ${entry.answer||''} ${entry.category||''}`);
+ let score=0;
+ if(hay.includes(q))score+=40;
+ for(const w of words)if(hay.includes(w))score+=3;
+ return score;
+}
+function helpAnswerHtml(entry){
+ if(!entry)return `<div class="pst-help-answer"><h4>Aucune réponse exacte trouvée</h4><p>Essayez avec des mots comme horaire, congé, maladie, Chronotime, ménage, Supabase, Excel ou archivage.</p></div>`;
+ return `<div class="pst-help-answer"><span class="help-category">${esc(entry.category)}</span><h4>${esc(entry.q)}</h4><p>${esc(entry.answer)}</p>${entry.checks?.length?`<strong>À vérifier :</strong><ol>${entry.checks.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}<div class="pst-help-rule"><strong>Règle utilisée :</strong> ${esc(entry.rule||'')}</div></div>`;
+}
+function renderHelp(){
+ const list=$('#pstHelpFaqList');if(list){
+   const category=$('#pstHelpCategory')?.value||'';
+   const rows=PST_HELP_ENTRIES.filter(x=>!category||x.category===category);
+   list.innerHTML=rows.map(x=>`<details><summary>${esc(x.q)}</summary><p>${esc(x.answer)}</p><button type="button" class="ghost small" data-help-query="${esc(x.q)}">Voir le diagnostic</button></details>`).join('');
+ }
+}
+function searchHelp(query){
+ const q=String(query||$('#pstHelpSearch')?.value||'').trim();
+ const cat=$('#pstHelpCategory')?.value||'';
+ const candidates=PST_HELP_ENTRIES.filter(x=>!cat||x.category===cat)
+   .map(x=>({x,score:helpScore(x,q)})).sort((a,b)=>b.score-a.score);
+ const found=candidates[0]?.score>0?candidates[0].x:null;
+ const box=$('#pstHelpResult');if(box)box.innerHTML=helpAnswerHtml(found);
+}
+function bindHelpCenter(){
+ const input=$('#pstHelpSearch'),btn=$('#pstHelpSearchBtn'),cat=$('#pstHelpCategory');
+ if(btn)btn.onclick=()=>searchHelp();
+ if(input)input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();searchHelp()}};
+ if(cat)cat.onchange=()=>{renderHelp();if(input?.value)searchHelp(input.value)};
+ document.querySelectorAll('[data-help-query]').forEach(b=>b.onclick=()=>{if(input)input.value=b.dataset.helpQuery||'';searchHelp(b.dataset.helpQuery||'')});
+ renderHelp();
+}
+window.PSTHelp={search:searchHelp,render:renderHelp,entries:PST_HELP_ENTRIES};
+
 /* ---------- Navigation ---------- */
-const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage','room-prep':'Préparation salle & café',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',connections:'Connexions',settings:'Paramètres'};
-function setView(view){if(!document.getElementById(view))return;currentView=view;$$('.view').forEach(v=>v.classList.toggle('active',v.id===view));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if($('#pageTitle'))$('#pageTitle').textContent=VIEW_TITLES[view]||view;document.body.classList.remove('menu-open');window.PSTNavigation?.closeMenu?.();window.scrollTo({top:0,behavior:'auto'});renderAll()}
+const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage','room-prep':'Préparation salle & café',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',connections:'Connexions',help:'FAQ / Aide',settings:'Paramètres'};
+function setView(view){
+ if(!document.getElementById(view))return;
+ const previous=document.querySelector('.view.active')?.id||currentView||'dashboard';
+ capturePlanningScroll();
+ currentView=view;
+ $$('.view').forEach(v=>v.classList.toggle('active',v.id===view));
+ $$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+ if($('#pageTitle'))$('#pageTitle').textContent=VIEW_TITLES[view]||view;
+ document.body.classList.remove('menu-open');window.PSTNavigation?.closeMenu?.();
+ safeRenderAll();
+ // Chaque écran retrouve sa propre position. Un écran jamais visité commence naturellement en haut.
+ if(previous!==view && !pstPlanningScrollMemory[`page:${view}`]){
+   pstPlanningScrollMemory[`page:${view}`]={left:0,top:0};
+ }
+ restorePlanningScroll();
+}
 window.PSTSetView=setView;
 
 document.addEventListener('pst:view-changed',e=>{
@@ -2407,7 +2487,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.143 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.144 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2477,7 +2557,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.143 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.144 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2625,7 +2705,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.143 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.144 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2877,7 +2957,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.143 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.144 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2931,7 +3011,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.143 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.144 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3544,7 +3624,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.143 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.144 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -5212,7 +5292,10 @@ const pstPlanningScrollMemory={};
 
 function pstScrollKey(el,index=0){
   if(!el)return '';
-  if(el===document.scrollingElement||el===document.documentElement||el===document.body)return 'page';
+  if(el===document.scrollingElement||el===document.documentElement||el===document.body){
+    const view=document.querySelector('.view.active')?.id||currentView||'global';
+    return `page:${view}`;
+  }
   if(el.dataset?.scrollKey)return `data:${el.dataset.scrollKey}`;
   if(el.id)return `id:${el.id}`;
   const parts=[];
@@ -5277,8 +5360,8 @@ function restorePlanningScroll(){
       pstScrollableCandidates().forEach((el,i)=>{
         const mem=pstPlanningScrollMemory[pstScrollKey(el,i)];
         if(!mem)return;
-        if(Number.isFinite(mem.left))el.scrollLeft=Math.min(mem.left,Math.max(0,el.scrollWidth-el.clientWidth));
-        if(Number.isFinite(mem.top))el.scrollTop=Math.min(mem.top,Math.max(0,el.scrollHeight-el.clientHeight));
+        if(Number.isFinite(mem.left)&&el.scrollWidth>=el.clientWidth)el.scrollLeft=Math.min(mem.left,Math.max(0,el.scrollWidth-el.clientWidth));
+        if(Number.isFinite(mem.top)&&el.scrollHeight>=el.clientHeight)el.scrollTop=Math.min(mem.top,Math.max(0,el.scrollHeight-el.clientHeight));
       });
     });
   });
@@ -5294,17 +5377,8 @@ window.addEventListener('scroll',()=>{
   if(document.scrollingElement)pstRememberScroll(document.scrollingElement);
 },{passive:true});
 
-let pstMutationRestoreTimer=0;
-const pstScrollObserver=new MutationObserver(mutations=>{
-  if(!mutations.some(m=>m.type==='childList'))return;
-  clearTimeout(pstMutationRestoreTimer);
-  pstMutationRestoreTimer=setTimeout(()=>restorePlanningScroll(),0);
-});
-
-document.addEventListener('DOMContentLoaded',()=>{
-  const root=document.querySelector('main')||document.querySelector('#app')||document.body;
-  if(root)pstScrollObserver.observe(root,{subtree:true,childList:true});
-},{once:true});
+// V147.144 — pas de MutationObserver qui force la position pendant que l'utilisateur défile.
+// La restauration est déclenchée uniquement autour des rendus explicites de l'application.
 
 
 
@@ -5787,7 +5861,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.143 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.144 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -5833,7 +5907,9 @@ function bindEvents(){
  });
  $('#modalCancel').onclick=closeModal;$('#modalClose').onclick=closeModal;$('#modalDelete').onclick=()=>modalDeleteHandler?.();$('#detailClose').onclick=()=>$('#detailModal').close();$('#emailClose').onclick=()=>$('#emailModal').close();
  // Navigation mobile gérée uniquement par navigation.js pour éviter les doubles événements.
- $('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b){setView(b.dataset.view)}});$('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').onclick=()=>printView(document.querySelector('.view.active')?.id);
+ $('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b){setView(b.dataset.view)}});
+ document.addEventListener('click',e=>{const b=e.target.closest?.('[data-help-query]');if(!b)return;const q=b.dataset.helpQuery||'';const input=$('#pstHelpSearch');if(input)input.value=q;searchHelp(q)});
+$('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').onclick=()=>printView(document.querySelector('.view.active')?.id);
  const gay=$('#globalAcademicYear');if(gay)gay.onchange=e=>setActiveAcademicYear(e.target.value);const pay=$('#prevAcademicYear');if(pay)pay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),-1));const nay=$('#nextAcademicYear');if(nay)nay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),1));
  {const q=$('#quickAdd');if(q)q.onclick=openQuickMenu;const f=$('#quickNoteFab');if(f)f.onclick=openQuickMenu;}
  $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
@@ -6190,7 +6266,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.143 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.144 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){
