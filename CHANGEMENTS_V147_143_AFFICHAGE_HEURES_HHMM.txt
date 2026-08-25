@@ -1,0 +1,26 @@
+V147.143 — AFFICHAGE DES HEURES EN HEURES / MINUTES
+
+Base stricte : V147.142.
+
+Objectif :
+Les calculs internes restent en heures décimales pour ne modifier aucune règle métier,
+mais toutes les durées affichées à l'utilisateur utilisent désormais le format heures/minutes.
+
+Exemples :
+- 9,08 h -> 9 h 05
+- 6,25 h -> 6 h 15
+- 185,67 h -> 185 h 40
+- +1,33 h -> +1 h 20
+- -0,58 h -> -0 h 35
+
+Correction appliquée notamment à :
+- Pilotage des horaires : Prévu, Réalisé, Écart, heures ajoutées ;
+- calcul d'heures entre deux dates ;
+- calendrier équipe et écarts ;
+- cartes agents : temps hebdomadaire et heures supplémentaires ;
+- historique des modifications ;
+- messages / warnings RH ;
+- comparaison des durées Chronotime.
+
+Aucune donnée n'est convertie ou modifiée en base.
+Aucune règle de calcul, congé, maladie, Chronotime, planning ou synchronisation n'a été changée.

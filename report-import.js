@@ -338,6 +338,10 @@
     }
     return out;
   }
+  function fmtMinutesHours(minutes){
+    const m=Math.round(Math.abs(Number(minutes)||0)),h=Math.floor(m/60),mm=m%60,sign=Number(minutes)<0?'-':'';
+    return `${sign}${h} h${mm?` ${String(mm).padStart(2,'0')}`:''}`;
+  }
   function renderChronoChanges(p){
     const box=document.getElementById('chronoChangePreview');if(!box)return;
     const aid=document.getElementById('chronoAgentSelect')?.value||'';
@@ -348,8 +352,8 @@
     box.innerHTML=`<div class="import-message warning"><strong>⚠ ${changes.length} différence${changes.length>1?'s':''} à valider</strong><br>Aucune de ces journées ne sera modifiée sans votre choix.</div>
       <div class="chrono-bulk-actions"><button type="button" class="ghost small" id="chronoKeepAll">Tout garder dans l’application</button><button type="button" class="ghost small" id="chronoApplyAll">Tout appliquer depuis Chronotime</button></div>
       <div class="table-wrap chrono-change-table"><table><thead><tr><th>Date</th><th>Application</th><th>Nouveau Chronotime</th><th>Informations</th><th>Décision obligatoire</th></tr></thead><tbody>${changes.map(x=>{
-        const appHours=x.oldMinutes!=null?` · ${(x.oldMinutes/60).toLocaleString('fr-FR',{maximumFractionDigits:2})} h`:'';
-        const chronoHours=x.newMinutes!=null?` · ${(Number(x.newMinutes)/60).toLocaleString('fr-FR',{maximumFractionDigits:2})} h`:'';
+        const appHours=x.oldMinutes!=null?` · ${fmtMinutesHours(x.oldMinutes)}`:'';
+        const chronoHours=x.newMinutes!=null?` · ${fmtMinutesHours(x.newMinutes)}`:'';
         return `<tr data-chrono-conflict-date="${esc(x.date)}"><td>${esc(fmtDate(x.date))}<small>${esc(x.reason)}</small></td><td><strong>${esc(x.oldType)}</strong>${appHours}<small>${x.manual?'✏️ Saisie manuelle':'Donnée actuelle'}</small></td><td><strong>${esc(x.newType)}</strong>${chronoHours}</td><td>${x.note?`<span class="chrono-info-note">ⓘ ${esc(x.note)}</span>`:'—'}</td><td><label class="chrono-choice"><input type="radio" name="chronoChoice_${esc(x.date)}" value="keep"> Garder actuel</label><label class="chrono-choice"><input type="radio" name="chronoChoice_${esc(x.date)}" value="apply"> Appliquer Chronotime</label></td></tr>`;
       }).join('')}</tbody></table></div>`;
     const setAll=value=>box.querySelectorAll('tr[data-chrono-conflict-date]').forEach(tr=>{const i=tr.querySelector(`input[value="${value}"]`);if(i)i.checked=true});

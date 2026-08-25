@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.142';
+const APP_VERSION='147.143';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -64,7 +64,12 @@ function daysBetweenDates(fromISO,toISO){const a=normalizeDateValue(fromISO),b=n
 function weekNumber(v){const d=parseDate(v);d.setDate(d.getDate()+3-((d.getDay()+6)%7));const w1=new Date(d.getFullYear(),0,4,12);return 1+Math.round(((d-w1)/86400000-3+((w1.getDay()+6)%7))/7)}
 function minutes(t){if(!t)return null;const [h,m]=t.split(':').map(Number);return h*60+m}
 function hoursBetween(a,b,p=0){a=minutes(a);b=minutes(b);if(a==null||b==null)return 0;let d=b-a;if(d<0)d+=1440;return Math.max(0,(d-Number(p||0))/60)}
-const fmtHours=n=>`${(Math.round((Number(n)||0)*100)/100).toLocaleString('fr-FR',{maximumFractionDigits:2})} h`;
+const fmtHours=n=>{
+ const value=Number(n)||0,totalMinutes=Math.round(Math.abs(value)*60),hours=Math.floor(totalMinutes/60),minutes=totalMinutes%60;
+ const sign=value<0?'-':'';
+ return `${sign}${hours} h${minutes?` ${String(minutes).padStart(2,'0')}`:''}`;
+};
+const fmtSignedHours=n=>`${Number(n)>0?'+':''}${fmtHours(n)}`;
 const inRange=(d,a,b)=>(!a||d>=a)&&(!b||d<=b); const dateMonthMatch=(d,m)=>!m||String(d||'').startsWith(m);
 function businessDays(a,b){if(!a||!b)return 0;let d=parseDate(a),e=parseDate(b),n=0;while(d<=e){if(![0,6].includes(d.getDay()))n++;d.setDate(d.getDate()+1)}return n}
 function normalizeEmails(v){return String(v||'').split(/[;,\n]+/).map(x=>x.trim()).filter(Boolean).join(',')}
@@ -387,7 +392,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.142 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.143 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -511,7 +516,7 @@ function pendingSyncDiagnostics(){
  const confirmedAt=Number(lastConfirmedSupabaseAt||0);
  const queueCount=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
 
- // V147.142 — la file centrale de mutations est la référence absolue.
+ // V147.143 — la file centrale de mutations est la référence absolue.
  // Si elle est vide, un ancien localDirty/offlinePending ne doit plus afficher
  // une modification fantôme "non confirmée".
  if(queueCount===0){
@@ -1371,7 +1376,7 @@ function safeRenderAll(){
  return errors;
 }
 
-// ===== V147.142 — moteur central de synchronisation =====
+// ===== V147.143 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -2402,7 +2407,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.142 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.143 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2472,7 +2477,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.142 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.143 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2515,7 +2520,7 @@ function dayCountingRule(dayType){
 }
 function dayCountingLabel(dayType){
  const r=dayCountingRule(dayType);
- if(r.mode==='fixed')return `${Number(r.hours||0).toLocaleString('fr-FR')} h fixes`;
+ if(r.mode==='fixed')return `${fmtHours(r.hours||0)} fixes`;
  if(r.mode==='zero')return '0 h';
  return 'Horaires prévus';
 }
@@ -2620,7 +2625,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.142 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.143 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2872,7 +2877,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.142 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.143 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -2926,7 +2931,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.142 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.143 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3499,7 +3504,7 @@ function renderTeamCalendar(){
         :(info.dayType==='Présence'&&info.missions?`<small class="agent-missions">${esc(info.missions)}</small>`:'');
 
       const delta=Math.abs(h.delta)>0.001
-        ?`<em class="agent-delta ${h.delta>0?'positive':'negative'}">${h.delta>0?'+':''}${h.delta.toFixed(2)} h</em>`:'';
+        ?`<em class="agent-delta ${h.delta>0?'positive':'negative'}">${fmtSignedHours(h.delta)}</em>`:'';
 
       return `<button class="team-agent-entry ${cls}" data-agent-day="${a.id}" data-date="${date}" title="Modifier ${esc(agentName(a))} le ${fmtDate(date)}"><span class="agent-entry-avatar">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><span class="agent-entry-main"><strong>${esc(agentName(a))}</strong>${mainLine}${secondaryLine}${motive}</span>${delta}<span class="agent-entry-arrow">›</span></button>`;
     }).join('');
@@ -3539,7 +3544,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.142 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.143 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -3602,7 +3607,7 @@ function calendarDayVisual(info){
 function renderAbsenceBoard(){const month=$('#absenceMonth').value||monthISO(),[y,m]=month.split('-').map(Number),count=new Date(y,m,0).getDate(),agents=db.agents.filter(a=>a.status==='Actif'),gridWidth=150+(count*42);let html=`<div class="month-grid" style="grid-template-columns:150px repeat(${count},42px);min-width:${gridWidth}px"><div class="month-corner">Agent</div>`+Array.from({length:count},(_,i)=>{const d=`${month}-${pad(i+1)}`;return `<div class="month-day-head ${[0,6].includes(parseDate(d).getDay())?'weekend':''}">${i+1}</div>`}).join('');for(const a of agents){html+=`<div class="month-agent">${esc(agentName(a))}</div>`;for(let i=1;i<=count;i++){const d=`${month}-${pad(i)}`,info=dayInfo(a.id,d),v=calendarDayVisual(info),hours=info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:'';html+=`<button class="month-cell day-state ${v.cls}" ${v.color?`style="background:${esc(v.color)}!important"`:``} data-agent-day="${a.id}" data-date="${d}" data-day-type="${esc(info.dayType||'Présence')}" title="${fmtDate(d)} — ${esc(v.label)}${esc(hours)}"><span>${v.code}</span></button>`}}html+='</div>';$('#absenceMonthBoard').innerHTML=html}
 
 /* ---------- Rendu : modules ---------- */
-function renderAgents(){const q=($('#agentSearch').value||'').toLowerCase(),status=$('#agentStatus').value;const arr=db.agents.filter(a=>(!status||a.status===status)&&(!q||agentName(a).toLowerCase().includes(q)||String(a.assignment).toLowerCase().includes(q)));$('#agentCards').innerHTML=cardList(arr.map(a=>{const state=agentState(a),month=$('#planningMonth').value||monthISO(),rows=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)),absence=rows.filter(x=>isAbsenceType(x.dayType)).length,ot=rows.reduce((s,x)=>s+Number(x.overtime||0),0);return `<article class="agent-card"><div class="agent-avatar">${esc((a.firstName||'?')[0])}</div><div class="agent-main"><div class="panel-head"><h3>${esc(agentName(a))}</h3>${badge(a.status)}</div><p>${esc(a.role)} · ${esc(a.assignment||'Sans affectation')}</p><div class="agent-stats"><span>${badge(state.label)}</span><span>${esc(a.weeklyHours)} h/semaine</span>${(()=>{const p=permanenceScheduleForAgent(a.id);return p.start&&p.end?`<span class="perm-summary">🟠 Permanence ${esc(p.start)}–${esc(p.end)}</span>`:''})()}${(()=>{if(activeRotation(a.id,todayISO()))return '';const s=standardScheduleForAgent(a.id,todayISO());return s.start&&s.end?`<span class="std-summary">🔵 Standard ${esc(s.start)}–${esc(s.end)}</span>`:''})()}<span>${absence} absence(s) ce mois</span><span>${ot>=0?'+':''}${ot} h supp.</span></div><div class="card-actions"><button type="button" data-edit-type="agent" data-edit-id="${a.id}">Modifier</button><button data-new-weekly-agent="${a.id}">Horaires annuels</button><button data-permanence-agent="${a.id}" class="permanence-button">Permanence</button><button data-new-rotation-agent="${a.id}">Roulement</button><button data-agent-day="${a.id}" data-date="${todayISO()}">Signaler un écart</button></div></div></article>`}),'Aucun agent trouvé.')}
+function renderAgents(){const q=($('#agentSearch').value||'').toLowerCase(),status=$('#agentStatus').value;const arr=db.agents.filter(a=>(!status||a.status===status)&&(!q||agentName(a).toLowerCase().includes(q)||String(a.assignment).toLowerCase().includes(q)));$('#agentCards').innerHTML=cardList(arr.map(a=>{const state=agentState(a),month=$('#planningMonth').value||monthISO(),rows=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)),absence=rows.filter(x=>isAbsenceType(x.dayType)).length,ot=rows.reduce((s,x)=>s+Number(x.overtime||0),0);return `<article class="agent-card"><div class="agent-avatar">${esc((a.firstName||'?')[0])}</div><div class="agent-main"><div class="panel-head"><h3>${esc(agentName(a))}</h3>${badge(a.status)}</div><p>${esc(a.role)} · ${esc(a.assignment||'Sans affectation')}</p><div class="agent-stats"><span>${badge(state.label)}</span><span>${fmtHours(a.weeklyHours)} / semaine</span>${(()=>{const p=permanenceScheduleForAgent(a.id);return p.start&&p.end?`<span class="perm-summary">🟠 Permanence ${esc(p.start)}–${esc(p.end)}</span>`:''})()}${(()=>{if(activeRotation(a.id,todayISO()))return '';const s=standardScheduleForAgent(a.id,todayISO());return s.start&&s.end?`<span class="std-summary">🔵 Standard ${esc(s.start)}–${esc(s.end)}</span>`:''})()}<span>${absence} absence(s) ce mois</span><span>${fmtSignedHours(ot)} supp.</span></div><div class="card-actions"><button type="button" data-edit-type="agent" data-edit-id="${a.id}">Modifier</button><button data-new-weekly-agent="${a.id}">Horaires annuels</button><button data-permanence-agent="${a.id}" class="permanence-button">Permanence</button><button data-new-rotation-agent="${a.id}">Roulement</button><button data-agent-day="${a.id}" data-date="${todayISO()}">Signaler un écart</button></div></div></article>`}),'Aucun agent trouvé.')}
 function rotationPilotageSummary(agentId,shift,r){
  const labels=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],days=(r.weekdays||[1,2,3,4,5]).map(Number),rows=[];
  for(const wd of days){const p=exactWeeklyProfile(agentId,shift,wd,r.effectiveFrom);if(p?.start&&p?.end)rows.push({wd,start:p.start,end:p.end})}
@@ -3872,11 +3877,11 @@ function rhScheduleCheck({start='',end='',pause=0,segments=[]}={}){
  const first=Math.min(...parsed.map(x=>x.s)),last=Math.max(...parsed.map(x=>x.e));
  const raw=parsed.reduce((n,x)=>n+(x.e-x.s),0),effective=Math.max(0,(raw-pause)/60),amplitude=(last-first)/60;
  const type=effective>=6?'Journée':effective>=3?'Demi-journée':'Durée courte';
- if(amplitude>12)warnings.push(`Amplitude ${amplitude.toFixed(2).replace('.',',')} h : protocole RH à vérifier (> 12 h).`);
- if(effective>10)warnings.push(`Travail effectif ${effective.toFixed(2).replace('.',',')} h : protocole RH à vérifier (> 10 h).`);
- if(effective>0&&effective<3)warnings.push(`Travail effectif ${effective.toFixed(2).replace('.',',')} h : inférieur au repère RH de 3 h pour une demi-journée.`);
- if(effective>=3&&effective<6)warnings.push(`Classification RH conseillée : demi-journée (${effective.toFixed(2).replace('.',',')} h).`);
- if(effective>=6&&effective<=10)warnings.push(`Classification RH : journée (${effective.toFixed(2).replace('.',',')} h).`);
+ if(amplitude>12)warnings.push(`Amplitude ${fmtHours(amplitude)} : protocole RH à vérifier (> 12 h).`);
+ if(effective>10)warnings.push(`Travail effectif ${fmtHours(effective)} : protocole RH à vérifier (> 10 h).`);
+ if(effective>0&&effective<3)warnings.push(`Travail effectif ${fmtHours(effective)} : inférieur au repère RH de 3 h pour une demi-journée.`);
+ if(effective>=3&&effective<6)warnings.push(`Classification RH conseillée : demi-journée (${fmtHours(effective)}).`);
+ if(effective>=6&&effective<=10)warnings.push(`Classification RH : journée (${fmtHours(effective)}).`);
  // La matrice entreprise exige une pause méridienne de 30 min quand la journée couvre toute la plage 11:30–14:00.
  if(first<690&&last>840&&pause<30)warnings.push(`Pause méridienne : l’horaire couvre 11h30–14h00 ; le protocole prévoit 30 min. Saisie autorisée.`);
  return {warnings,effective,amplitude,type};
@@ -4487,8 +4492,7 @@ function historyLooksLikeTimeField(field){
 function historySignedHours(value){
  const n=Number(value);
  if(!Number.isFinite(n))return String(value||'—');
- if(n===0)return '0 h';
- return `${n>0?'+':''}${String(n).replace('.',',')} h`;
+ return fmtSignedHours(n);
 }
 function changeHistoryValue(field,value){
  if(value===null||value===undefined||String(value).trim()==='')return 'Non renseigné';
@@ -4506,7 +4510,7 @@ function changeHistoryValue(field,value){
  }
  if(field==='overtime')return historySignedHours(value);
  if(field==='weeklyHours'){
-   const n=Number(value);return Number.isFinite(n)?`${String(n).replace('.',',')} h / semaine`:raw;
+   const n=Number(value);return Number.isFinite(n)?`${fmtHours(n)} / semaine`:raw;
  }
  if(historyLooksLikeTimeField(field)&&/^\d{1,2}:\d{2}/.test(raw))return raw.slice(0,5);
  return raw;
@@ -5783,7 +5787,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.142 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.143 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -6186,7 +6190,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.142 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.143 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){
