@@ -1,0 +1,17 @@
+V147.145 — CONTINUITÉ DES ÉLÉMENTS OPÉRATIONNELS ENTRE ANNÉES
+
+Base stricte : V147.144.
+
+Les éléments encore ouverts restent affichés à leur emplacement quand l'année scolaire change :
+- Interventions Maintenance
+- Urgences / problématiques Sécurité & qualité
+- Demandes direction
+- Chantiers / GPA
+
+Règle :
+- Tant qu'un élément n'est pas clôturé, il reste visible quelle que soit l'année scolaire sélectionnée.
+- Une fois terminé / clôturé / annulé / archivé / réalisé / non applicable, il redevient historique et suit son année d'origine.
+- Le tableau de bord conserve aussi les urgences, interventions ouvertes et retards opérationnels des années précédentes.
+- Les historiques clôturés ne sont pas mélangés entre années.
+
+Aucune autre règle métier n'a été modifiée.

@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.144';
+const APP_VERSION='147.146';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -169,6 +169,17 @@ const IMPORTED_INTERVENTIONS=[
 
 const GENERIC_CLEANING=[['Poussière / mobilier','Selon plan local'],['Lavage des sols','Selon plan local'],['Points de contact','Selon plan local'],['Vitres / miroirs','Selon besoin'],['Poubelles / consommables','Selon plan local'],['Murs / portes','Selon besoin'],['Odeurs / aération','À chaque passage'],['Rangement général','À chaque passage']];
 const VACATION_TASKS=['Vérifier et programmer les alarmes / intrusion','Vérifier les accès, clés et badges','Adapter ou arrêter le chauffage selon consignes','Adapter la ventilation et la climatisation','Sécuriser l’eau et programmer la remise en service ECS','Prévoir surveillance légionelles / températures si nécessaire','Éteindre les éclairages non indispensables','Sécuriser informatique, réseau et équipements audiovisuels','Contrôler chambres froides, cuisine et demi-pension','Prévoir surveillance des chantiers et entreprises','Informer les personnes d’astreinte et prestataires','Programmer la remise en service avant la rentrée','Effectuer une ronde de fermeture','Effectuer une ronde de réouverture'];
+const LEGIONELLA_SUMMER_TASKS=[
+ 'Légionelle — début juillet : détartrer et désinfecter les mousseurs de robinets',
+ 'Légionelle — déposer, désinfecter et sécher complètement pommeaux de douche et douchettes',
+ 'Légionelle — laisser pommeaux et douchettes démontés pendant toute la fermeture estivale',
+ 'Légionelle — coordonner les interventions de l’exploitant et les soutirages des réseaux',
+ 'Légionelle — fin août : remettre en place pommeaux et douchettes après interventions et soutirages',
+ 'Légionelle — avant accueil : soutirer tous les points ECS et les points d’eau froide associés',
+ 'Légionelle — ECS : maintenir l’écoulement au moins 3 min après obtention de la température d’eau chaude',
+ 'Légionelle — vérifier le bon fonctionnement des équipements avant remise en service',
+ 'Légionelle — programmer / vérifier les analyses après plusieurs semaines d’inutilisation sur les points à risque'
+];
 const SCHOOL_CALENDAR={
  '2026-2027':{
   A:[['Toussaint','2026-10-18','2026-11-01','Fin des cours 17/10 — reprise 02/11'],['Noël','2026-12-20','2027-01-03','Fin des cours 19/12 — reprise 04/01'],['Hiver','2027-02-14','2027-02-28','Fin des cours 13/02 — reprise 01/03'],['Printemps','2027-04-11','2027-04-25','Fin des cours 10/04 — reprise 26/04'],['Été','2027-07-04','2027-08-31','Fin des cours 03/07 — date de fin à adapter']],
@@ -392,7 +403,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.144 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.146 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -516,7 +527,7 @@ function pendingSyncDiagnostics(){
  const confirmedAt=Number(lastConfirmedSupabaseAt||0);
  const queueCount=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
 
- // V147.144 — la file centrale de mutations est la référence absolue.
+ // V147.146 — la file centrale de mutations est la référence absolue.
  // Si elle est vide, un ancien localDirty/offlinePending ne doit plus afficher
  // une modification fantôme "non confirmée".
  if(queueCount===0){
@@ -1377,7 +1388,7 @@ function safeRenderAll(){
  return errors;
 }
 
-// ===== V147.144 — moteur central de synchronisation =====
+// ===== V147.146 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -2156,7 +2167,7 @@ async function deleteRecord(type,id,label='élément'){
 }
 
 
-/* ---------- V147.144 : Centre d’aide / FAQ local ---------- */
+/* ---------- V147.146 : Centre d’aide / FAQ local ---------- */
 const PST_HELP_ENTRIES=[
  {category:'Horaires',q:'Pourquoi Prévu et Réalisé sont différents mais Écart vaut 0 h ?',keys:'prévu réalisé différence écart zéro maladie congé 0h',answer:'Prévu et Réalisé sont deux totaux bruts. Écart comptabilisé applique les règles métier : certaines journées ne doivent pas créer de débit.',checks:['Regardez le type de journée concerné.','Une Maladie compte 7 h en Réalisé mais ne génère pas d’écart.','Une règle réglée à 0 h ne doit pas créer de débit.','Pour une Présence avec horaire réel différent, un écart doit en revanche apparaître.'],rule:'Écart comptabilisé ≠ forcément Réalisé − Prévu. Les exceptions métier restent à 0 h d’écart.'},
  {category:'Horaires',q:'Comment sont calculées les heures d’un agent entre deux dates ?',keys:'calculette heures dates période total réalisé prévu',answer:'Dans Pilotage des horaires, choisissez l’agent, la date de début et la date de fin. Le calcul additionne jour par jour les règles réellement applicables.',checks:['Prévu vient de l’horaire théorique applicable à la date.','Réalisé reprend l’horaire réel lorsqu’il existe.','Sinon le réalisé suit la règle du type de journée.','Les heures ajoutées ou retirées sont intégrées.'],rule:'Le calcul utilise le moteur dayHours, identique à celui du tableau de Pilotage.'},
@@ -2177,6 +2188,8 @@ const PST_HELP_ENTRIES=[
  {category:'Connexions',q:'Pourquoi l’IA est rouge alors que Supabase est vert ?',keys:'ia edge function gemini openai rouge supabase vert',answer:'La base Supabase et l’IA sont deux chemins distincts. Supabase peut être joignable alors que l’Edge Function ou le fournisseur IA ne l’est pas.',checks:['Vérifiez Edge Function IA.','Vérifiez le fournisseur IA.','Une absence de crédits ou de clé API concerne l’IA, pas les formulaires métier.'],rule:'Une panne IA ne doit pas empêcher l’enregistrement des données métier.'},
  {category:'Archivage',q:'Pourquoi un document importé ne se voit pas dans Archivage ?',keys:'document import archivage original cloud invisible',answer:'L’archivage a besoin de la fiche d’import et, selon le cas, du lien vers l’original cloud.',checks:['Vérifiez le type de document.','Vérifiez l’année scolaire.','Videz les filtres d’Archivage.','Vérifiez si l’original cloud est rattaché.'],rule:'La fiche peut exister même si l’original cloud est à vérifier ; les deux états sont affichés séparément.'},
  {category:'Navigation',q:'Pourquoi l’année scolaire change les données visibles ?',keys:'année scolaire filtre haut global écran',answer:'L’année scolaire affichée dans la barre du haut est le contexte global de Pilotage. Elle s’applique aux écrans qui utilisent une période scolaire.',checks:['Regardez le sélecteur en haut.','Changez l’année si vous cherchez une donnée ancienne.','Les filtres mensuels sont replacés dans l’année sélectionnée si nécessaire.'],rule:'Le sélecteur global est la source unique du contexte scolaire.'},
+ {category:'Navigation',q:'Pourquoi une intervention ou une urgence reste visible après un changement d’année ?',keys:'intervention urgence changement année reste visible actif chantier demande',answer:'C’est volontaire : un élément opérationnel non clôturé doit suivre son traitement jusqu’au bout, même s’il a commencé pendant l’année scolaire précédente.',checks:['Les interventions Maintenance restent visibles tant qu’elles ne sont pas clôturées.','Les urgences / problématiques ouvertes restent visibles.','Les demandes direction et chantiers en cours restent visibles.','Une fois clôturé, l’élément rejoint l’historique de son année.'],rule:'Actif / ouvert = visible toutes années ; clôturé = historique filtré par année scolaire.'},
+ {category:'Vacances',q:'Que faut-il faire pour prévenir le risque légionelle pendant la fermeture estivale ?',keys:'légionelle legionelle douche douchette mousseur soutirage ecs été fermeture rentrée 3 minutes analyse',answer:'Le module Vacances & fermetures reprend la procédure transmise par la Région : entretien et désinfection avant fermeture, pommeaux et douchettes démontés et séchés pendant l’inoccupation, puis soutirage complet et remise en service avant la rentrée.',checks:['Avant fermeture : détartrer et désinfecter mousseurs, pommeaux et douchettes.','Déposer pommeaux et douchettes, les désinfecter et les sécher complètement à l’air libre.','Ne pas les réinstaller pendant l’inoccupation estivale.','Au retour : après interventions exploitant et soutirages réseaux, les remettre en place.','Soutirer tous les points ECS et les points d’eau froide associés.','Pour l’ECS : maintenir l’écoulement au moins 3 minutes après obtention de la température d’eau chaude.','Vérifier les équipements et les analyses légionelle requises après plusieurs semaines d’inutilisation.'],rule:'Consignes reprises du courrier Région Auvergne-Rhône-Alpes reçu le 25 août 2026.'},
  {category:'Navigation',q:'Pourquoi la barre de défilement remonte pendant que je travaille ?',keys:'curseur scroll barre défilement remonte pc',answer:'Ce comportement ne doit plus se produire. Pilotage mémorise maintenant la position de chaque écran et de chaque tableau pendant les rafraîchissements.',checks:['Si le problème réapparaît, notez l’écran précis.','Vérifiez s’il s’agit de la page entière ou d’un tableau horizontal/vertical.'],rule:'Un rafraîchissement de données ne doit pas modifier la position de lecture sur PC.'}
 ];
 
@@ -2487,7 +2500,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.144 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.146 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2557,7 +2570,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.144 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.146 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2705,7 +2718,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.144 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.146 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2957,7 +2970,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.144 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.146 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -3011,7 +3024,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.144 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.146 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3624,7 +3637,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.144 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.146 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -4125,7 +4138,7 @@ function renderVacations(){
    (!status||x.status===status)&&
    (!x.start||!x.end||(x.end>=range.start&&x.start<=range.end))
  ).sort((a,b)=>a.start.localeCompare(b.start));$('#vacationCards').innerHTML=cardList(arr.map(x=>{const done=(x.tasks||[]).filter(t=>t.done).length,total=(x.tasks||[]).length,pct=total?Math.round(done/total*100):0;return `<article class="vacation-card"><div class="panel-head"><div><h3>${esc(x.name)}</h3><p>${fmtDate(x.start)} → ${fmtDate(x.end)} · Zone ${esc(x.zone)}</p></div>${badge(x.status)}</div><div class="progress"><span style="width:${pct}%"></span></div><p>${done}/${total} actions terminées (${pct} %)</p><ul>${(x.tasks||[]).slice(0,6).map(t=>`<li class="${t.done?'done':''}">${t.done?'✓':'○'} ${esc(t.text)}</li>`).join('')}</ul><div class="card-actions"><button type="button" data-edit-type="vacation" data-edit-id="${x.id}">Ouvrir la checklist</button></div></article>`}),'Aucune période chargée.')}
-function renderIssues(){const m=$('#issueMonth').value,agent=$('#issueAgent').value,cat=$('#issueCategory').value,status=$('#issueStatus').value;let arr=db.issues.filter(x=>dateMonthMatch(x.date,m)&&(!agent||x.agentId===agent)&&(!cat||x.category===cat)&&(!status||x.status===status)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));if(window.__dashboardUrgentOnly)arr=arr.filter(x=>!isClosedStatus(x.status)&&isUrgentPriority(x.priority));$('#issuesTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.category)}</td><td>${esc(agentName(agentById(x.agentId)))}</td><td>${badge(x.priority)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.action||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('issue',x.id)}</td></tr>`).join(''):emptyRow(9)}
+function renderIssues(){const m=$('#issueMonth').value,agent=$('#issueAgent').value,cat=$('#issueCategory').value,status=$('#issueStatus').value;let arr=db.issues.filter(x=>operationalMonthVisible(x,m,'date')&&(!agent||x.agentId===agent)&&(!cat||x.category===cat)&&(!status||x.status===status)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));if(window.__dashboardUrgentOnly)arr=arr.filter(x=>!isClosedStatus(x.status)&&isUrgentPriority(x.priority));$('#issuesTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.category)}</td><td>${esc(agentName(agentById(x.agentId)))}</td><td>${badge(x.priority)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.action||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('issue',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderPeriodic(){const fam=$('#periodicFamily').value,status=$('#periodicStatus').value,bld=$('#periodicBuilding').value;const arr=db.periodic.filter(x=>(!fam||x.family===fam)&&(!status||periodicComputed(x)===status||x.status===status)&&(!bld||x.building===bld||x.building==='Tous bâtiments')).sort((a,b)=>(periodicDue(a)||'9999').localeCompare(periodicDue(b)||'9999'));$('#periodicCards').innerHTML=cardList(arr.map(x=>{const state=periodicComputed(x),ncs=(db.reportNonconformities||[]).filter(n=>String(n.periodicControlId||'')===String(x.id));const open=ncs.filter(n=>!['FAIT','Levée'].includes(n.status)),done=ncs.filter(n=>['FAIT','Levée'].includes(n.status)),plans=(db.issues||[]).filter(i=>ncs.some(n=>String(n.id)===String(i.sourceNonconformityId||''))),openPlans=plans.filter(i=>!isClosedStatus(i.status));const nc=ncs.length?`<section class="periodic-nc-block ${open.length?'has-open':'all-done'}"><div class="periodic-nc-summary"><strong>${open.length?'🔴 CONTRÔLE NON CONFORME':'🟢 OBSERVATIONS LEVÉES'}</strong><span>${ncs.length} observations · 🔴 ${open.length} à traiter · 🟢 ${done.length} FAIT/levées · 📋 ${openPlans.length} plan(s) d’action ouvert(s)</span></div>${open.length?`<h4>Non-conformités à traiter</h4>${open.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p>${n.action?`<p><b>Préconisation :</b> ${esc(n.action)}</p>`:''}</div><select data-nc-status="${esc(n.id)}"><option selected>À traiter</option><option>FAIT</option><option>Levée</option></select></article>`).join('')}`:''}${done.length?`<details><summary>🟢 ${done.length} FAIT / levées</summary>${done.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')} — ${esc(n.status)}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p></div><select data-nc-status="${esc(n.id)}"><option>À traiter</option><option ${n.status==='FAIT'?'selected':''}>FAIT</option><option ${n.status==='Levée'?'selected':''}>Levée</option></select></article>`).join('')}</details>`:''}</section>`:'';return `<article class="periodic-card ${state==='En retard'?'late':''}"><div class="panel-head"><span>${esc(x.no)}</span>${badge(state)}</div><h3>${esc(x.name)}</h3><p>${esc(x.family)} · ${esc(x.building)}</p>${x.periodicityText?`<p class="muted"><strong>Périodicité :</strong> ${esc(x.periodicityText)}</p>`:''}<dl><dt>Dernier</dt><dd>${fmtDate(x.lastDate)||'Non renseigné'}</dd><dt>Échéance</dt><dd>${fmtDate(periodicDue(x))||'À définir'}</dd><dt>Responsable</dt><dd>${esc(x.provider||'À définir')}</dd></dl>${nc}${attachmentButtons(x.attachments)}${periodicOneDriveButtons(x)}<button type="button" class="ghost" data-edit-type="periodic" data-edit-id="${x.id}">✎ Ouvrir / modifier le contrôle</button></article>`}),'Aucun contrôle trouvé.');}
 function renderCleaningGuide(){const type=$('#cleaningGuideType').value||db.lists.roomTypes.find(x=>GUIDE[x])||Object.keys(GUIDE)[0];$('#cleaningGuideType').value=type;const rows=GUIDE[type]||[];$('#cleaningGuideTable').innerHTML=`<table><thead><tr><th>Opération</th><th>Fréquence préconisée</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table>`}
 
@@ -4186,9 +4199,9 @@ function renderCleaningDashboard(arr){
  <div class="clean-dash-grid three"><article class="clean-dash-panel"><h3>À reprendre — priorités</h3><div class="sub">Contrôles les moins bien notés</div>${prioRows}</article><article class="clean-dash-panel"><h3>Récidives par local</h3><div class="sub">Même lieu à reprendre au moins deux fois</div><div class="clean-list">${recRows}</div></article><article class="clean-dash-panel"><h3>Indicateurs de pilotage</h3><div class="sub">Lecture rapide pour le suivi</div><div class="clean-list"><div class="clean-list-item"><span>Objectif qualité atteint</span><b>${d.avgPct>=target?'✅ Oui':'⚠️ Non'}</b></div><div class="clean-list-item"><span>Bâtiments suivis</span><b>${d.buildings.length}</b></div><div class="clean-list-item"><span>Locaux en récidive</span><b>${d.recurrent.length}</b></div><div class="clean-list-item"><span>Non-conformités</span><b>${d.nonConformes}</b></div><div class="clean-list-item"><span>Contrôles à reprendre</span><b>${d.reprendre}</b></div></div></article></div>`;
 }
 function renderCleaning(){const month=$('#cleanMonth').value,bld=$('#cleanBuilding').value,type=$('#cleanRoomType').value,status=$('#cleanStatus').value;const arr=db.cleaning.filter(x=>dateMonthMatch(x.date,month)&&(!bld||x.building===bld)&&(!type||x.roomType===type)&&(!status||x.overallStatus===status)).sort((a,b)=>b.date.localeCompare(a.date));const all=arr.length,ok=arr.filter(x=>x.overallStatus==='Conforme').length,weak=arr.reduce((s,x)=>s+(x.tasks||[]).filter(t=>['À reprendre','Non conforme'].includes(t.status)).length,0),avg=all?Math.round(arr.reduce((s,x)=>s+Number(x.score||0),0)/all):0;$('#cleaningSummary').innerHTML=`<article><span>Contrôles</span><strong>${all}</strong></article><article><span>Conformes</span><strong>${ok}</strong></article><article><span>Score moyen</span><strong>${avg||'—'}${all?' %':''}</strong></article><article><span>Points faibles</span><strong>${weak}</strong></article>`;$('#cleaningTable').innerHTML=arr.length?arr.map(x=>{const weakTasks=(x.tasks||[]).filter(t=>['À reprendre','Non conforme'].includes(t.status));return `<tr><td>${fmtDate(x.date)} ${esc(x.time||'')}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.roomType)}</td><td>${esc(agentName(agentById(x.agentId)))}</td><td>${x.score||0} %</td><td>${badge(x.overallStatus)}</td><td>${esc(weakTasks.slice(0,3).map(t=>t.name).join(', ')||'—')}</td><td>${editButton('cleaning',x.id)}</td></tr>`}).join(''):emptyRow(8);renderCleaningDashboard(arr);renderCleaningGuide()}
-function renderMaintenance(){const st=$('#maintenanceStatus').value,p=$('#maintenancePriority').value,f=$('#maintenanceFamily').value;const arr=db.maintenance.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!st||x.status===st)&&(!p||x.priority===p)&&(!f||x.family===f)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#maintenanceTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.family)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${badge(x.priority)}</td><td>${esc(x.assigned||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('maintenance',x.id)}</td></tr>`).join(''):emptyRow(10)}
-function renderRequests(){const st=$('#requestStatus').value,t=$('#requestType').value;const arr=db.requests.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#requestsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc(x.requester)}</td><td>${esc(x.type)}</td><td>${esc([x.building,x.room].filter(Boolean).join(' · '))}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('request',x.id)}</td></tr>`).join(''):emptyRow(9)}
-function renderWorks(){const st=$('#workStatus').value,t=$('#workType').value;const arr=db.works.filter(x=>recordInAcademicYear(x,['date','dueDate','gpaEnd'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9)}
+function renderMaintenance(){const st=$('#maintenanceStatus').value,p=$('#maintenancePriority').value,f=$('#maintenanceFamily').value;const arr=db.maintenance.filter(x=>operationalRecordVisible(x,['date','dueDate'])&&(!st||x.status===st)&&(!p||x.priority===p)&&(!f||x.family===f)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#maintenanceTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.family)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${badge(x.priority)}</td><td>${esc(x.assigned||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('maintenance',x.id)}</td></tr>`).join(''):emptyRow(10)}
+function renderRequests(){const st=$('#requestStatus').value,t=$('#requestType').value;const arr=db.requests.filter(x=>operationalRecordVisible(x,['date','dueDate'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#requestsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc(x.requester)}</td><td>${esc(x.type)}</td><td>${esc([x.building,x.room].filter(Boolean).join(' · '))}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('request',x.id)}</td></tr>`).join(''):emptyRow(9)}
+function renderWorks(){const st=$('#workStatus').value,t=$('#workType').value;const arr=db.works.filter(x=>operationalRecordVisible(x,['date','dueDate','gpaEnd'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderMeetings(){const m=$('#meetingMonth').value,t=$('#meetingType').value;const arr=db.meetings.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));$('#meetingsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.time||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${esc(x.participants||'—')}</td><td>${badge(x.status)}</td><td>${editButton('meeting',x.id)}</td></tr>`).join(''):emptyRow(8)}
 function renderPersonal(){const m=$('#personalMonth').value,t=$('#personalType').value,s=$('#personalStatus').value;const arr=db.personalEvents.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)&&(!s||x.status===s)).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));$('#personalTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc([x.start,x.end].filter(Boolean).join('–')||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('personal',x.id)}</td></tr>`).join(''):emptyRow(8);$('#personalCards').innerHTML=cardList(arr.map(x=>`<article class="list-card"><div><strong>${fmtDate(x.date)} ${esc(x.start||'')}</strong>${badge(x.status)}</div><h3>${esc(x.title)}</h3><p>${esc(x.type)} · ${esc(x.location||'Sans lieu')}</p><button type="button" data-edit-type="personal" data-edit-id="${x.id}">Modifier</button></article>`))}
 function renderNotes(){const cat=$('#noteCategory').value,p=$('#notePriority').value,s=$('#noteStatus').value,q=($('#noteSearch').value||'').toLowerCase();const arr=db.notes.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!cat||x.category===cat)&&(!p||x.priority===p)&&(!s||x.status===s)&&(!q||`${x.title} ${x.text}`.toLowerCase().includes(q))).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#notesBoard').innerHTML=cardList(arr.map(x=>{const done=(x.items||[]).filter(i=>i.done).length;return `<article class="note-card"><div class="panel-head"><span>${esc(x.category)}</span>${badge(x.priority)}</div><h3>${esc(x.title)}</h3><p>${esc(x.text||'')}</p>${x.agentId?`<p>👤 ${esc(agentName(agentById(x.agentId)))}</p>`:''}<p>Échéance : ${fmtDate(x.dueDate)||'—'} · ${done}/${(x.items||[]).length} items</p><ul>${(x.items||[]).map(i=>`<li class="${i.done?'done':''}">${i.done?'✓':'○'} ${esc(i.text)}</li>`).join('')}</ul>${attachmentButtons(x.attachments)}<div class="card-actions"><span>${badge(x.status)}</span><button type="button" class="note-edit-button" data-edit-type="note" data-edit-id="${x.id}" aria-label="Modifier la note ${esc(x.title)}">Modifier</button></div></article>`}),'Aucune note.')}
@@ -4218,6 +4231,15 @@ function recordInAcademicYear(record,dateFields=['date'],label=activeAcademicYea
  if(normalizeAcademicYear(record?.academicYear))return normalizeAcademicYear(record.academicYear)===y;
  for(const f of dateFields){const d=normalizeDateValue(record?.[f]);if(d&&d>=r.start&&d<=r.end)return true}
  return !dateFields.some(f=>normalizeDateValue(record?.[f]));
+}
+// V147.146 — continuité des éléments opérationnels entre années scolaires.
+// Un élément non clôturé reste visible, même si son année d'origine n'est plus sélectionnée.
+// Une fois clôturé, il redevient historique et suit le filtre de son année scolaire.
+function operationalRecordVisible(record,dateFields=['date'],label=activeAcademicYear()){
+ return !isClosedStatus(record?.status)||recordInAcademicYear(record,dateFields,label);
+}
+function operationalMonthVisible(record,month,dateField='date'){
+ return !isClosedStatus(record?.status)||dateMonthMatch(record?.[dateField],month);
 }
 function periodOverlapsAcademicYear(record,startField='effectiveFrom',endField='effectiveTo',label=activeAcademicYear()){
  const r=academicYearRange(label),start=normalizeDateValue(record?.[startField]),end=normalizeDateValue(record?.[endField]);
@@ -4868,7 +4890,9 @@ function collectUrgentDashboardActions(){
  const rows=[];
  for(const [key,label,icon,editType] of sources){
   for(const x of (db[key]||[])){
-   if(!recordInAcademicYear(x,['date','dueDate','start','end'])||isClosedStatus(x.status)||!isUrgentPriority(x.priority))continue;
+   const crossYear=['issues','maintenance','requests','works'].includes(key);
+   const visible=crossYear?operationalRecordVisible(x,['date','dueDate','start','end']):recordInAcademicYear(x,['date','dueDate','start','end']);
+   if(!visible||isClosedStatus(x.status)||!isUrgentPriority(x.priority))continue;
    rows.push({label,icon,editType,id:x.id,title:x.title||x.subject||x.no||label,due:recordDueDate(x)});
   }
  }
@@ -4885,7 +4909,9 @@ function collectLateDashboardActions(today=todayISO()){
  const rows=[];
  for(const key of sources){
   for(const x of (db[key]||[])){
-   if(!recordInAcademicYear(x,['date','dueDate']))continue;
+   const crossYear=['issues','maintenance','requests','works'].includes(key);
+   const visible=crossYear?operationalRecordVisible(x,['date','dueDate']):recordInAcademicYear(x,['date','dueDate']);
+   if(!visible)continue;
    const due=recordDueDate(x);
    if(!isClosedStatus(x.status)&&due&&due<today)rows.push({module:key,record:x,due});
   }
@@ -4899,7 +4925,7 @@ function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnectio
  const present=todayInActive?activeAgents.filter(a=>{const info=dayInfo(a.id,today);return !isAbsenceType(info.dayType)&&normalizeText(info.dayType)!=='repos'}).length:null;
  const urgentActions=collectUrgentDashboardActions();
  const lateActions=collectLateDashboardActions(today);
- const allMaint=(db.maintenance||[]).filter(x=>recordInAcademicYear(x,['date','dueDate']));
+ const allMaint=(db.maintenance||[]).filter(x=>operationalRecordVisible(x,['date','dueDate']));
  const closedMaint=allMaint.filter(x=>isClosedStatus(x.status));
  const openMaint=allMaint.filter(x=>!isClosedStatus(x.status));
  // "À faire" = statut À faire uniquement. Les statuts À qualifier / Planifiée restent dans "ouvertes".
@@ -4940,7 +4966,30 @@ const LIST_LABELS={roles:'Fonctions agents',dayTypes:'Types de journée / absenc
 function renderSettings(){if($('#cleaningAlertDays'))$('#cleaningAlertDays').value=db.settings.cleaningAlertDays||30;if($('#meetingAlertDays'))$('#meetingAlertDays').value=db.settings.meetingAlertDays||3;for(const [k,v] of Object.entries(db.settings)){const e=document.getElementById(k);if(e&&k!=='counters'){if(e.type==='checkbox')e.checked=Boolean(v);else e.value=v??''}}$('#buildingSettings').innerHTML=db.buildings.map(b=>`<div class="building-card" data-building-id="${b.id}"><div class="panel-head"><input value="${esc(b.name)}" data-building-name><button class="danger small" data-remove-building="${b.id}">Supprimer</button></div><div class="floor-chips">${b.floors.map((f,i)=>`<span><input value="${esc(f)}" data-floor-index="${i}"><button data-remove-floor="${i}">×</button></span>`).join('')}</div><button class="ghost small" data-add-floor="${b.id}">＋ Étage / niveau</button></div>`).join('');$('#spaceSettings').innerHTML=db.spaces.slice().sort((a,b)=>(a.building+a.floor+a.name).localeCompare(b.building+b.floor+b.name)).map(s=>`<button class="space-chip" data-edit-type="space" data-edit-id="${s.id}"><strong>${esc(s.name)}</strong><small>${esc(s.building)} · ${esc(s.floor)} · ${esc(s.type)}</small></button>`).join('')||'<p>Aucun local configuré.</p>';const absenceItems=db.lists.dayTypes;if($('#absenceTypeSettings'))$('#absenceTypeSettings').innerHTML=`<div class="list-editor" data-list-key="dayTypes">${absenceItems.map((x,i)=>`<div><input value="${esc(x)}" data-list-index="${i}" ${x==='Présence'?'readonly':''}><button class="danger small" data-remove-list="${i}" ${x==='Présence'?'disabled':''}>×</button></div>`).join('')}<button class="ghost small" data-add-list="dayTypes">＋ Ajouter un motif</button></div>`;$('#listSettings').innerHTML=Object.entries(db.lists).filter(([k])=>k!=='dayTypes').map(([k,items])=>`<details><summary>${esc(LIST_LABELS[k]||k)} <small>${items.length} choix</small></summary><div class="list-editor" data-list-key="${k}">${items.map((x,i)=>`<div><input value="${esc(x)}" data-list-index="${i}"><button class="danger small" data-remove-list="${i}">×</button></div>`).join('')}<button class="ghost small" data-add-list="${k}">＋ Choix</button></div></details>`).join('')}
 function saveSettings(){const keys=['appName','schoolName','schoolZone','defaultLayout','printOrientation','defaultInspector','emailsTo','emailsCc','emailsBcc','emailSubjectPrefix','outlookEmail','cleaningAlertDays','meetingAlertDays','autoReportHour','autoReportTimezone','autoReportWeekdays','autoReportSignature'];for(const k of keys)db.settings[k]=document.getElementById(k)?.value??db.settings[k];db.settings.academicYear=activeAcademicYear();for(const k of ['autoDailyEnabled','autoWeeklyEnabled','autoReportOnlyIfEvents','autoReportIncludeAgents','autoReportIncludeMaintenance','autoReportIncludeCleaning','autoReportIncludePeriodic','autoReportIncludeMeetings','cleaningNotificationsEnabled','cleaningNotifyNever','cleaningNotifyOverdue','cleaningNotifyPlanned']){const e=document.getElementById(k);if(e)db.settings[k]=e.checked}$$('[data-building-id]').forEach(card=>{const b=db.buildings.find(x=>x.id===card.dataset.buildingId);if(!b)return;const old=b.name;b.name=card.querySelector('[data-building-name]').value.trim()||b.name;b.floors=$$('[data-floor-index]',card).map(i=>i.value.trim()).filter(Boolean);if(old!==b.name){db.spaces.forEach(s=>{if(s.building===old)s.building=b.name});for(const type of ['cleaning','maintenance','requests','works','periodic'])db[type].forEach(x=>{if(x.building===old)x.building=b.name})}});$$('[data-list-key]').forEach(ed=>{db.lists[ed.dataset.listKey]=$$('[data-list-index]',ed).map(i=>i.value.trim()).filter(Boolean)});applyLayout(db.settings.defaultLayout);save();toast('Paramètres enregistrés')}
 function addBuilding(){const b={id:uid(),name:`Nouveau bâtiment ${db.buildings.length+1}`,floors:['Rez-de-chaussée']};db.buildings.push(b);save();setView('settings')}
-function loadSchoolHolidays(){const zone=$('#vacationZone').value||db.settings.schoolZone||'A',year=activeAcademicYear(),periods=SCHOOL_CALENDAR[year]?.[zone]||[];if(!periods.length){toast(`Calendrier officiel non intégré pour ${year}. Le logiciel reste utilisable : ajoutez les périodes manuellement.`);return}for(const [name,start,end,notes] of periods){if(!db.vacations.some(x=>x.name===name&&x.start===start)){db.vacations.push({id:uid(),name:`Vacances de ${name}`,zone,start,end,status:'À préparer',tasks:VACATION_TASKS.map(t=>({text:t,done:false})),notes,attachments:[]})}}save();toast(`Vacances zone ${zone} chargées`)}
+
+function addLegionellaTasksToSummerVacations(){
+ const year=activeAcademicYear(),zone=$('#vacationZone')?.value||db.settings.schoolZone||'A';
+ const range=academicYearRange(year);
+ const summer=(db.vacations||[]).filter(v=>{
+   const name=normalizeText(v.name||'');
+   const overlaps=(!v.start||!v.end)||(v.end>=range.start&&v.start<=range.end);
+   return overlaps&&(v.zone===zone||v.zone==='Toutes'||!v.zone)&&(name.includes('ete')||name.includes('estiv')||String(v.start||'').slice(5,7)==='07'||String(v.start||'').slice(5,7)==='08');
+ });
+ if(!summer.length){toast('Aucune période estivale trouvée pour cette année. Chargez le calendrier ou créez une période été.');return false}
+ let added=0;
+ for(const v of summer){
+   if(!Array.isArray(v.tasks))v.tasks=[];
+   const existing=new Set(v.tasks.map(t=>normalizeText(t.text||t)));
+   for(const text of LEGIONELLA_SUMMER_TASKS){
+     if(existing.has(normalizeText(text)))continue;
+     v.tasks.push({text,done:false});added++;
+   }
+ }
+ if(!added){toast('Les actions légionelle sont déjà présentes dans la checklist été.');return true}
+ save();toast(`✅ ${added} action(s) légionelle ajoutée(s) à la checklist été`);
+ return true
+}
+function loadSchoolHolidays(){const zone=$('#vacationZone').value||db.settings.schoolZone||'A',year=activeAcademicYear(),periods=SCHOOL_CALENDAR[year]?.[zone]||[];if(!periods.length){toast(`Calendrier officiel non intégré pour ${year}. Le logiciel reste utilisable : ajoutez les périodes manuellement.`);return}for(const [name,start,end,notes] of periods){if(!db.vacations.some(x=>x.name===name&&x.start===start)){db.vacations.push({id:uid(),name:`Vacances de ${name}`,zone,start,end,status:'À préparer',tasks:[...VACATION_TASKS,...(/été/i.test(name)?LEGIONELLA_SUMMER_TASKS:[])].map(t=>({text:t,done:false})),notes,attachments:[]})}}save();toast(`Vacances zone ${zone} chargées`)}
 
 
 async function sendAutomaticReportTest(){
@@ -5377,7 +5426,7 @@ window.addEventListener('scroll',()=>{
   if(document.scrollingElement)pstRememberScroll(document.scrollingElement);
 },{passive:true});
 
-// V147.144 — pas de MutationObserver qui force la position pendant que l'utilisateur défile.
+// V147.146 — pas de MutationObserver qui force la position pendant que l'utilisateur défile.
 // La restauration est déclenchée uniquement autour des rendus explicites de l'application.
 
 
@@ -5861,7 +5910,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.144 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.146 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -5912,7 +5961,7 @@ function bindEvents(){
 $('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').onclick=()=>printView(document.querySelector('.view.active')?.id);
  const gay=$('#globalAcademicYear');if(gay)gay.onchange=e=>setActiveAcademicYear(e.target.value);const pay=$('#prevAcademicYear');if(pay)pay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),-1));const nay=$('#nextAcademicYear');if(nay)nay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),1));
  {const q=$('#quickAdd');if(q)q.onclick=openQuickMenu;const f=$('#quickNoteFab');if(f)f.onclick=openQuickMenu;}
- $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
+ $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;const legBtn=$('#addLegionellaSummerTasks');if(legBtn)legBtn.onclick=addLegionellaTasksToSummerVacations;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
  $('#prevTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,-7);renderTeamCalendar()};$('#nextTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,7);renderTeamCalendar()};$('#prevTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,-1));renderTeamCalendar()};$('#nextTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,1));renderTeamCalendar()};$('#todayTeamWeek').onclick=()=>{teamWeek=startOfWeek(todayISO());renderTeamCalendar()};$('#teamDateJump').onchange=e=>{teamWeek=startOfWeek(e.target.value);renderTeamCalendar()};$('#prevPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,-7);renderPersonalCalendar()};$('#nextPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,7);renderPersonalCalendar()};$('#todayPersonalWeek').onclick=()=>{personalWeek=startOfWeek(todayISO());renderPersonalCalendar()};
  $('#saveSettings').onclick=saveSettings;const wizardOpen=$('#openAutoReportWizard');if(wizardOpen)wizardOpen.onclick=openAutoReportWizard;const wizardClose=$('#autoReportWizardClose');if(wizardClose)wizardClose.onclick=()=>wizardEl().close();const wizardBack=$('#autoReportWizardBack');if(wizardBack)wizardBack.onclick=()=>{saveWizardStep();autoReportWizardStep=Math.max(0,autoReportWizardStep-1);renderAutoReportWizard()};const wizardNext=$('#autoReportWizardNext');if(wizardNext)wizardNext.onclick=()=>{saveWizardStep();if(autoReportWizardStep===3){wizardEl().close();return}autoReportWizardStep=Math.min(3,autoReportWizardStep+1);renderAutoReportWizard()};document.addEventListener('click',e=>{const p=e.target.closest('[data-wizard-provider]');if(p){autoReportWizardData.provider=p.dataset.wizardProvider;renderAutoReportWizard()}});const sart=$('#sendAutomaticReportTest');if(sart)sart.onclick=sendAutomaticReportTest;function openNotificationCenter(){window.PSTNotificationCenter?.open?.()}
 function closeNotificationCenter(){window.PSTNotificationCenter?.close?.()}
@@ -6266,7 +6315,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.144 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.146 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){

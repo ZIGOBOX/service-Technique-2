@@ -723,6 +723,19 @@
   .table-wrap,.team-calendar,.personal-calendar{scroll-behavior:auto!important}
 }
 </style>
+
+<style id="v147146-legionella-vacations">
+.legionella-vacation-panel{border-left:5px solid #0ea5e9;margin:14px 0}
+.legionella-regulatory{padding:12px 14px;border-radius:12px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;margin-bottom:12px}
+.legionella-regulatory p{margin:5px 0}
+.legionella-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.legionella-steps section{padding:13px;border:1px solid #dbeafe;border-radius:12px;background:#f8fbff}
+.legionella-steps h4{margin:0 0 8px;color:#075ca8}
+.legionella-steps ul{margin:7px 0 0 18px;padding:0}
+.legionella-steps li{margin:5px 0;line-height:1.35}
+@media(max-width:900px){.legionella-steps{grid-template-columns:1fr}}
+@media print{#addLegionellaSummerTasks{display:none!important}.legionella-vacation-panel{break-inside:avoid}}
+</style>
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -771,7 +784,7 @@
       <button class="nav-btn" data-view="help"><span>?</span>FAQ / Aide</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.144 — 25/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.146 — 26/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -931,6 +944,59 @@
     <section class="view" id="vacations">
       <div class="section-actions"><div><h3>Vacances scolaires & fermetures</h3><p>Préparation des alarmes, du chauffage, des réseaux, des accès et de la remise en service.</p></div><div><button class="ghost" id="loadSchoolHolidays">Charger le calendrier officiel</button><button class="primary" id="newVacation">＋ Période</button></div></div>
       <div class="filters"><select id="vacationZone"><option value="A">Zone A</option><option value="B">Zone B</option><option value="C">Zone C</option></select><select id="vacationYear"></select><select id="vacationStatus"><option value="">Tous les états</option><option>À préparer</option><option>En cours</option><option>Prête</option><option>Clôturée</option></select><button class="ghost" data-print="vacations">Imprimer</button></div>
+
+      <article class="panel legionella-vacation-panel">
+        <div class="panel-head">
+          <div>
+            <span class="calendar-kicker">PRÉVENTION SANITAIRE</span>
+            <h3>💧 Prévention du risque légionelle — fermeture estivale</h3>
+            <p class="muted">Consignes Région Auvergne-Rhône-Alpes · courrier reçu le 25 août 2026.</p>
+          </div>
+          <button type="button" class="primary" id="addLegionellaSummerTasks">Ajouter à la checklist été</button>
+        </div>
+
+        <div class="legionella-regulatory">
+          <strong>⚠ Après plusieurs semaines d’inutilisation</strong>
+          <p>Des analyses de légionelle doivent être réalisées sur les installations d’eau chaude sanitaire comportant des points d’usage à risque.</p>
+          <p><b>Points concernés :</b> douches, douchettes et tout point de puisage susceptible de générer de la vapeur d’eau.</p>
+        </div>
+
+        <div class="legionella-steps">
+          <section>
+            <h4>1. Avant la fermeture estivale</h4>
+            <p><b>Idéalement début juillet, dès la mise en non-utilisation des points.</b></p>
+            <ul>
+              <li>Entretien, détartrage et désinfection des mousseurs de robinets.</li>
+              <li>Entretien, détartrage et désinfection des pommeaux de douche et douchettes.</li>
+              <li>Déposer les pommeaux de douche et les douchettes.</li>
+              <li>Désinfecter les équipements déposés.</li>
+              <li>Les laisser sécher complètement à l’air libre.</li>
+              <li>Ne pas les réinstaller pendant toute la période d’inoccupation estivale.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h4>2. Pendant l’inoccupation</h4>
+            <ul>
+              <li>Conserver les pommeaux et douchettes démontés et parfaitement secs.</li>
+              <li>Coordonner les interventions prévues avec l’exploitant chauffage / ECS.</li>
+              <li>Prévoir les opérations de soutirage des réseaux avant remise en service.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h4>3. Retour du personnel / avant la rentrée</h4>
+            <ul>
+              <li>Après les interventions des exploitants et les soutirages des réseaux, remettre en place pommeaux et douchettes.</li>
+              <li>Effectuer un nouveau soutirage sur <b>tous les points ECS</b> et sur les <b>points d’eau froide associés</b>.</li>
+              <li>Pour l’ECS : faire couler au moins <b>3 minutes après obtention de la température d’eau chaude</b>.</li>
+              <li>Vérifier le bon fonctionnement des équipements avant remise en service.</li>
+              <li>Réaliser les analyses légionelle requises après plusieurs semaines d’inutilisation sur les installations comportant des points à risque.</li>
+            </ul>
+          </section>
+        </div>
+      </article>
+
       <div id="vacationCards" class="vacation-grid"></div>
     </section>
 
@@ -1292,7 +1358,7 @@
           <select id="pstHelpCategory" aria-label="Catégorie d’aide">
             <option value="">Toutes les catégories</option>
             <option>Horaires</option><option>Agents</option><option>Absences</option><option>Chronotime</option>
-            <option>Contrôle ménage</option><option>Maintenance</option><option>Contrôles périodiques</option>
+            <option>Contrôle ménage</option><option>Maintenance</option><option>Vacances</option><option>Contrôles périodiques</option>
             <option>Import / export</option><option>Connexions</option><option>Archivage</option><option>Navigation</option>
           </select>
           <button type="button" class="primary" id="pstHelpSearchBtn">Rechercher</button>

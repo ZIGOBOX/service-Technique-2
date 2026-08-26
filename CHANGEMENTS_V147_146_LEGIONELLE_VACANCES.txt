@@ -1,0 +1,19 @@
+V147.146 — PRÉVENTION LÉGIONELLE DANS VACANCES & FERMETURES
+
+Base stricte : V147.145.
+
+Ajouts dans « Vacances & fermetures » :
+- Bloc permanent « Prévention du risque légionelle — fermeture estivale ».
+- Rappel des installations / points à risque.
+- Actions avant fermeture : entretien, détartrage, désinfection, dépose et séchage.
+- Consignes pendant l'inoccupation : équipements démontés et secs, coordination exploitant.
+- Actions avant rentrée : remise en place, soutirage ECS + eau froide associée, 3 minutes après obtention
+  de la température ECS, contrôle du fonctionnement et analyses nécessaires.
+- Bouton « Ajouter à la checklist été » pour injecter les actions dans la période estivale active.
+- Les périodes Été chargées depuis le calendrier officiel reçoivent automatiquement ces actions.
+- FAQ enrichie avec la procédure légionelle.
+
+Source intégrée : contenu du courrier Région Auvergne-Rhône-Alpes transmis par l'utilisateur,
+daté du 25 août 2026.
+
+Aucune autre règle métier n'a été modifiée.
