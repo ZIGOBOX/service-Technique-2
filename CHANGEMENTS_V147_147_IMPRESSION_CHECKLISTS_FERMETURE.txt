@@ -1,0 +1,17 @@
+V147.147 — IMPRESSION INDIVIDUELLE DES CHECKLISTS DE FERMETURE
+
+Base stricte : V147.146.
+
+Dans Vacances & fermetures :
+- Chaque période possède maintenant le bouton « Imprimer la checklist ».
+- L'impression concerne uniquement la période choisie.
+- Toutes les actions de la checklist sont imprimées, même si la carte n'en affiche qu'un aperçu.
+- Les actions terminées sont imprimées avec ☑ / FAIT.
+- Les actions restantes sont imprimées avec ☐ / À FAIRE.
+- La feuille A4 comporte le nom de la période, les dates, la zone, le statut,
+  le niveau d'avancement et les notes éventuelles.
+- Deux zones de contrôle / visa sont ajoutées : fermeture et réouverture.
+- Les checklists estivales incluent naturellement les actions légionelle de V147.146.
+
+Aucune donnée n'est modifiée par l'impression.
+Aucune autre règle métier n'a été changée.

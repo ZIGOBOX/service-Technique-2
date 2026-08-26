@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.146';
+const APP_VERSION='147.147';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -403,7 +403,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.146 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.147 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -527,7 +527,7 @@ function pendingSyncDiagnostics(){
  const confirmedAt=Number(lastConfirmedSupabaseAt||0);
  const queueCount=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
 
- // V147.146 — la file centrale de mutations est la référence absolue.
+ // V147.147 — la file centrale de mutations est la référence absolue.
  // Si elle est vide, un ancien localDirty/offlinePending ne doit plus afficher
  // une modification fantôme "non confirmée".
  if(queueCount===0){
@@ -1388,7 +1388,7 @@ function safeRenderAll(){
  return errors;
 }
 
-// ===== V147.146 — moteur central de synchronisation =====
+// ===== V147.147 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -2167,7 +2167,7 @@ async function deleteRecord(type,id,label='élément'){
 }
 
 
-/* ---------- V147.146 : Centre d’aide / FAQ local ---------- */
+/* ---------- V147.147 : Centre d’aide / FAQ local ---------- */
 const PST_HELP_ENTRIES=[
  {category:'Horaires',q:'Pourquoi Prévu et Réalisé sont différents mais Écart vaut 0 h ?',keys:'prévu réalisé différence écart zéro maladie congé 0h',answer:'Prévu et Réalisé sont deux totaux bruts. Écart comptabilisé applique les règles métier : certaines journées ne doivent pas créer de débit.',checks:['Regardez le type de journée concerné.','Une Maladie compte 7 h en Réalisé mais ne génère pas d’écart.','Une règle réglée à 0 h ne doit pas créer de débit.','Pour une Présence avec horaire réel différent, un écart doit en revanche apparaître.'],rule:'Écart comptabilisé ≠ forcément Réalisé − Prévu. Les exceptions métier restent à 0 h d’écart.'},
  {category:'Horaires',q:'Comment sont calculées les heures d’un agent entre deux dates ?',keys:'calculette heures dates période total réalisé prévu',answer:'Dans Pilotage des horaires, choisissez l’agent, la date de début et la date de fin. Le calcul additionne jour par jour les règles réellement applicables.',checks:['Prévu vient de l’horaire théorique applicable à la date.','Réalisé reprend l’horaire réel lorsqu’il existe.','Sinon le réalisé suit la règle du type de journée.','Les heures ajoutées ou retirées sont intégrées.'],rule:'Le calcul utilise le moteur dayHours, identique à celui du tableau de Pilotage.'},
@@ -2190,6 +2190,7 @@ const PST_HELP_ENTRIES=[
  {category:'Navigation',q:'Pourquoi l’année scolaire change les données visibles ?',keys:'année scolaire filtre haut global écran',answer:'L’année scolaire affichée dans la barre du haut est le contexte global de Pilotage. Elle s’applique aux écrans qui utilisent une période scolaire.',checks:['Regardez le sélecteur en haut.','Changez l’année si vous cherchez une donnée ancienne.','Les filtres mensuels sont replacés dans l’année sélectionnée si nécessaire.'],rule:'Le sélecteur global est la source unique du contexte scolaire.'},
  {category:'Navigation',q:'Pourquoi une intervention ou une urgence reste visible après un changement d’année ?',keys:'intervention urgence changement année reste visible actif chantier demande',answer:'C’est volontaire : un élément opérationnel non clôturé doit suivre son traitement jusqu’au bout, même s’il a commencé pendant l’année scolaire précédente.',checks:['Les interventions Maintenance restent visibles tant qu’elles ne sont pas clôturées.','Les urgences / problématiques ouvertes restent visibles.','Les demandes direction et chantiers en cours restent visibles.','Une fois clôturé, l’élément rejoint l’historique de son année.'],rule:'Actif / ouvert = visible toutes années ; clôturé = historique filtré par année scolaire.'},
  {category:'Vacances',q:'Que faut-il faire pour prévenir le risque légionelle pendant la fermeture estivale ?',keys:'légionelle legionelle douche douchette mousseur soutirage ecs été fermeture rentrée 3 minutes analyse',answer:'Le module Vacances & fermetures reprend la procédure transmise par la Région : entretien et désinfection avant fermeture, pommeaux et douchettes démontés et séchés pendant l’inoccupation, puis soutirage complet et remise en service avant la rentrée.',checks:['Avant fermeture : détartrer et désinfecter mousseurs, pommeaux et douchettes.','Déposer pommeaux et douchettes, les désinfecter et les sécher complètement à l’air libre.','Ne pas les réinstaller pendant l’inoccupation estivale.','Au retour : après interventions exploitant et soutirages réseaux, les remettre en place.','Soutirer tous les points ECS et les points d’eau froide associés.','Pour l’ECS : maintenir l’écoulement au moins 3 minutes après obtention de la température d’eau chaude.','Vérifier les équipements et les analyses légionelle requises après plusieurs semaines d’inutilisation.'],rule:'Consignes reprises du courrier Région Auvergne-Rhône-Alpes reçu le 25 août 2026.'},
+ {category:'Vacances',q:'Comment imprimer une checklist de fermeture ?',keys:'imprimer impression checklist fermeture vacances pdf papier',answer:'Dans Vacances & fermetures, chaque période possède son propre bouton Imprimer la checklist.',checks:['Repérez la période à imprimer.','Cliquez sur « Imprimer la checklist ».','Une page A4 dédiée s’ouvre avec toutes les actions, pas seulement l’aperçu de la carte.','Les actions déjà faites apparaissent cochées et les actions restantes apparaissent non cochées.','Le document contient aussi des zones de visa pour la fermeture et la réouverture.'],rule:'L’impression est individuelle : une période = une checklist complète.'},
  {category:'Navigation',q:'Pourquoi la barre de défilement remonte pendant que je travaille ?',keys:'curseur scroll barre défilement remonte pc',answer:'Ce comportement ne doit plus se produire. Pilotage mémorise maintenant la position de chaque écran et de chaque tableau pendant les rafraîchissements.',checks:['Si le problème réapparaît, notez l’écran précis.','Vérifiez s’il s’agit de la page entière ou d’un tableau horizontal/vertical.'],rule:'Un rafraîchissement de données ne doit pas modifier la position de lecture sur PC.'}
 ];
 
@@ -2500,7 +2501,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.146 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.147 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2570,7 +2571,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.146 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.147 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2718,7 +2719,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.146 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.147 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2970,7 +2971,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.146 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.147 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -3024,7 +3025,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.146 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.147 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3637,7 +3638,7 @@ function eventsForDate(d){
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
  ];
- // V147.146 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.147 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -4137,7 +4138,7 @@ function renderVacations(){
    (!zone||x.zone===zone||x.zone==='Toutes')&&
    (!status||x.status===status)&&
    (!x.start||!x.end||(x.end>=range.start&&x.start<=range.end))
- ).sort((a,b)=>a.start.localeCompare(b.start));$('#vacationCards').innerHTML=cardList(arr.map(x=>{const done=(x.tasks||[]).filter(t=>t.done).length,total=(x.tasks||[]).length,pct=total?Math.round(done/total*100):0;return `<article class="vacation-card"><div class="panel-head"><div><h3>${esc(x.name)}</h3><p>${fmtDate(x.start)} → ${fmtDate(x.end)} · Zone ${esc(x.zone)}</p></div>${badge(x.status)}</div><div class="progress"><span style="width:${pct}%"></span></div><p>${done}/${total} actions terminées (${pct} %)</p><ul>${(x.tasks||[]).slice(0,6).map(t=>`<li class="${t.done?'done':''}">${t.done?'✓':'○'} ${esc(t.text)}</li>`).join('')}</ul><div class="card-actions"><button type="button" data-edit-type="vacation" data-edit-id="${x.id}">Ouvrir la checklist</button></div></article>`}),'Aucune période chargée.')}
+ ).sort((a,b)=>a.start.localeCompare(b.start));$('#vacationCards').innerHTML=cardList(arr.map(x=>{const done=(x.tasks||[]).filter(t=>t.done).length,total=(x.tasks||[]).length,pct=total?Math.round(done/total*100):0;return `<article class="vacation-card"><div class="panel-head"><div><h3>${esc(x.name)}</h3><p>${fmtDate(x.start)} → ${fmtDate(x.end)} · Zone ${esc(x.zone)}</p></div>${badge(x.status)}</div><div class="progress"><span style="width:${pct}%"></span></div><p>${done}/${total} actions terminées (${pct} %)</p><ul>${(x.tasks||[]).slice(0,6).map(t=>`<li class="${t.done?'done':''}">${t.done?'✓':'○'} ${esc(t.text)}</li>`).join('')}</ul><div class="card-actions"><button type="button" data-edit-type="vacation" data-edit-id="${x.id}">Ouvrir la checklist</button><button type="button" class="ghost" data-print-vacation="${x.id}">🖨 Imprimer la checklist</button></div></article>`}),'Aucune période chargée.')}
 function renderIssues(){const m=$('#issueMonth').value,agent=$('#issueAgent').value,cat=$('#issueCategory').value,status=$('#issueStatus').value;let arr=db.issues.filter(x=>operationalMonthVisible(x,m,'date')&&(!agent||x.agentId===agent)&&(!cat||x.category===cat)&&(!status||x.status===status)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));if(window.__dashboardUrgentOnly)arr=arr.filter(x=>!isClosedStatus(x.status)&&isUrgentPriority(x.priority));$('#issuesTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.category)}</td><td>${esc(agentName(agentById(x.agentId)))}</td><td>${badge(x.priority)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.action||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('issue',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderPeriodic(){const fam=$('#periodicFamily').value,status=$('#periodicStatus').value,bld=$('#periodicBuilding').value;const arr=db.periodic.filter(x=>(!fam||x.family===fam)&&(!status||periodicComputed(x)===status||x.status===status)&&(!bld||x.building===bld||x.building==='Tous bâtiments')).sort((a,b)=>(periodicDue(a)||'9999').localeCompare(periodicDue(b)||'9999'));$('#periodicCards').innerHTML=cardList(arr.map(x=>{const state=periodicComputed(x),ncs=(db.reportNonconformities||[]).filter(n=>String(n.periodicControlId||'')===String(x.id));const open=ncs.filter(n=>!['FAIT','Levée'].includes(n.status)),done=ncs.filter(n=>['FAIT','Levée'].includes(n.status)),plans=(db.issues||[]).filter(i=>ncs.some(n=>String(n.id)===String(i.sourceNonconformityId||''))),openPlans=plans.filter(i=>!isClosedStatus(i.status));const nc=ncs.length?`<section class="periodic-nc-block ${open.length?'has-open':'all-done'}"><div class="periodic-nc-summary"><strong>${open.length?'🔴 CONTRÔLE NON CONFORME':'🟢 OBSERVATIONS LEVÉES'}</strong><span>${ncs.length} observations · 🔴 ${open.length} à traiter · 🟢 ${done.length} FAIT/levées · 📋 ${openPlans.length} plan(s) d’action ouvert(s)</span></div>${open.length?`<h4>Non-conformités à traiter</h4>${open.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p>${n.action?`<p><b>Préconisation :</b> ${esc(n.action)}</p>`:''}</div><select data-nc-status="${esc(n.id)}"><option selected>À traiter</option><option>FAIT</option><option>Levée</option></select></article>`).join('')}`:''}${done.length?`<details><summary>🟢 ${done.length} FAIT / levées</summary>${done.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')} — ${esc(n.status)}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p></div><select data-nc-status="${esc(n.id)}"><option>À traiter</option><option ${n.status==='FAIT'?'selected':''}>FAIT</option><option ${n.status==='Levée'?'selected':''}>Levée</option></select></article>`).join('')}</details>`:''}</section>`:'';return `<article class="periodic-card ${state==='En retard'?'late':''}"><div class="panel-head"><span>${esc(x.no)}</span>${badge(state)}</div><h3>${esc(x.name)}</h3><p>${esc(x.family)} · ${esc(x.building)}</p>${x.periodicityText?`<p class="muted"><strong>Périodicité :</strong> ${esc(x.periodicityText)}</p>`:''}<dl><dt>Dernier</dt><dd>${fmtDate(x.lastDate)||'Non renseigné'}</dd><dt>Échéance</dt><dd>${fmtDate(periodicDue(x))||'À définir'}</dd><dt>Responsable</dt><dd>${esc(x.provider||'À définir')}</dd></dl>${nc}${attachmentButtons(x.attachments)}${periodicOneDriveButtons(x)}<button type="button" class="ghost" data-edit-type="periodic" data-edit-id="${x.id}">✎ Ouvrir / modifier le contrôle</button></article>`}),'Aucun contrôle trouvé.');}
 function renderCleaningGuide(){const type=$('#cleaningGuideType').value||db.lists.roomTypes.find(x=>GUIDE[x])||Object.keys(GUIDE)[0];$('#cleaningGuideType').value=type;const rows=GUIDE[type]||[];$('#cleaningGuideTable').innerHTML=`<table><thead><tr><th>Opération</th><th>Fréquence préconisée</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table>`}
@@ -4232,7 +4233,7 @@ function recordInAcademicYear(record,dateFields=['date'],label=activeAcademicYea
  for(const f of dateFields){const d=normalizeDateValue(record?.[f]);if(d&&d>=r.start&&d<=r.end)return true}
  return !dateFields.some(f=>normalizeDateValue(record?.[f]));
 }
-// V147.146 — continuité des éléments opérationnels entre années scolaires.
+// V147.147 — continuité des éléments opérationnels entre années scolaires.
 // Un élément non clôturé reste visible, même si son année d'origine n'est plus sélectionnée.
 // Une fois clôturé, il redevient historique et suit le filtre de son année scolaire.
 function operationalRecordVisible(record,dateFields=['date'],label=activeAcademicYear()){
@@ -5176,6 +5177,73 @@ function printableViewHTML(view){
  copies.forEach((el,k)=>{const src=originals[k],span=document.createElement('span');span.className='print-field';span.textContent=src?.tagName==='SELECT'?src.options[src.selectedIndex]?.text||'':(src?.value||'');el.replaceWith(span)});
  clone.querySelectorAll('.hidden').forEach(x=>x.remove());return clone.innerHTML;
 }
+
+function printVacationChecklist(id){
+ const x=byId('vacations',id);
+ if(!x){toast('Checklist de fermeture introuvable');return}
+ const tasks=Array.isArray(x.tasks)?x.tasks:[];
+ const done=tasks.filter(t=>t.done).length,total=tasks.length,pct=total?Math.round(done/total*100):0;
+ const orientation='portrait';
+ const w=window.open('','_blank');
+ if(!w){toast('Autorisez les fenêtres contextuelles pour imprimer');return}
+ const title=`Checklist — ${x.name||'Vacances / fermeture'}`;
+ const notes=String(x.notes||'').trim();
+ const rows=tasks.length?tasks.map((t,i)=>`
+   <tr class="${t.done?'task-done':''}">
+     <td class="task-no">${i+1}</td>
+     <td class="task-check">${t.done?'☑':'☐'}</td>
+     <td class="task-text">${esc(t.text||'')}</td>
+     <td class="task-status">${t.done?'FAIT':'À FAIRE'}</td>
+   </tr>`).join(''):`<tr><td colspan="4">Aucune action dans cette checklist.</td></tr>`;
+ const css=`
+   ${reportPrintCSS(orientation)}
+   @page{size:A4 portrait;margin:12mm}
+   body{font-family:Arial,Helvetica,sans-serif;color:#1f2937;background:#fff}
+   .closure-head{border:2px solid #0b5ea8;border-radius:8px;padding:12px 14px;margin-bottom:12px}
+   .closure-head h1{font-size:20px;margin:0 0 6px;color:#0b5ea8}
+   .closure-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:11px}
+   .closure-meta strong{color:#16324f}
+   .closure-progress{margin:10px 0;padding:8px 10px;background:#eef6ff;border-left:4px solid #0b5ea8;font-weight:700}
+   table.checklist{width:100%;border-collapse:collapse;font-size:10.5px}
+   table.checklist th{background:#0b5ea8;color:#fff;padding:7px;border:1px solid #0b5ea8;text-align:left}
+   table.checklist td{padding:7px;border:1px solid #cbd5e1;vertical-align:top}
+   .task-no{width:8mm;text-align:center}.task-check{width:9mm;text-align:center;font-size:15px}
+   .task-status{width:20mm;font-weight:700;text-align:center}
+   .task-done{background:#f0fdf4}.task-done .task-text{text-decoration:none}
+   .closure-notes{margin-top:12px;border:1px solid #cbd5e1;border-radius:6px;padding:10px;white-space:pre-wrap}
+   .closure-sign{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+   .closure-sign div{min-height:35mm;border:1px solid #cbd5e1;padding:8px}
+   .closure-sign strong{display:block;margin-bottom:8px;color:#16324f}
+   .print-footer{margin-top:10px}
+ `;
+ w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${css}</style></head><body>
+   <header class="print-header"><img src="${appLogoURL()}"><div><h1>${esc(db.settings.appName)}</h1><p>${esc(db.settings.schoolName)}</p><strong>Vacances & fermetures</strong></div></header>
+   <section class="closure-head">
+     <h1>${esc(x.name||'Vacances / fermeture')}</h1>
+     <div class="closure-meta">
+       <div><strong>Période :</strong> ${fmtDate(x.start)||'—'} → ${fmtDate(x.end)||'—'}</div>
+       <div><strong>Année scolaire :</strong> ${esc(activeAcademicYear())}</div>
+       <div><strong>Zone :</strong> ${esc(x.zone||'—')}</div>
+       <div><strong>Statut :</strong> ${esc(x.status||'—')}</div>
+     </div>
+   </section>
+   <div class="closure-progress">Avancement : ${done} / ${total} action(s) terminée(s) — ${pct} %</div>
+   <table class="checklist">
+     <thead><tr><th>N°</th><th>✓</th><th>Action à réaliser</th><th>État</th></tr></thead>
+     <tbody>${rows}</tbody>
+   </table>
+   ${notes?`<section class="closure-notes"><strong>Notes de la période</strong><br>${esc(notes)}</section>`:''}
+   <section class="closure-sign">
+     <div><strong>Contrôle de fermeture</strong>Date : ____________________<br><br>Nom / visa :<br><br>____________________________</div>
+     <div><strong>Contrôle de réouverture</strong>Date : ____________________<br><br>Nom / visa :<br><br>____________________________</div>
+   </section>
+   <footer class="print-footer">${esc(db.settings.appName)} — Checklist imprimée le ${new Date().toLocaleString('fr-FR')}</footer>
+ </body></html>`);
+ w.document.close();
+ waitAndPrint(w);
+}
+window.PSTPrintVacationChecklist=printVacationChecklist;
+
 function printView(viewId){
  const view=document.getElementById(viewId)||document.querySelector('.view.active');if(!view)return;
  const orientation=db.settings.printOrientation||'landscape',w=window.open('','_blank');if(!w){toast('Autorisez les fenêtres contextuelles pour imprimer');return}
@@ -5426,7 +5494,7 @@ window.addEventListener('scroll',()=>{
   if(document.scrollingElement)pstRememberScroll(document.scrollingElement);
 },{passive:true});
 
-// V147.146 — pas de MutationObserver qui force la position pendant que l'utilisateur défile.
+// V147.147 — pas de MutationObserver qui force la position pendant que l'utilisateur défile.
 // La restauration est déclenchée uniquement autour des rendus explicites de l'application.
 
 
@@ -5778,6 +5846,12 @@ function bindReliableDynamicActions(){
  if(window.__pstDynamicActionsBound)return;
  window.__pstDynamicActionsBound=true;
  document.addEventListener('click',e=>{
+   const vacationPrint=e.target.closest?.('[data-print-vacation]');
+   if(vacationPrint){
+     e.preventDefault();e.stopPropagation();
+     printVacationChecklist(vacationPrint.dataset.printVacation);
+     return;
+   }
    const edit=e.target.closest?.('[data-edit-type]');
    if(edit){
      const type=edit.dataset.editType,id=edit.dataset.editId;
@@ -5910,7 +5984,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.146 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.147 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -6003,7 +6077,7 @@ const dsn=$('#dashboardSyncNow');if(dsn)dsn.onclick=dashboardSyncNow;
  else if(source==='roomprep'){setView('room-prep');setTimeout(()=>window.PSTRoomPrep?.edit?.(id),60)}
  else if(source==='waste')setView('waste');
  return
-}const perm=e.target.closest('[data-permanence-agent]');if(perm){openAgentPermanence(perm.dataset.permanenceAgent);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date,null,ad.dataset.dayType||'');return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
+}const perm=e.target.closest('[data-permanence-agent]');if(perm){openAgentPermanence(perm.dataset.permanenceAgent);return}const pvc=e.target.closest('[data-print-vacation]');if(pvc){e.preventDefault();printVacationChecklist(pvc.dataset.printVacation);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date,null,ad.dataset.dayType||'');return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
 }
 
 
@@ -6315,7 +6389,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.146 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.147 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){
