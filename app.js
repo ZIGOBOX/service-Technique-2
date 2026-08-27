@@ -5237,48 +5237,90 @@ function collectLateDashboardActions(today=todayISO()){
  }
  return rows;
 }
+let dashboardWeatherCacheV149={at:0,text:'Consulter la météo',detail:'Roanne et alentours'};
+async function renderDashboardWeatherV149(){
+ const title=$('#dashboardWeatherTitle'),detail=$('#dashboardWeatherDetail');if(!title||!detail)return;
+ const now=Date.now();
+ if(now-dashboardWeatherCacheV149.at<15*60*1000){title.textContent=dashboardWeatherCacheV149.text;detail.textContent=dashboardWeatherCacheV149.detail;return}
+ title.textContent='Météo du jour';detail.textContent='Actualisation…';
+ try{
+  const url='https://api.open-meteo.com/v1/forecast?latitude=46.0362&longitude=4.0680&current=temperature_2m,weather_code,wind_speed_10m,precipitation&daily=precipitation_probability_max&timezone=Europe%2FParis&forecast_days=1';
+  const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw new Error(`HTTP ${res.status}`);const data=await res.json(),c=data.current||{},rain=Math.round(data.daily?.precipitation_probability_max?.[0]??0),code=Number(c.weather_code??-1);
+  const weatherText=code===0?'Ciel dégagé':code<=2?'Éclaircies':code===3?'Couvert':code<=48?'Brouillard':code<=57?'Bruine':code<=67?'Pluie':code<=77?'Neige':code<=82?'Averses':'Orage';
+  dashboardWeatherCacheV149={at:now,text:`${Math.round(c.temperature_2m??0)}°C · ${weatherText}`,detail:`Pluie ${rain}% · vent ${Math.round(c.wind_speed_10m??0)} km/h`};
+ }catch(e){dashboardWeatherCacheV149={at:now,text:'Météo indisponible',detail:'Appuyez pour ouvrir la page météo'};}
+ title.textContent=dashboardWeatherCacheV149.text;detail.textContent=dashboardWeatherCacheV149.detail;
+}
+function renderDashboardTeamTodayV149(){
+ const el=$('#dashboardTeamToday');if(!el)return;const today=todayISO(),nowTime=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+ const agents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif');
+ el.innerHTML=agents.length?agents.map(a=>{
+  const info=dayInfo(a.id,today),type=String(info.dayType||'Présence'),norm=normalizeText(type),start=String(info.plannedStart||''),end=String(info.plannedEnd||'');let status='Présent',cls='',schedule=start&&end?`${start} – ${end}`:'Horaire non défini';
+  if(norm==='repos'){status='Repos';cls='rest';schedule='Journée';}
+  else if(isAbsenceType(type)){status=type;cls='absent';schedule='Journée';}
+  else if(start&&start>nowTime){status='À venir';cls='future';schedule=`Prend à ${start}`;}
+  return `<button class="dashboard-team-row-v149" data-agent-day="${a.id}" data-date="${today}"><span class="dashboard-team-avatar-v149">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong><small>${esc(schedule)}</small><span class="dashboard-team-status-v149 ${cls}">${esc(status)}</span></button>`;
+ }).join(''):'<div class="empty-card">Aucun agent actif.</div>';
+}
+function dashboardSourceEditTypeV149(source){return ({note:'note',maintenance:'maintenance',request:'request',work:'work',issue:'issue',periodic:'periodic',meeting:'meeting',personal:'personal'})[source]||''}
+function renderDashboardPrioritiesV149(urgentActions,lateActions){
+ const el=$('#priorityList');if(!el)return;const today=todayISO(),seen=new Set(),rows=[];
+ const add=(r)=>{const key=`${r.editType||r.source||''}:${r.id||r.title}`;if(seen.has(key))return;seen.add(key);rows.push(r)};
+ urgentActions.filter(x=>!x.due||x.due<=today).forEach(x=>add({...x,level:'URGENT'}));
+ lateActions.forEach(x=>{const source=({issues:'issue',maintenance:'maintenance',requests:'request',works:'work',notes:'note'})[x.module]||x.module,rec=x.record;add({icon:'⏰',title:rec.title||rec.subject||rec.no||'Échéance en retard',label:'En retard',editType:source,id:rec.id,due:x.due,level:'RETARD'});});
+ eventsForDate(today).filter(e=>['issue','maintenance','request','work','note','periodic'].includes(e.source)).forEach(e=>add({icon:e.source==='maintenance'?'🔧':e.source==='periodic'?'📋':e.source==='issue'?'⚠':'•',title:e.title||'Action du jour',label:'Aujourd’hui',editType:dashboardSourceEditTypeV149(e.source),id:e.id,due:recordDueDate(e)||today,level:isUrgentPriority(e.priority)?'URGENT':'AUJOURD’HUI'}));
+ rows.sort((a,b)=>(a.level==='URGENT'?-2:a.level==='RETARD'?-1:0)-(b.level==='URGENT'?-2:b.level==='RETARD'?-1:0)||String(a.due||'9999').localeCompare(String(b.due||'9999')));
+ el.innerHTML=cardList(rows.slice(0,7).map(x=>itemCard(x.icon||'•',x.title,`${badge(x.level==='URGENT'?'Urgente':x.level==='RETARD'?'En retard':'Aujourd’hui')} · ${esc(x.label||'Action')} · ${fmtDate(x.due)||'À traiter'}`,x.editType,x.id)),'Aucune priorité particulière aujourd’hui.');
+}
+function renderDashboardRemindersV149(notes,pSoon){
+ const el=$('#dashboardReminders');if(!el)return;const today=todayISO(),tomorrow=addDays(today,1),cards=[];
+ cards.push(`<button class="dashboard-reminder-v149" data-go="weather"><span class="icon">🌦️</span><div><strong id="dashboardWeatherTitle">Météo du jour</strong><small id="dashboardWeatherDetail">Actualisation…</small></div></button>`);
+ const dueTomorrow=notes.filter(x=>recordDueDate(x)===tomorrow).sort((a,b)=>String(a.priority||'').localeCompare(String(b.priority||'')))[0];
+ if(dueTomorrow)cards.push(`<button class="dashboard-reminder-v149" data-edit-type="note" data-edit-id="${dueTomorrow.id}"><span class="icon">✎</span><div><strong>${esc(dueTomorrow.title||'Note à traiter')}</strong><small>Échéance demain · ${esc(dueTomorrow.category||'Bloc-notes')}</small></div></button>`);
+ else cards.push(`<button class="dashboard-reminder-v149" data-go="notes"><span class="icon">✎</span><div><strong>Notes</strong><small>Aucune note n’arrive à échéance demain.</small></div></button>`);
+ const meter=meterReadingItemForDate(today)||meterReadingItemForDate(tomorrow);if(meter)cards.push(`<button class="dashboard-reminder-v149 agenda-action" data-agenda-source="meter-reading" data-agenda-id="${meter.id}"><span class="icon">📊</span><div><strong>Relevé des compteurs</strong><small>${meter.date===today?'À faire aujourd’hui':'Échéance demain'} · logements</small></div></button>`);
+ else if(pSoon[0])cards.push(`<button class="dashboard-reminder-v149" data-edit-type="periodic" data-edit-id="${pSoon[0].id}"><span class="icon">📋</span><div><strong>${esc(pSoon[0].name||pSoon[0].title||'Contrôle périodique')}</strong><small>Contrôle à surveiller prochainement</small></div></button>`);
+ else cards.push(`<button class="dashboard-reminder-v149" data-go="periodic"><span class="icon">📋</span><div><strong>Contrôles périodiques</strong><small>Aucune alerte proche.</small></div></button>`);
+ const wasteToday=wasteAgendaItemForDate(today),wasteTomorrow=wasteAgendaItemForDate(tomorrow);if(wasteToday||wasteTomorrow){const w=wasteToday||wasteTomorrow;cards.push(`<button class="dashboard-reminder-v149" data-go="waste"><span class="icon">🗑️</span><div><strong>${esc(w.title||'Collecte des déchets')}</strong><small>${wasteToday?'Aujourd’hui':'Demain'} · ${esc(w.meta||'')}</small></div></button>`)}
+ else cards.push(`<button class="dashboard-reminder-v149" data-go="waste"><span class="icon">🗑️</span><div><strong>Déchets / bacs</strong><small>Voir la prochaine collecte programmée.</small></div></button>`);
+ el.innerHTML=cards.slice(0,4).join('');renderDashboardWeatherV149();
+}
+function renderDashboardWeekV149(){
+ const el=$('#dashboardWeekStrip');if(!el)return;const today=todayISO(),monday=startOfWeek(today),days=Array.from({length:5},(_,i)=>addDays(monday,i));
+ const label=$('#dashboardWeekLabel');if(label)label.textContent=`Du ${fmtDate(days[0])} au ${fmtDate(days[4])}`;
+ el.innerHTML=days.map(d=>{const date=parseDate(d),events=eventsForDate(d).filter(e=>e.source!=='agent-real-schedule').slice(0,3);return `<section class="dashboard-week-day-v149 ${d===today?'today':''}"><header class="dashboard-week-head-v149"><strong>${esc(date.toLocaleDateString('fr-FR',{weekday:'long'}))} ${date.getDate()}</strong><small>${events.length} élément${events.length>1?'s':''}</small></header><div class="dashboard-week-events-v149">${events.length?events.map(e=>`<button class="dashboard-week-event-v149 agenda-action" data-agenda-source="${esc(e.source||'personal')}" data-agenda-id="${esc(e.id||'')}"><time>${esc(agendaTime(e)||'—')}</time><span title="${esc(e.title||'Événement')}">${esc(e.title||'Événement')}</span></button>`).join(''):'<div class="dashboard-week-empty-v149">Rien de prévu</div>'}</div></section>`}).join('');
+}
 function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnections();
  renderGlobalAcademicYear();
  const today=todayISO(),activeRange=academicYearRange(activeAcademicYear()),todayInActive=academicYearContains(activeAcademicYear(),today),refDate=todayInActive?today:activeRange.start,soon7=addDays(refDate,7);
  const activeAgents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif');
- const present=todayInActive?activeAgents.filter(a=>{const info=dayInfo(a.id,today);return !isAbsenceType(info.dayType)&&normalizeText(info.dayType)!=='repos'}).length:null;
- const urgentActions=collectUrgentDashboardActions();
- const lateActions=collectLateDashboardActions(today);
- const allMaint=(db.maintenance||[]).filter(x=>recordInAcademicYear(x,['date','dueDate']));
- const closedMaint=allMaint.filter(x=>isClosedStatus(x.status));
- const openMaint=allMaint.filter(x=>!isClosedStatus(x.status));
- // "À faire" = statut À faire uniquement. Les statuts À qualifier / Planifiée restent dans "ouvertes".
- const todoMaint=allMaint.filter(x=>normalizeText(x.status)==='a faire');
- const maintCounts={
-   total:allMaint.length,
-   todo:todoMaint.length,
-   open:openMaint.length,
-   closed:closedMaint.length,
-   byStatus:allMaint.reduce((acc,x)=>{const k=String(x.status||'Sans statut').trim()||'Sans statut';acc[k]=(acc[k]||0)+1;return acc},{})
- };
- window.PSTMaintenanceCounts=maintCounts;
- const recentClean=(db.cleaning||[]).filter(x=>recordInAcademicYear(x,['date']));
- const comp=recentClean.length?Math.round(recentClean.filter(x=>normalizeText(x.overallStatus)==='conforme').length/recentClean.length*100):null;
- const weak=recentClean.reduce((sum,x)=>sum+(x.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).length,0);
+ const present=todayInActive?activeAgents.filter(a=>{const info=dayInfo(a.id,today);return !isAbsenceType(info.dayType)&&normalizeText(info.dayType)!=='repos'}).length:0;
+ const absent=todayInActive?activeAgents.filter(a=>isAbsenceType(dayInfo(a.id,today).dayType)).length:0;
+ const meetingsToday=(db.meetings||[]).filter(x=>normalizeDateValue(x.date)===today&&!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule').length;
+ const urgentActions=collectUrgentDashboardActions();const lateActions=collectLateDashboardActions(today);const urgentToday=urgentActions.filter(x=>!x.due||x.due<=today).length;
+ const allMaint=(db.maintenance||[]).filter(x=>recordInAcademicYear(x,['date','dueDate']));const closedMaint=allMaint.filter(x=>isClosedStatus(x.status));const openMaint=allMaint.filter(x=>!isClosedStatus(x.status));const todoMaint=allMaint.filter(x=>normalizeText(x.status)==='a faire');
+ const maintCounts={total:allMaint.length,todo:todoMaint.length,open:openMaint.length,closed:closedMaint.length,byStatus:allMaint.reduce((acc,x)=>{const k=String(x.status||'Sans statut').trim()||'Sans statut';acc[k]=(acc[k]||0)+1;return acc},{})};window.PSTMaintenanceCounts=maintCounts;
+ const recentClean=(db.cleaning||[]).filter(x=>recordInAcademicYear(x,['date']));const comp=recentClean.length?Math.round(recentClean.filter(x=>normalizeText(x.overallStatus)==='conforme').length/recentClean.length*100):null;const weak=recentClean.reduce((sum,x)=>sum+(x.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).length,0);
  const pLate=(db.periodic||[]).filter(x=>normalizeText(periodicComputed(x))==='en retard'),pSoon=(db.periodic||[]).filter(x=>normalizeText(periodicComputed(x))==='bientot');
  const notes=(db.notes||[]).filter(x=>recordInAcademicYear(x,['date','dueDate'])&&!isClosedStatus(x.status)),notesDue=notes.filter(x=>{const due=recordDueDate(x);return due&&due<=soon7}).length;
- $('#kpiAgents').textContent=activeAgents.length;$('#kpiPresent').textContent=todayInActive?`${present} présents aujourd’hui`:`Année ${activeAcademicYear()}`;
- $('#kpiUrgentActions').textContent=urgentActions.length;$('#kpiLate').textContent=`${lateActions.length} en retard`;
- $('#kpiMaintenance').textContent=maintCounts.open;$('#kpiMaintenanceTodo').textContent=`${maintCounts.todo} à faire`;
- $('#kpiCompliance').textContent=comp==null?'—':`${comp} %`;$('#kpiCleaningWeak').textContent=`${weak} point${weak>1?'s':''} faible${weak>1?'s':''}`;
- $('#kpiPeriodicLate').textContent=pLate.length;$('#kpiPeriodicSoon').textContent=`${pSoon.length} bientôt`;
- $('#kpiNotes').textContent=notes.length;$('#kpiNotesDue').textContent=`${notesDue} échéance${notesDue>1?'s':''} proche${notesDue>1?'s':''}`;
- const pri=[...urgentActions].sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,8);
- $('#priorityList').innerHTML=cardList(pri.map(x=>itemCard(x.icon,x.title,`${badge('Urgente')} · ${esc(x.label)} · ${fmtDate(x.due)||'Sans échéance'}`,x.editType,x.id)),'Aucune urgence dans le logiciel.');
+ // Informations strictement journalières en haut du tableau de bord.
+ const dayLabel=parseDate(today).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});const hero=$('#dailyHeroDate');if(hero)hero.textContent=dayLabel.charAt(0).toUpperCase()+dayLabel.slice(1);
+ const heroSummary=$('#dailyHeroSummary');if(heroSummary)heroSummary.textContent=`${present} présent${present>1?'s':''} · ${eventsForDate(today).length} élément${eventsForDate(today).length>1?'s':''} aujourd’hui · ${urgentToday} urgence${urgentToday>1?'s':''} à traiter`;
+ if($('#todayKpiPresent'))$('#todayKpiPresent').textContent=present;if($('#todayKpiAbsent'))$('#todayKpiAbsent').textContent=absent;if($('#todayKpiMeetings'))$('#todayKpiMeetings').textContent=meetingsToday;if($('#todayKpiUrgent'))$('#todayKpiUrgent').textContent=urgentToday;
+ // Indicateurs globaux, déplacés dans « À surveiller ».
+ $('#kpiAgents').textContent=activeAgents.length;$('#kpiPresent').textContent=todayInActive?`${present} présents aujourd’hui`:`Année ${activeAcademicYear()}`;$('#kpiUrgentActions').textContent=urgentActions.length;$('#kpiLate').textContent=`${lateActions.length} en retard`;
+ $('#kpiMaintenance').textContent=maintCounts.open;$('#kpiMaintenanceTodo').textContent=`${maintCounts.todo} à faire`;$('#kpiCompliance').textContent=comp==null?'—':`${comp} %`;$('#kpiCleaningWeak').textContent=`${weak} point${weak>1?'s':''} faible${weak>1?'s':''}`;$('#kpiPeriodicLate').textContent=pLate.length;$('#kpiPeriodicSoon').textContent=`${pSoon.length} bientôt`;$('#kpiNotes').textContent=notes.length;$('#kpiNotesDue').textContent=`${notesDue} échéance${notesDue>1?'s':''} proche${notesDue>1?'s':''}`;
+ // Les anciens aperçus restent alimentés mais sont masqués pour préserver la compatibilité.
  $('#dashboardNotes').innerHTML=cardList(notes.slice().sort((a,b)=>(recordDueDate(a)||'9999').localeCompare(recordDueDate(b)||'9999')).slice(0,5).map(x=>itemCard('✎',x.title,`${esc(x.category)} · ${fmtDate(recordDueDate(x))||'Sans échéance'}`,'note',x.id)),'Aucune note active.');
  $('#maintenancePreview').innerHTML=cardList(openMaint.filter(x=>{const st=normalizeText(x.status);return st==='en cours'||st.startsWith('en attente')}).slice(0,5).map(x=>itemCard('⚙',x.title,`${esc(x.building)} · ${badge(x.status)}`,'maintenance',x.id)),'Aucune intervention en cours.');
  $('#maintenanceTodoPreview').innerHTML=cardList(todoMaint.slice(0,5).map(x=>itemCard('🧰',x.title,`${badge(x.priority)} · ${fmtDate(recordDueDate(x))||'Sans échéance'}`,'maintenance',x.id)),'Aucune intervention à faire.');
- const weakRows=[];recentClean.forEach(c=>(c.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).forEach(t=>weakRows.push({c,t})));
- $('#cleaningWeakPreview').innerHTML=cardList(weakRows.slice(0,5).map(({c,t})=>itemCard('🧹',t.name,`${esc(c.building)} · ${esc(c.room)} · ${badge(t.status)}`,'cleaning',c.id)),'Aucun point faible récent.');
- const nextMeet=(db.meetings||[]).filter(x=>recordInAcademicYear(x,['date'])&&normalizeDateValue(x.date)>=refDate&&!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule').sort((a,b)=>`${normalizeDateValue(a.date)}${a.time||''}`.localeCompare(`${normalizeDateValue(b.date)}${b.time||''}`)).slice(0,5);
- $('#meetingPreview').innerHTML=cardList(nextMeet.map(x=>itemCard('📅',x.title,`${fmtDate(normalizeDateValue(x.date))} ${esc(x.time||'')} · ${esc(x.location||'')}`,'meeting',x.id)),'Aucun rendez-vous à venir.');
- renderTeamCalendar();renderPersonalCalendar();renderDashboardTodayAgenda();window.PDFImportModule?.renderDashboard?.();
+ const weakRows=[];recentClean.forEach(c=>(c.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).forEach(t=>weakRows.push({c,t})));$('#cleaningWeakPreview').innerHTML=cardList(weakRows.slice(0,5).map(({c,t})=>itemCard('🧹',t.name,`${esc(c.building)} · ${esc(c.room)} · ${badge(t.status)}`,'cleaning',c.id)),'Aucun point faible récent.');
+ const nextMeet=(db.meetings||[]).filter(x=>recordInAcademicYear(x,['date'])&&normalizeDateValue(x.date)>=refDate&&!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule').sort((a,b)=>`${normalizeDateValue(a.date)}${a.time||''}`.localeCompare(`${normalizeDateValue(b.date)}${b.time||''}`)).slice(0,5);$('#meetingPreview').innerHTML=cardList(nextMeet.map(x=>itemCard('📅',x.title,`${fmtDate(normalizeDateValue(x.date))} ${esc(x.time||'')} · ${esc(x.location||'')}`,'meeting',x.id)),'Aucun rendez-vous à venir.');
+ renderDashboardTeamTodayV149();renderDashboardTodayAgenda();renderDashboardPrioritiesV149(urgentActions,lateActions);renderDashboardRemindersV149(notes,pSoon);renderDashboardWeekV149();
+ // Ces calendriers sont encore rendus dans une zone masquée pour ne casser aucune liaison historique.
+ renderTeamCalendar();renderPersonalCalendar();window.PDFImportModule?.renderDashboard?.();
 }
+
 
 /* ---------- Paramètres ---------- */
 const LIST_LABELS={roles:'Fonctions agents',dayTypes:'Types de journée / absence',priorities:'Priorités',generalStatuses:'Statuts généraux',issueCategories:'Catégories sécurité / qualité',maintenanceFamilies:'Domaines maintenance',maintenanceStatuses:'Statuts maintenance',requestTypes:'Types de demande',workTypes:'Types chantier / GPA',meetingTypes:'Types réunion',personalTypes:'Types agenda personnel',noteCategories:'Catégories bloc-notes',roomTypes:'Types de locaux',cleaningStatuses:'Résultats ménage',periodicFamilies:'Familles contrôles périodiques',documentCategories:'Catégories documents'};

@@ -767,6 +767,60 @@
  .meter-reading-row>small{grid-column:1/-1}
 }
 </style>
+
+<style id="v147149-dashboard-journalier-semaine">
+/* V147.149 — Tableau de bord centré sur la journée et la semaine. */
+#dashboard.daily-dashboard-v149{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;align-items:start;padding-bottom:18px}
+#dashboard.daily-dashboard-v149 > *{min-width:0}
+#dashboard .daily-hero-v149{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 20px;border-radius:22px;background:linear-gradient(115deg,#082d68 0%,#075eb5 58%,#08aee6 100%);color:#fff;box-shadow:0 14px 32px rgba(8,73,132,.18);overflow:hidden}
+#dashboard .daily-hero-main-v149{display:flex;align-items:center;gap:14px;min-width:0}
+#dashboard .daily-hero-logo-v149{width:62px;height:62px;object-fit:contain;padding:4px;border-radius:50%;background:#fff;box-shadow:0 8px 20px rgba(0,30,70,.2);flex:0 0 auto}
+#dashboard .daily-hero-kicker-v149{font-size:.68rem;font-weight:900;letter-spacing:.11em;color:#bfe9ff}
+#dashboard .daily-hero-v149 h3{margin:2px 0 3px;color:#fff;font-size:clamp(1.65rem,2.4vw,2.4rem);line-height:1.05;text-transform:none}
+#dashboard .daily-hero-v149 p{margin:0;color:rgba(255,255,255,.9);font-size:.9rem}
+#dashboard .daily-quick-v149{margin:0!important;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+#dashboard .daily-quick-v149 button{min-height:40px;padding:8px 12px;border:1px solid rgba(255,255,255,.32);background:rgba(255,255,255,.13);color:#fff;border-radius:11px;box-shadow:none;font-size:.82rem;font-weight:800}
+#dashboard .daily-quick-v149 button:hover{background:rgba(255,255,255,.22)}
+#dashboard .today-kpis-v149{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+#dashboard .today-kpi-v149{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #e2ebf4;background:#fff;border-radius:16px;box-shadow:0 6px 18px rgba(15,46,82,.06)}
+#dashboard .today-kpi-icon-v149{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#eef6ff;color:#0967ba;font-size:1.35rem;flex:0 0 auto}
+#dashboard .today-kpi-icon-v149.warn{background:#fff6e9;color:#c46a00}#dashboard .today-kpi-icon-v149.danger{background:#fff0ef;color:#c83b31}
+#dashboard .today-kpi-v149 div{display:grid;grid-template-columns:auto auto;align-items:end;column-gap:8px;min-width:0}
+#dashboard .today-kpi-v149 small{grid-column:1/-1;color:#334e6f;font-weight:800;font-size:.78rem}
+#dashboard .today-kpi-v149 strong{font-size:1.75rem;line-height:1;color:#102d56}
+#dashboard .today-kpi-v149 em{font-style:normal;color:#75869a;font-size:.72rem;padding-bottom:2px}
+#dashboard .daily-team-panel-v149{grid-column:1/span 4;height:310px;margin:0!important;overflow:hidden;display:flex;flex-direction:column}
+#dashboard .daily-agenda-panel-v149{grid-column:5/span 4;height:310px!important;margin:0!important;overflow:hidden;display:flex;flex-direction:column}
+#dashboard .daily-priority-panel-v149{grid-column:9/span 4;height:310px;margin:0!important;overflow:hidden;display:flex;flex-direction:column}
+#dashboard .daily-team-panel-v149 .panel-head,#dashboard .daily-agenda-panel-v149 .panel-head,#dashboard .daily-priority-panel-v149 .panel-head{flex:0 0 auto;margin-bottom:8px}
+#dashboard .dashboard-team-today-v149,#dashboard .daily-priority-list-v149,#dashboard .daily-agenda-panel-v149 .dashboard-today-agenda{flex:1 1 auto;min-height:0;overflow:auto;scrollbar-gutter:stable}
+#dashboard .dashboard-team-row-v149{width:100%;border:0;border-bottom:1px solid #edf2f7;background:#fff;display:grid;grid-template-columns:34px minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:7px 5px;text-align:left;color:#17365d}
+#dashboard .dashboard-team-row-v149:hover{background:#f8fbff}
+#dashboard .dashboard-team-avatar-v149{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#eaf4ff;color:#075eaa;font-weight:900}
+#dashboard .dashboard-team-row-v149 strong{font-size:.83rem}.dashboard-team-row-v149 small{color:#6b7d91;font-size:.72rem}
+#dashboard .dashboard-team-status-v149{font-size:.68rem;font-weight:800;border-radius:999px;padding:4px 7px;background:#ecf8f1;color:#218653;white-space:nowrap}
+#dashboard .dashboard-team-status-v149.absent{background:#fff2ec;color:#b95b18}.dashboard-team-status-v149.rest{background:#f1f3f6;color:#6c7888}.dashboard-team-status-v149.future{background:#edf5ff;color:#1769b0}
+#dashboard .today-agenda-row{padding:8px 4px!important}.today-agenda-time{min-width:47px!important;font-size:.78rem!important}.today-agenda-main strong{font-size:.8rem!important}.today-agenda-main small{font-size:.68rem!important}
+#dashboard .daily-priority-list-v149 .preview-item{padding:8px 5px!important}.daily-priority-list-v149 .preview-item strong{font-size:.8rem!important}.daily-priority-list-v149 .preview-item small{font-size:.68rem!important}
+#dashboard .daily-reminders-panel-v149{grid-column:1/-1;margin:0!important}
+#dashboard .dashboard-reminders-v149{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+#dashboard .dashboard-reminder-v149{border:1px solid #e6edf5;border-radius:14px;background:#fbfdff;min-height:68px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;text-align:left;color:#17365d}
+#dashboard button.dashboard-reminder-v149{cursor:pointer}.dashboard-reminder-v149 .icon{font-size:1.35rem;line-height:1.2}.dashboard-reminder-v149 div{min-width:0}.dashboard-reminder-v149 strong{display:block;font-size:.78rem;margin-bottom:2px}.dashboard-reminder-v149 small{display:block;color:#65788e;font-size:.68rem;line-height:1.25}
+#dashboard .daily-week-panel-v149{grid-column:1/-1;margin:0!important;overflow:hidden}
+#dashboard .dashboard-week-strip-v149{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+#dashboard .dashboard-week-day-v149{border:1px solid #e5edf6;border-radius:14px;background:#fff;overflow:hidden;min-width:0}.dashboard-week-day-v149.today{border-color:#4b9fff;box-shadow:inset 3px 0 0 #1478df}
+#dashboard .dashboard-week-head-v149{padding:7px 9px;background:#f7faff;border-bottom:1px solid #edf2f7;text-align:center}.dashboard-week-day-v149.today .dashboard-week-head-v149{background:#eaf4ff;color:#075eaa}.dashboard-week-head-v149 strong{display:block;font-size:.78rem;text-transform:capitalize}.dashboard-week-head-v149 small{font-size:.65rem;color:#73859a}
+#dashboard .dashboard-week-events-v149{padding:5px;display:grid;gap:3px;min-height:72px}.dashboard-week-event-v149{display:grid;grid-template-columns:37px minmax(0,1fr);gap:5px;align-items:center;border:0;background:transparent;padding:4px;border-radius:7px;text-align:left;color:#24466d;min-width:0}.dashboard-week-event-v149:hover{background:#f3f8fe}.dashboard-week-event-v149 time{font-size:.64rem;color:#4f7194}.dashboard-week-event-v149 span{font-size:.67rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dashboard-week-empty-v149{padding:16px 5px;text-align:center;color:#94a1af;font-size:.68rem}
+#dashboard .daily-watch-panel-v149{grid-column:1/-1;margin:0!important}
+#dashboard .dashboard-watch-grid-v149{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+#dashboard .dashboard-watch-v149{border:1px solid #e4ebf3;border-radius:14px;background:#fff;padding:9px 10px;display:flex;align-items:center;gap:9px;text-align:left;color:#17365d;min-width:0}.dashboard-watch-v149>span{font-size:1.25rem}.dashboard-watch-v149 div{display:grid;grid-template-columns:auto auto;column-gap:7px;align-items:end;min-width:0}.dashboard-watch-v149 small{grid-column:1/-1;font-size:.68rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dashboard-watch-v149 strong{font-size:1rem}.dashboard-watch-v149 em{font-style:normal;font-size:.61rem;color:#71849a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dashboard-watch-v149.danger strong{color:#c43f34}.dashboard-watch-v149.good strong{color:#228456}
+#dashboard .dashboard-legacy-v149{display:none!important}
+#dashboard .calendar-kicker.urgent{color:#c64336;background:#fff0ef}
+@media (min-width:1280px){#dashboard.daily-dashboard-v149{gap:12px}#dashboard .panel{border-radius:16px}#dashboard .panel-head{margin-bottom:7px}#dashboard .panel-head h3{font-size:.96rem}#dashboard .daily-reminders-panel-v149,#dashboard .daily-week-panel-v149,#dashboard .daily-watch-panel-v149{padding:12px 14px!important}#dashboard .daily-reminders-panel-v149 .panel-head,#dashboard .daily-week-panel-v149 .panel-head,#dashboard .daily-watch-panel-v149 .panel-head{margin-bottom:7px}}
+@media (max-width:1100px){#dashboard.daily-dashboard-v149{display:block}#dashboard.daily-dashboard-v149>*{margin-bottom:12px!important}#dashboard .daily-hero-v149{align-items:flex-start;flex-direction:column}#dashboard .daily-quick-v149{justify-content:flex-start}#dashboard .today-kpis-v149{grid-template-columns:repeat(2,1fr)}#dashboard .daily-team-panel-v149,#dashboard .daily-agenda-panel-v149,#dashboard .daily-priority-panel-v149{height:auto!important;max-height:none}#dashboard .dashboard-team-today-v149,#dashboard .daily-priority-list-v149,#dashboard .daily-agenda-panel-v149 .dashboard-today-agenda{max-height:360px}#dashboard .dashboard-reminders-v149{grid-template-columns:repeat(2,1fr)}#dashboard .dashboard-week-strip-v149{grid-template-columns:1fr;gap:7px}#dashboard .dashboard-watch-grid-v149{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:600px){#dashboard .daily-hero-v149{padding:13px}.daily-hero-logo-v149{width:52px!important;height:52px!important}#dashboard .today-kpis-v149{grid-template-columns:1fr 1fr;gap:8px}#dashboard .today-kpi-v149{padding:9px;gap:8px}#dashboard .today-kpi-icon-v149{width:36px;height:36px;font-size:1rem}#dashboard .today-kpi-v149 strong{font-size:1.35rem}#dashboard .dashboard-reminders-v149,#dashboard .dashboard-watch-grid-v149{grid-template-columns:1fr}#dashboard .daily-quick-more-v149{display:none}}
+</style>
+
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -867,75 +921,78 @@
     </header>
     <div id="academicYearWarning" class="academic-year-warning hidden" role="alert"></div>
 
-    <section class="view active" id="dashboard">
-      <div class="welcome-banner">
-        <div class="welcome-copy"><span class="eyebrow">PILOTAGE EN TEMPS RÉEL</span><h3 id="welcomeTitle">Pilotage Service Technique</h3></div>
-        <img src="./assets/logo-service-technique.png" alt="" class="welcome-logo" data-app-logo="1">
-        <p id="dailyMotivation" class="daily-motivation">Petit à petit, l’oiseau fait son nid.</p>
-      </div>
-
-      <div class="quick-actions" id="dashboardQuickActions">
-        <button data-quick="agent-day">👤 Jour agent</button>
-        <button data-quick="note">✎ Note</button>
-        <button data-quick="maintenance">⚙ Intervention</button>
-        <button data-quick="agent-activity">＋ Activité agent</button>
-        <button data-quick="cleaning">✓ Contrôle ménage</button>
-        <button data-quick="meeting">◫ Rendez-vous</button>
-        <button data-quick="request">↗ Demande</button>
-        <button type="button" onclick="window.open('https://zigobox.github.io/Faciale-/','_blank','noopener')">📊 Dashboard</button>
-      </div>
-
-      <div class="kpi-grid">
-        <article class="kpi clickable accent-blue" data-go="agents" role="button" tabindex="0" aria-label="Ouvrir agents"><span>Agents actifs</span><strong id="kpiAgents">0</strong><small id="kpiPresent">0 présents aujourd’hui</small></article>
-        <article class="kpi clickable accent-red" data-go="issues-urgent" role="button" tabindex="0" aria-label="Ouvrir issues-urgent"><span>Actions urgentes</span><strong id="kpiUrgentActions">0</strong><small id="kpiLate">0 en retard</small></article>
-        <article class="kpi clickable accent-orange" data-go="maintenance" role="button" tabindex="0" aria-label="Ouvrir maintenance"><span>Interventions ouvertes</span><strong id="kpiMaintenance">0</strong><small id="kpiMaintenanceTodo">0 à faire</small></article>
-        <article class="kpi clickable accent-green" data-go="cleaning" role="button" tabindex="0" aria-label="Ouvrir cleaning"><span>Conformité ménage</span><strong id="kpiCompliance">—</strong><small id="kpiCleaningWeak">0 point faible</small></article>
-        <article class="kpi clickable accent-purple" data-go="periodic" role="button" tabindex="0" aria-label="Ouvrir periodic"><span>Contrôles périodiques</span><strong id="kpiPeriodicLate">0</strong><small id="kpiPeriodicSoon">0 bientôt</small></article>
-        <article class="kpi clickable accent-cyan" data-go="notes" role="button" tabindex="0" aria-label="Ouvrir notes"><span>Notes actives</span><strong id="kpiNotes">0</strong><small id="kpiNotesDue">0 échéance proche</small></article>
-      </div>
-
-      <article class="panel calendar-panel">
-        <div class="panel-head calendar-head">
-          <div><span class="calendar-kicker">ÉQUIPE</span><h3>Calendrier des agents</h3><p id="teamWeekLabel" class="muted"></p></div>
-          <div class="calendar-nav">
-            <button class="icon-btn" id="prevTeamMonth" title="Mois précédent">«</button>
-            <button class="icon-btn" id="prevTeamWeek" title="Semaine précédente">‹</button>
-            <button class="ghost small" id="todayTeamWeek">Aujourd’hui</button>
-            <button class="icon-btn" id="nextTeamWeek" title="Semaine suivante">›</button>
-            <button class="icon-btn" id="nextTeamMonth" title="Mois suivant">»</button>
-            <input type="date" id="teamDateJump" title="Aller à une date">
+    <section class="view active daily-dashboard-v149" id="dashboard">
+      <article class="daily-hero-v149">
+        <div class="daily-hero-main-v149">
+          <img src="./assets/logo-service-technique.png" alt="" class="daily-hero-logo-v149" data-app-logo="1">
+          <div>
+            <span class="daily-hero-kicker-v149">AUJOURD’HUI</span>
+            <h3 id="dailyHeroDate">Aujourd’hui</h3>
+            <p id="dailyHeroSummary">Chargement de la journée…</p>
           </div>
         </div>
-        <p class="hint">Touchez un agent un jour donné pour poser un congé, un RTT, modifier son arrivée ou son départ, ou ajouter des heures supplémentaires.</p>
-        <div id="teamWeekCalendar" class="team-calendar"></div>
+        <div class="quick-actions daily-quick-v149" id="dashboardQuickActions">
+          <button data-quick="agent-activity">＋ Activité agent</button>
+          <button data-quick="maintenance">＋ Intervention</button>
+          <button data-quick="note">＋ Note</button>
+          <button data-quick="cleaning">＋ Contrôle ménage</button>
+          <button data-quick="meeting" class="daily-quick-more-v149">＋ Rendez-vous</button>
+        </div>
       </article>
 
-      <article class="panel calendar-panel">
-        <div class="panel-head calendar-head">
-          <div><span class="calendar-kicker personal">PERSONNEL</span><h3>Mon calendrier</h3><p id="personalWeekLabel" class="muted"></p></div>
-          <div class="calendar-nav">
-            <button class="icon-btn" id="prevPersonalWeek">‹</button><button class="ghost small" id="todayPersonalWeek">Cette semaine</button><button class="icon-btn" id="nextPersonalWeek">›</button><button class="primary small" id="newPersonalEventDash">＋ Événement</button>
-          </div>
-        </div>
-        <div id="personalWeekCalendar" class="personal-calendar"></div>
+      <div class="today-kpis-v149" aria-label="Indicateurs du jour">
+        <article class="today-kpi-v149"><span class="today-kpi-icon-v149">👥</span><div><small>Présents</small><strong id="todayKpiPresent">0</strong><em>aujourd’hui</em></div></article>
+        <article class="today-kpi-v149"><span class="today-kpi-icon-v149 warn">👤</span><div><small>Absents</small><strong id="todayKpiAbsent">0</strong><em>aujourd’hui</em></div></article>
+        <article class="today-kpi-v149"><span class="today-kpi-icon-v149">📅</span><div><small>Rendez-vous</small><strong id="todayKpiMeetings">0</strong><em>aujourd’hui</em></div></article>
+        <article class="today-kpi-v149"><span class="today-kpi-icon-v149 danger">⚠</span><div><small>Urgences</small><strong id="todayKpiUrgent">0</strong><em>à traiter</em></div></article>
+      </div>
+
+      <article class="panel daily-team-panel-v149">
+        <div class="panel-head"><div><span class="calendar-kicker">ÉQUIPE</span><h3>Équipe aujourd’hui</h3></div><button class="ghost small" data-go="agents">Voir tout</button></div>
+        <div id="dashboardTeamToday" class="dashboard-team-today-v149"></div>
       </article>
 
-      <article class="panel dashboard-today-panel">
-        <div class="panel-head">
-          <div><span class="calendar-kicker personal">JOURNALIER</span><h3>📍 Planning d'aujourd'hui</h3><p class="muted">Heure et lieu visibles immédiatement pour les rendez-vous, réunions et préparations de salle/café.</p></div>
-        </div>
+      <article class="panel dashboard-today-panel daily-agenda-panel-v149">
+        <div class="panel-head"><div><span class="calendar-kicker personal">JOURNALIER</span><h3>Ma journée</h3></div><button class="ghost small" data-go="personal">Voir agenda</button></div>
         <div id="dashboardTodayAgenda" class="dashboard-today-agenda"></div>
       </article>
 
-      <div class="dashboard-grid">
-        <article class="panel shortcut-panel clickable" data-go="issues-urgent" role="button" tabindex="0"><div class="panel-head"><h3>🔥 Actions urgentes — tous modules</h3><span class="go-arrow">›</span></div><div id="priorityList" class="card-list"></div></article>
-        <article class="panel shortcut-panel" data-go="notes"><div class="panel-head"><h3>✎ Blocs-notes</h3><span class="go-arrow">›</span></div><div id="dashboardNotes" class="card-list"></div></article>
-        <article class="panel shortcut-panel" data-go="maintenance"><div class="panel-head"><h3>⚙ Interventions en cours</h3><span class="go-arrow">›</span></div><div id="maintenancePreview" class="card-list"></div></article>
-        <article class="panel shortcut-panel" data-go="maintenance"><div class="panel-head"><h3>🧰 Interventions à faire</h3><span class="go-arrow">›</span></div><div id="maintenanceTodoPreview" class="card-list"></div></article>
-        <article class="panel shortcut-panel" data-go="cleaning"><div class="panel-head"><h3>🧹 Points faibles ménage</h3><span class="go-arrow">›</span></div><div id="cleaningWeakPreview" class="card-list"></div></article>
-        <article class="panel shortcut-panel" data-go="meetings"><div class="panel-head"><h3>📅 Prochains rendez-vous</h3><span class="go-arrow">›</span></div><div id="meetingPreview" class="card-list"></div></article>
+      <article class="panel daily-priority-panel-v149">
+        <div class="panel-head"><div><span class="calendar-kicker urgent">PRIORITÉS</span><h3>Priorités du jour</h3></div><button class="ghost small" data-go="issues-urgent">Voir toutes</button></div>
+        <div id="priorityList" class="card-list daily-priority-list-v149"></div>
+      </article>
+
+      <article class="panel daily-reminders-panel-v149">
+        <div class="panel-head"><div><span class="calendar-kicker personal">RAPPELS</span><h3>À ne pas oublier</h3></div></div>
+        <div id="dashboardReminders" class="dashboard-reminders-v149"></div>
+      </article>
+
+      <article class="panel daily-week-panel-v149">
+        <div class="panel-head"><div><span class="calendar-kicker">SEMAINE</span><h3>Ma semaine</h3><p id="dashboardWeekLabel" class="muted"></p></div></div>
+        <div id="dashboardWeekStrip" class="dashboard-week-strip-v149"></div>
+      </article>
+
+      <article class="panel daily-watch-panel-v149">
+        <div class="panel-head"><div><span class="calendar-kicker">SYNTHÈSE</span><h3>À surveiller</h3></div></div>
+        <div class="dashboard-watch-grid-v149">
+          <button class="dashboard-watch-v149 danger" data-go="maintenance"><span>🔧</span><div><small>Interventions ouvertes</small><strong id="kpiMaintenance">0</strong><em id="kpiMaintenanceTodo">0 à faire</em></div></button>
+          <button class="dashboard-watch-v149" data-go="periodic"><span>📋</span><div><small>Contrôles périodiques</small><strong id="kpiPeriodicLate">0</strong><em id="kpiPeriodicSoon">0 bientôt</em></div></button>
+          <button class="dashboard-watch-v149 good" data-go="cleaning"><span>🧹</span><div><small>Conformité ménage</small><strong id="kpiCompliance">—</strong><em id="kpiCleaningWeak">0 point faible</em></div></button>
+          <button class="dashboard-watch-v149" data-go="notes"><span>✎</span><div><small>Notes actives</small><strong id="kpiNotes">0</strong><em id="kpiNotesDue">0 échéance proche</em></div></button>
+          <button class="dashboard-watch-v149" data-go="pdfimports"><span>◷</span><div><small>Chronotime</small><strong id="dashboardChronoCompact">Voir</strong><em>imports et delta annuel</em></div></button>
+        </div>
+      </article>
+
+      <!-- Éléments historiques conservés pour compatibilité avec les fonctions existantes. -->
+      <div class="dashboard-legacy-v149" aria-hidden="true">
+        <span id="kpiAgents">0</span><span id="kpiPresent"></span>
+        <span id="kpiUrgentActions">0</span><span id="kpiLate"></span>
+        <div id="dashboardNotes"></div><div id="maintenancePreview"></div><div id="maintenanceTodoPreview"></div><div id="cleaningWeakPreview"></div><div id="meetingPreview"></div>
+        <article class="calendar-panel"><p id="teamWeekLabel"></p><button id="prevTeamMonth"></button><button id="prevTeamWeek"></button><button id="todayTeamWeek"></button><button id="nextTeamWeek"></button><button id="nextTeamMonth"></button><input id="teamDateJump" type="date"><div id="teamWeekCalendar"></div></article>
+        <article class="calendar-panel"><p id="personalWeekLabel"></p><button id="prevPersonalWeek"></button><button id="todayPersonalWeek"></button><button id="nextPersonalWeek"></button><button id="newPersonalEventDash"></button><div id="personalWeekCalendar"></div></article>
+        <div id="chronoDashboard"></div><span id="chronoDashboardUpdated"></span>
       </div>
-      <article class="panel dashboard-chrono-panel"><div class="panel-head"><div><h3>Δ annuel Chronotime</h3><p class="muted" id="chronoDashboardUpdated">Aucune injection</p></div><button class="ghost small" data-go="pdfimports">Voir les imports</button></div><div id="chronoDashboard" class="chrono-dashboard-grid"></div></article></section>
+    </section>
 
     <section class="view" id="pdfimports">
       <div class="section-actions"><div><h3>Chronotime</h3><p>Importer les synoptiques Chronotime des agents. Les rapports techniques et réglementaires sont désormais classés directement dans l’onglet Contrôles périodiques.</p></div></div>
