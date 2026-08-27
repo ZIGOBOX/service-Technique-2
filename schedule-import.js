@@ -1,4 +1,4 @@
-/* Pilotage Service Technique V147.146 — import/export horaires + contrôles RH non bloquants */
+/* Pilotage Service Technique V147.148 — import/export horaires + contrôles RH non bloquants */
 (() => {
   'use strict';
 
@@ -81,7 +81,7 @@
     });
     const wsH=XLSX.utils.json_to_sheet(hrows);
     const hHeaders=Object.keys(hrows[0]||{});setWidths(wsH,[25,28,13,13,16,13,16,12,12,14,14,14,14,18,14,16,14,16,36,30,28,34]);addAutoFilter(wsH,wsH['!ref']);styleSheet(wsH,hHeaders.length,hrows.length+1);
-    // V147.146 — Matrice RH dynamique.
+    // V147.148 — Matrice RH dynamique.
     // Les cellules de calcul se recalculent dans Excel à chaque modification d'horaire.
     // Les anomalies sont des WARNING uniquement : jamais de blocage.
     const idx=Object.fromEntries(hHeaders.map((h,i)=>[h,XLSX.utils.encode_col(i)]));

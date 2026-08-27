@@ -2,11 +2,26 @@
   'use strict';
   const q=(s,r=document)=>r.querySelector(s);
   const qa=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  function activeDomain(){
+    return q('.nav-domain:has(.nav-btn.active)') || q('.nav-domain');
+  }
+  function syncNavDomains(){
+    const domains=qa('.nav-domain');
+    if(!domains.length)return;
+    if(window.innerWidth>900){
+      domains.forEach(d=>d.open=true);
+      return;
+    }
+    const active=activeDomain();
+    domains.forEach(d=>d.open=(d===active));
+  }
+
   function closeMenu(){
     document.body.classList.remove('menu-open');
     const open=q('#openMenu'); if(open) open.setAttribute('aria-expanded','false');
   }
   function openMenu(){
+    syncNavDomains();
     document.body.classList.add('menu-open');
     const open=q('#openMenu'); if(open) open.setAttribute('aria-expanded','true');
   }
@@ -45,6 +60,11 @@
     }
     if(backdrop) backdrop.addEventListener('click',closeMenu);
     if(nav){
+      nav.addEventListener('toggle',e=>{
+        const domain=e.target;
+        if(!(domain instanceof HTMLDetailsElement)||!domain.classList.contains('nav-domain')||!domain.open||window.innerWidth>900)return;
+        qa('.nav-domain',nav).forEach(d=>{if(d!==domain)d.open=false});
+      },true);
       nav.addEventListener('click',e=>{
         const btn=e.target.closest('.nav-btn[data-view]');
         if(!btn) return;
@@ -54,13 +74,14 @@
       qa('.nav-btn[data-view]',nav).forEach(btn=>{btn.type='button';btn.tabIndex=0;});
     }
     document.addEventListener('keydown',e=>{if(e.key==='Escape') closeMenu();});
-    window.addEventListener('resize',()=>{if(window.innerWidth>900) closeMenu();});
+    window.addEventListener('resize',()=>{if(window.innerWidth>900) closeMenu();syncNavDomains();});
     document.addEventListener('click',e=>{
       const go=e.target.closest('[data-go]');
       if(go && go.dataset.go){e.preventDefault();switchView(go.dataset.go);}
     },true);
     const alreadyActive=q('.view.active');
     if(!alreadyActive) switchView('dashboard');
+    syncNavDomains();
     document.documentElement.classList.add('navigation-ready');
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initNavigation,{once:true});

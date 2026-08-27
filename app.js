@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.146';
+const APP_VERSION='147.148';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -354,6 +354,12 @@ function migrate(raw){
  for(const c of STABLE_FORM_COLLECTIONS){
    d[c]=applyDeletedRecordsToCollection(c,normalizeStableCollection(d[c]),d);
  }
+ for(const x of d.agentActivities||[]){
+   if(!Array.isArray(x.agentIds)||!x.agentIds.length)x.agentIds=x.agentId?[String(x.agentId)]:[];
+   x.agentIds=[...new Set(x.agentIds.map(String).filter(Boolean))];
+   if(!x.agentId&&x.agentIds.length)x.agentId=x.agentIds[0];
+   if(!['hours','full-day','half-day'].includes(String(x.durationMode||'')))x.durationMode='hours';
+ }
  if(!Array.isArray(d.cleaningRoomChecks))d.cleaningRoomChecks=[];
  if(!Array.isArray(d.cleaningDeletedIds))d.cleaningDeletedIds=[];
  mergeBundledControlReports(d);
@@ -392,7 +398,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.146 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.148 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -516,7 +522,7 @@ function pendingSyncDiagnostics(){
  const confirmedAt=Number(lastConfirmedSupabaseAt||0);
  const queueCount=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
 
- // V147.146 — la file centrale de mutations est la référence absolue.
+ // V147.148 — la file centrale de mutations est la référence absolue.
  // Si elle est vide, un ancien localDirty/offlinePending ne doit plus afficher
  // une modification fantôme "non confirmée".
  if(queueCount===0){
@@ -1378,7 +1384,7 @@ function safeRenderAll(){
  return errors;
 }
 
-// ===== V147.146 — moteur central de synchronisation =====
+// ===== V147.148 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -2157,7 +2163,7 @@ async function deleteRecord(type,id,label='élément'){
 }
 
 
-/* ---------- V147.146 : Centre d’aide / FAQ local ---------- */
+/* ---------- V147.148 : Centre d’aide / FAQ local ---------- */
 const PST_HELP_ENTRIES=[
  {category:'Horaires',q:'Pourquoi Prévu et Réalisé sont différents mais Écart vaut 0 h ?',keys:'prévu réalisé différence écart zéro maladie congé 0h',answer:'Prévu et Réalisé sont deux totaux bruts. Écart comptabilisé applique les règles métier : certaines journées ne doivent pas créer de débit.',checks:['Regardez le type de journée concerné.','Une Maladie compte 7 h en Réalisé mais ne génère pas d’écart.','Une règle réglée à 0 h ne doit pas créer de débit.','Pour une Présence avec horaire réel différent, un écart doit en revanche apparaître.'],rule:'Écart comptabilisé ≠ forcément Réalisé − Prévu. Les exceptions métier restent à 0 h d’écart.'},
  {category:'Horaires',q:'Comment sont calculées les heures d’un agent entre deux dates ?',keys:'calculette heures dates période total réalisé prévu',answer:'Dans Pilotage des horaires, choisissez l’agent, la date de début et la date de fin. Le calcul additionne jour par jour les règles réellement applicables.',checks:['Prévu vient de l’horaire théorique applicable à la date.','Réalisé reprend l’horaire réel lorsqu’il existe.','Sinon le réalisé suit la règle du type de journée.','Les heures ajoutées ou retirées sont intégrées.'],rule:'Le calcul utilise le moteur dayHours, identique à celui du tableau de Pilotage.'},
@@ -2179,7 +2185,7 @@ const PST_HELP_ENTRIES=[
  {category:'Archivage',q:'Pourquoi un document importé ne se voit pas dans Archivage ?',keys:'document import archivage original cloud invisible',answer:'L’archivage a besoin de la fiche d’import et, selon le cas, du lien vers l’original cloud.',checks:['Vérifiez le type de document.','Vérifiez l’année scolaire.','Videz les filtres d’Archivage.','Vérifiez si l’original cloud est rattaché.'],rule:'La fiche peut exister même si l’original cloud est à vérifier ; les deux états sont affichés séparément.'},
  {category:'Navigation',q:'Pourquoi l’année scolaire change les données visibles ?',keys:'année scolaire filtre haut global écran',answer:'L’année scolaire affichée dans la barre du haut est le contexte global de Pilotage. Elle s’applique aux écrans qui utilisent une période scolaire.',checks:['Regardez le sélecteur en haut.','Changez l’année si vous cherchez une donnée ancienne.','Les filtres mensuels sont replacés dans l’année sélectionnée si nécessaire.'],rule:'Le sélecteur global est la source unique du contexte scolaire.'},
  {category:'Navigation',q:'Quand dois-je faire le relevé des compteurs ?',keys:'compteurs relevé logements dernier jour ouvré mois agenda',answer:'Le relevé des compteurs apparaît automatiquement dans l’Agenda personnel le dernier jour ouvré de chaque mois.',checks:['Regardez Agenda personnel.','La section Compteurs à relever affiche toutes les échéances de l’année scolaire.','La tâche apparaît aussi dans le calendrier de la semaine correspondant à cette date.'],rule:'Relevé des compteurs = dernier jour ouvré de chaque mois, hors week-end et jours fériés connus par l’application.'},
- {category:'Maintenance',q:'Comment tracer ce qu’un agent a réellement fait ?',keys:'activité agent travail réalisé intervention imprévu débouchage trace date heure',answer:'Utilisez Activité des agents ou le raccourci Ajout activité agent. La trace peut être spontanée ou liée à une intervention / demande existante.',checks:['Choisissez l’agent et la date.','Renseignez si possible les heures de début et de fin.','Décrivez le travail réellement effectué et le résultat.','Si vous liez une intervention ou une demande, vous pouvez la clôturer automatiquement.'],rule:'Le journal d’activité conserve la réalisation réelle sans obliger à créer une demande d’intervention au préalable.'},
+ {category:'Maintenance',q:'Comment tracer ce que les agents ont réellement fait ?',keys:'activité agents travail réalisé intervention imprévu débouchage trace date heure journée demi journée plusieurs agents',answer:'Utilisez Activité des agents ou le raccourci Ajout activité agent. Une même activité peut concerner un ou plusieurs agents et être saisie en heures précises, journée complète ou demi-journée.',checks:['Sélectionnez un ou plusieurs agents.','Choisissez la date et la durée : heures, journée complète ou demi-journée.','Décrivez le travail réellement effectué et le résultat.','Si vous liez une intervention ou une demande, vous pouvez la clôturer automatiquement.'],rule:'Une seule fiche peut tracer un travail collectif ; la durée peut être déclarée sans horaire précis.'},
  {category:'Navigation',q:'Pourquoi la barre de défilement remonte pendant que je travaille ?',keys:'curseur scroll barre défilement remonte pc',answer:'Ce comportement ne doit plus se produire. Pilotage mémorise maintenant la position de chaque écran et de chaque tableau pendant les rafraîchissements.',checks:['Si le problème réapparaît, notez l’écran précis.','Vérifiez s’il s’agit de la page entière ou d’un tableau horizontal/vertical.'],rule:'Un rafraîchissement de données ne doit pas modifier la position de lecture sur PC.'}
 ];
 
@@ -2231,6 +2237,10 @@ function setView(view){
  currentView=view;
  $$('.view').forEach(v=>v.classList.toggle('active',v.id===view));
  $$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+ const activeNav=document.querySelector(`.nav-btn[data-view="${view}"]`);
+ const activeDomain=activeNav?.closest('.nav-domain');
+ if(activeDomain)activeDomain.open=true;
+
  if($('#pageTitle'))$('#pageTitle').textContent=VIEW_TITLES[view]||view;
  document.body.classList.remove('menu-open');window.PSTNavigation?.closeMenu?.();
  safeRenderAll();
@@ -2490,7 +2500,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.146 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.148 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2560,7 +2570,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.146 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.148 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2708,7 +2718,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.146 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.148 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2960,7 +2970,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.146 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.148 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -3014,7 +3024,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.146 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.148 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3612,7 +3622,7 @@ function wasteAgendaItemForDate(d){
  return {id:`waste-${d}`,date:d,start:'',title:`${bin.icon} Sortir / passage ${bin.label}`,source:'waste',view:'waste',meta:`Rue Noëlas · Rue Jean Puy${ci.shifted?' · collecte décalée':''}`};
 }
 
-/* ---------- V147.146 : relevé mensuel des compteurs ---------- */
+/* ---------- V147.148 : relevé mensuel des compteurs ---------- */
 function lastWorkingDayOfMonth(year,month){
   // month = 1..12. Jour ouvré = lundi à vendredi, hors jours fériés français connus par l'application.
   const last=new Date(Number(year),Number(month),0);
@@ -3683,7 +3693,7 @@ function eventsForDate(d){
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`})),
   ...([meterReadingItemForDate(d)].filter(Boolean))
  ];
- // V147.146 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.148 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -4257,10 +4267,53 @@ const AGENT_ACTIVITY_TYPES=[
  'Maintenance','Plomberie / débouchage','Entretien courant','Ménage ponctuel','Logistique / manutention',
  'Sécurité','Préparation de salle','Espaces extérieurs','Accueil / service','Autre'
 ];
+const AGENT_ACTIVITY_DURATION_MODES=[
+ ['hours','Heures précises'],
+ ['full-day','Journée complète'],
+ ['half-day','Demi-journée']
+];
 
+function agentActivityAgentIds(x){
+ const raw=Array.isArray(x?.agentIds)?x.agentIds:(x?.agentId?[x.agentId]:[]);
+ return [...new Set(raw.map(String).filter(Boolean))];
+}
+function agentActivityAgentNames(x){
+ const names=agentActivityAgentIds(x).map(id=>agentName(agentById(id))).filter(Boolean);
+ return names.length?names.join(', '):'Agent non renseigné';
+}
+function agentActivityDurationMode(x){
+ const mode=String(x?.durationMode||'').trim();
+ return ['hours','full-day','half-day'].includes(mode)?mode:'hours';
+}
 function agentActivityDuration(x){
- if(!x?.start||!x?.end)return 0;
+ if(agentActivityDurationMode(x)!=='hours'||!x?.start||!x?.end)return 0;
  return Math.max(0,hoursBetween(x.start,x.end,0));
+}
+function agentActivityPeriodLabel(x){
+ const mode=agentActivityDurationMode(x);
+ if(mode==='full-day')return 'Journée complète';
+ if(mode==='half-day')return 'Demi-journée';
+ return [x?.start,x?.end].filter(Boolean).join('–')||'Heures non précisées';
+}
+function agentActivityDurationLabel(x){
+ const mode=agentActivityDurationMode(x);
+ if(mode==='full-day')return '1 journée';
+ if(mode==='half-day')return '½ journée';
+ return x?.start&&x?.end?fmtHours(agentActivityDuration(x)):'Heures à préciser';
+}
+function agentActivityDurationSummary(rows){
+ let full=0,half=0,hours=0;
+ for(const x of rows||[]){
+   const mode=agentActivityDurationMode(x);
+   if(mode==='full-day')full++;
+   else if(mode==='half-day')half++;
+   else hours+=agentActivityDuration(x);
+ }
+ const parts=[];
+ if(full)parts.push(`${full} j`);
+ if(half)parts.push(`${half} demi-j`);
+ if(hours>0.001)parts.push(fmtHours(hours));
+ return parts.join(' · ')||'0';
 }
 function agentActivityPeriodBounds(mode,reference){
  const ref=normalizeDateValue(reference)||todayISO();
@@ -4273,16 +4326,34 @@ function agentActivityLinkedLabel(x){
  if(x?.requestId){const r=byId('requests',x.requestId);return r?`Demande ${r.no||''} — ${r.title||''}`:'Demande liée'}
  return 'Activité spontanée';
 }
+function selectedActivityFilterAgentIds(){
+ return [...document.querySelectorAll('#activityAgentFilterChecks input[type="checkbox"][data-agent-filter]:checked')].map(x=>String(x.value)).filter(Boolean);
+}
+function updateActivityAgentFilterSummary(){
+ const ids=selectedActivityFilterAgentIds(),summary=$('#activityAgentFilterSummary');
+ if(!summary)return;
+ if(!ids.length){summary.textContent='Agents : tous';return}
+ const names=ids.map(id=>agentName(agentById(id))).filter(Boolean);
+ summary.textContent=names.length===1?`Agent : ${names[0]}`:`Agents : ${names.length} sélectionnés`;
+}
+function renderActivityAgentFilter(){
+ const box=$('#activityAgentFilterChecks');if(!box)return;
+ const selected=new Set(selectedActivityFilterAgentIds());
+ const agents=(db.agents||[]).filter(a=>a.status!=='Inactif'||selected.has(String(a.id)));
+ box.innerHTML=`<div class="activity-agent-filter-actions"><button type="button" class="ghost small" data-activity-filter-all="1">Tous</button><button type="button" class="ghost small" data-activity-filter-none="1">Aucun</button></div>`+
+   agents.map(a=>`<label><input type="checkbox" data-agent-filter value="${esc(a.id)}" ${selected.has(String(a.id))?'checked':''}> ${esc(agentName(a))}</label>`).join('');
+ updateActivityAgentFilterSummary();
+}
 function filteredAgentActivities(){
  const mode=$('#activityPeriodMode')?.value||'day';
  const ref=$('#activityReferenceDate')?.value||todayISO();
  const range=agentActivityPeriodBounds(mode,ref);
- const aid=$('#activityAgentFilter')?.value||'';
+ const aids=selectedActivityFilterAgentIds();
  const type=$('#activityTypeFilter')?.value||'';
  const rows=(db.agentActivities||[])
    .filter(x=>recordInAcademicYear(x,['date']))
    .filter(x=>x.date>=range.start&&x.date<=range.end)
-   .filter(x=>!aid||String(x.agentId)===String(aid))
+   .filter(x=>!aids.length||agentActivityAgentIds(x).some(id=>aids.includes(String(id))))
    .filter(x=>!type||x.type===type)
    .sort((a,b)=>`${b.date||''} ${b.start||''}`.localeCompare(`${a.date||''} ${a.start||''}`));
  return {rows,range};
@@ -4290,42 +4361,37 @@ function filteredAgentActivities(){
 function renderAgentActivities(){
  const table=$('#agentActivityTable');if(!table)return;
  const ref=$('#activityReferenceDate');if(ref&&!ref.value)ref.value=todayISO();
- const af=$('#activityAgentFilter');if(af){
-   const old=af.value;af.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','');af.value=old;
- }
+ renderActivityAgentFilter();
  const tf=$('#activityTypeFilter');if(tf){
    const old=tf.value;tf.innerHTML='<option value="">Tous les types</option>'+selectOptions(AGENT_ACTIVITY_TYPES,old);tf.value=old;
  }
  const {rows,range}=filteredAgentActivities();
- const total=rows.reduce((n,x)=>n+agentActivityDuration(x),0);
  const linked=rows.filter(x=>x.maintenanceId||x.requestId).length;
  const spontaneous=rows.length-linked;
  if($('#activityCount'))$('#activityCount').textContent=rows.length;
- if($('#activityHours'))$('#activityHours').textContent=fmtHours(total);
+ if($('#activityHours'))$('#activityHours').textContent=agentActivityDurationSummary(rows);
  if($('#activityLinked'))$('#activityLinked').textContent=linked;
  if($('#activitySpontaneous'))$('#activitySpontaneous').textContent=spontaneous;
  if($('#activityPeriodLabel'))$('#activityPeriodLabel').textContent=`Période affichée : ${range.label}`;
  table.innerHTML=rows.length?rows.map(x=>{
-   const a=agentName(agentById(x.agentId))||'Agent non renseigné';
-   const linked=agentActivityLinkedLabel(x);
+   const linkedLabel=agentActivityLinkedLabel(x);
    const spontaneous=!(x.maintenanceId||x.requestId);
    return `<tr>
     <td>${fmtDate(x.date)}</td>
-    <td>${esc([x.start,x.end].filter(Boolean).join('–')||'—')}</td>
-    <td><strong>${esc(a)}</strong></td>
+    <td>${esc(agentActivityPeriodLabel(x))}</td>
+    <td><strong>${esc(agentActivityAgentNames(x))}</strong></td>
     <td>${esc(x.type||'Autre')}</td>
     <td><strong>${esc(x.title||'')}</strong>${x.details?`<small>${esc(x.details)}</small>`:''}${x.result?`<small>Résultat : ${esc(x.result)}</small>`:''}</td>
     <td>${esc([x.building,x.floor,x.sector,x.room].filter(Boolean).join(' · ')||'—')}</td>
-    <td><span class="activity-link-badge ${spontaneous?'activity-spontaneous':''}">${esc(linked)}</span></td>
-    <td>${x.start&&x.end?fmtHours(agentActivityDuration(x)):'—'}</td>
+    <td><span class="activity-link-badge ${spontaneous?'activity-spontaneous':''}">${esc(linkedLabel)}</span></td>
+    <td>${esc(agentActivityDurationLabel(x))}</td>
     <td>${editButton('agentActivity',x.id)}</td>
    </tr>`;
  }).join(''):emptyRow(9);
 }
 function appendActivityToLinkedText(existing,x){
- const stamp=[fmtDate(x.date),x.start||''].filter(Boolean).join(' ');
- const who=agentName(agentById(x.agentId))||'Agent';
- const line=`${stamp} — ${who} : ${x.title}${x.result?` — ${x.result}`:''}`;
+ const stamp=[fmtDate(x.date),agentActivityPeriodLabel(x)].filter(Boolean).join(' ');
+ const line=`${stamp} — ${agentActivityAgentNames(x)} : ${x.title}${x.result?` — ${x.result}`:''}`;
  return [String(existing||'').trim(),line].filter(Boolean).join('\n');
 }
 async function updateLinkedItemFromActivity(x,closeLinked){
@@ -4333,8 +4399,8 @@ async function updateLinkedItemFromActivity(x,closeLinked){
    const m=byId('maintenance',x.maintenanceId);
    if(m){
      m.action=appendActivityToLinkedText(m.action,x);
-     if(!m.assigned)m.assigned=agentName(agentById(x.agentId))||'';
-     m.completedDate=x.date;m.completedTime=x.end||x.start||'';
+     if(!m.assigned)m.assigned=agentActivityAgentNames(x);
+     m.completedDate=x.date;m.completedTime=agentActivityDurationMode(x)==='hours'?(x.end||x.start||''):'';
      if(closeLinked)m.status='Clôturée';
      const res=await commitFormRecordVerified('Intervention liée','maintenance',m);
      if(!res?.ok)return false;
@@ -4344,13 +4410,20 @@ async function updateLinkedItemFromActivity(x,closeLinked){
    const r=byId('requests',x.requestId);
    if(r){
      r.response=appendActivityToLinkedText(r.response,x);
-     r.completedDate=x.date;r.completedTime=x.end||x.start||'';
+     r.completedDate=x.date;r.completedTime=agentActivityDurationMode(x)==='hours'?(x.end||x.start||''):'';
      if(closeLinked)r.status='Clôturé';
      const res=await commitFormRecordVerified('Demande liée','requests',r);
      if(!res?.ok)return false;
    }
  }
  return true;
+}
+function activityAgentPickerHtml(selectedIds=[]){
+ const selected=new Set((selectedIds||[]).map(String));
+ const agents=(db.agents||[]).filter(a=>a.status!=='Inactif'||selected.has(String(a.id)));
+ return `<div class="activity-agent-picker"><strong>Agent(s) ayant réalisé l’activité</strong><div class="activity-agent-picker-grid">${
+   agents.map(a=>`<label><input type="checkbox" name="agentIds" value="${esc(a.id)}" ${selected.has(String(a.id))?'checked':''}> ${esc(agentName(a))}</label>`).join('')
+ }</div><small>Vous pouvez sélectionner plusieurs agents pour une même activité.</small></div>`;
 }
 function bindAgentActivityLinks(){
  const f=$('#modalForm');if(!f)return;
@@ -4363,18 +4436,40 @@ function bindAgentActivityLinks(){
  if(m)m.onchange=()=>sync('maintenance');
  if(r)r.onchange=()=>sync('request');
 }
+function bindAgentActivityDuration(){
+ const f=$('#modalForm');if(!f)return;
+ const mode=f.elements.durationMode;
+ const wrap=f.querySelector('[data-activity-hours-fields]');
+ const note=f.querySelector('[data-activity-duration-note]');
+ const refresh=()=>{
+   const precise=(mode?.value||'hours')==='hours';
+   if(wrap)wrap.style.display=precise?'contents':'none';
+   if(note){
+     note.textContent=mode?.value==='full-day'
+       ?'La durée sera enregistrée comme une journée complète, sans obligation de saisir des heures.'
+       :mode?.value==='half-day'
+         ?'La durée sera enregistrée comme une demi-journée, sans obligation de saisir des heures.'
+         :'Renseignez les heures de début et de fin si vous souhaitez comptabiliser une durée précise.';
+   }
+ }
+ if(mode)mode.onchange=refresh;refresh();
+}
 function openAgentActivity(id,defaults={}){
  const old=id?byId('agentActivities',id):null;
- const x=old||{id:uid(),no:nextNo('agentActivity','ACT'),date:todayISO(),start:'',end:'',agentId:defaults.agentId||'',type:'Entretien courant',title:'',details:'',result:'',building:'',floor:'',sector:'',room:'',maintenanceId:defaults.maintenanceId||'',requestId:defaults.requestId||'',notes:''};
+ const selectedIds=old?agentActivityAgentIds(old):(defaults.agentIds||[defaults.agentId].filter(Boolean));
+ const x=old||{id:uid(),no:nextNo('agentActivity','ACT'),date:todayISO(),start:'',end:'',agentId:selectedIds[0]||'',agentIds:selectedIds,durationMode:'hours',type:'Entretien courant',title:'',details:'',result:'',building:'',floor:'',sector:'',room:'',maintenanceId:defaults.maintenanceId||'',requestId:defaults.requestId||'',notes:''};
+ if(!Array.isArray(x.agentIds)||!x.agentIds.length)x.agentIds=agentActivityAgentIds(x);
+ if(!x.durationMode)x.durationMode='hours';
  const openMaint=(db.maintenance||[]).filter(m=>!['cloturee','terminee'].includes(normalizeText(m.status||''))).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
  const openReq=(db.requests||[]).filter(r=>!['cloture','termine'].includes(normalizeText(r.status||''))).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
  const maintOptions='<option value="">Aucune intervention liée</option>'+selectOptions(openMaint.concat(x.maintenanceId&&!openMaint.some(m=>m.id===x.maintenanceId)?[byId('maintenance',x.maintenanceId)].filter(Boolean):[]),x.maintenanceId,m=>`${m.no||''} — ${m.title||''}`,m=>m.id);
  const reqOptions='<option value="">Aucune demande liée</option>'+selectOptions(openReq.concat(x.requestId&&!openReq.some(r=>r.id===x.requestId)?[byId('requests',x.requestId)].filter(Boolean):[]),x.requestId,r=>`${r.no||''} — ${r.title||''}`,r=>r.id);
  openModal(old?'Modifier l’activité réalisée':'Ajout activité agent',`<div class="form-grid">
-   <label>Agent<select name="agentId" required>${agentOptions(x.agentId)}</select></label>
+   ${activityAgentPickerHtml(x.agentIds)}
    ${field('Date','date',x.date,'date','required')}
-   ${field('Début','start',x.start,'time')}
-   ${field('Fin','end',x.end,'time')}
+   <label class="activity-duration-mode">Durée de l’activité<select name="durationMode">${selectOptions(AGENT_ACTIVITY_DURATION_MODES,x.durationMode,v=>v[1],v=>v[0])}</select></label>
+   <div class="activity-hours-fields" data-activity-hours-fields>${field('Début','start',x.start,'time')}${field('Fin','end',x.end,'time')}</div>
+   <div class="activity-duration-note" data-activity-duration-note></div>
    <label>Type d’activité<select name="type">${selectOptions(AGENT_ACTIVITY_TYPES,x.type)}</select></label>
    ${field('Travail réalisé','title',x.title,'text','required')}
    ${centralLocationFields(x,'actLoc')}
@@ -4385,15 +4480,20 @@ function openAgentActivity(id,defaults={}){
     <label>Intervention maintenance<select name="maintenanceId">${maintOptions}</select></label>
     <label>Demande direction<select name="requestId">${reqOptions}</select></label>
     <label class="linked-close-line"><input type="checkbox" name="closeLinked" value="1" ${(x.maintenanceId||x.requestId)?'checked':''}> Marquer l’élément lié comme terminé / clôturé</label>
-    <small>Si aucun élément n’est choisi, l’activité reste une trace spontanée : par exemple débouchage, manutention, petite réparation non prévue, etc.</small>
+    <small>Si aucun élément n’est choisi, l’activité reste une trace spontanée.</small>
    </div>
    ${textareaField('Commentaire complémentaire','notes',x.notes)}
  </div>`,async form=>{
-   const o=formDataObj(form);
-   Object.assign(x,o,{maintenanceId:o.maintenanceId||'',requestId:o.requestId||''});
+   const fd=new FormData(form),o=formDataObj(form);
+   const ids=[...new Set(fd.getAll('agentIds').map(String).filter(Boolean))];
+   Object.assign(x,o,{agentIds:ids,agentId:ids[0]||'',durationMode:o.durationMode||'hours',maintenanceId:o.maintenanceId||'',requestId:o.requestId||''});
+   if(x.durationMode!=='hours'){x.start='';x.end=''}
    if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;
-   if(!x.agentId||!x.date||!String(x.title||'').trim()){toast('Agent, date et travail réalisé sont obligatoires');return {ok:false}}
-   if(x.start&&x.end&&agentActivityDuration(x)<=0){toast('L’heure de fin doit être après l’heure de début');return {ok:false}}
+   if(!ids.length||!x.date||!String(x.title||'').trim()){toast('Choisissez au moins un agent, la date et le travail réalisé');return {ok:false}}
+   if(x.durationMode==='hours'){
+     if((x.start&&!x.end)||(!x.start&&x.end)){toast('Pour des heures précises, renseignez le début et la fin');return {ok:false}}
+     if(x.start&&x.end&&agentActivityDuration(x)<=0){toast('L’heure de fin doit être après l’heure de début');return {ok:false}}
+   }
    const persisted=await commitFormRecordVerified('Activité agent','agentActivities',x);
    if(!persisted?.ok)return {ok:false};
    const linkedOk=await updateLinkedItemFromActivity(x,!!form.elements.closeLinked?.checked);
@@ -4401,8 +4501,8 @@ function openAgentActivity(id,defaults={}){
    closeModal();renderAgentActivities();
    toast(x.maintenanceId||x.requestId?'✅ Activité tracée — élément lié mis à jour':'✅ Activité agent tracée');
    return {ok:true};
- },{audit:{track:!!old,type:'Activité agent',recordId:x.id,no:x.no,title:x.title,entity:(form)=>[agentName(agentById(form?.elements?.agentId?.value)),form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('agentActivities',x.id,'activité agent'):null});
- bindCentralLocation('actLoc');bindAgentActivityLinks();
+ },{audit:{track:!!old,type:'Activité agent',recordId:x.id,no:x.no,title:x.title,entity:()=>[agentActivityAgentNames(x),x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('agentActivities',x.id,'activité agent'):null});
+ bindCentralLocation('actLoc');bindAgentActivityLinks();bindAgentActivityDuration();
 }
 function printAgentActivityRegister(){
  const view=$('#agent-activity');if(!view)return;
@@ -5202,11 +5302,11 @@ async function sendAutomaticReportTest(){
 /* ---------- Rapports / impression / e-mail ---------- */
 function reportTitle(type){return {daily:'Rapport quotidien',weekly:'Rapport hebdomadaire',monthly:'Rapport mensuel général',team:'Bilan mensuel des agents',absence:'Congés et absences',cleaning:'Contrôles ménage',maintenance:'Maintenance',periodic:'Contrôles périodiques',vacation:'Vacances et fermeture',full:'Registre complet'}[type]||'Rapport'}
 function tableHTML(headers,rows){return `<div class="report-table-wrap"><table class="report-table cols-${headers.length}" data-cols="${headers.length}"><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map(r=>`<tr>${r.map(c=>`<td>${c??''}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length}" class="empty-cell">Aucune donnée.</td></tr>`}</tbody></table></div>`}
-function reportData(type){let title=reportTitle(type),subtitle='',html='';const daily=$('#dailyDate').value||todayISO(),weekly=startOfWeek($('#weeklyDate').value||todayISO()),monthly=$('#monthlyDate').value||monthISO(),teamMonth=$('#teamReportMonth').value||monthISO(),absMonth=$('#absenceReportMonth').value||monthISO(),cleanMonth=$('#cleaningReportMonth').value||monthISO(),maintMonth=$('#maintenanceReportMonth').value||monthISO(),year=$('#periodicReportYear').value||new Date().getFullYear();if(type==='daily'){subtitle=fmtDateLong(daily);const agents=db.agents.filter(a=>a.status==='Actif').map(a=>{const i=dayInfo(a.id,daily),h=dayHours(i),x=planningDisplayFor(a,daily);return [esc(agentName(a)),badge(i.dayType),esc(i.shift||''),esc(x.text),esc(fmtHours(h.total)),esc(i.note||'')]});html+=`<h2>Équipe</h2>${tableHTML(['Agent','Journée','Service','Horaire applicable','Heures','Information / motif'],agents)}`;const events=eventsForDate(daily);html+=`<h2>Agenda journalier — toutes les actions</h2>${tableHTML(['Heure','Objet','Lieu','Statut'],events.map(x=>[esc(agendaTime(x)||'—'),esc(x.title||'Événement'),esc(agendaPlace(x)||'Lieu non renseigné'),badge(x.status||x.overallStatus||'À faire')]))}`;html+=`<h2>Interventions</h2>${tableHTML(['N°','Objet','Lieu','Priorité','Statut'],db.maintenance.filter(x=>x.date===daily||x.dueDate===daily).map(x=>[esc(x.no),esc(x.title),esc(x.building),badge(x.priority),badge(x.status)]))}`};const acts=(db.agentActivities||[]).filter(x=>x.date===daily);html+=`<h2>Activité réalisée par les agents</h2>${tableHTML(['Heure','Agent','Type','Travail réalisé','Lieu','Durée'],acts.map(x=>[esc([x.start,x.end].filter(Boolean).join('–')||'—'),esc(agentName(agentById(x.agentId))),esc(x.type||''),esc(x.title||''),esc([x.building,x.floor,x.room].filter(Boolean).join(' · ')||'—'),esc(x.start&&x.end?fmtHours(agentActivityDuration(x)):'—')]))}`
+function reportData(type){let title=reportTitle(type),subtitle='',html='';const daily=$('#dailyDate').value||todayISO(),weekly=startOfWeek($('#weeklyDate').value||todayISO()),monthly=$('#monthlyDate').value||monthISO(),teamMonth=$('#teamReportMonth').value||monthISO(),absMonth=$('#absenceReportMonth').value||monthISO(),cleanMonth=$('#cleaningReportMonth').value||monthISO(),maintMonth=$('#maintenanceReportMonth').value||monthISO(),year=$('#periodicReportYear').value||new Date().getFullYear();if(type==='daily'){subtitle=fmtDateLong(daily);const agents=db.agents.filter(a=>a.status==='Actif').map(a=>{const i=dayInfo(a.id,daily),h=dayHours(i),x=planningDisplayFor(a,daily);return [esc(agentName(a)),badge(i.dayType),esc(i.shift||''),esc(x.text),esc(fmtHours(h.total)),esc(i.note||'')]});html+=`<h2>Équipe</h2>${tableHTML(['Agent','Journée','Service','Horaire applicable','Heures','Information / motif'],agents)}`;const events=eventsForDate(daily);html+=`<h2>Agenda journalier — toutes les actions</h2>${tableHTML(['Heure','Objet','Lieu','Statut'],events.map(x=>[esc(agendaTime(x)||'—'),esc(x.title||'Événement'),esc(agendaPlace(x)||'Lieu non renseigné'),badge(x.status||x.overallStatus||'À faire')]))}`;html+=`<h2>Interventions</h2>${tableHTML(['N°','Objet','Lieu','Priorité','Statut'],db.maintenance.filter(x=>x.date===daily||x.dueDate===daily).map(x=>[esc(x.no),esc(x.title),esc(x.building),badge(x.priority),badge(x.status)]))}`};const acts=(db.agentActivities||[]).filter(x=>x.date===daily);html+=`<h2>Activité réalisée par les agents</h2>${tableHTML(['Période','Agent(s)','Type','Travail réalisé','Lieu','Durée'],acts.map(x=>[esc(agentActivityPeriodLabel(x)),esc(agentActivityAgentNames(x)),esc(x.type||''),esc(x.title||''),esc([x.building,x.floor,x.room].filter(Boolean).join(' · ')||'—'),esc(agentActivityDurationLabel(x))]))}`
 if(type==='weekly'){const end=endOfWeek(weekly);subtitle=`${fmtDate(weekly)} au ${fmtDate(end)}`;const allDays=[];for(const a of db.agents.filter(x=>x.status==='Actif'))for(let d=weekly;d<=end;d=addDays(d,1)){const i=dayInfo(a.id,d),x=planningDisplayFor(a,d);if(![0,6].includes(parseDate(d).getDay()))allDays.push([fmtDate(d),esc(agentName(a)),badge(i.dayType),esc(i.shift||''),esc(x.text),esc(i.note||'')])}html=tableHTML(['Date','Agent','Journée','Service','Horaire applicable','Information / motif'],allDays)+`<h2>Échéances et rendez-vous</h2>`+tableHTML(['Date','Type','Objet','Statut'],[...db.meetings.filter(x=>inRange(x.date,weekly,end)).map(x=>[fmtDate(x.date),esc(x.type),esc(x.title),badge(x.status)]),...db.notes.filter(x=>inRange(x.dueDate,weekly,end)).map(x=>[fmtDate(x.dueDate),'Note',esc(x.title),badge(x.status)])])}
-const weeklyActs=(db.agentActivities||[]).filter(x=>inRange(x.date,weekly,endOfWeek(weekly)));if(type==='weekly')html+=`<h2>Activité réalisée par les agents</h2>${tableHTML(['Date','Heure','Agent','Type','Travail réalisé','Durée'],weeklyActs.map(x=>[fmtDate(x.date),esc([x.start,x.end].filter(Boolean).join('–')||'—'),esc(agentName(agentById(x.agentId))),esc(x.type||''),esc(x.title||''),esc(x.start&&x.end?fmtHours(agentActivityDuration(x)):'—')]))}`;
+const weeklyActs=(db.agentActivities||[]).filter(x=>inRange(x.date,weekly,endOfWeek(weekly)));if(type==='weekly')html+=`<h2>Activité réalisée par les agents</h2>${tableHTML(['Date','Période','Agent(s)','Type','Travail réalisé','Durée'],weeklyActs.map(x=>[fmtDate(x.date),esc(agentActivityPeriodLabel(x)),esc(agentActivityAgentNames(x)),esc(x.type||''),esc(x.title||''),esc(agentActivityDurationLabel(x))]))}`;
 if(type==='monthly'){subtitle=monthly;html=`<h2>Indicateurs</h2>${tableHTML(['Module','Total','Ouverts / faibles'],[['Maintenance',db.maintenance.filter(x=>dateMonthMatch(x.date,monthly)).length,db.maintenance.filter(x=>dateMonthMatch(x.date,monthly)&&!['Terminée','Clôturée'].includes(x.status)).length],['Ménage',db.cleaning.filter(x=>dateMonthMatch(x.date,monthly)).length,db.cleaning.filter(x=>dateMonthMatch(x.date,monthly)&&x.overallStatus!=='Conforme').length],['Actions',db.issues.filter(x=>dateMonthMatch(x.date,monthly)).length,db.issues.filter(x=>dateMonthMatch(x.date,monthly)&&!['Terminé','Clôturé'].includes(x.status)).length]])}<h2>Rendez-vous</h2>${tableHTML(['Date','Objet','Lieu','Statut'],db.meetings.filter(x=>dateMonthMatch(x.date,monthly)).map(x=>[fmtDate(x.date),esc(x.title),esc(x.location),badge(x.status)]))}`}
-const monthActs=(db.agentActivities||[]).filter(x=>dateMonthMatch(x.date,monthly));if(type==='monthly')html+=`<h2>Activité réalisée par les agents</h2>${tableHTML(['Date','Agent','Type','Travail réalisé','Lieu','Durée'],monthActs.map(x=>[fmtDate(x.date),esc(agentName(agentById(x.agentId))),esc(x.type||''),esc(x.title||''),esc([x.building,x.floor,x.room].filter(Boolean).join(' · ')||'—'),esc(x.start&&x.end?fmtHours(agentActivityDuration(x)):'—')]))}`;
+const monthActs=(db.agentActivities||[]).filter(x=>dateMonthMatch(x.date,monthly));if(type==='monthly')html+=`<h2>Activité réalisée par les agents</h2>${tableHTML(['Date','Agent(s)','Type','Travail réalisé','Lieu','Durée'],monthActs.map(x=>[fmtDate(x.date),esc(agentActivityAgentNames(x)),esc(x.type||''),esc(x.title||''),esc([x.building,x.floor,x.room].filter(Boolean).join(' · ')||'—'),esc(agentActivityDurationLabel(x))]))}`;
 if(type==='team'){subtitle=teamMonth;const rows=db.agents.filter(a=>a.status==='Actif').map(a=>{let planned=0,actual=0,abs=0,ot=0;const [y,m]=teamMonth.split('-').map(Number),last=new Date(y,m,0).getDate();for(let i=1;i<=last;i++){const d=`${teamMonth}-${pad(i)}`;if([0,6].includes(parseDate(d).getDay()))continue;const info=dayInfo(a.id,d),h=dayHours(info);planned+=h.planned;actual+=h.total;if(isAbsenceType(info.dayType))abs++;ot+=Number(info.overtime||0)}return [esc(agentName(a)),fmtHours(planned),fmtHours(actual),`${actual-planned>=0?'+':''}${fmtHours(actual-planned)}`,abs,fmtHours(ot)]});html=tableHTML(['Agent','Prévu','Réalisé','Écart','Jours absence','Heures ajoutées'],rows)}
 if(type==='absence'){subtitle=absMonth;html=tableHTML(['Date','Agent','Motif','Statut','Note'],db.agentDays.filter(x=>dateMonthMatch(x.date,absMonth)&&isAbsenceType(x.dayType)).map(x=>[fmtDate(x.date),esc(agentName(agentById(x.agentId))),badge(x.dayType),badge(x.status||'Validée'),esc(x.note||'')]))}
 if(type==='cleaning'){subtitle=cleanMonth;html=tableHTML(['Date','Lieu','Type','Agent','Score','Résultat','Points faibles'],db.cleaning.filter(x=>dateMonthMatch(x.date,cleanMonth)).map(x=>[fmtDate(x.date),esc(`${x.building} ${x.floor} ${x.room}`),esc(x.roomType),esc(agentName(agentById(x.agentId))),`${x.score||0} %`,badge(x.overallStatus),esc((x.tasks||[]).filter(t=>['À reprendre','Non conforme'].includes(t.status)).map(t=>t.name).join(', '))]))}
@@ -5514,10 +5614,35 @@ function exportStyledExcel(module){
  }
  toast('Fichier prêt — touchez « Télécharger maintenant »');
 }
-function exportCSV(module){const map={agents:['firstName','lastName','role','weeklyHours','email','phone','assignment','status'],agentDays:['date','agentId','dayType','plannedStart','plannedEnd','actualStart','actualEnd','pause','overtime','status','note'],cleaning:['no','date','time','building','floor','roomType','room','agentId','score','overallStatus','comment'],maintenance:['no','date','title','family','priority','status','building','floor','room','requester','assigned','dueDate','cost','description','action'],requests:['no','date','type','title','priority','status','building','room','requester','dueDate','description','response'],works:['no','date','type','title','company','architect','building','priority','status','dueDate','gpaEnd','description','decision'],meetings:['no','date','time','end','type','title','location','participants','status','notes','actions'],issues:['no','date','category','agentId','title','priority','status','owner','dueDate','cost','description','action'],periodic:['no','name','family','intervalMonths','periodicityText','building','floor','sector','room','lastDate','nextDate','status','provider','register','requirement','notes'],notes:['no','date','category','agentId','title','priority','status','dueDate','text'],vacations:['name','zone','start','end','status','notes'],agentActivities:['no','date','start','end','agentId','type','title','building','floor','sector','room','details','result','maintenanceId','requestId','notes'],documents:['no','date','title','category','linkedModule','description']};const keys=map[module]||Object.keys(db[module]?.[0]||{}).filter(k=>!['id','attachments','tasks','items'].includes(k)),rows=db[module]||[];downloadText(`${module}-${todayISO()}.csv`,[keys.join(';'),...rows.map(r=>keys.map(k=>csvEscape(k==='agentId'?agentName(agentById(r[k])):r[k])).join(';'))].join('\n'),'text/csv;charset=utf-8')}
+function exportCSV(module){
+ const map={
+  agents:['firstName','lastName','role','weeklyHours','email','phone','assignment','status'],
+  agentDays:['date','agentId','dayType','plannedStart','plannedEnd','actualStart','actualEnd','pause','overtime','status','note'],
+  cleaning:['no','date','time','building','floor','roomType','room','agentId','score','overallStatus','comment'],
+  maintenance:['no','date','title','family','priority','status','building','floor','room','requester','assigned','dueDate','cost','description','action'],
+  requests:['no','date','type','title','priority','status','building','room','requester','dueDate','description','response'],
+  works:['no','date','type','title','company','architect','building','priority','status','dueDate','gpaEnd','description','decision'],
+  meetings:['no','date','time','end','type','title','location','participants','status','notes','actions'],
+  issues:['no','date','category','agentId','title','priority','status','owner','dueDate','cost','description','action'],
+  periodic:['no','name','family','intervalMonths','periodicityText','building','floor','sector','room','lastDate','nextDate','status','provider','register','requirement','notes'],
+  notes:['no','date','category','agentId','title','priority','status','dueDate','text'],
+  vacations:['name','zone','start','end','status','notes'],
+  agentActivities:['no','date','durationMode','start','end','agentIds','type','title','building','floor','sector','room','details','result','maintenanceId','requestId','notes'],
+  documents:['no','date','title','category','linkedModule','description']
+ };
+ const keys=map[module]||Object.keys(db[module]?.[0]||{}).filter(k=>!['id','attachments','tasks','items'].includes(k));
+ const rows=db[module]||[];
+ const cell=(r,k)=>{
+   if(k==='agentId')return agentName(agentById(r[k]));
+   if(module==='agentActivities'&&k==='agentIds')return agentActivityAgentNames(r);
+   if(module==='agentActivities'&&k==='durationMode')return agentActivityDurationLabel(r);
+   return r[k];
+ };
+ downloadText(`${module}-${todayISO()}.csv`,[keys.join(';'),...rows.map(r=>keys.map(k=>csvEscape(cell(r,k))).join(';'))].join('\n'),'text/csv;charset=utf-8');
+}
 /* ---------- Initialisation des listes et rendu global ---------- */
 function fillSelect(id,items,keep=true){const e=document.getElementById(id);if(!e)return;const old=keep?e.value:'';const first=e.querySelector('option[value=""]')?.outerHTML||'';e.innerHTML=first+selectOptions(items,old)}
-function hydrateSelects(){fillSelect('personalType',db.lists.personalTypes);fillSelect('personalStatus',db.lists.generalStatuses);for(const id of ['rotationAgent','planningAgent','absenceAgent','issueAgent']){const e=$(`#${id}`);if(e){const old=e.value;e.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','')}}const aaf=$('#activityAgentFilter');if(aaf){const old=aaf.value;aaf.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','');aaf.value=old}
+function hydrateSelects(){fillSelect('personalType',db.lists.personalTypes);fillSelect('personalStatus',db.lists.generalStatuses);for(const id of ['rotationAgent','planningAgent','absenceAgent','issueAgent']){const e=$(`#${id}`);if(e){const old=e.value;e.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','')}}renderActivityAgentFilter();
 fillSelect('activityTypeFilter',AGENT_ACTIVITY_TYPES);
 fillSelect('planningSignal',['Conforme','Heures supplémentaires','Heures manquantes','Absence']);fillSelect('absenceType',db.lists.dayTypes.filter(isAbsenceType));fillSelect('absenceStatus',['Demandée','Validée','Refusée','Annulée']);fillSelect('issueCategory',db.lists.issueCategories);fillSelect('issueStatus',db.lists.generalStatuses);fillSelect('periodicFamily',db.lists.periodicFamilies);fillSelect('periodicStatus',['À jour','Bientôt','En retard','À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable']);const pb=$('#periodicBuilding');if(pb){const old=pb.value;pb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}const cb=$('#cleanBuilding');if(cb){const old=cb.value;cb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}fillSelect('cleanRoomType',db.lists.roomTypes);fillSelect('cleanStatus',db.lists.cleaningStatuses);fillSelect('cleaningGuideType',Object.keys(GUIDE));fillSelect('maintenanceStatus',db.lists.maintenanceStatuses);fillSelect('maintenancePriority',db.lists.priorities);fillSelect('maintenanceFamily',db.lists.maintenanceFamilies);fillSelect('requestStatus',db.lists.generalStatuses);fillSelect('requestType',db.lists.requestTypes);fillSelect('workStatus',db.lists.generalStatuses);fillSelect('workType',db.lists.workTypes);fillSelect('meetingType',db.lists.meetingTypes);fillSelect('noteCategory',db.lists.noteCategories);fillSelect('notePriority',db.lists.priorities);fillSelect('noteStatus',db.lists.generalStatuses);fillSelect('documentCategory',db.lists.documentCategories);const vp=$('#vacationReportPeriod');if(vp){const old=vp.value;vp.innerHTML=selectOptions(db.vacations,old,x=>`${x.name} — ${fmtDate(x.start)}`,x=>x.id)}const csv=$('#csvModule');if(csv){const opts=[['agents','Agents'],['agentDays','Horaires, congés et absences'],['agentActivities','Activité des agents'],['cleaning','Contrôles ménage'],['maintenance','Maintenance'],['requests','Demandes direction'],['works','Chantiers / GPA'],['meetings','Réunions'],['issues','Sécurité / qualité'],['periodic','Contrôles périodiques'],['notes','Notes'],['vacations','Vacances'],['documents','Documents']];const old=csv.value;csv.innerHTML=selectOptions(opts,old,x=>x[1],x=>x[0])}}
 function renderReportPreview(){if(!$('#reportPreview'))return;const r=reportData('daily');$('#reportPreview').innerHTML=`<h3>${esc(r.title)} — ${esc(r.subtitle)}</h3>${r.html}`}
@@ -5626,7 +5751,7 @@ window.addEventListener('scroll',()=>{
   if(document.scrollingElement)pstRememberScroll(document.scrollingElement);
 },{passive:true});
 
-// V147.146 — pas de MutationObserver qui force la position pendant que l'utilisateur défile.
+// V147.148 — pas de MutationObserver qui force la position pendant que l'utilisateur défile.
 // La restauration est déclenchée uniquement autour des rendus explicites de l'application.
 
 
@@ -6110,7 +6235,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.146 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.148 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -6161,9 +6286,19 @@ function bindEvents(){
 $('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').onclick=()=>printView(document.querySelector('.view.active')?.id);
  const gay=$('#globalAcademicYear');if(gay)gay.onchange=e=>setActiveAcademicYear(e.target.value);const pay=$('#prevAcademicYear');if(pay)pay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),-1));const nay=$('#nextAcademicYear');if(nay)nay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),1));
  {const q=$('#quickAdd');if(q)q.onclick=openQuickMenu;const f=$('#quickNoteFab');if(f)f.onclick=openQuickMenu;}
+ document.addEventListener('change',e=>{
+   if(e.target?.matches?.('#activityAgentFilterChecks input[data-agent-filter]')){updateActivityAgentFilterSummary();renderAgentActivities()}
+ });
+ document.addEventListener('click',e=>{
+   const all=e.target.closest?.('[data-activity-filter-all]'),none=e.target.closest?.('[data-activity-filter-none]');
+   if(!all&&!none)return;
+   e.preventDefault();
+   document.querySelectorAll('#activityAgentFilterChecks input[data-agent-filter]').forEach(c=>c.checked=!!all);
+   updateActivityAgentFilterSummary();renderAgentActivities();
+ });
  const naa=$('#newAgentActivity');if(naa)naa.onclick=()=>openAgentActivity();
  const paa=$('#printAgentActivity');if(paa)paa.onclick=printAgentActivityRegister;
- for(const id of ['activityPeriodMode','activityReferenceDate','activityAgentFilter','activityTypeFilter']){const e=$(`#${id}`);if(e)e.onchange=renderAgentActivities}
+ for(const id of ['activityPeriodMode','activityReferenceDate','activityTypeFilter']){const e=$(`#${id}`);if(e)e.onchange=renderAgentActivities}
  $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
  $('#prevTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,-7);renderTeamCalendar()};$('#nextTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,7);renderTeamCalendar()};$('#prevTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,-1));renderTeamCalendar()};$('#nextTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,1));renderTeamCalendar()};$('#todayTeamWeek').onclick=()=>{teamWeek=startOfWeek(todayISO());renderTeamCalendar()};$('#teamDateJump').onchange=e=>{teamWeek=startOfWeek(e.target.value);renderTeamCalendar()};$('#prevPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,-7);renderPersonalCalendar()};$('#nextPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,7);renderPersonalCalendar()};$('#todayPersonalWeek').onclick=()=>{personalWeek=startOfWeek(todayISO());renderPersonalCalendar()};
  $('#saveSettings').onclick=saveSettings;const wizardOpen=$('#openAutoReportWizard');if(wizardOpen)wizardOpen.onclick=openAutoReportWizard;const wizardClose=$('#autoReportWizardClose');if(wizardClose)wizardClose.onclick=()=>wizardEl().close();const wizardBack=$('#autoReportWizardBack');if(wizardBack)wizardBack.onclick=()=>{saveWizardStep();autoReportWizardStep=Math.max(0,autoReportWizardStep-1);renderAutoReportWizard()};const wizardNext=$('#autoReportWizardNext');if(wizardNext)wizardNext.onclick=()=>{saveWizardStep();if(autoReportWizardStep===3){wizardEl().close();return}autoReportWizardStep=Math.min(3,autoReportWizardStep+1);renderAutoReportWizard()};document.addEventListener('click',e=>{const p=e.target.closest('[data-wizard-provider]');if(p){autoReportWizardData.provider=p.dataset.wizardProvider;renderAutoReportWizard()}});const sart=$('#sendAutomaticReportTest');if(sart)sart.onclick=sendAutomaticReportTest;function openNotificationCenter(){window.PSTNotificationCenter?.open?.()}
@@ -6518,7 +6653,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.146 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.148 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){

@@ -665,3 +665,93 @@ button{user-select:none;-webkit-user-select:none}
 
 /* V147.83 — informations manuelles + validation Chronotime */
 .manual-info-box{border:2px solid var(--line,#d7dee8);border-radius:14px;padding:14px;background:var(--panel,#fff);margin-top:6px}.manual-info-box>strong{display:block;margin-bottom:5px}.manual-info-box textarea{min-height:90px}.manual-info-trigger{margin-right:4px}.chrono-bulk-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.chrono-change-table td{vertical-align:top}.chrono-change-table small{display:block;margin-top:4px;opacity:.75}.chrono-info-note{display:block;max-width:280px;white-space:normal}.chrono-choice{display:block;margin:2px 0;white-space:nowrap}
+
+
+/* V147.148 — menu burger regroupé par domaines */
+#nav{gap:8px!important}
+.nav-domain{
+  margin:0;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:13px;
+  background:rgba(255,255,255,.025);
+  overflow:clip;
+}
+.nav-domain>summary{
+  list-style:none;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:38px;
+  padding:9px 10px;
+  color:#bcd8ee;
+  cursor:pointer;
+  user-select:none;
+  font-size:10.5px;
+  font-weight:850;
+  letter-spacing:.035em;
+  text-transform:uppercase;
+}
+.nav-domain>summary::-webkit-details-marker{display:none}
+.nav-domain>summary::after{
+  content:"›";
+  margin-left:auto;
+  font-size:16px;
+  line-height:1;
+  transform:rotate(0deg);
+  transition:transform .15s ease;
+  opacity:.75;
+}
+.nav-domain[open]>summary::after{transform:rotate(90deg)}
+.nav-domain[open]>summary{
+  color:#fff;
+  background:rgba(255,255,255,.055);
+}
+.nav-domain-icon{
+  width:20px;
+  text-align:center;
+  font-size:13px;
+  filter:saturate(.9);
+}
+.nav-domain-items{
+  display:grid;
+  gap:3px;
+  padding:4px 5px 7px;
+}
+.nav-domain .nav-btn{
+  width:100%;
+  padding:9px 9px;
+  font-size:11.5px;
+}
+.nav-domain:has(.nav-btn.active){
+  border-color:rgba(57,189,255,.32);
+  background:rgba(9,122,191,.08);
+}
+@media(min-width:901px){
+  .nav-domain>summary{font-size:9.5px;padding:7px 9px;min-height:32px}
+  .nav-domain .nav-btn{padding:8px 9px}
+}
+@media(max-width:900px){
+  .sidebar nav{padding-bottom:24px!important}
+  .nav-domain{border-color:rgba(255,255,255,.12)}
+  .nav-domain>summary{min-height:44px;font-size:11px}
+  .nav-domain .nav-btn{min-height:42px;font-size:12px}
+}
+
+/* V147.148 — activité multi-agents et durée journée/demi-journée/heures */
+.activity-agent-filter{min-width:190px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;position:relative}
+.activity-agent-filter>summary{list-style:none;cursor:pointer;padding:10px 12px;font-size:.8rem;font-weight:800;color:#334155;white-space:nowrap}
+.activity-agent-filter>summary::-webkit-details-marker{display:none}
+.activity-agent-filter>summary::after{content:"▾";float:right;margin-left:10px}
+.activity-agent-filter-checks{position:absolute;z-index:60;top:calc(100% + 5px);left:0;min-width:260px;max-height:290px;overflow:auto;padding:9px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.15)}
+.activity-agent-filter-checks label,.activity-agent-picker label{display:flex!important;align-items:center!important;gap:8px!important;padding:7px 8px!important;margin:0!important;border-radius:8px;font-size:.84rem!important;font-weight:650!important;color:#334155!important}
+.activity-agent-filter-checks label:hover,.activity-agent-picker label:hover{background:#f1f5f9}
+.activity-agent-filter-checks input,.activity-agent-picker input{width:auto!important;margin:0!important}
+.activity-agent-filter-actions{display:flex;gap:6px;padding:0 4px 7px;border-bottom:1px solid #e2e8f0;margin-bottom:4px}
+.activity-agent-filter-actions button{padding:5px 8px;font-size:.72rem}
+.activity-agent-picker{grid-column:1/-1;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;padding:10px}
+.activity-agent-picker>strong{display:block;margin-bottom:7px;color:#1e3a5f}
+.activity-agent-picker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}
+.activity-duration-mode{grid-column:1/-1}
+.activity-hours-fields{display:contents}
+.activity-duration-note{grid-column:1/-1;padding:9px 11px;border-radius:10px;background:#eff6ff;color:#1e40af;font-size:.8rem;font-weight:700}
+@media(max-width:700px){.activity-agent-filter{width:100%}.activity-agent-filter-checks{position:static;min-width:0;box-shadow:none;border:0;border-top:1px solid #e2e8f0;border-radius:0}.activity-agent-picker-grid{grid-template-columns:1fr}}

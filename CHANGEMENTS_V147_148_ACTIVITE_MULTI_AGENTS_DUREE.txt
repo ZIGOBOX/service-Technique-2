@@ -1,0 +1,20 @@
+V147.148 — RAPPORT / JOURNAL D'ACTIVITÉ : MULTI-AGENTS ET DURÉE SIMPLIFIÉE
+
+Base stricte : V147.147.
+
+- Une même activité peut concerner plusieurs agents.
+- Sélection par cases à cocher dans le formulaire.
+- Filtre du rapport par plusieurs agents simultanément.
+- Trois durées possibles :
+  * Heures précises
+  * Journée complète
+  * Demi-journée
+- Les heures début/fin ne sont demandées que pour « Heures précises ».
+- Les anciennes activités à un seul agent restent compatibles.
+- Le tableau affiche tous les agents concernés.
+- Résumé des durées : ex. « 2 j · 3 demi-j · 4 h 30 ».
+- Rapports quotidien, hebdomadaire et mensuel adaptés.
+- Export Excel/CSV adapté.
+- Les interventions/demandes liées conservent tous les noms des agents dans la trace.
+
+Aucune autre règle métier n'a été modifiée.

@@ -1,0 +1,53 @@
+V147.147 — MENU BURGER PAR DOMAINES
+
+Base stricte : V147.146.
+
+Le menu principal est maintenant classé en 5 domaines :
+
+1. Pilotage & équipe
+- Tableau de bord
+- Agenda personnel
+- Agents & recrutements
+- Activité des agents
+- Réunions & rendez-vous
+- Bloc-notes
+
+2. Horaires & absences
+- Roulements annuels
+- Pilotage des horaires
+- Import / export horaires
+- Chronotime
+- Congés, RTT & absences
+- Vacances & fermetures
+
+3. Bâtiments & interventions
+- Sécurité & qualité
+- Contrôles périodiques
+- Contrôle ménage
+- Préparation salle & café
+- Maintenance
+- Demandes direction
+- Chantiers & GPA
+- Poubelles
+
+4. Documents & services
+- Documentation
+- Outlook professionnel
+- Archivage
+- Météo
+
+5. Rapports & système
+- Rapports & impressions
+- Connexions
+- FAQ / Aide
+- Paramètres
+
+Sur téléphone :
+- les domaines sont repliables ;
+- le domaine de l'écran actuel s'ouvre automatiquement ;
+- ouvrir un domaine replie les autres pour réduire la longueur du burger.
+
+Sur PC :
+- les domaines restent ouverts mais clairement séparés visuellement.
+
+Aucun écran ni règle métier n'a été supprimé ou modifié.

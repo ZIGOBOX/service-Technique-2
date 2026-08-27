@@ -786,37 +786,66 @@
       <div><h1 id="brandAppName">Pilotage Service Technique</h1><p id="brandSchoolName">Lycée Jean Puy</p></div>
       <button class="icon-btn mobile-only" id="closeMenu" aria-label="Fermer le menu">×</button>
     </div>
-    <nav id="nav">
-      <button class="nav-btn active" data-view="dashboard"><span>⌂</span>Tableau de bord</button>
-      <button class="nav-btn" data-view="personal"><span>📅</span>Agenda personnel</button>
-      <button class="nav-btn" data-view="agents"><span>👥</span>Agents & recrutements</button>
-      <button class="nav-btn" data-view="rotations"><span>↻</span>Roulements annuels</button>
-      <button class="nav-btn" data-view="planning"><span>◷</span>Pilotage des horaires</button>
-      <button class="nav-btn" data-view="schedule-import"><span>⇄</span>Import / export horaires</button>
-      <button class="nav-btn" data-view="pdfimports"><span>📥</span>Chronotime</button>
-      <button class="nav-btn" data-view="absences"><span>☀</span>Congés, RTT & absences</button>
-      <button class="nav-btn" data-view="vacations"><span>🏫</span>Vacances & fermetures</button>
-      <button class="nav-btn" data-view="issues"><span>⚠</span>Sécurité & qualité</button>
-      <button class="nav-btn" data-view="periodic"><span>🛡</span>Contrôles périodiques</button>
-      <button class="nav-btn" data-view="cleaning"><span>✓</span>Contrôle ménage</button>
-      <button class="nav-btn" data-view="room-prep"><span>☕</span>Préparation salle & café</button>
-      <button class="nav-btn" data-view="maintenance"><span>⚙</span>Maintenance</button>
-      <button class="nav-btn" data-view="agent-activity"><span>✓</span>Activité des agents</button>
-      <button class="nav-btn" data-view="requests"><span>↗</span>Demandes direction</button>
-      <button class="nav-btn" data-view="works"><span>▦</span>Chantiers & GPA</button>
-      <button class="nav-btn" data-view="meetings"><span>◫</span>Réunions & rendez-vous</button>
-      <button class="nav-btn" data-view="notes"><span>✎</span>Bloc-notes</button>
-      <button class="nav-btn" data-view="documents"><span>📚</span>Documentation</button>
-      <button class="nav-btn" data-view="outlook"><span>✉</span>Outlook professionnel</button>
-      <button class="nav-btn" data-view="archives"><span>🗃</span>Archivage</button>
-      <button class="nav-btn" data-view="weather"><span>☁️</span>Météo</button>
-      <button class="nav-btn" data-view="waste"><span>🗑️</span>Poubelles</button>
-      <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
-      <button class="nav-btn" data-view="connections"><span>●</span>Connexions</button>
-      <button class="nav-btn" data-view="help"><span>?</span>FAQ / Aide</button>
-      <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
+    <nav id="nav" aria-label="Menu principal">
+      <details class="nav-domain" data-nav-domain="pilotage" open>
+        <summary><span class="nav-domain-icon">🧭</span><span>Pilotage & équipe</span></summary>
+        <div class="nav-domain-items">
+          <button class="nav-btn active" data-view="dashboard"><span>⌂</span>Tableau de bord</button>
+          <button class="nav-btn" data-view="personal"><span>📅</span>Agenda personnel</button>
+          <button class="nav-btn" data-view="agents"><span>👥</span>Agents & recrutements</button>
+          <button class="nav-btn" data-view="agent-activity"><span>✓</span>Activité des agents</button>
+          <button class="nav-btn" data-view="meetings"><span>◫</span>Réunions & rendez-vous</button>
+          <button class="nav-btn" data-view="notes"><span>✎</span>Bloc-notes</button>
+        </div>
+      </details>
+
+      <details class="nav-domain" data-nav-domain="horaires">
+        <summary><span class="nav-domain-icon">◷</span><span>Horaires & absences</span></summary>
+        <div class="nav-domain-items">
+          <button class="nav-btn" data-view="rotations"><span>↻</span>Roulements annuels</button>
+          <button class="nav-btn" data-view="planning"><span>◷</span>Pilotage des horaires</button>
+          <button class="nav-btn" data-view="schedule-import"><span>⇄</span>Import / export horaires</button>
+          <button class="nav-btn" data-view="pdfimports"><span>📥</span>Chronotime</button>
+          <button class="nav-btn" data-view="absences"><span>☀</span>Congés, RTT & absences</button>
+          <button class="nav-btn" data-view="vacations"><span>🏫</span>Vacances & fermetures</button>
+        </div>
+      </details>
+
+      <details class="nav-domain" data-nav-domain="batiments">
+        <summary><span class="nav-domain-icon">🏢</span><span>Bâtiments & interventions</span></summary>
+        <div class="nav-domain-items">
+          <button class="nav-btn" data-view="issues"><span>⚠</span>Sécurité & qualité</button>
+          <button class="nav-btn" data-view="periodic"><span>🛡</span>Contrôles périodiques</button>
+          <button class="nav-btn" data-view="cleaning"><span>✓</span>Contrôle ménage</button>
+          <button class="nav-btn" data-view="room-prep"><span>☕</span>Préparation salle & café</button>
+          <button class="nav-btn" data-view="maintenance"><span>⚙</span>Maintenance</button>
+          <button class="nav-btn" data-view="requests"><span>↗</span>Demandes direction</button>
+          <button class="nav-btn" data-view="works"><span>▦</span>Chantiers & GPA</button>
+          <button class="nav-btn" data-view="waste"><span>🗑️</span>Poubelles</button>
+        </div>
+      </details>
+
+      <details class="nav-domain" data-nav-domain="documents">
+        <summary><span class="nav-domain-icon">📚</span><span>Documents & services</span></summary>
+        <div class="nav-domain-items">
+          <button class="nav-btn" data-view="documents"><span>📚</span>Documentation</button>
+          <button class="nav-btn" data-view="outlook"><span>✉</span>Outlook professionnel</button>
+          <button class="nav-btn" data-view="archives"><span>🗃</span>Archivage</button>
+          <button class="nav-btn" data-view="weather"><span>☁️</span>Météo</button>
+        </div>
+      </details>
+
+      <details class="nav-domain" data-nav-domain="systeme">
+        <summary><span class="nav-domain-icon">⚙</span><span>Rapports & système</span></summary>
+        <div class="nav-domain-items">
+          <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
+          <button class="nav-btn" data-view="connections"><span>●</span>Connexions</button>
+          <button class="nav-btn" data-view="help"><span>?</span>FAQ / Aide</button>
+          <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
+        </div>
+      </details>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.146 — 27/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.148 — 27/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -1160,7 +1189,7 @@
 
       <div class="activity-summary-grid">
         <article><span>Activités</span><strong id="activityCount">0</strong></article>
-        <article><span>Temps tracé</span><strong id="activityHours">0 h</strong></article>
+        <article><span>Durées déclarées</span><strong id="activityHours">0</strong></article>
         <article><span>Liées à une demande</span><strong id="activityLinked">0</strong></article>
         <article><span>Imprévues / spontanées</span><strong id="activitySpontaneous">0</strong></article>
       </div>
@@ -1174,7 +1203,10 @@
           </select>
         </label>
         <label>Date de référence<input type="date" id="activityReferenceDate"></label>
-        <label>Agent<select id="activityAgentFilter"><option value="">Tous les agents</option></select></label>
+        <details class="activity-agent-filter" id="activityAgentFilterBox">
+          <summary id="activityAgentFilterSummary">Agents : tous</summary>
+          <div id="activityAgentFilterChecks" class="activity-agent-filter-checks"></div>
+        </details>
         <label>Type<select id="activityTypeFilter"><option value="">Tous les types</option></select></label>
         <button class="ghost" id="printAgentActivity">Imprimer / PDF</button>
       </div>
@@ -1182,7 +1214,7 @@
 
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Heure</th><th>Agent</th><th>Type</th><th>Travail réalisé</th><th>Lieu</th><th>Origine / lien</th><th>Durée</th><th></th></tr></thead>
+          <thead><tr><th>Date</th><th>Horaire / période</th><th>Agent(s)</th><th>Type</th><th>Travail réalisé</th><th>Lieu</th><th>Origine / lien</th><th>Durée déclarée</th><th></th></tr></thead>
           <tbody id="agentActivityTable"></tbody>
         </table>
       </div>
