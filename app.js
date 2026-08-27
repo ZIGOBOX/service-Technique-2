@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.148';
-const APP_BUILD='21/08/2026';
+const APP_VERSION='147.152';
+const APP_BUILD='27/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -5723,7 +5723,7 @@ function renderDailyMotivation(){
  el.title='Dicton motivation du jour';
 }
 
-function renderBrand(){renderDailyMotivation();secureAppLogos();document.title=`${db.settings.appName} — V${APP_VERSION}`;$('#brandAppName').textContent=db.settings.appName;$('#brandSchoolName').textContent=db.settings.schoolName;$('#welcomeTitle').textContent=db.settings.appName;$('#today').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});document.documentElement.style.setProperty('--print-orientation',db.settings.printOrientation||'landscape');for(const id of ['authVersion','sidebarVersion','aboutVersion']){const el=document.getElementById(id);if(el)el.textContent=`Version ${APP_VERSION} — ${APP_BUILD}`}}
+function renderBrand(){renderDailyMotivation();secureAppLogos();document.title=`${db.settings.appName} — V${APP_VERSION}`;const brandApp=$('#brandAppName');if(brandApp)brandApp.textContent=db.settings.appName;const brandSchool=$('#brandSchoolName');if(brandSchool)brandSchool.textContent=db.settings.schoolName;const welcomeTitle=$('#welcomeTitle');if(welcomeTitle)welcomeTitle.textContent=db.settings.appName;const today=$('#today');if(today)today.textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});document.documentElement.style.setProperty('--print-orientation',db.settings.printOrientation||'landscape');for(const id of ['authVersion','sidebarVersion','aboutVersion']){const el=document.getElementById(id);if(el)el.textContent=`Version ${APP_VERSION} — ${APP_BUILD}`}}
 
 // V147.15 — mémoire réelle des positions horizontales, y compris si le DOM est recréé.
 const pstPlanningScrollMemory={};
