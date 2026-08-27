@@ -1,0 +1,30 @@
+V147.145 — JOURNAL D'ACTIVITÉ DES AGENTS
+
+Base stricte : V147.144.
+
+Nouveau module « Activité des agents »
+- Trace le travail réellement effectué, qu'il soit prévu ou imprévu.
+- Champs : agent, date, heure début/fin, type, travail réalisé, lieu, détail, résultat, commentaire.
+- Exemples de tâches spontanées : débouchage, manutention, petite réparation, entretien courant.
+- Une activité peut être liée à une intervention Maintenance ou à une Demande direction.
+- Quand le travail lié est terminé, l'option de clôture met automatiquement :
+  * l'intervention Maintenance en « Clôturée » ;
+  * la Demande direction en « Clôturé ».
+- La réalisation est ajoutée dans le champ Action / Réponse de l'élément lié, avec date, heure et agent.
+- Une intervention affiche le nombre d'activités agents qui lui sont rattachées.
+
+Traçabilité et consultation
+- Filtres Journée / Semaine / Mois.
+- Filtre par agent et type d'activité.
+- Total du nombre d'activités et du temps tracé.
+- Distinction entre activités liées et activités spontanées.
+- Impression / PDF du journal filtré.
+- Les rapports quotidien, hebdomadaire et mensuel général intègrent maintenant l'activité réelle des agents.
+- Export Excel/CSV disponible pour « Activité des agents ».
+
+Accès rapide
+- Bouton « + Activité agent » sur le tableau de bord.
+- « Ajout activité agent » dans le menu d'ajout rapide.
+
+La nouvelle collection agentActivities utilise le même fonctionnement local-first / Supabase que les autres formulaires stables.
+Aucune règle d'horaires, maladie, congé, Chronotime, RH, année scolaire ou synchronisation existante n'a été modifiée.

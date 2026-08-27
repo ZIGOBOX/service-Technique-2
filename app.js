@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.147';
+const APP_VERSION='147.146';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -169,17 +169,6 @@ const IMPORTED_INTERVENTIONS=[
 
 const GENERIC_CLEANING=[['Poussière / mobilier','Selon plan local'],['Lavage des sols','Selon plan local'],['Points de contact','Selon plan local'],['Vitres / miroirs','Selon besoin'],['Poubelles / consommables','Selon plan local'],['Murs / portes','Selon besoin'],['Odeurs / aération','À chaque passage'],['Rangement général','À chaque passage']];
 const VACATION_TASKS=['Vérifier et programmer les alarmes / intrusion','Vérifier les accès, clés et badges','Adapter ou arrêter le chauffage selon consignes','Adapter la ventilation et la climatisation','Sécuriser l’eau et programmer la remise en service ECS','Prévoir surveillance légionelles / températures si nécessaire','Éteindre les éclairages non indispensables','Sécuriser informatique, réseau et équipements audiovisuels','Contrôler chambres froides, cuisine et demi-pension','Prévoir surveillance des chantiers et entreprises','Informer les personnes d’astreinte et prestataires','Programmer la remise en service avant la rentrée','Effectuer une ronde de fermeture','Effectuer une ronde de réouverture'];
-const LEGIONELLA_SUMMER_TASKS=[
- 'Légionelle — début juillet : détartrer et désinfecter les mousseurs de robinets',
- 'Légionelle — déposer, désinfecter et sécher complètement pommeaux de douche et douchettes',
- 'Légionelle — laisser pommeaux et douchettes démontés pendant toute la fermeture estivale',
- 'Légionelle — coordonner les interventions de l’exploitant et les soutirages des réseaux',
- 'Légionelle — fin août : remettre en place pommeaux et douchettes après interventions et soutirages',
- 'Légionelle — avant accueil : soutirer tous les points ECS et les points d’eau froide associés',
- 'Légionelle — ECS : maintenir l’écoulement au moins 3 min après obtention de la température d’eau chaude',
- 'Légionelle — vérifier le bon fonctionnement des équipements avant remise en service',
- 'Légionelle — programmer / vérifier les analyses après plusieurs semaines d’inutilisation sur les points à risque'
-];
 const SCHOOL_CALENDAR={
  '2026-2027':{
   A:[['Toussaint','2026-10-18','2026-11-01','Fin des cours 17/10 — reprise 02/11'],['Noël','2026-12-20','2027-01-03','Fin des cours 19/12 — reprise 04/01'],['Hiver','2027-02-14','2027-02-28','Fin des cours 13/02 — reprise 01/03'],['Printemps','2027-04-11','2027-04-25','Fin des cours 10/04 — reprise 26/04'],['Été','2027-07-04','2027-08-31','Fin des cours 03/07 — date de fin à adapter']],
@@ -297,7 +286,7 @@ function clone(x){return structuredClone(x)}
 const BUNDLED_CONTROL_REPORTS=[{"key":"apave-135054046-001-1-rvre","title":"RVRE — Installations électriques et éclairages","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"RVRE ERP — aucune non-conformité identifiée dans le périmètre de la vérification.","observations":0,"subtype":"RVRE ERP","sha256":"fbcc7667636c65c9a134f6421ab4056fd9fcaedb586bd58f9aa34410dd89759a","size":1344942,"path":"reports/2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf","file":"2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf"},{"key":"apave-135054046-001-1-rvp","title":"Vérification périodique des installations électriques","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"Vérification périodique des installations électriques — 23 observations signalées dans le rapport.","observations":23,"subtype":"Vérification périodique","sha256":"cda549f71a666baaf27efddd3fa653b5a7725910497e2c81403eadc7438fcc01","size":3680309,"path":"reports/2025-07-07_APAVE_Verification_Installations_Electriques.pdf","file":"2025-07-07_APAVE_Verification_Installations_Electriques.pdf"},{"key":"apave-135046511-001-1-gaz","title":"Installations thermiques / réseau gaz","org":"APAVE","family":"Gaz","date":"2025-09-05","ref":"135046511-001-1","summary":"Vérification des installations thermiques fluide / réseau gaz — 1 observation.","observations":1,"subtype":"Thermique / Gaz","sha256":"f5ffc7006ae754c35ce9dbd4a82611eeb6d2e64878f6583e31112cf051588906","size":1497083,"path":"reports/2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf","file":"2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf"},{"key":"apave-a513283837-004-1-sport","title":"Vérification périodique des équipements sportifs","org":"APAVE","family":"Équipements sportifs","date":"2025-12-05","ref":"A513283837-004-1","summary":"Vérification visuelle et manuelle des équipements sportifs — 26 observations.","observations":26,"subtype":"Équipements sportifs","sha256":"423aa2fd3840deafbd2daab0dae3df00f449f40a1b9f3f314f1b44bbdc249f9e","size":4445518,"path":"reports/2025-12-05_APAVE_Equipements_Sportifs.pdf","file":"2025-12-05_APAVE_Equipements_Sportifs.pdf"},{"key":"apave-a513283836-004-1-ancrage","title":"Vérification des dispositifs d’ancrage pour EPI","org":"APAVE","family":"Autres contrôles","date":"2026-02-02","ref":"A513283836-004-1","summary":"Vérification générale périodique des dispositifs d’ancrage pour EPI — 5 observations.","observations":5,"subtype":"Ancrages / EPI","sha256":"fcf149dfb1e45c0e1dab938b86dbee07fcf9839d3b8180734abb92155c2f3e50","size":135938,"path":"reports/2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf","file":"2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf"},{"key":"bv-28016576-155-1-1-cta-vmc","title":"Contrôle des CTA et VMC sanitaires","org":"Bureau Veritas","family":"VMC / Ventilation","date":"2026-03-20","ref":"28016576/155.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — CTA et VMC sanitaires — écarts et non-conformités présents dans le rapport.","observations":null,"subtype":"CTA / VMC sanitaires","sha256":"aadb4258da54a155ca98194d8602d3bef1ff46a26236911f82388766f39fdb96","size":5246665,"path":"reports/2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf","file":"2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf"},{"key":"bv-28016576-152-1-1-hottes","title":"Contrôle des hottes de cuisines","org":"Bureau Veritas","family":"Cuisine / Cuisson","date":"2026-03-20","ref":"28016576/152.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — hottes de cuisines — observations présentes dans le rapport.","observations":null,"subtype":"Hottes de cuisines","sha256":"144566b4d982b7a241b3400b91f0ce4396b13f1026dbfeabd91b4aa024c3b912","size":3374751,"path":"reports/2026-03-20_BureauVeritas_Hottes_Cuisines.pdf","file":"2026-03-20_BureauVeritas_Hottes_Cuisines.pdf"}];
 
 function defaultData(){const buildings=clone(initialBuildings);const agents=[['Mme','Tarrio','Agent d’accueil'],['Mme','Delorme','Agent d’accueil / lingerie'],['Complément','accueil','Agent d’accueil'],['Mme','Berthoux','Agent de restauration'],['Mme','Bozio','Agent d’accueil']].map((n,i)=>({id:uid(),no:`AGT-${String(i+1).padStart(3,'0')}`,firstName:n[0],lastName:n[1],role:n[2],weeklyHours:35,email:'',phone:'',assignment:'',status:'Actif',arrivalDate:'',workdays:[1,2,3,4,5],notes:''}));const monday=startOfWeek(todayISO());const maintenance=IMPORTED_INTERVENTIONS.map((x,i)=>({id:uid(),no:`MAI-2026-${String(i+1).padStart(4,'0')}`,date:todayISO(),title:x[0],family:x[1],priority:x[2],status:x[3],building:x[5]||'',floor:'',room:x[5]||'',requester:'Direction',assigned:'',dueDate:'',cost:'',description:x[4]||'',action:'',attachments:[],importBatch:'excel-2026-08'}));return {version:31,settings:{initialSeedCompleted:true,seedVersion:31,cleaningAlertDays:30,cleaningNotificationsEnabled:true,cleaningNotifyNever:true,cleaningNotifyOverdue:true,cleaningNotifyPlanned:true,meetingAlertDays:3,
-autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:academicYearFor(todayISO()),defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:[],rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],cleaningDeletedIds:[],notificationDismissals:{},importOriginalBindings:{}}}
+autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:academicYearFor(todayISO()),defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:[],rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],agentActivities:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],cleaningDeletedIds:[],notificationDismissals:{},importOriginalBindings:{}}}
 function nextSeedNo(rows){return `MAI-2026-${String((rows?.length||0)+1).padStart(4,'0')}`}
 
 function normalizedReportFileKey(name=''){
@@ -354,7 +343,7 @@ function migrate(raw){
  const base=defaultData();
  if(!raw||typeof raw!=='object'){mergeBundledControlReports(base);return base;}
  const d={...base,...raw,settings:{...base.settings,...(raw.settings||{}),counters:{...base.settings.counters,...(raw.settings?.counters||{})}},lists:{...base.lists,...(raw.lists||{})}};
- for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
+ for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','agentActivities','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
    if(!Array.isArray(d[k]))d[k]=base[k];
  }
  mergeContractControls14723(d);
@@ -403,7 +392,7 @@ function migrate(raw){
  return d;
 }
 
-// V147.147 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
+// V147.146 — profils horaires fournis par l'utilisateur (photo du 24/08/2026).
 // Matin et Soir pour Mamessier et Thelly, année scolaire 2026-2027.
 // Idempotent : même agent + même profil + même date d'effet = mise à jour, jamais doublon.
 function ensureMamessierThellyShiftProfiles(target=db){
@@ -527,7 +516,7 @@ function pendingSyncDiagnostics(){
  const confirmedAt=Number(lastConfirmedSupabaseAt||0);
  const queueCount=typeof pstPendingMutationCount==='function'?pstPendingMutationCount():0;
 
- // V147.147 — la file centrale de mutations est la référence absolue.
+ // V147.146 — la file centrale de mutations est la référence absolue.
  // Si elle est vide, un ancien localDirty/offlinePending ne doit plus afficher
  // une modification fantôme "non confirmée".
  if(queueCount===0){
@@ -1045,7 +1034,7 @@ async function waitForCloudIdle(maxMs=18000){
  return !cloudBusy;
 }
 
-const STABLE_FORM_COLLECTIONS=['requests','works','meetings','notes','issues','periodic','cleaning','vacations','personalEvents','documents','agents','rotations','weeklyPlans','spaces'];
+const STABLE_FORM_COLLECTIONS=['requests','works','meetings','notes','issues','periodic','cleaning','vacations','personalEvents','agentActivities','documents','agents','rotations','weeklyPlans','spaces'];
 
 function stableRecordTime(r){
  const t=Date.parse(r?.updatedAt||r?.createdAt||r?.modifiedAt||'');
@@ -1363,6 +1352,7 @@ function safeRenderAll(){
    periodic:['Contrôles périodiques',renderPeriodic],
    cleaning:['Ménage',renderCleaning],
    maintenance:['Maintenance',renderMaintenance],
+   'agent-activity':['Activité agents',renderAgentActivities],
    requests:['Demandes',renderRequests],
    works:['Chantiers',renderWorks],
    meetings:['Réunions',renderMeetings],
@@ -1388,7 +1378,7 @@ function safeRenderAll(){
  return errors;
 }
 
-// ===== V147.147 — moteur central de synchronisation =====
+// ===== V147.146 — moteur central de synchronisation =====
 const PST_SYNC_QUEUE_KEY='pst-sync-queue-v147136';
 const PST_DEVICE_ID_KEY='pst-device-id-v147136';
 
@@ -2167,7 +2157,7 @@ async function deleteRecord(type,id,label='élément'){
 }
 
 
-/* ---------- V147.147 : Centre d’aide / FAQ local ---------- */
+/* ---------- V147.146 : Centre d’aide / FAQ local ---------- */
 const PST_HELP_ENTRIES=[
  {category:'Horaires',q:'Pourquoi Prévu et Réalisé sont différents mais Écart vaut 0 h ?',keys:'prévu réalisé différence écart zéro maladie congé 0h',answer:'Prévu et Réalisé sont deux totaux bruts. Écart comptabilisé applique les règles métier : certaines journées ne doivent pas créer de débit.',checks:['Regardez le type de journée concerné.','Une Maladie compte 7 h en Réalisé mais ne génère pas d’écart.','Une règle réglée à 0 h ne doit pas créer de débit.','Pour une Présence avec horaire réel différent, un écart doit en revanche apparaître.'],rule:'Écart comptabilisé ≠ forcément Réalisé − Prévu. Les exceptions métier restent à 0 h d’écart.'},
  {category:'Horaires',q:'Comment sont calculées les heures d’un agent entre deux dates ?',keys:'calculette heures dates période total réalisé prévu',answer:'Dans Pilotage des horaires, choisissez l’agent, la date de début et la date de fin. Le calcul additionne jour par jour les règles réellement applicables.',checks:['Prévu vient de l’horaire théorique applicable à la date.','Réalisé reprend l’horaire réel lorsqu’il existe.','Sinon le réalisé suit la règle du type de journée.','Les heures ajoutées ou retirées sont intégrées.'],rule:'Le calcul utilise le moteur dayHours, identique à celui du tableau de Pilotage.'},
@@ -2188,9 +2178,8 @@ const PST_HELP_ENTRIES=[
  {category:'Connexions',q:'Pourquoi l’IA est rouge alors que Supabase est vert ?',keys:'ia edge function gemini openai rouge supabase vert',answer:'La base Supabase et l’IA sont deux chemins distincts. Supabase peut être joignable alors que l’Edge Function ou le fournisseur IA ne l’est pas.',checks:['Vérifiez Edge Function IA.','Vérifiez le fournisseur IA.','Une absence de crédits ou de clé API concerne l’IA, pas les formulaires métier.'],rule:'Une panne IA ne doit pas empêcher l’enregistrement des données métier.'},
  {category:'Archivage',q:'Pourquoi un document importé ne se voit pas dans Archivage ?',keys:'document import archivage original cloud invisible',answer:'L’archivage a besoin de la fiche d’import et, selon le cas, du lien vers l’original cloud.',checks:['Vérifiez le type de document.','Vérifiez l’année scolaire.','Videz les filtres d’Archivage.','Vérifiez si l’original cloud est rattaché.'],rule:'La fiche peut exister même si l’original cloud est à vérifier ; les deux états sont affichés séparément.'},
  {category:'Navigation',q:'Pourquoi l’année scolaire change les données visibles ?',keys:'année scolaire filtre haut global écran',answer:'L’année scolaire affichée dans la barre du haut est le contexte global de Pilotage. Elle s’applique aux écrans qui utilisent une période scolaire.',checks:['Regardez le sélecteur en haut.','Changez l’année si vous cherchez une donnée ancienne.','Les filtres mensuels sont replacés dans l’année sélectionnée si nécessaire.'],rule:'Le sélecteur global est la source unique du contexte scolaire.'},
- {category:'Navigation',q:'Pourquoi une intervention ou une urgence reste visible après un changement d’année ?',keys:'intervention urgence changement année reste visible actif chantier demande',answer:'C’est volontaire : un élément opérationnel non clôturé doit suivre son traitement jusqu’au bout, même s’il a commencé pendant l’année scolaire précédente.',checks:['Les interventions Maintenance restent visibles tant qu’elles ne sont pas clôturées.','Les urgences / problématiques ouvertes restent visibles.','Les demandes direction et chantiers en cours restent visibles.','Une fois clôturé, l’élément rejoint l’historique de son année.'],rule:'Actif / ouvert = visible toutes années ; clôturé = historique filtré par année scolaire.'},
- {category:'Vacances',q:'Que faut-il faire pour prévenir le risque légionelle pendant la fermeture estivale ?',keys:'légionelle legionelle douche douchette mousseur soutirage ecs été fermeture rentrée 3 minutes analyse',answer:'Le module Vacances & fermetures reprend la procédure transmise par la Région : entretien et désinfection avant fermeture, pommeaux et douchettes démontés et séchés pendant l’inoccupation, puis soutirage complet et remise en service avant la rentrée.',checks:['Avant fermeture : détartrer et désinfecter mousseurs, pommeaux et douchettes.','Déposer pommeaux et douchettes, les désinfecter et les sécher complètement à l’air libre.','Ne pas les réinstaller pendant l’inoccupation estivale.','Au retour : après interventions exploitant et soutirages réseaux, les remettre en place.','Soutirer tous les points ECS et les points d’eau froide associés.','Pour l’ECS : maintenir l’écoulement au moins 3 minutes après obtention de la température d’eau chaude.','Vérifier les équipements et les analyses légionelle requises après plusieurs semaines d’inutilisation.'],rule:'Consignes reprises du courrier Région Auvergne-Rhône-Alpes reçu le 25 août 2026.'},
- {category:'Vacances',q:'Comment imprimer une checklist de fermeture ?',keys:'imprimer impression checklist fermeture vacances pdf papier',answer:'Dans Vacances & fermetures, chaque période possède son propre bouton Imprimer la checklist.',checks:['Repérez la période à imprimer.','Cliquez sur « Imprimer la checklist ».','Une page A4 dédiée s’ouvre avec toutes les actions, pas seulement l’aperçu de la carte.','Les actions déjà faites apparaissent cochées et les actions restantes apparaissent non cochées.','Le document contient aussi des zones de visa pour la fermeture et la réouverture.'],rule:'L’impression est individuelle : une période = une checklist complète.'},
+ {category:'Navigation',q:'Quand dois-je faire le relevé des compteurs ?',keys:'compteurs relevé logements dernier jour ouvré mois agenda',answer:'Le relevé des compteurs apparaît automatiquement dans l’Agenda personnel le dernier jour ouvré de chaque mois.',checks:['Regardez Agenda personnel.','La section Compteurs à relever affiche toutes les échéances de l’année scolaire.','La tâche apparaît aussi dans le calendrier de la semaine correspondant à cette date.'],rule:'Relevé des compteurs = dernier jour ouvré de chaque mois, hors week-end et jours fériés connus par l’application.'},
+ {category:'Maintenance',q:'Comment tracer ce qu’un agent a réellement fait ?',keys:'activité agent travail réalisé intervention imprévu débouchage trace date heure',answer:'Utilisez Activité des agents ou le raccourci Ajout activité agent. La trace peut être spontanée ou liée à une intervention / demande existante.',checks:['Choisissez l’agent et la date.','Renseignez si possible les heures de début et de fin.','Décrivez le travail réellement effectué et le résultat.','Si vous liez une intervention ou une demande, vous pouvez la clôturer automatiquement.'],rule:'Le journal d’activité conserve la réalisation réelle sans obliger à créer une demande d’intervention au préalable.'},
  {category:'Navigation',q:'Pourquoi la barre de défilement remonte pendant que je travaille ?',keys:'curseur scroll barre défilement remonte pc',answer:'Ce comportement ne doit plus se produire. Pilotage mémorise maintenant la position de chaque écran et de chaque tableau pendant les rafraîchissements.',checks:['Si le problème réapparaît, notez l’écran précis.','Vérifiez s’il s’agit de la page entière ou d’un tableau horizontal/vertical.'],rule:'Un rafraîchissement de données ne doit pas modifier la position de lecture sur PC.'}
 ];
 
@@ -2234,7 +2223,7 @@ function bindHelpCenter(){
 window.PSTHelp={search:searchHelp,render:renderHelp,entries:PST_HELP_ENTRIES};
 
 /* ---------- Navigation ---------- */
-const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage','room-prep':'Préparation salle & café',maintenance:'Maintenance',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',connections:'Connexions',help:'FAQ / Aide',settings:'Paramètres'};
+const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',cleaning:'Contrôle ménage','room-prep':'Préparation salle & café',maintenance:'Maintenance','agent-activity':'Activité des agents',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',connections:'Connexions',help:'FAQ / Aide',settings:'Paramètres'};
 function setView(view){
  if(!document.getElementById(view))return;
  const previous=document.querySelector('.view.active')?.id||currentView||'dashboard';
@@ -2501,7 +2490,7 @@ function upsertChronotimePermanence(c){
   if(manualDay)return 0;
   let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-  // V147.147 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
+  // V147.146 — toute saisie manuelle reste prioritaire, y compris Présence + horaire réel.
   // Chronotime ne peut plus réécrire silencieusement une journée corrigée manuellement.
   if(day && String(day.source||'').toLowerCase()!=='chronotime' && !/Chronotime/i.test(String(day.note||''))) return 0;
 
@@ -2571,7 +2560,7 @@ function syncStoredChronotimePastilles(){
     if(manualDay)continue;
     let day=rows.find(x=>x.source==='chronotime'||/Chronotime/i.test(String(x.note||'')))||rows[0]||null;
 
-    // V147.147 — ne jamais écraser automatiquement une saisie manuelle.
+    // V147.146 — ne jamais écraser automatiquement une saisie manuelle.
     // Cela protège aussi Présence, horaire réel, heures ajoutées/retirées, RTT, congé, maladie, etc.
     // Une divergence doit être traitée par l'écran de validation Chronotime.
     if(day && String(day.source||'').toLowerCase()!=='chronotime' &&
@@ -2719,7 +2708,7 @@ function openAgent(id){
    const attachmentCheck=await processAttachments(form,x,'agents');if(!attachmentCheck?.ok)return;
    if(old){for(const r of db.rotations.filter(r=>String(r.agentId)===String(x.id))){r.weekdays=(r.weekdays||[]).map(Number).filter(d=>x.workdays.includes(d))}}
 
-   // V147.147 — La fiche Agent ne peut plus créer silencieusement un deuxième
+   // V147.146 — La fiche Agent ne peut plus créer silencieusement un deuxième
    // horaire théorique sur une date déjà couverte.
    const standardFrom=x.standardSchedule.effectiveFrom;
    const exactStandard=(db.weeklyPlans||[]).find(q=>
@@ -2971,7 +2960,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    return;
  }
  const isPeriod=isAbsenceType(o.dayType)||['Formation','Repos'].includes(o.dayType);
- // V147.147 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
+ // V147.146 — le champ Informations / Motif reste disponible mais ne bloque jamais l'enregistrement.
  const manualHoursChanged=Math.abs(Number(o.overtime||0))>0.0001;
  const manualActualChanged=!!(o.actualStart||o.actualEnd);
  const manualTypeChanged=String(o.dayType||'Présence')!=='Présence';
@@ -3025,7 +3014,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  const expectedDays=db.agentDays.filter(r=>String(r.agentId)===String(o.agentId)&&r.date>=from&&r.date<=to).map(r=>deepClone(r));
 
- // V147.147 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
+ // V147.146 — PRIORITÉ ABSOLUE À LA SAUVEGARDE DU FORMULAIRE.
  // Aucune erreur d'historique ne doit pouvoir empêcher Enregistrer.
  localDirty=true;
  clearTheoreticalScheduleCache();
@@ -3348,7 +3337,7 @@ function upsertDbRecord(collection,record){
 function refreshCollectionView(collection){
  capturePlanningScroll();
  const map={
-   maintenance:renderMaintenance,requests:renderRequests,works:renderWorks,meetings:renderMeetings,
+   maintenance:renderMaintenance,agentActivities:renderAgentActivities,requests:renderRequests,works:renderWorks,meetings:renderMeetings,
    notes:renderNotes,issues:renderIssues,periodic:renderPeriodic,cleaning:renderCleaning,
    vacations:renderVacations,personalEvents:renderPersonal,documents:renderDocuments,
    agents:renderAgents,rotations:renderRotations,weeklyPlans:renderPlanning,
@@ -3622,6 +3611,61 @@ function wasteAgendaItemForDate(d){
  const bin=api.binForDate(friday);
  return {id:`waste-${d}`,date:d,start:'',title:`${bin.icon} Sortir / passage ${bin.label}`,source:'waste',view:'waste',meta:`Rue Noëlas · Rue Jean Puy${ci.shifted?' · collecte décalée':''}`};
 }
+
+/* ---------- V147.146 : relevé mensuel des compteurs ---------- */
+function lastWorkingDayOfMonth(year,month){
+  // month = 1..12. Jour ouvré = lundi à vendredi, hors jours fériés français connus par l'application.
+  const last=new Date(Number(year),Number(month),0);
+  for(let day=last.getDate();day>=1;day--){
+    const iso=`${year}-${pad(month)}-${pad(day)}`,wd=parseDate(iso).getDay();
+    if(wd!==0&&wd!==6&&!frenchPublicHolidayName(iso))return iso;
+  }
+  return `${year}-${pad(month)}-01`;
+}
+function meterReadingItemForDate(date){
+  const d=normalizeDateValue(date);if(!d)return null;
+  const y=Number(d.slice(0,4)),m=Number(d.slice(5,7));
+  const due=lastWorkingDayOfMonth(y,m);
+  if(d!==due)return null;
+  return {
+    id:`meter-reading-${d}`,date:d,start:'',time:'',type:'Tâche',priority:'Normale',status:'À faire',
+    title:'Relevé des compteurs',location:'Logements',source:'meter-reading',view:'personal',
+    meta:'Dernier jour ouvré du mois',readOnlyRecurring:true
+  };
+}
+function meterReadingItemsForMonth(month){
+  const ym=String(month||'').slice(0,7);if(!/^\d{4}-\d{2}$/.test(ym))return [];
+  const [y,m]=ym.split('-').map(Number),d=lastWorkingDayOfMonth(y,m);
+  const item=meterReadingItemForDate(d);
+  return item?[item]:[];
+}
+function meterReadingItemsForAcademicYear(label=activeAcademicYear()){
+  const range=academicYearRange(label),out=[];
+  let d=range.start.slice(0,7)+'-01';
+  while(d<=range.end){
+    const [y,m]=d.slice(0,7).split('-').map(Number);
+    const due=lastWorkingDayOfMonth(y,m);
+    if(due>=range.start&&due<=range.end){
+      const item=meterReadingItemForDate(due);if(item)out.push(item);
+    }
+    d=addMonths(d,1).slice(0,7)+'-01';
+  }
+  return out;
+}
+function renderMeterReadingsAgenda(){
+  const el=$('#meterReadingsAgenda');if(!el)return;
+  const today=todayISO(),items=meterReadingItemsForAcademicYear();
+  el.innerHTML=items.length?items.map(x=>{
+    const month=parseDate(x.date).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+    const cls=x.date<today?'past':(x.date.slice(0,7)===today.slice(0,7)?'current':'');
+    return `<div class="meter-reading-row ${cls}">
+      <strong>${esc(month.charAt(0).toUpperCase()+month.slice(1))}</strong>
+      <small>${fmtDateLong(x.date)} — Relevé des compteurs</small>
+      <span class="meter-reading-chip">Dernier jour ouvré</span>
+    </div>`;
+  }).join(''):'<div class="empty">Aucune échéance dans l’année scolaire sélectionnée.</div>';
+}
+
 function eventsForDate(d){
  const sameDay=(x)=>normalizeDateValue(x)===d;
  const active=(x)=>!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule';
@@ -3636,9 +3680,10 @@ function eventsForDate(d){
   ...(db.issues||[]).filter(x=>onDateOrDue(x)&&active(x)).map(x=>({...x,date:d,start:x.time||'',source:'issue',title:`${normalizeText(x.priority)==='urgente'?'⚠️ ':''}Sécurité/qualité · ${x.title||x.description||'Action'}`})),
   ...(db.periodic||[]).filter(x=>sameDay(periodicDue(x))&&!isClosedStatus(x.status)).map(x=>({...x,date:d,start:x.time||'',source:'periodic',title:`Contrôle périodique · ${x.name||x.title||x.family||'Contrôle'}`})),
   ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
-  ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`}))
+  ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`})),
+  ...([meterReadingItemForDate(d)].filter(Boolean))
  ];
- // V147.147 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.146 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
@@ -3681,6 +3726,13 @@ function renderPersonalCalendar(){
  $('#personalWeekCalendar').innerHTML=days.map(d=>`<div class="personal-day ${d===todayISO()?'today':''}"><button class="personal-day-head" data-new-personal-date="${d}"><strong>${parseDate(d).toLocaleDateString('fr-FR',{weekday:'long'})}</strong><span>${parseDate(d).getDate()}</span></button><div>${cardList(eventsForDate(d).map(personalEventButton),'Libre')}</div></div>`).join('');
 }
 window.PSTRefreshPersonalAgenda=()=>{try{renderPersonalCalendar()}catch(e){console.warn('Actualisation agenda',e)}};
+
+document.addEventListener('click',e=>{
+ const b=e.target.closest?.('.agenda-action[data-agenda-source="meter-reading"]');if(!b)return;
+ e.preventDefault();e.stopPropagation();
+ openDetail('Relevé des compteurs',`<div class="notice"><strong>À faire :</strong> Relevé des compteurs des logements.</div><p>Cette tâche revient automatiquement le dernier jour ouvré de chaque mois.</p>`);
+},true);
+
 function calendarDayVisual(info){
  const raw=info.dayType||'Présence',day=normalizeText(raw),shift=normalizeText(info.shift||'Standard'),disp=db.settings?.chronoDayDisplay?.[raw]||{};
  let v;
@@ -4138,8 +4190,8 @@ function renderVacations(){
    (!zone||x.zone===zone||x.zone==='Toutes')&&
    (!status||x.status===status)&&
    (!x.start||!x.end||(x.end>=range.start&&x.start<=range.end))
- ).sort((a,b)=>a.start.localeCompare(b.start));$('#vacationCards').innerHTML=cardList(arr.map(x=>{const done=(x.tasks||[]).filter(t=>t.done).length,total=(x.tasks||[]).length,pct=total?Math.round(done/total*100):0;return `<article class="vacation-card"><div class="panel-head"><div><h3>${esc(x.name)}</h3><p>${fmtDate(x.start)} → ${fmtDate(x.end)} · Zone ${esc(x.zone)}</p></div>${badge(x.status)}</div><div class="progress"><span style="width:${pct}%"></span></div><p>${done}/${total} actions terminées (${pct} %)</p><ul>${(x.tasks||[]).slice(0,6).map(t=>`<li class="${t.done?'done':''}">${t.done?'✓':'○'} ${esc(t.text)}</li>`).join('')}</ul><div class="card-actions"><button type="button" data-edit-type="vacation" data-edit-id="${x.id}">Ouvrir la checklist</button><button type="button" class="ghost" data-print-vacation="${x.id}">🖨 Imprimer la checklist</button></div></article>`}),'Aucune période chargée.')}
-function renderIssues(){const m=$('#issueMonth').value,agent=$('#issueAgent').value,cat=$('#issueCategory').value,status=$('#issueStatus').value;let arr=db.issues.filter(x=>operationalMonthVisible(x,m,'date')&&(!agent||x.agentId===agent)&&(!cat||x.category===cat)&&(!status||x.status===status)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));if(window.__dashboardUrgentOnly)arr=arr.filter(x=>!isClosedStatus(x.status)&&isUrgentPriority(x.priority));$('#issuesTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.category)}</td><td>${esc(agentName(agentById(x.agentId)))}</td><td>${badge(x.priority)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.action||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('issue',x.id)}</td></tr>`).join(''):emptyRow(9)}
+ ).sort((a,b)=>a.start.localeCompare(b.start));$('#vacationCards').innerHTML=cardList(arr.map(x=>{const done=(x.tasks||[]).filter(t=>t.done).length,total=(x.tasks||[]).length,pct=total?Math.round(done/total*100):0;return `<article class="vacation-card"><div class="panel-head"><div><h3>${esc(x.name)}</h3><p>${fmtDate(x.start)} → ${fmtDate(x.end)} · Zone ${esc(x.zone)}</p></div>${badge(x.status)}</div><div class="progress"><span style="width:${pct}%"></span></div><p>${done}/${total} actions terminées (${pct} %)</p><ul>${(x.tasks||[]).slice(0,6).map(t=>`<li class="${t.done?'done':''}">${t.done?'✓':'○'} ${esc(t.text)}</li>`).join('')}</ul><div class="card-actions"><button type="button" data-edit-type="vacation" data-edit-id="${x.id}">Ouvrir la checklist</button></div></article>`}),'Aucune période chargée.')}
+function renderIssues(){const m=$('#issueMonth').value,agent=$('#issueAgent').value,cat=$('#issueCategory').value,status=$('#issueStatus').value;let arr=db.issues.filter(x=>dateMonthMatch(x.date,m)&&(!agent||x.agentId===agent)&&(!cat||x.category===cat)&&(!status||x.status===status)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));if(window.__dashboardUrgentOnly)arr=arr.filter(x=>!isClosedStatus(x.status)&&isUrgentPriority(x.priority));$('#issuesTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.category)}</td><td>${esc(agentName(agentById(x.agentId)))}</td><td>${badge(x.priority)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small>${(()=>{const n=(db.agentActivities||[]).filter(a=>String(a.maintenanceId||'')===String(x.id)).length;return n?`<small>✓ ${n} activité${n>1?'s':''} agent tracée${n>1?'s':''}</small>`:''})()}</td><td>${esc(x.action||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('issue',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderPeriodic(){const fam=$('#periodicFamily').value,status=$('#periodicStatus').value,bld=$('#periodicBuilding').value;const arr=db.periodic.filter(x=>(!fam||x.family===fam)&&(!status||periodicComputed(x)===status||x.status===status)&&(!bld||x.building===bld||x.building==='Tous bâtiments')).sort((a,b)=>(periodicDue(a)||'9999').localeCompare(periodicDue(b)||'9999'));$('#periodicCards').innerHTML=cardList(arr.map(x=>{const state=periodicComputed(x),ncs=(db.reportNonconformities||[]).filter(n=>String(n.periodicControlId||'')===String(x.id));const open=ncs.filter(n=>!['FAIT','Levée'].includes(n.status)),done=ncs.filter(n=>['FAIT','Levée'].includes(n.status)),plans=(db.issues||[]).filter(i=>ncs.some(n=>String(n.id)===String(i.sourceNonconformityId||''))),openPlans=plans.filter(i=>!isClosedStatus(i.status));const nc=ncs.length?`<section class="periodic-nc-block ${open.length?'has-open':'all-done'}"><div class="periodic-nc-summary"><strong>${open.length?'🔴 CONTRÔLE NON CONFORME':'🟢 OBSERVATIONS LEVÉES'}</strong><span>${ncs.length} observations · 🔴 ${open.length} à traiter · 🟢 ${done.length} FAIT/levées · 📋 ${openPlans.length} plan(s) d’action ouvert(s)</span></div>${open.length?`<h4>Non-conformités à traiter</h4>${open.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p>${n.action?`<p><b>Préconisation :</b> ${esc(n.action)}</p>`:''}</div><select data-nc-status="${esc(n.id)}"><option selected>À traiter</option><option>FAIT</option><option>Levée</option></select></article>`).join('')}`:''}${done.length?`<details><summary>🟢 ${done.length} FAIT / levées</summary>${done.map(n=>`<article class="periodic-nc-item"><div><strong>Observation ${esc(n.observationNo||'—')} — ${esc(n.status)}</strong>${n.location?`<small>${esc(n.location)}</small>`:''}<p>${esc(n.text||'')}</p></div><select data-nc-status="${esc(n.id)}"><option>À traiter</option><option ${n.status==='FAIT'?'selected':''}>FAIT</option><option ${n.status==='Levée'?'selected':''}>Levée</option></select></article>`).join('')}</details>`:''}</section>`:'';return `<article class="periodic-card ${state==='En retard'?'late':''}"><div class="panel-head"><span>${esc(x.no)}</span>${badge(state)}</div><h3>${esc(x.name)}</h3><p>${esc(x.family)} · ${esc(x.building)}</p>${x.periodicityText?`<p class="muted"><strong>Périodicité :</strong> ${esc(x.periodicityText)}</p>`:''}<dl><dt>Dernier</dt><dd>${fmtDate(x.lastDate)||'Non renseigné'}</dd><dt>Échéance</dt><dd>${fmtDate(periodicDue(x))||'À définir'}</dd><dt>Responsable</dt><dd>${esc(x.provider||'À définir')}</dd></dl>${nc}${attachmentButtons(x.attachments)}${periodicOneDriveButtons(x)}<button type="button" class="ghost" data-edit-type="periodic" data-edit-id="${x.id}">✎ Ouvrir / modifier le contrôle</button></article>`}),'Aucun contrôle trouvé.');}
 function renderCleaningGuide(){const type=$('#cleaningGuideType').value||db.lists.roomTypes.find(x=>GUIDE[x])||Object.keys(GUIDE)[0];$('#cleaningGuideType').value=type;const rows=GUIDE[type]||[];$('#cleaningGuideTable').innerHTML=`<table><thead><tr><th>Opération</th><th>Fréquence préconisée</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table>`}
 
@@ -4200,11 +4252,190 @@ function renderCleaningDashboard(arr){
  <div class="clean-dash-grid three"><article class="clean-dash-panel"><h3>À reprendre — priorités</h3><div class="sub">Contrôles les moins bien notés</div>${prioRows}</article><article class="clean-dash-panel"><h3>Récidives par local</h3><div class="sub">Même lieu à reprendre au moins deux fois</div><div class="clean-list">${recRows}</div></article><article class="clean-dash-panel"><h3>Indicateurs de pilotage</h3><div class="sub">Lecture rapide pour le suivi</div><div class="clean-list"><div class="clean-list-item"><span>Objectif qualité atteint</span><b>${d.avgPct>=target?'✅ Oui':'⚠️ Non'}</b></div><div class="clean-list-item"><span>Bâtiments suivis</span><b>${d.buildings.length}</b></div><div class="clean-list-item"><span>Locaux en récidive</span><b>${d.recurrent.length}</b></div><div class="clean-list-item"><span>Non-conformités</span><b>${d.nonConformes}</b></div><div class="clean-list-item"><span>Contrôles à reprendre</span><b>${d.reprendre}</b></div></div></article></div>`;
 }
 function renderCleaning(){const month=$('#cleanMonth').value,bld=$('#cleanBuilding').value,type=$('#cleanRoomType').value,status=$('#cleanStatus').value;const arr=db.cleaning.filter(x=>dateMonthMatch(x.date,month)&&(!bld||x.building===bld)&&(!type||x.roomType===type)&&(!status||x.overallStatus===status)).sort((a,b)=>b.date.localeCompare(a.date));const all=arr.length,ok=arr.filter(x=>x.overallStatus==='Conforme').length,weak=arr.reduce((s,x)=>s+(x.tasks||[]).filter(t=>['À reprendre','Non conforme'].includes(t.status)).length,0),avg=all?Math.round(arr.reduce((s,x)=>s+Number(x.score||0),0)/all):0;$('#cleaningSummary').innerHTML=`<article><span>Contrôles</span><strong>${all}</strong></article><article><span>Conformes</span><strong>${ok}</strong></article><article><span>Score moyen</span><strong>${avg||'—'}${all?' %':''}</strong></article><article><span>Points faibles</span><strong>${weak}</strong></article>`;$('#cleaningTable').innerHTML=arr.length?arr.map(x=>{const weakTasks=(x.tasks||[]).filter(t=>['À reprendre','Non conforme'].includes(t.status));return `<tr><td>${fmtDate(x.date)} ${esc(x.time||'')}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.roomType)}</td><td>${esc(agentName(agentById(x.agentId)))}</td><td>${x.score||0} %</td><td>${badge(x.overallStatus)}</td><td>${esc(weakTasks.slice(0,3).map(t=>t.name).join(', ')||'—')}</td><td>${editButton('cleaning',x.id)}</td></tr>`}).join(''):emptyRow(8);renderCleaningDashboard(arr);renderCleaningGuide()}
-function renderMaintenance(){const st=$('#maintenanceStatus').value,p=$('#maintenancePriority').value,f=$('#maintenanceFamily').value;const arr=db.maintenance.filter(x=>operationalRecordVisible(x,['date','dueDate'])&&(!st||x.status===st)&&(!p||x.priority===p)&&(!f||x.family===f)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#maintenanceTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.family)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${badge(x.priority)}</td><td>${esc(x.assigned||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('maintenance',x.id)}</td></tr>`).join(''):emptyRow(10)}
-function renderRequests(){const st=$('#requestStatus').value,t=$('#requestType').value;const arr=db.requests.filter(x=>operationalRecordVisible(x,['date','dueDate'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#requestsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc(x.requester)}</td><td>${esc(x.type)}</td><td>${esc([x.building,x.room].filter(Boolean).join(' · '))}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('request',x.id)}</td></tr>`).join(''):emptyRow(9)}
-function renderWorks(){const st=$('#workStatus').value,t=$('#workType').value;const arr=db.works.filter(x=>operationalRecordVisible(x,['date','dueDate','gpaEnd'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9)}
+
+const AGENT_ACTIVITY_TYPES=[
+ 'Maintenance','Plomberie / débouchage','Entretien courant','Ménage ponctuel','Logistique / manutention',
+ 'Sécurité','Préparation de salle','Espaces extérieurs','Accueil / service','Autre'
+];
+
+function agentActivityDuration(x){
+ if(!x?.start||!x?.end)return 0;
+ return Math.max(0,hoursBetween(x.start,x.end,0));
+}
+function agentActivityPeriodBounds(mode,reference){
+ const ref=normalizeDateValue(reference)||todayISO();
+ if(mode==='week'){const start=startOfWeek(ref);return {start,end:endOfWeek(start),label:`Semaine du ${fmtDate(start)} au ${fmtDate(endOfWeek(start))}`}}
+ if(mode==='month'){const ym=ref.slice(0,7),start=`${ym}-01`,end=endOfMonthISO(start);return {start,end,label:parseDate(start).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}}
+ return {start:ref,end:ref,label:fmtDateLong(ref)};
+}
+function agentActivityLinkedLabel(x){
+ if(x?.maintenanceId){const m=byId('maintenance',x.maintenanceId);return m?`Intervention ${m.no||''} — ${m.title||''}`:'Intervention liée'}
+ if(x?.requestId){const r=byId('requests',x.requestId);return r?`Demande ${r.no||''} — ${r.title||''}`:'Demande liée'}
+ return 'Activité spontanée';
+}
+function filteredAgentActivities(){
+ const mode=$('#activityPeriodMode')?.value||'day';
+ const ref=$('#activityReferenceDate')?.value||todayISO();
+ const range=agentActivityPeriodBounds(mode,ref);
+ const aid=$('#activityAgentFilter')?.value||'';
+ const type=$('#activityTypeFilter')?.value||'';
+ const rows=(db.agentActivities||[])
+   .filter(x=>recordInAcademicYear(x,['date']))
+   .filter(x=>x.date>=range.start&&x.date<=range.end)
+   .filter(x=>!aid||String(x.agentId)===String(aid))
+   .filter(x=>!type||x.type===type)
+   .sort((a,b)=>`${b.date||''} ${b.start||''}`.localeCompare(`${a.date||''} ${a.start||''}`));
+ return {rows,range};
+}
+function renderAgentActivities(){
+ const table=$('#agentActivityTable');if(!table)return;
+ const ref=$('#activityReferenceDate');if(ref&&!ref.value)ref.value=todayISO();
+ const af=$('#activityAgentFilter');if(af){
+   const old=af.value;af.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','');af.value=old;
+ }
+ const tf=$('#activityTypeFilter');if(tf){
+   const old=tf.value;tf.innerHTML='<option value="">Tous les types</option>'+selectOptions(AGENT_ACTIVITY_TYPES,old);tf.value=old;
+ }
+ const {rows,range}=filteredAgentActivities();
+ const total=rows.reduce((n,x)=>n+agentActivityDuration(x),0);
+ const linked=rows.filter(x=>x.maintenanceId||x.requestId).length;
+ const spontaneous=rows.length-linked;
+ if($('#activityCount'))$('#activityCount').textContent=rows.length;
+ if($('#activityHours'))$('#activityHours').textContent=fmtHours(total);
+ if($('#activityLinked'))$('#activityLinked').textContent=linked;
+ if($('#activitySpontaneous'))$('#activitySpontaneous').textContent=spontaneous;
+ if($('#activityPeriodLabel'))$('#activityPeriodLabel').textContent=`Période affichée : ${range.label}`;
+ table.innerHTML=rows.length?rows.map(x=>{
+   const a=agentName(agentById(x.agentId))||'Agent non renseigné';
+   const linked=agentActivityLinkedLabel(x);
+   const spontaneous=!(x.maintenanceId||x.requestId);
+   return `<tr>
+    <td>${fmtDate(x.date)}</td>
+    <td>${esc([x.start,x.end].filter(Boolean).join('–')||'—')}</td>
+    <td><strong>${esc(a)}</strong></td>
+    <td>${esc(x.type||'Autre')}</td>
+    <td><strong>${esc(x.title||'')}</strong>${x.details?`<small>${esc(x.details)}</small>`:''}${x.result?`<small>Résultat : ${esc(x.result)}</small>`:''}</td>
+    <td>${esc([x.building,x.floor,x.sector,x.room].filter(Boolean).join(' · ')||'—')}</td>
+    <td><span class="activity-link-badge ${spontaneous?'activity-spontaneous':''}">${esc(linked)}</span></td>
+    <td>${x.start&&x.end?fmtHours(agentActivityDuration(x)):'—'}</td>
+    <td>${editButton('agentActivity',x.id)}</td>
+   </tr>`;
+ }).join(''):emptyRow(9);
+}
+function appendActivityToLinkedText(existing,x){
+ const stamp=[fmtDate(x.date),x.start||''].filter(Boolean).join(' ');
+ const who=agentName(agentById(x.agentId))||'Agent';
+ const line=`${stamp} — ${who} : ${x.title}${x.result?` — ${x.result}`:''}`;
+ return [String(existing||'').trim(),line].filter(Boolean).join('\n');
+}
+async function updateLinkedItemFromActivity(x,closeLinked){
+ if(x.maintenanceId){
+   const m=byId('maintenance',x.maintenanceId);
+   if(m){
+     m.action=appendActivityToLinkedText(m.action,x);
+     if(!m.assigned)m.assigned=agentName(agentById(x.agentId))||'';
+     m.completedDate=x.date;m.completedTime=x.end||x.start||'';
+     if(closeLinked)m.status='Clôturée';
+     const res=await commitFormRecordVerified('Intervention liée','maintenance',m);
+     if(!res?.ok)return false;
+   }
+ }
+ if(x.requestId){
+   const r=byId('requests',x.requestId);
+   if(r){
+     r.response=appendActivityToLinkedText(r.response,x);
+     r.completedDate=x.date;r.completedTime=x.end||x.start||'';
+     if(closeLinked)r.status='Clôturé';
+     const res=await commitFormRecordVerified('Demande liée','requests',r);
+     if(!res?.ok)return false;
+   }
+ }
+ return true;
+}
+function bindAgentActivityLinks(){
+ const f=$('#modalForm');if(!f)return;
+ const m=f.elements.maintenanceId,r=f.elements.requestId,c=f.elements.closeLinked;
+ const sync=source=>{
+   if(source==='maintenance'&&m?.value&&r)r.value='';
+   if(source==='request'&&r?.value&&m)m.value='';
+   if(c)c.checked=!!(m?.value||r?.value);
+ }
+ if(m)m.onchange=()=>sync('maintenance');
+ if(r)r.onchange=()=>sync('request');
+}
+function openAgentActivity(id,defaults={}){
+ const old=id?byId('agentActivities',id):null;
+ const x=old||{id:uid(),no:nextNo('agentActivity','ACT'),date:todayISO(),start:'',end:'',agentId:defaults.agentId||'',type:'Entretien courant',title:'',details:'',result:'',building:'',floor:'',sector:'',room:'',maintenanceId:defaults.maintenanceId||'',requestId:defaults.requestId||'',notes:''};
+ const openMaint=(db.maintenance||[]).filter(m=>!['cloturee','terminee'].includes(normalizeText(m.status||''))).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
+ const openReq=(db.requests||[]).filter(r=>!['cloture','termine'].includes(normalizeText(r.status||''))).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
+ const maintOptions='<option value="">Aucune intervention liée</option>'+selectOptions(openMaint.concat(x.maintenanceId&&!openMaint.some(m=>m.id===x.maintenanceId)?[byId('maintenance',x.maintenanceId)].filter(Boolean):[]),x.maintenanceId,m=>`${m.no||''} — ${m.title||''}`,m=>m.id);
+ const reqOptions='<option value="">Aucune demande liée</option>'+selectOptions(openReq.concat(x.requestId&&!openReq.some(r=>r.id===x.requestId)?[byId('requests',x.requestId)].filter(Boolean):[]),x.requestId,r=>`${r.no||''} — ${r.title||''}`,r=>r.id);
+ openModal(old?'Modifier l’activité réalisée':'Ajout activité agent',`<div class="form-grid">
+   <label>Agent<select name="agentId" required>${agentOptions(x.agentId)}</select></label>
+   ${field('Date','date',x.date,'date','required')}
+   ${field('Début','start',x.start,'time')}
+   ${field('Fin','end',x.end,'time')}
+   <label>Type d’activité<select name="type">${selectOptions(AGENT_ACTIVITY_TYPES,x.type)}</select></label>
+   ${field('Travail réalisé','title',x.title,'text','required')}
+   ${centralLocationFields(x,'actLoc')}
+   ${textareaField('Détail de l’intervention / de la tâche','details',x.details)}
+   ${textareaField('Résultat / suite donnée','result',x.result)}
+   <div class="activity-modal-link">
+    <strong>Lier à un travail déjà prévu (facultatif)</strong>
+    <label>Intervention maintenance<select name="maintenanceId">${maintOptions}</select></label>
+    <label>Demande direction<select name="requestId">${reqOptions}</select></label>
+    <label class="linked-close-line"><input type="checkbox" name="closeLinked" value="1" ${(x.maintenanceId||x.requestId)?'checked':''}> Marquer l’élément lié comme terminé / clôturé</label>
+    <small>Si aucun élément n’est choisi, l’activité reste une trace spontanée : par exemple débouchage, manutention, petite réparation non prévue, etc.</small>
+   </div>
+   ${textareaField('Commentaire complémentaire','notes',x.notes)}
+ </div>`,async form=>{
+   const o=formDataObj(form);
+   Object.assign(x,o,{maintenanceId:o.maintenanceId||'',requestId:o.requestId||''});
+   if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;
+   if(!x.agentId||!x.date||!String(x.title||'').trim()){toast('Agent, date et travail réalisé sont obligatoires');return {ok:false}}
+   if(x.start&&x.end&&agentActivityDuration(x)<=0){toast('L’heure de fin doit être après l’heure de début');return {ok:false}}
+   const persisted=await commitFormRecordVerified('Activité agent','agentActivities',x);
+   if(!persisted?.ok)return {ok:false};
+   const linkedOk=await updateLinkedItemFromActivity(x,!!form.elements.closeLinked?.checked);
+   if(!linkedOk){toast('⚠️ Activité enregistrée, mais l’élément lié reste à vérifier');return {ok:true}}
+   closeModal();renderAgentActivities();
+   toast(x.maintenanceId||x.requestId?'✅ Activité tracée — élément lié mis à jour':'✅ Activité agent tracée');
+   return {ok:true};
+ },{audit:{track:!!old,type:'Activité agent',recordId:x.id,no:x.no,title:x.title,entity:(form)=>[agentName(agentById(form?.elements?.agentId?.value)),form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('agentActivities',x.id,'activité agent'):null});
+ bindCentralLocation('actLoc');bindAgentActivityLinks();
+}
+function printAgentActivityRegister(){
+ const view=$('#agent-activity');if(!view)return;
+ printView('agent-activity');
+}
+
+function renderMaintenance(){const st=$('#maintenanceStatus').value,p=$('#maintenancePriority').value,f=$('#maintenanceFamily').value;const arr=db.maintenance.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!st||x.status===st)&&(!p||x.priority===p)&&(!f||x.family===f)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#maintenanceTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.family)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${badge(x.priority)}</td><td>${esc(x.assigned||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('maintenance',x.id)}</td></tr>`).join(''):emptyRow(10)}
+function renderRequests(){const st=$('#requestStatus').value,t=$('#requestType').value;const arr=db.requests.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#requestsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc(x.requester)}</td><td>${esc(x.type)}</td><td>${esc([x.building,x.room].filter(Boolean).join(' · '))}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('request',x.id)}</td></tr>`).join(''):emptyRow(9)}
+function renderWorks(){const st=$('#workStatus').value,t=$('#workType').value;const arr=db.works.filter(x=>recordInAcademicYear(x,['date','dueDate','gpaEnd'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderMeetings(){const m=$('#meetingMonth').value,t=$('#meetingType').value;const arr=db.meetings.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));$('#meetingsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.time||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${esc(x.participants||'—')}</td><td>${badge(x.status)}</td><td>${editButton('meeting',x.id)}</td></tr>`).join(''):emptyRow(8)}
-function renderPersonal(){const m=$('#personalMonth').value,t=$('#personalType').value,s=$('#personalStatus').value;const arr=db.personalEvents.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)&&(!s||x.status===s)).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));$('#personalTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc([x.start,x.end].filter(Boolean).join('–')||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('personal',x.id)}</td></tr>`).join(''):emptyRow(8);$('#personalCards').innerHTML=cardList(arr.map(x=>`<article class="list-card"><div><strong>${fmtDate(x.date)} ${esc(x.start||'')}</strong>${badge(x.status)}</div><h3>${esc(x.title)}</h3><p>${esc(x.type)} · ${esc(x.location||'Sans lieu')}</p><button type="button" data-edit-type="personal" data-edit-id="${x.id}">Modifier</button></article>`))}
+function renderPersonal(){
+ const m=$('#personalMonth').value,t=$('#personalType').value,st=$('#personalStatus').value;
+ const regular=(db.personalEvents||[]).filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)&&(!st||x.status===st));
+ const recurring=meterReadingItemsForMonth(m).filter(x=>(!t||x.type===t)&&(!st||x.status===st));
+ const arr=[...regular,...recurring].sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+ $('#personalTable').innerHTML=arr.length?arr.map(x=>`<tr>
+   <td>${fmtDate(x.date)}</td>
+   <td>${esc([x.start,x.end].filter(Boolean).join('–')||'—')}</td>
+   <td>${esc(x.type)}</td>
+   <td><strong>${esc(x.title)}</strong>${x.readOnlyRecurring?'<small>Récurrence automatique mensuelle</small>':''}</td>
+   <td>${esc(x.location||'—')}</td>
+   <td>${badge(x.priority)}</td>
+   <td>${badge(x.status)}</td>
+   <td>${x.readOnlyRecurring?'<span class="meter-reading-chip">Automatique</span>':editButton('personal',x.id)}</td>
+  </tr>`).join(''):emptyRow(8);
+ $('#personalCards').innerHTML=cardList(arr.map(x=>`<article class="list-card">
+   <div><strong>${fmtDate(x.date)} ${esc(x.start||'')}</strong>${badge(x.status)}</div>
+   <h3>${esc(x.title)}</h3>
+   <p>${esc(x.type)} · ${esc(x.location||'Sans lieu')}</p>
+   ${x.readOnlyRecurring?'<span class="meter-reading-chip">Dernier jour ouvré du mois</span>':`<button type="button" data-edit-type="personal" data-edit-id="${x.id}">Modifier</button>`}
+  </article>`));
+ renderMeterReadingsAgenda();
+}
 function renderNotes(){const cat=$('#noteCategory').value,p=$('#notePriority').value,s=$('#noteStatus').value,q=($('#noteSearch').value||'').toLowerCase();const arr=db.notes.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!cat||x.category===cat)&&(!p||x.priority===p)&&(!s||x.status===s)&&(!q||`${x.title} ${x.text}`.toLowerCase().includes(q))).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#notesBoard').innerHTML=cardList(arr.map(x=>{const done=(x.items||[]).filter(i=>i.done).length;return `<article class="note-card"><div class="panel-head"><span>${esc(x.category)}</span>${badge(x.priority)}</div><h3>${esc(x.title)}</h3><p>${esc(x.text||'')}</p>${x.agentId?`<p>👤 ${esc(agentName(agentById(x.agentId)))}</p>`:''}<p>Échéance : ${fmtDate(x.dueDate)||'—'} · ${done}/${(x.items||[]).length} items</p><ul>${(x.items||[]).map(i=>`<li class="${i.done?'done':''}">${i.done?'✓':'○'} ${esc(i.text)}</li>`).join('')}</ul>${attachmentButtons(x.attachments)}<div class="card-actions"><span>${badge(x.status)}</span><button type="button" class="note-edit-button" data-edit-type="note" data-edit-id="${x.id}" aria-label="Modifier la note ${esc(x.title)}">Modifier</button></div></article>`}),'Aucune note.')}
 function renderDocuments(){const cat=$('#documentCategory').value,q=($('#documentSearch').value||'').toLowerCase();const arr=db.documents.filter(x=>recordInAcademicYear(x,['date'])&&(!cat||x.category===cat)&&(!q||`${x.title} ${x.description}`.toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));
  const guides=BUILTIN_GUIDES.filter(x=>(!cat||x.category===cat)&&(!q||x.title.toLowerCase().includes(q)));
@@ -4232,15 +4463,6 @@ function recordInAcademicYear(record,dateFields=['date'],label=activeAcademicYea
  if(normalizeAcademicYear(record?.academicYear))return normalizeAcademicYear(record.academicYear)===y;
  for(const f of dateFields){const d=normalizeDateValue(record?.[f]);if(d&&d>=r.start&&d<=r.end)return true}
  return !dateFields.some(f=>normalizeDateValue(record?.[f]));
-}
-// V147.147 — continuité des éléments opérationnels entre années scolaires.
-// Un élément non clôturé reste visible, même si son année d'origine n'est plus sélectionnée.
-// Une fois clôturé, il redevient historique et suit le filtre de son année scolaire.
-function operationalRecordVisible(record,dateFields=['date'],label=activeAcademicYear()){
- return !isClosedStatus(record?.status)||recordInAcademicYear(record,dateFields,label);
-}
-function operationalMonthVisible(record,month,dateField='date'){
- return !isClosedStatus(record?.status)||dateMonthMatch(record?.[dateField],month);
 }
 function periodOverlapsAcademicYear(record,startField='effectiveFrom',endField='effectiveTo',label=activeAcademicYear()){
  const r=academicYearRange(label),start=normalizeDateValue(record?.[startField]),end=normalizeDateValue(record?.[endField]);
@@ -4891,9 +5113,7 @@ function collectUrgentDashboardActions(){
  const rows=[];
  for(const [key,label,icon,editType] of sources){
   for(const x of (db[key]||[])){
-   const crossYear=['issues','maintenance','requests','works'].includes(key);
-   const visible=crossYear?operationalRecordVisible(x,['date','dueDate','start','end']):recordInAcademicYear(x,['date','dueDate','start','end']);
-   if(!visible||isClosedStatus(x.status)||!isUrgentPriority(x.priority))continue;
+   if(!recordInAcademicYear(x,['date','dueDate','start','end'])||isClosedStatus(x.status)||!isUrgentPriority(x.priority))continue;
    rows.push({label,icon,editType,id:x.id,title:x.title||x.subject||x.no||label,due:recordDueDate(x)});
   }
  }
@@ -4910,9 +5130,7 @@ function collectLateDashboardActions(today=todayISO()){
  const rows=[];
  for(const key of sources){
   for(const x of (db[key]||[])){
-   const crossYear=['issues','maintenance','requests','works'].includes(key);
-   const visible=crossYear?operationalRecordVisible(x,['date','dueDate']):recordInAcademicYear(x,['date','dueDate']);
-   if(!visible)continue;
+   if(!recordInAcademicYear(x,['date','dueDate']))continue;
    const due=recordDueDate(x);
    if(!isClosedStatus(x.status)&&due&&due<today)rows.push({module:key,record:x,due});
   }
@@ -4926,7 +5144,7 @@ function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnectio
  const present=todayInActive?activeAgents.filter(a=>{const info=dayInfo(a.id,today);return !isAbsenceType(info.dayType)&&normalizeText(info.dayType)!=='repos'}).length:null;
  const urgentActions=collectUrgentDashboardActions();
  const lateActions=collectLateDashboardActions(today);
- const allMaint=(db.maintenance||[]).filter(x=>operationalRecordVisible(x,['date','dueDate']));
+ const allMaint=(db.maintenance||[]).filter(x=>recordInAcademicYear(x,['date','dueDate']));
  const closedMaint=allMaint.filter(x=>isClosedStatus(x.status));
  const openMaint=allMaint.filter(x=>!isClosedStatus(x.status));
  // "À faire" = statut À faire uniquement. Les statuts À qualifier / Planifiée restent dans "ouvertes".
@@ -4967,30 +5185,7 @@ const LIST_LABELS={roles:'Fonctions agents',dayTypes:'Types de journée / absenc
 function renderSettings(){if($('#cleaningAlertDays'))$('#cleaningAlertDays').value=db.settings.cleaningAlertDays||30;if($('#meetingAlertDays'))$('#meetingAlertDays').value=db.settings.meetingAlertDays||3;for(const [k,v] of Object.entries(db.settings)){const e=document.getElementById(k);if(e&&k!=='counters'){if(e.type==='checkbox')e.checked=Boolean(v);else e.value=v??''}}$('#buildingSettings').innerHTML=db.buildings.map(b=>`<div class="building-card" data-building-id="${b.id}"><div class="panel-head"><input value="${esc(b.name)}" data-building-name><button class="danger small" data-remove-building="${b.id}">Supprimer</button></div><div class="floor-chips">${b.floors.map((f,i)=>`<span><input value="${esc(f)}" data-floor-index="${i}"><button data-remove-floor="${i}">×</button></span>`).join('')}</div><button class="ghost small" data-add-floor="${b.id}">＋ Étage / niveau</button></div>`).join('');$('#spaceSettings').innerHTML=db.spaces.slice().sort((a,b)=>(a.building+a.floor+a.name).localeCompare(b.building+b.floor+b.name)).map(s=>`<button class="space-chip" data-edit-type="space" data-edit-id="${s.id}"><strong>${esc(s.name)}</strong><small>${esc(s.building)} · ${esc(s.floor)} · ${esc(s.type)}</small></button>`).join('')||'<p>Aucun local configuré.</p>';const absenceItems=db.lists.dayTypes;if($('#absenceTypeSettings'))$('#absenceTypeSettings').innerHTML=`<div class="list-editor" data-list-key="dayTypes">${absenceItems.map((x,i)=>`<div><input value="${esc(x)}" data-list-index="${i}" ${x==='Présence'?'readonly':''}><button class="danger small" data-remove-list="${i}" ${x==='Présence'?'disabled':''}>×</button></div>`).join('')}<button class="ghost small" data-add-list="dayTypes">＋ Ajouter un motif</button></div>`;$('#listSettings').innerHTML=Object.entries(db.lists).filter(([k])=>k!=='dayTypes').map(([k,items])=>`<details><summary>${esc(LIST_LABELS[k]||k)} <small>${items.length} choix</small></summary><div class="list-editor" data-list-key="${k}">${items.map((x,i)=>`<div><input value="${esc(x)}" data-list-index="${i}"><button class="danger small" data-remove-list="${i}">×</button></div>`).join('')}<button class="ghost small" data-add-list="${k}">＋ Choix</button></div></details>`).join('')}
 function saveSettings(){const keys=['appName','schoolName','schoolZone','defaultLayout','printOrientation','defaultInspector','emailsTo','emailsCc','emailsBcc','emailSubjectPrefix','outlookEmail','cleaningAlertDays','meetingAlertDays','autoReportHour','autoReportTimezone','autoReportWeekdays','autoReportSignature'];for(const k of keys)db.settings[k]=document.getElementById(k)?.value??db.settings[k];db.settings.academicYear=activeAcademicYear();for(const k of ['autoDailyEnabled','autoWeeklyEnabled','autoReportOnlyIfEvents','autoReportIncludeAgents','autoReportIncludeMaintenance','autoReportIncludeCleaning','autoReportIncludePeriodic','autoReportIncludeMeetings','cleaningNotificationsEnabled','cleaningNotifyNever','cleaningNotifyOverdue','cleaningNotifyPlanned']){const e=document.getElementById(k);if(e)db.settings[k]=e.checked}$$('[data-building-id]').forEach(card=>{const b=db.buildings.find(x=>x.id===card.dataset.buildingId);if(!b)return;const old=b.name;b.name=card.querySelector('[data-building-name]').value.trim()||b.name;b.floors=$$('[data-floor-index]',card).map(i=>i.value.trim()).filter(Boolean);if(old!==b.name){db.spaces.forEach(s=>{if(s.building===old)s.building=b.name});for(const type of ['cleaning','maintenance','requests','works','periodic'])db[type].forEach(x=>{if(x.building===old)x.building=b.name})}});$$('[data-list-key]').forEach(ed=>{db.lists[ed.dataset.listKey]=$$('[data-list-index]',ed).map(i=>i.value.trim()).filter(Boolean)});applyLayout(db.settings.defaultLayout);save();toast('Paramètres enregistrés')}
 function addBuilding(){const b={id:uid(),name:`Nouveau bâtiment ${db.buildings.length+1}`,floors:['Rez-de-chaussée']};db.buildings.push(b);save();setView('settings')}
-
-function addLegionellaTasksToSummerVacations(){
- const year=activeAcademicYear(),zone=$('#vacationZone')?.value||db.settings.schoolZone||'A';
- const range=academicYearRange(year);
- const summer=(db.vacations||[]).filter(v=>{
-   const name=normalizeText(v.name||'');
-   const overlaps=(!v.start||!v.end)||(v.end>=range.start&&v.start<=range.end);
-   return overlaps&&(v.zone===zone||v.zone==='Toutes'||!v.zone)&&(name.includes('ete')||name.includes('estiv')||String(v.start||'').slice(5,7)==='07'||String(v.start||'').slice(5,7)==='08');
- });
- if(!summer.length){toast('Aucune période estivale trouvée pour cette année. Chargez le calendrier ou créez une période été.');return false}
- let added=0;
- for(const v of summer){
-   if(!Array.isArray(v.tasks))v.tasks=[];
-   const existing=new Set(v.tasks.map(t=>normalizeText(t.text||t)));
-   for(const text of LEGIONELLA_SUMMER_TASKS){
-     if(existing.has(normalizeText(text)))continue;
-     v.tasks.push({text,done:false});added++;
-   }
- }
- if(!added){toast('Les actions légionelle sont déjà présentes dans la checklist été.');return true}
- save();toast(`✅ ${added} action(s) légionelle ajoutée(s) à la checklist été`);
- return true
-}
-function loadSchoolHolidays(){const zone=$('#vacationZone').value||db.settings.schoolZone||'A',year=activeAcademicYear(),periods=SCHOOL_CALENDAR[year]?.[zone]||[];if(!periods.length){toast(`Calendrier officiel non intégré pour ${year}. Le logiciel reste utilisable : ajoutez les périodes manuellement.`);return}for(const [name,start,end,notes] of periods){if(!db.vacations.some(x=>x.name===name&&x.start===start)){db.vacations.push({id:uid(),name:`Vacances de ${name}`,zone,start,end,status:'À préparer',tasks:[...VACATION_TASKS,...(/été/i.test(name)?LEGIONELLA_SUMMER_TASKS:[])].map(t=>({text:t,done:false})),notes,attachments:[]})}}save();toast(`Vacances zone ${zone} chargées`)}
+function loadSchoolHolidays(){const zone=$('#vacationZone').value||db.settings.schoolZone||'A',year=activeAcademicYear(),periods=SCHOOL_CALENDAR[year]?.[zone]||[];if(!periods.length){toast(`Calendrier officiel non intégré pour ${year}. Le logiciel reste utilisable : ajoutez les périodes manuellement.`);return}for(const [name,start,end,notes] of periods){if(!db.vacations.some(x=>x.name===name&&x.start===start)){db.vacations.push({id:uid(),name:`Vacances de ${name}`,zone,start,end,status:'À préparer',tasks:VACATION_TASKS.map(t=>({text:t,done:false})),notes,attachments:[]})}}save();toast(`Vacances zone ${zone} chargées`)}
 
 
 async function sendAutomaticReportTest(){
@@ -5007,9 +5202,11 @@ async function sendAutomaticReportTest(){
 /* ---------- Rapports / impression / e-mail ---------- */
 function reportTitle(type){return {daily:'Rapport quotidien',weekly:'Rapport hebdomadaire',monthly:'Rapport mensuel général',team:'Bilan mensuel des agents',absence:'Congés et absences',cleaning:'Contrôles ménage',maintenance:'Maintenance',periodic:'Contrôles périodiques',vacation:'Vacances et fermeture',full:'Registre complet'}[type]||'Rapport'}
 function tableHTML(headers,rows){return `<div class="report-table-wrap"><table class="report-table cols-${headers.length}" data-cols="${headers.length}"><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map(r=>`<tr>${r.map(c=>`<td>${c??''}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length}" class="empty-cell">Aucune donnée.</td></tr>`}</tbody></table></div>`}
-function reportData(type){let title=reportTitle(type),subtitle='',html='';const daily=$('#dailyDate').value||todayISO(),weekly=startOfWeek($('#weeklyDate').value||todayISO()),monthly=$('#monthlyDate').value||monthISO(),teamMonth=$('#teamReportMonth').value||monthISO(),absMonth=$('#absenceReportMonth').value||monthISO(),cleanMonth=$('#cleaningReportMonth').value||monthISO(),maintMonth=$('#maintenanceReportMonth').value||monthISO(),year=$('#periodicReportYear').value||new Date().getFullYear();if(type==='daily'){subtitle=fmtDateLong(daily);const agents=db.agents.filter(a=>a.status==='Actif').map(a=>{const i=dayInfo(a.id,daily),h=dayHours(i),x=planningDisplayFor(a,daily);return [esc(agentName(a)),badge(i.dayType),esc(i.shift||''),esc(x.text),esc(fmtHours(h.total)),esc(i.note||'')]});html+=`<h2>Équipe</h2>${tableHTML(['Agent','Journée','Service','Horaire applicable','Heures','Information / motif'],agents)}`;const events=eventsForDate(daily);html+=`<h2>Agenda journalier — toutes les actions</h2>${tableHTML(['Heure','Objet','Lieu','Statut'],events.map(x=>[esc(agendaTime(x)||'—'),esc(x.title||'Événement'),esc(agendaPlace(x)||'Lieu non renseigné'),badge(x.status||x.overallStatus||'À faire')]))}`;html+=`<h2>Interventions</h2>${tableHTML(['N°','Objet','Lieu','Priorité','Statut'],db.maintenance.filter(x=>x.date===daily||x.dueDate===daily).map(x=>[esc(x.no),esc(x.title),esc(x.building),badge(x.priority),badge(x.status)]))}`}
+function reportData(type){let title=reportTitle(type),subtitle='',html='';const daily=$('#dailyDate').value||todayISO(),weekly=startOfWeek($('#weeklyDate').value||todayISO()),monthly=$('#monthlyDate').value||monthISO(),teamMonth=$('#teamReportMonth').value||monthISO(),absMonth=$('#absenceReportMonth').value||monthISO(),cleanMonth=$('#cleaningReportMonth').value||monthISO(),maintMonth=$('#maintenanceReportMonth').value||monthISO(),year=$('#periodicReportYear').value||new Date().getFullYear();if(type==='daily'){subtitle=fmtDateLong(daily);const agents=db.agents.filter(a=>a.status==='Actif').map(a=>{const i=dayInfo(a.id,daily),h=dayHours(i),x=planningDisplayFor(a,daily);return [esc(agentName(a)),badge(i.dayType),esc(i.shift||''),esc(x.text),esc(fmtHours(h.total)),esc(i.note||'')]});html+=`<h2>Équipe</h2>${tableHTML(['Agent','Journée','Service','Horaire applicable','Heures','Information / motif'],agents)}`;const events=eventsForDate(daily);html+=`<h2>Agenda journalier — toutes les actions</h2>${tableHTML(['Heure','Objet','Lieu','Statut'],events.map(x=>[esc(agendaTime(x)||'—'),esc(x.title||'Événement'),esc(agendaPlace(x)||'Lieu non renseigné'),badge(x.status||x.overallStatus||'À faire')]))}`;html+=`<h2>Interventions</h2>${tableHTML(['N°','Objet','Lieu','Priorité','Statut'],db.maintenance.filter(x=>x.date===daily||x.dueDate===daily).map(x=>[esc(x.no),esc(x.title),esc(x.building),badge(x.priority),badge(x.status)]))}`};const acts=(db.agentActivities||[]).filter(x=>x.date===daily);html+=`<h2>Activité réalisée par les agents</h2>${tableHTML(['Heure','Agent','Type','Travail réalisé','Lieu','Durée'],acts.map(x=>[esc([x.start,x.end].filter(Boolean).join('–')||'—'),esc(agentName(agentById(x.agentId))),esc(x.type||''),esc(x.title||''),esc([x.building,x.floor,x.room].filter(Boolean).join(' · ')||'—'),esc(x.start&&x.end?fmtHours(agentActivityDuration(x)):'—')]))}`
 if(type==='weekly'){const end=endOfWeek(weekly);subtitle=`${fmtDate(weekly)} au ${fmtDate(end)}`;const allDays=[];for(const a of db.agents.filter(x=>x.status==='Actif'))for(let d=weekly;d<=end;d=addDays(d,1)){const i=dayInfo(a.id,d),x=planningDisplayFor(a,d);if(![0,6].includes(parseDate(d).getDay()))allDays.push([fmtDate(d),esc(agentName(a)),badge(i.dayType),esc(i.shift||''),esc(x.text),esc(i.note||'')])}html=tableHTML(['Date','Agent','Journée','Service','Horaire applicable','Information / motif'],allDays)+`<h2>Échéances et rendez-vous</h2>`+tableHTML(['Date','Type','Objet','Statut'],[...db.meetings.filter(x=>inRange(x.date,weekly,end)).map(x=>[fmtDate(x.date),esc(x.type),esc(x.title),badge(x.status)]),...db.notes.filter(x=>inRange(x.dueDate,weekly,end)).map(x=>[fmtDate(x.dueDate),'Note',esc(x.title),badge(x.status)])])}
+const weeklyActs=(db.agentActivities||[]).filter(x=>inRange(x.date,weekly,endOfWeek(weekly)));if(type==='weekly')html+=`<h2>Activité réalisée par les agents</h2>${tableHTML(['Date','Heure','Agent','Type','Travail réalisé','Durée'],weeklyActs.map(x=>[fmtDate(x.date),esc([x.start,x.end].filter(Boolean).join('–')||'—'),esc(agentName(agentById(x.agentId))),esc(x.type||''),esc(x.title||''),esc(x.start&&x.end?fmtHours(agentActivityDuration(x)):'—')]))}`;
 if(type==='monthly'){subtitle=monthly;html=`<h2>Indicateurs</h2>${tableHTML(['Module','Total','Ouverts / faibles'],[['Maintenance',db.maintenance.filter(x=>dateMonthMatch(x.date,monthly)).length,db.maintenance.filter(x=>dateMonthMatch(x.date,monthly)&&!['Terminée','Clôturée'].includes(x.status)).length],['Ménage',db.cleaning.filter(x=>dateMonthMatch(x.date,monthly)).length,db.cleaning.filter(x=>dateMonthMatch(x.date,monthly)&&x.overallStatus!=='Conforme').length],['Actions',db.issues.filter(x=>dateMonthMatch(x.date,monthly)).length,db.issues.filter(x=>dateMonthMatch(x.date,monthly)&&!['Terminé','Clôturé'].includes(x.status)).length]])}<h2>Rendez-vous</h2>${tableHTML(['Date','Objet','Lieu','Statut'],db.meetings.filter(x=>dateMonthMatch(x.date,monthly)).map(x=>[fmtDate(x.date),esc(x.title),esc(x.location),badge(x.status)]))}`}
+const monthActs=(db.agentActivities||[]).filter(x=>dateMonthMatch(x.date,monthly));if(type==='monthly')html+=`<h2>Activité réalisée par les agents</h2>${tableHTML(['Date','Agent','Type','Travail réalisé','Lieu','Durée'],monthActs.map(x=>[fmtDate(x.date),esc(agentName(agentById(x.agentId))),esc(x.type||''),esc(x.title||''),esc([x.building,x.floor,x.room].filter(Boolean).join(' · ')||'—'),esc(x.start&&x.end?fmtHours(agentActivityDuration(x)):'—')]))}`;
 if(type==='team'){subtitle=teamMonth;const rows=db.agents.filter(a=>a.status==='Actif').map(a=>{let planned=0,actual=0,abs=0,ot=0;const [y,m]=teamMonth.split('-').map(Number),last=new Date(y,m,0).getDate();for(let i=1;i<=last;i++){const d=`${teamMonth}-${pad(i)}`;if([0,6].includes(parseDate(d).getDay()))continue;const info=dayInfo(a.id,d),h=dayHours(info);planned+=h.planned;actual+=h.total;if(isAbsenceType(info.dayType))abs++;ot+=Number(info.overtime||0)}return [esc(agentName(a)),fmtHours(planned),fmtHours(actual),`${actual-planned>=0?'+':''}${fmtHours(actual-planned)}`,abs,fmtHours(ot)]});html=tableHTML(['Agent','Prévu','Réalisé','Écart','Jours absence','Heures ajoutées'],rows)}
 if(type==='absence'){subtitle=absMonth;html=tableHTML(['Date','Agent','Motif','Statut','Note'],db.agentDays.filter(x=>dateMonthMatch(x.date,absMonth)&&isAbsenceType(x.dayType)).map(x=>[fmtDate(x.date),esc(agentName(agentById(x.agentId))),badge(x.dayType),badge(x.status||'Validée'),esc(x.note||'')]))}
 if(type==='cleaning'){subtitle=cleanMonth;html=tableHTML(['Date','Lieu','Type','Agent','Score','Résultat','Points faibles'],db.cleaning.filter(x=>dateMonthMatch(x.date,cleanMonth)).map(x=>[fmtDate(x.date),esc(`${x.building} ${x.floor} ${x.room}`),esc(x.roomType),esc(agentName(agentById(x.agentId))),`${x.score||0} %`,badge(x.overallStatus),esc((x.tasks||[]).filter(t=>['À reprendre','Non conforme'].includes(t.status)).map(t=>t.name).join(', '))]))}
@@ -5177,73 +5374,6 @@ function printableViewHTML(view){
  copies.forEach((el,k)=>{const src=originals[k],span=document.createElement('span');span.className='print-field';span.textContent=src?.tagName==='SELECT'?src.options[src.selectedIndex]?.text||'':(src?.value||'');el.replaceWith(span)});
  clone.querySelectorAll('.hidden').forEach(x=>x.remove());return clone.innerHTML;
 }
-
-function printVacationChecklist(id){
- const x=byId('vacations',id);
- if(!x){toast('Checklist de fermeture introuvable');return}
- const tasks=Array.isArray(x.tasks)?x.tasks:[];
- const done=tasks.filter(t=>t.done).length,total=tasks.length,pct=total?Math.round(done/total*100):0;
- const orientation='portrait';
- const w=window.open('','_blank');
- if(!w){toast('Autorisez les fenêtres contextuelles pour imprimer');return}
- const title=`Checklist — ${x.name||'Vacances / fermeture'}`;
- const notes=String(x.notes||'').trim();
- const rows=tasks.length?tasks.map((t,i)=>`
-   <tr class="${t.done?'task-done':''}">
-     <td class="task-no">${i+1}</td>
-     <td class="task-check">${t.done?'☑':'☐'}</td>
-     <td class="task-text">${esc(t.text||'')}</td>
-     <td class="task-status">${t.done?'FAIT':'À FAIRE'}</td>
-   </tr>`).join(''):`<tr><td colspan="4">Aucune action dans cette checklist.</td></tr>`;
- const css=`
-   ${reportPrintCSS(orientation)}
-   @page{size:A4 portrait;margin:12mm}
-   body{font-family:Arial,Helvetica,sans-serif;color:#1f2937;background:#fff}
-   .closure-head{border:2px solid #0b5ea8;border-radius:8px;padding:12px 14px;margin-bottom:12px}
-   .closure-head h1{font-size:20px;margin:0 0 6px;color:#0b5ea8}
-   .closure-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:11px}
-   .closure-meta strong{color:#16324f}
-   .closure-progress{margin:10px 0;padding:8px 10px;background:#eef6ff;border-left:4px solid #0b5ea8;font-weight:700}
-   table.checklist{width:100%;border-collapse:collapse;font-size:10.5px}
-   table.checklist th{background:#0b5ea8;color:#fff;padding:7px;border:1px solid #0b5ea8;text-align:left}
-   table.checklist td{padding:7px;border:1px solid #cbd5e1;vertical-align:top}
-   .task-no{width:8mm;text-align:center}.task-check{width:9mm;text-align:center;font-size:15px}
-   .task-status{width:20mm;font-weight:700;text-align:center}
-   .task-done{background:#f0fdf4}.task-done .task-text{text-decoration:none}
-   .closure-notes{margin-top:12px;border:1px solid #cbd5e1;border-radius:6px;padding:10px;white-space:pre-wrap}
-   .closure-sign{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
-   .closure-sign div{min-height:35mm;border:1px solid #cbd5e1;padding:8px}
-   .closure-sign strong{display:block;margin-bottom:8px;color:#16324f}
-   .print-footer{margin-top:10px}
- `;
- w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${css}</style></head><body>
-   <header class="print-header"><img src="${appLogoURL()}"><div><h1>${esc(db.settings.appName)}</h1><p>${esc(db.settings.schoolName)}</p><strong>Vacances & fermetures</strong></div></header>
-   <section class="closure-head">
-     <h1>${esc(x.name||'Vacances / fermeture')}</h1>
-     <div class="closure-meta">
-       <div><strong>Période :</strong> ${fmtDate(x.start)||'—'} → ${fmtDate(x.end)||'—'}</div>
-       <div><strong>Année scolaire :</strong> ${esc(activeAcademicYear())}</div>
-       <div><strong>Zone :</strong> ${esc(x.zone||'—')}</div>
-       <div><strong>Statut :</strong> ${esc(x.status||'—')}</div>
-     </div>
-   </section>
-   <div class="closure-progress">Avancement : ${done} / ${total} action(s) terminée(s) — ${pct} %</div>
-   <table class="checklist">
-     <thead><tr><th>N°</th><th>✓</th><th>Action à réaliser</th><th>État</th></tr></thead>
-     <tbody>${rows}</tbody>
-   </table>
-   ${notes?`<section class="closure-notes"><strong>Notes de la période</strong><br>${esc(notes)}</section>`:''}
-   <section class="closure-sign">
-     <div><strong>Contrôle de fermeture</strong>Date : ____________________<br><br>Nom / visa :<br><br>____________________________</div>
-     <div><strong>Contrôle de réouverture</strong>Date : ____________________<br><br>Nom / visa :<br><br>____________________________</div>
-   </section>
-   <footer class="print-footer">${esc(db.settings.appName)} — Checklist imprimée le ${new Date().toLocaleString('fr-FR')}</footer>
- </body></html>`);
- w.document.close();
- waitAndPrint(w);
-}
-window.PSTPrintVacationChecklist=printVacationChecklist;
-
 function printView(viewId){
  const view=document.getElementById(viewId)||document.querySelector('.view.active');if(!view)return;
  const orientation=db.settings.printOrientation||'landscape',w=window.open('','_blank');if(!w){toast('Autorisez les fenêtres contextuelles pour imprimer');return}
@@ -5384,10 +5514,12 @@ function exportStyledExcel(module){
  }
  toast('Fichier prêt — touchez « Télécharger maintenant »');
 }
-function exportCSV(module){const map={agents:['firstName','lastName','role','weeklyHours','email','phone','assignment','status'],agentDays:['date','agentId','dayType','plannedStart','plannedEnd','actualStart','actualEnd','pause','overtime','status','note'],cleaning:['no','date','time','building','floor','roomType','room','agentId','score','overallStatus','comment'],maintenance:['no','date','title','family','priority','status','building','floor','room','requester','assigned','dueDate','cost','description','action'],requests:['no','date','type','title','priority','status','building','room','requester','dueDate','description','response'],works:['no','date','type','title','company','architect','building','priority','status','dueDate','gpaEnd','description','decision'],meetings:['no','date','time','end','type','title','location','participants','status','notes','actions'],issues:['no','date','category','agentId','title','priority','status','owner','dueDate','cost','description','action'],periodic:['no','name','family','intervalMonths','periodicityText','building','floor','sector','room','lastDate','nextDate','status','provider','register','requirement','notes'],notes:['no','date','category','agentId','title','priority','status','dueDate','text'],vacations:['name','zone','start','end','status','notes'],documents:['no','date','title','category','linkedModule','description']};const keys=map[module]||Object.keys(db[module]?.[0]||{}).filter(k=>!['id','attachments','tasks','items'].includes(k)),rows=db[module]||[];downloadText(`${module}-${todayISO()}.csv`,[keys.join(';'),...rows.map(r=>keys.map(k=>csvEscape(k==='agentId'?agentName(agentById(r[k])):r[k])).join(';'))].join('\n'),'text/csv;charset=utf-8')}
+function exportCSV(module){const map={agents:['firstName','lastName','role','weeklyHours','email','phone','assignment','status'],agentDays:['date','agentId','dayType','plannedStart','plannedEnd','actualStart','actualEnd','pause','overtime','status','note'],cleaning:['no','date','time','building','floor','roomType','room','agentId','score','overallStatus','comment'],maintenance:['no','date','title','family','priority','status','building','floor','room','requester','assigned','dueDate','cost','description','action'],requests:['no','date','type','title','priority','status','building','room','requester','dueDate','description','response'],works:['no','date','type','title','company','architect','building','priority','status','dueDate','gpaEnd','description','decision'],meetings:['no','date','time','end','type','title','location','participants','status','notes','actions'],issues:['no','date','category','agentId','title','priority','status','owner','dueDate','cost','description','action'],periodic:['no','name','family','intervalMonths','periodicityText','building','floor','sector','room','lastDate','nextDate','status','provider','register','requirement','notes'],notes:['no','date','category','agentId','title','priority','status','dueDate','text'],vacations:['name','zone','start','end','status','notes'],agentActivities:['no','date','start','end','agentId','type','title','building','floor','sector','room','details','result','maintenanceId','requestId','notes'],documents:['no','date','title','category','linkedModule','description']};const keys=map[module]||Object.keys(db[module]?.[0]||{}).filter(k=>!['id','attachments','tasks','items'].includes(k)),rows=db[module]||[];downloadText(`${module}-${todayISO()}.csv`,[keys.join(';'),...rows.map(r=>keys.map(k=>csvEscape(k==='agentId'?agentName(agentById(r[k])):r[k])).join(';'))].join('\n'),'text/csv;charset=utf-8')}
 /* ---------- Initialisation des listes et rendu global ---------- */
 function fillSelect(id,items,keep=true){const e=document.getElementById(id);if(!e)return;const old=keep?e.value:'';const first=e.querySelector('option[value=""]')?.outerHTML||'';e.innerHTML=first+selectOptions(items,old)}
-function hydrateSelects(){fillSelect('personalType',db.lists.personalTypes);fillSelect('personalStatus',db.lists.generalStatuses);for(const id of ['rotationAgent','planningAgent','absenceAgent','issueAgent']){const e=$(`#${id}`);if(e){const old=e.value;e.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','')}}fillSelect('planningSignal',['Conforme','Heures supplémentaires','Heures manquantes','Absence']);fillSelect('absenceType',db.lists.dayTypes.filter(isAbsenceType));fillSelect('absenceStatus',['Demandée','Validée','Refusée','Annulée']);fillSelect('issueCategory',db.lists.issueCategories);fillSelect('issueStatus',db.lists.generalStatuses);fillSelect('periodicFamily',db.lists.periodicFamilies);fillSelect('periodicStatus',['À jour','Bientôt','En retard','À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable']);const pb=$('#periodicBuilding');if(pb){const old=pb.value;pb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}const cb=$('#cleanBuilding');if(cb){const old=cb.value;cb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}fillSelect('cleanRoomType',db.lists.roomTypes);fillSelect('cleanStatus',db.lists.cleaningStatuses);fillSelect('cleaningGuideType',Object.keys(GUIDE));fillSelect('maintenanceStatus',db.lists.maintenanceStatuses);fillSelect('maintenancePriority',db.lists.priorities);fillSelect('maintenanceFamily',db.lists.maintenanceFamilies);fillSelect('requestStatus',db.lists.generalStatuses);fillSelect('requestType',db.lists.requestTypes);fillSelect('workStatus',db.lists.generalStatuses);fillSelect('workType',db.lists.workTypes);fillSelect('meetingType',db.lists.meetingTypes);fillSelect('noteCategory',db.lists.noteCategories);fillSelect('notePriority',db.lists.priorities);fillSelect('noteStatus',db.lists.generalStatuses);fillSelect('documentCategory',db.lists.documentCategories);const vp=$('#vacationReportPeriod');if(vp){const old=vp.value;vp.innerHTML=selectOptions(db.vacations,old,x=>`${x.name} — ${fmtDate(x.start)}`,x=>x.id)}const csv=$('#csvModule');if(csv){const opts=[['agents','Agents'],['agentDays','Horaires, congés et absences'],['cleaning','Contrôles ménage'],['maintenance','Maintenance'],['requests','Demandes direction'],['works','Chantiers / GPA'],['meetings','Réunions'],['issues','Sécurité / qualité'],['periodic','Contrôles périodiques'],['notes','Notes'],['vacations','Vacances'],['documents','Documents']];const old=csv.value;csv.innerHTML=selectOptions(opts,old,x=>x[1],x=>x[0])}}
+function hydrateSelects(){fillSelect('personalType',db.lists.personalTypes);fillSelect('personalStatus',db.lists.generalStatuses);for(const id of ['rotationAgent','planningAgent','absenceAgent','issueAgent']){const e=$(`#${id}`);if(e){const old=e.value;e.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','')}}const aaf=$('#activityAgentFilter');if(aaf){const old=aaf.value;aaf.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','');aaf.value=old}
+fillSelect('activityTypeFilter',AGENT_ACTIVITY_TYPES);
+fillSelect('planningSignal',['Conforme','Heures supplémentaires','Heures manquantes','Absence']);fillSelect('absenceType',db.lists.dayTypes.filter(isAbsenceType));fillSelect('absenceStatus',['Demandée','Validée','Refusée','Annulée']);fillSelect('issueCategory',db.lists.issueCategories);fillSelect('issueStatus',db.lists.generalStatuses);fillSelect('periodicFamily',db.lists.periodicFamilies);fillSelect('periodicStatus',['À jour','Bientôt','En retard','À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable']);const pb=$('#periodicBuilding');if(pb){const old=pb.value;pb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}const cb=$('#cleanBuilding');if(cb){const old=cb.value;cb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}fillSelect('cleanRoomType',db.lists.roomTypes);fillSelect('cleanStatus',db.lists.cleaningStatuses);fillSelect('cleaningGuideType',Object.keys(GUIDE));fillSelect('maintenanceStatus',db.lists.maintenanceStatuses);fillSelect('maintenancePriority',db.lists.priorities);fillSelect('maintenanceFamily',db.lists.maintenanceFamilies);fillSelect('requestStatus',db.lists.generalStatuses);fillSelect('requestType',db.lists.requestTypes);fillSelect('workStatus',db.lists.generalStatuses);fillSelect('workType',db.lists.workTypes);fillSelect('meetingType',db.lists.meetingTypes);fillSelect('noteCategory',db.lists.noteCategories);fillSelect('notePriority',db.lists.priorities);fillSelect('noteStatus',db.lists.generalStatuses);fillSelect('documentCategory',db.lists.documentCategories);const vp=$('#vacationReportPeriod');if(vp){const old=vp.value;vp.innerHTML=selectOptions(db.vacations,old,x=>`${x.name} — ${fmtDate(x.start)}`,x=>x.id)}const csv=$('#csvModule');if(csv){const opts=[['agents','Agents'],['agentDays','Horaires, congés et absences'],['agentActivities','Activité des agents'],['cleaning','Contrôles ménage'],['maintenance','Maintenance'],['requests','Demandes direction'],['works','Chantiers / GPA'],['meetings','Réunions'],['issues','Sécurité / qualité'],['periodic','Contrôles périodiques'],['notes','Notes'],['vacations','Vacances'],['documents','Documents']];const old=csv.value;csv.innerHTML=selectOptions(opts,old,x=>x[1],x=>x[0])}}
 function renderReportPreview(){if(!$('#reportPreview'))return;const r=reportData('daily');$('#reportPreview').innerHTML=`<h3>${esc(r.title)} — ${esc(r.subtitle)}</h3>${r.html}`}
 
 const DAILY_MOTIVATION_SAYINGS=["Chaque jour fait avancer quand on garde le cap.","Chaque jour simplifie le chemin quand on ne lâche pas l’objectif.","Chaque jour construit du solide quand on apprend de chaque étape.","Un petit pas ouvre la voie quand on avance avec méthode.","Un petit pas transforme l’effort quand on transforme les difficultés en étapes.","Un petit pas fait gagner du temps quand on choisit d’avancer.","La constance renforce le résultat quand on reste concentré sur l’essentiel.","La constance prépare la réussite quand on fait simplement le prochain pas utile.","La constance rend l’objectif plus proche quand on travaille avec soin.","Le courage simplifie le chemin quand on agit avec régularité.","Le courage construit du solide quand on garde le cap.","La patience fait avancer quand on ne lâche pas l’objectif.","La patience transforme l’effort quand on apprend de chaque étape.","La patience fait gagner du temps quand on avance avec méthode.","L’attention ouvre la voie quand on transforme les difficultés en étapes.","L’attention prépare la réussite quand on choisit d’avancer.","L’attention rend l’objectif plus proche quand on reste concentré sur l’essentiel.","Une bonne méthode renforce le résultat quand on fait simplement le prochain pas utile.","Une bonne méthode donne de l’élan quand on travaille avec soin.","Le travail régulier fait avancer quand on agit avec régularité.","Le travail régulier transforme l’effort quand on garde le cap.","Le travail régulier construit du solide quand on ne lâche pas l’objectif.","La persévérance ouvre la voie quand on apprend de chaque étape.","La persévérance prépare la réussite quand on avance avec méthode.","La persévérance fait gagner du temps quand on transforme les difficultés en étapes.","Une priorité claire renforce le résultat quand on choisit d’avancer.","Une priorité claire donne de l’élan quand on reste concentré sur l’essentiel.","Une priorité claire rend l’objectif plus proche quand on fait simplement le prochain pas utile.","Le calme simplifie le chemin quand on travaille avec soin.","Le calme construit du solide quand on agit avec régularité.","L’organisation ouvre la voie quand on garde le cap.","L’organisation transforme l’effort quand on ne lâche pas l’objectif.","L’organisation fait gagner du temps quand on apprend de chaque étape.","Chaque effort renforce le résultat quand on avance avec méthode.","Chaque effort prépare la réussite quand on transforme les difficultés en étapes.","Chaque effort rend l’objectif plus proche quand on choisit d’avancer.","Une solution simplifie le chemin quand on reste concentré sur l’essentiel.","Une solution donne de l’élan quand on fait simplement le prochain pas utile.","Le progrès fait avancer quand on travaille avec soin.","Le progrès transforme l’effort quand on agit avec régularité.","Le progrès fait gagner du temps quand on garde le cap.","Chaque jour ouvre la voie quand on ne lâche pas l’objectif.","Chaque jour prépare la réussite quand on apprend de chaque étape.","Chaque jour rend l’objectif plus proche quand on avance avec méthode.","Un petit pas renforce le résultat quand on transforme les difficultés en étapes.","Un petit pas donne de l’élan quand on choisit d’avancer.","La constance fait avancer quand on reste concentré sur l’essentiel.","La constance simplifie le chemin quand on fait simplement le prochain pas utile.","La constance construit du solide quand on travaille avec soin.","Le courage ouvre la voie quand on agit avec régularité.","Le courage prépare la réussite quand on garde le cap.","Le courage fait gagner du temps quand on ne lâche pas l’objectif.","La patience renforce le résultat quand on apprend de chaque étape.","La patience donne de l’élan quand on avance avec méthode.","La patience rend l’objectif plus proche quand on transforme les difficultés en étapes.","L’attention simplifie le chemin quand on choisit d’avancer.","L’attention construit du solide quand on reste concentré sur l’essentiel.","Une bonne méthode fait avancer quand on fait simplement le prochain pas utile.","Une bonne méthode transforme l’effort quand on travaille avec soin.","Une bonne méthode fait gagner du temps quand on agit avec régularité.","Le travail régulier renforce le résultat quand on garde le cap.","Le travail régulier prépare la réussite quand on ne lâche pas l’objectif.","Le travail régulier rend l’objectif plus proche quand on apprend de chaque étape.","La persévérance simplifie le chemin quand on avance avec méthode.","La persévérance donne de l’élan quand on transforme les difficultés en étapes.","Une priorité claire fait avancer quand on choisit d’avancer.","Une priorité claire transforme l’effort quand on reste concentré sur l’essentiel.","Une priorité claire construit du solide quand on fait simplement le prochain pas utile.","Le calme ouvre la voie quand on travaille avec soin.","Le calme prépare la réussite quand on agit avec régularité.","Le calme rend l’objectif plus proche quand on garde le cap.","L’organisation renforce le résultat quand on ne lâche pas l’objectif.","L’organisation donne de l’élan quand on apprend de chaque étape.","Chaque effort fait avancer quand on avance avec méthode.","Chaque effort simplifie le chemin quand on transforme les difficultés en étapes.","Chaque effort construit du solide quand on choisit d’avancer.","Une solution ouvre la voie quand on reste concentré sur l’essentiel.","Une solution transforme l’effort quand on fait simplement le prochain pas utile.","Une solution fait gagner du temps quand on travaille avec soin.","Le progrès renforce le résultat quand on agit avec régularité.","Le progrès donne de l’élan quand on garde le cap.","Le progrès rend l’objectif plus proche quand on ne lâche pas l’objectif.","Chaque jour simplifie le chemin quand on apprend de chaque étape.","Chaque jour construit du solide quand on avance avec méthode.","Un petit pas fait avancer quand on transforme les difficultés en étapes.","Un petit pas transforme l’effort quand on choisit d’avancer.","Un petit pas fait gagner du temps quand on reste concentré sur l’essentiel.","La constance ouvre la voie quand on fait simplement le prochain pas utile.","La constance prépare la réussite quand on travaille avec soin.","La constance rend l’objectif plus proche quand on agit avec régularité.","Le courage simplifie le chemin quand on garde le cap.","Le courage donne de l’élan quand on ne lâche pas l’objectif.","La patience fait avancer quand on apprend de chaque étape.","La patience transforme l’effort quand on avance avec méthode.","La patience construit du solide quand on transforme les difficultés en étapes.","L’attention ouvre la voie quand on choisit d’avancer.","L’attention prépare la réussite quand on reste concentré sur l’essentiel.","L’attention fait gagner du temps quand on fait simplement le prochain pas utile.","Une bonne méthode renforce le résultat quand on travaille avec soin.","Une bonne méthode donne de l’élan quand on agit avec régularité.","Le travail régulier fait avancer quand on garde le cap.","Le travail régulier simplifie le chemin quand on ne lâche pas l’objectif.","Le travail régulier construit du solide quand on apprend de chaque étape.","La persévérance ouvre la voie quand on avance avec méthode.","La persévérance transforme l’effort quand on transforme les difficultés en étapes.","La persévérance fait gagner du temps quand on choisit d’avancer.","Une priorité claire renforce le résultat quand on reste concentré sur l’essentiel.","Une priorité claire prépare la réussite quand on fait simplement le prochain pas utile.","Une priorité claire rend l’objectif plus proche quand on travaille avec soin.","Le calme simplifie le chemin quand on agit avec régularité.","Le calme construit du solide quand on garde le cap.","L’organisation fait avancer quand on ne lâche pas l’objectif.","L’organisation transforme l’effort quand on apprend de chaque étape.","L’organisation fait gagner du temps quand on avance avec méthode.","Chaque effort ouvre la voie quand on transforme les difficultés en étapes.","Chaque effort prépare la réussite quand on choisit d’avancer.","Chaque effort rend l’objectif plus proche quand on reste concentré sur l’essentiel.","Une solution renforce le résultat quand on fait simplement le prochain pas utile.","Une solution donne de l’élan quand on travaille avec soin.","Le progrès fait avancer quand on agit avec régularité.","Le progrès transforme l’effort quand on garde le cap.","Le progrès construit du solide quand on ne lâche pas l’objectif.","Chaque jour ouvre la voie quand on apprend de chaque étape.","Chaque jour prépare la réussite quand on avance avec méthode.","Chaque jour fait gagner du temps quand on transforme les difficultés en étapes.","Un petit pas renforce le résultat quand on choisit d’avancer.","Un petit pas donne de l’élan quand on reste concentré sur l’essentiel.","Un petit pas rend l’objectif plus proche quand on fait simplement le prochain pas utile.","La constance simplifie le chemin quand on travaille avec soin.","La constance construit du solide quand on agit avec régularité.","Le courage ouvre la voie quand on garde le cap.","Le courage transforme l’effort quand on ne lâche pas l’objectif.","Le courage fait gagner du temps quand on apprend de chaque étape.","La patience renforce le résultat quand on avance avec méthode.","La patience prépare la réussite quand on transforme les difficultés en étapes.","La patience rend l’objectif plus proche quand on choisit d’avancer.","L’attention simplifie le chemin quand on reste concentré sur l’essentiel.","L’attention donne de l’élan quand on fait simplement le prochain pas utile.","Une bonne méthode fait avancer quand on travaille avec soin.","Une bonne méthode transforme l’effort quand on agit avec régularité.","Une bonne méthode fait gagner du temps quand on garde le cap.","Le travail régulier ouvre la voie quand on ne lâche pas l’objectif.","Le travail régulier prépare la réussite quand on apprend de chaque étape.","Le travail régulier rend l’objectif plus proche quand on avance avec méthode.","La persévérance renforce le résultat quand on transforme les difficultés en étapes.","La persévérance donne de l’élan quand on choisit d’avancer.","Une priorité claire fait avancer quand on reste concentré sur l’essentiel.","Une priorité claire simplifie le chemin quand on fait simplement le prochain pas utile.","Une priorité claire construit du solide quand on travaille avec soin.","Le calme ouvre la voie quand on agit avec régularité.","Le calme prépare la réussite quand on garde le cap.","Le calme fait gagner du temps quand on ne lâche pas l’objectif.","L’organisation renforce le résultat quand on apprend de chaque étape.","L’organisation donne de l’élan quand on avance avec méthode.","L’organisation rend l’objectif plus proche quand on transforme les difficultés en étapes.","Chaque effort simplifie le chemin quand on choisit d’avancer.","Chaque effort construit du solide quand on reste concentré sur l’essentiel.","Une solution fait avancer quand on fait simplement le prochain pas utile.","Une solution transforme l’effort quand on travaille avec soin.","Une solution fait gagner du temps quand on agit avec régularité.","Le progrès renforce le résultat quand on garde le cap.","Le progrès prépare la réussite quand on ne lâche pas l’objectif.","Le progrès rend l’objectif plus proche quand on apprend de chaque étape.","Chaque jour simplifie le chemin quand on avance avec méthode.","Chaque jour donne de l’élan quand on transforme les difficultés en étapes.","Un petit pas fait avancer quand on choisit d’avancer.","Un petit pas transforme l’effort quand on reste concentré sur l’essentiel.","Un petit pas construit du solide quand on fait simplement le prochain pas utile.","La constance ouvre la voie quand on travaille avec soin.","La constance prépare la réussite quand on agit avec régularité.","La constance rend l’objectif plus proche quand on garde le cap.","Le courage renforce le résultat quand on ne lâche pas l’objectif.","Le courage donne de l’élan quand on apprend de chaque étape.","La patience fait avancer quand on avance avec méthode.","La patience simplifie le chemin quand on transforme les difficultés en étapes.","La patience construit du solide quand on choisit d’avancer.","L’attention ouvre la voie quand on reste concentré sur l’essentiel.","L’attention transforme l’effort quand on fait simplement le prochain pas utile.","L’attention fait gagner du temps quand on travaille avec soin.","Une bonne méthode renforce le résultat quand on agit avec régularité.","Une bonne méthode donne de l’élan quand on garde le cap.","Une bonne méthode rend l’objectif plus proche quand on ne lâche pas l’objectif.","Le travail régulier simplifie le chemin quand on apprend de chaque étape.","Le travail régulier construit du solide quand on avance avec méthode.","La persévérance fait avancer quand on transforme les difficultés en étapes.","La persévérance transforme l’effort quand on choisit d’avancer.","La persévérance fait gagner du temps quand on reste concentré sur l’essentiel.","Une priorité claire ouvre la voie quand on fait simplement le prochain pas utile.","Une priorité claire prépare la réussite quand on travaille avec soin.","Une priorité claire rend l’objectif plus proche quand on agit avec régularité.","Le calme simplifie le chemin quand on garde le cap.","Le calme donne de l’élan quand on ne lâche pas l’objectif.","L’organisation fait avancer quand on apprend de chaque étape.","L’organisation transforme l’effort quand on avance avec méthode.","L’organisation construit du solide quand on transforme les difficultés en étapes.","Chaque effort ouvre la voie quand on choisit d’avancer.","Chaque effort prépare la réussite quand on reste concentré sur l’essentiel.","Chaque effort fait gagner du temps quand on fait simplement le prochain pas utile.","Une solution renforce le résultat quand on travaille avec soin.","Une solution donne de l’élan quand on agit avec régularité.","Le progrès fait avancer quand on garde le cap.","Le progrès simplifie le chemin quand on ne lâche pas l’objectif.","Le progrès construit du solide quand on apprend de chaque étape.","Chaque jour ouvre la voie quand on avance avec méthode.","Chaque jour transforme l’effort quand on transforme les difficultés en étapes.","Chaque jour fait gagner du temps quand on choisit d’avancer.","Un petit pas renforce le résultat quand on reste concentré sur l’essentiel.","Un petit pas prépare la réussite quand on fait simplement le prochain pas utile.","Un petit pas rend l’objectif plus proche quand on travaille avec soin.","La constance simplifie le chemin quand on agit avec régularité.","La constance construit du solide quand on garde le cap.","Le courage fait avancer quand on ne lâche pas l’objectif.","Le courage transforme l’effort quand on apprend de chaque étape.","Le courage fait gagner du temps quand on avance avec méthode.","La patience ouvre la voie quand on transforme les difficultés en étapes.","La patience prépare la réussite quand on choisit d’avancer.","La patience rend l’objectif plus proche quand on reste concentré sur l’essentiel.","L’attention renforce le résultat quand on fait simplement le prochain pas utile.","L’attention donne de l’élan quand on travaille avec soin.","Une bonne méthode fait avancer quand on agit avec régularité.","Une bonne méthode transforme l’effort quand on garde le cap.","Une bonne méthode construit du solide quand on ne lâche pas l’objectif.","Le travail régulier ouvre la voie quand on apprend de chaque étape.","Le travail régulier prépare la réussite quand on avance avec méthode.","Le travail régulier fait gagner du temps quand on transforme les difficultés en étapes.","La persévérance renforce le résultat quand on choisit d’avancer.","La persévérance donne de l’élan quand on reste concentré sur l’essentiel.","La persévérance rend l’objectif plus proche quand on fait simplement le prochain pas utile.","Une priorité claire simplifie le chemin quand on travaille avec soin.","Une priorité claire construit du solide quand on agit avec régularité.","Le calme ouvre la voie quand on garde le cap.","Le calme transforme l’effort quand on ne lâche pas l’objectif.","Le calme fait gagner du temps quand on apprend de chaque étape.","L’organisation renforce le résultat quand on avance avec méthode.","L’organisation prépare la réussite quand on transforme les difficultés en étapes.","L’organisation rend l’objectif plus proche quand on choisit d’avancer.","Chaque effort simplifie le chemin quand on reste concentré sur l’essentiel.","Chaque effort donne de l’élan quand on fait simplement le prochain pas utile.","Une solution fait avancer quand on travaille avec soin.","Une solution transforme l’effort quand on agit avec régularité.","Une solution fait gagner du temps quand on garde le cap.","Le progrès ouvre la voie quand on ne lâche pas l’objectif.","Le progrès prépare la réussite quand on apprend de chaque étape.","Le progrès rend l’objectif plus proche quand on avance avec méthode.","Chaque jour renforce le résultat quand on transforme les difficultés en étapes.","Chaque jour donne de l’élan quand on choisit d’avancer.","Un petit pas fait avancer quand on reste concentré sur l’essentiel.","Un petit pas simplifie le chemin quand on fait simplement le prochain pas utile.","Un petit pas construit du solide quand on travaille avec soin.","La constance ouvre la voie quand on agit avec régularité.","La constance prépare la réussite quand on garde le cap.","La constance fait gagner du temps quand on ne lâche pas l’objectif.","Le courage renforce le résultat quand on apprend de chaque étape.","Le courage donne de l’élan quand on avance avec méthode.","Le courage rend l’objectif plus proche quand on transforme les difficultés en étapes.","La patience simplifie le chemin quand on choisit d’avancer.","La patience construit du solide quand on reste concentré sur l’essentiel.","L’attention fait avancer quand on fait simplement le prochain pas utile.","L’attention transforme l’effort quand on travaille avec soin.","L’attention fait gagner du temps quand on agit avec régularité.","Une bonne méthode renforce le résultat quand on garde le cap.","Une bonne méthode prépare la réussite quand on ne lâche pas l’objectif.","Une bonne méthode rend l’objectif plus proche quand on apprend de chaque étape.","Le travail régulier simplifie le chemin quand on avance avec méthode.","Le travail régulier donne de l’élan quand on transforme les difficultés en étapes.","La persévérance fait avancer quand on choisit d’avancer.","La persévérance transforme l’effort quand on reste concentré sur l’essentiel.","La persévérance construit du solide quand on fait simplement le prochain pas utile.","Une priorité claire ouvre la voie quand on travaille avec soin.","Une priorité claire prépare la réussite quand on agit avec régularité.","Une priorité claire rend l’objectif plus proche quand on garde le cap.","Le calme renforce le résultat quand on ne lâche pas l’objectif.","Le calme donne de l’élan quand on apprend de chaque étape.","L’organisation fait avancer quand on avance avec méthode.","L’organisation simplifie le chemin quand on transforme les difficultés en étapes.","L’organisation construit du solide quand on choisit d’avancer.","Chaque effort ouvre la voie quand on reste concentré sur l’essentiel.","Chaque effort transforme l’effort quand on fait simplement le prochain pas utile.","Chaque effort fait gagner du temps quand on travaille avec soin.","Une solution renforce le résultat quand on agit avec régularité.","Une solution donne de l’élan quand on garde le cap.","Une solution rend l’objectif plus proche quand on ne lâche pas l’objectif.","Le progrès simplifie le chemin quand on apprend de chaque étape.","Le progrès construit du solide quand on avance avec méthode.","Chaque jour fait avancer quand on transforme les difficultés en étapes.","Chaque jour transforme l’effort quand on choisit d’avancer.","Chaque jour fait gagner du temps quand on reste concentré sur l’essentiel.","Un petit pas ouvre la voie quand on fait simplement le prochain pas utile.","Un petit pas prépare la réussite quand on travaille avec soin.","Un petit pas rend l’objectif plus proche quand on agit avec régularité.","La constance simplifie le chemin quand on garde le cap.","La constance donne de l’élan quand on ne lâche pas l’objectif.","Le courage fait avancer quand on apprend de chaque étape.","Le courage transforme l’effort quand on avance avec méthode.","Le courage construit du solide quand on transforme les difficultés en étapes.","La patience ouvre la voie quand on choisit d’avancer.","La patience prépare la réussite quand on reste concentré sur l’essentiel.","La patience fait gagner du temps quand on fait simplement le prochain pas utile.","L’attention renforce le résultat quand on travaille avec soin.","L’attention donne de l’élan quand on agit avec régularité."];
@@ -5494,7 +5626,7 @@ window.addEventListener('scroll',()=>{
   if(document.scrollingElement)pstRememberScroll(document.scrollingElement);
 },{passive:true});
 
-// V147.147 — pas de MutationObserver qui force la position pendant que l'utilisateur défile.
+// V147.146 — pas de MutationObserver qui force la position pendant que l'utilisateur défile.
 // La restauration est déclenchée uniquement autour des rendus explicites de l'application.
 
 
@@ -5633,9 +5765,9 @@ window.PSTTableFilters={
 function renderAll(){return safeRenderAll()}
 
 /* ---------- Actions rapides ---------- */
-function openQuickMenu(){openDetail('Ajouter rapidement',`<div class="quick-menu-grid"><button data-quick="agent-day">👤<strong>Jour agent</strong><small>Congé, RTT, horaires, heures supp.</small></button><button data-quick="note">✎<strong>Bloc-notes</strong><small>Note et liste d’actions</small></button><button data-quick="maintenance">⚙<strong>Intervention</strong><small>Maintenance</small></button><button data-quick="cleaning">✓<strong>Contrôle ménage</strong><small>Saisie guidée</small></button><button data-quick="meeting">📅<strong>Rendez-vous</strong><small>Réunion ou visite</small></button><button data-quick="room-prep">☕<strong>Préparation salle & café</strong><small>Préparer une salle / demande café</small></button><button data-quick="request">↗<strong>Demande direction</strong><small>Aménagement / logistique</small></button><button data-quick="issue-urgent">⚠<strong>Urgence</strong><small>Sécurité / qualité · priorité Urgente</small></button><button data-quick="issue-problem">❗<strong>Problématique</strong><small>Sécurité / qualité · priorité Normale</small></button><button data-quick="document">📎<strong>Document</strong><small>Créer une fiche documentaire</small></button><button data-quick="import-hub" class="quick-import-main">📥<strong>Importer / Scanner</strong><small>Scan manuscrit ou PDF · détection automatique</small></button></div>`)}
-const QUICK_ACTION_KEYS=['agent-day','note','maintenance','cleaning','meeting','request','issue-urgent','issue-problem','document','room-prep'];
-function dispatchQuick(q){if($('#detailModal').open)$('#detailModal').close();({note:()=>openNote(),maintenance:()=>openMaintenance(),cleaning:()=>openCleaning(),meeting:()=>openMeeting(),request:()=>openRequest(),'issue-urgent':()=>openIssue(null,{priority:'Urgente'}),'issue-problem':()=>openIssue(null,{priority:'Normale'}),document:()=>openDocument(),'room-prep':()=>{const b=document.querySelector('.nav-btn[data-view="room-prep"]');if(b)b.click();else setView('room-prep')},'import-hub':()=>openCentralImportHub(),'agent-day':()=>{const aid=db.agents.find(a=>normalizeText(a.status)==='actif')?.id;if(aid)openAgentDay(aid,todayISO());else toast('Ajoutez d’abord un agent')}}[q]||(()=>{console.warn('Action rapide inconnue',q);toast('Cette action rapide n’est pas disponible')}))()}
+function openQuickMenu(){openDetail('Ajouter rapidement',`<div class="quick-menu-grid"><button data-quick="agent-day">👤<strong>Jour agent</strong><small>Congé, RTT, horaires, heures supp.</small></button><button data-quick="note">✎<strong>Bloc-notes</strong><small>Note et liste d’actions</small></button><button data-quick="maintenance">⚙<strong>Intervention</strong><small>Maintenance</small></button><button data-quick="agent-activity">✓<strong>Ajout activité agent</strong><small>Tracer le travail réellement effectué</small></button><button data-quick="cleaning">✓<strong>Contrôle ménage</strong><small>Saisie guidée</small></button><button data-quick="meeting">📅<strong>Rendez-vous</strong><small>Réunion ou visite</small></button><button data-quick="room-prep">☕<strong>Préparation salle & café</strong><small>Préparer une salle / demande café</small></button><button data-quick="request">↗<strong>Demande direction</strong><small>Aménagement / logistique</small></button><button data-quick="issue-urgent">⚠<strong>Urgence</strong><small>Sécurité / qualité · priorité Urgente</small></button><button data-quick="issue-problem">❗<strong>Problématique</strong><small>Sécurité / qualité · priorité Normale</small></button><button data-quick="document">📎<strong>Document</strong><small>Créer une fiche documentaire</small></button><button data-quick="import-hub" class="quick-import-main">📥<strong>Importer / Scanner</strong><small>Scan manuscrit ou PDF · détection automatique</small></button></div>`)}
+const QUICK_ACTION_KEYS=['agent-day','note','maintenance','agent-activity','cleaning','meeting','request','issue-urgent','issue-problem','document','room-prep'];
+function dispatchQuick(q){if($('#detailModal').open)$('#detailModal').close();({note:()=>openNote(),maintenance:()=>openMaintenance(),'agent-activity':()=>openAgentActivity(),cleaning:()=>openCleaning(),meeting:()=>openMeeting(),request:()=>openRequest(),'issue-urgent':()=>openIssue(null,{priority:'Urgente'}),'issue-problem':()=>openIssue(null,{priority:'Normale'}),document:()=>openDocument(),'room-prep':()=>{const b=document.querySelector('.nav-btn[data-view="room-prep"]');if(b)b.click();else setView('room-prep')},'import-hub':()=>openCentralImportHub(),'agent-day':()=>{const aid=db.agents.find(a=>normalizeText(a.status)==='actif')?.id;if(aid)openAgentDay(aid,todayISO());else toast('Ajoutez d’abord un agent')}}[q]||(()=>{console.warn('Action rapide inconnue',q);toast('Cette action rapide n’est pas disponible')}))()}
 function dashboardShortcut(target){
  const view=target||'dashboard';
  if(view==='issues-urgent'){
@@ -5649,7 +5781,7 @@ function dashboardShortcut(target){
  if(view==='maintenance'&&$('#maintenanceStatus'))$('#maintenanceStatus').value='';
  if(view==='periodic'&&$('#periodicStatus'))$('#periodicStatus').value='';
 }
-function dispatchEdit(type,id){({agent:()=>openAgent(id),rotation:()=>openRotation(id),personal:()=>openPersonalEvent(id),issue:()=>openIssue(id),periodic:()=>openPeriodic(id),cleaning:()=>openCleaning(id),maintenance:()=>openMaintenance(id),request:()=>openRequest(id),work:()=>openWork(id),meeting:()=>openMeeting(id),note:()=>openNote(id),vacation:()=>openVacation(id),document:()=>openDocument(id),space:()=>openSpace(id),reportNonconformity:()=>setView('pdfimports')}[type]||(()=>{}))()}
+function dispatchEdit(type,id){({agent:()=>openAgent(id),rotation:()=>openRotation(id),personal:()=>openPersonalEvent(id),issue:()=>openIssue(id),periodic:()=>openPeriodic(id),cleaning:()=>openCleaning(id),maintenance:()=>openMaintenance(id),agentActivity:()=>openAgentActivity(id),request:()=>openRequest(id),work:()=>openWork(id),meeting:()=>openMeeting(id),note:()=>openNote(id),vacation:()=>openVacation(id),document:()=>openDocument(id),space:()=>openSpace(id),reportNonconformity:()=>setView('pdfimports')}[type]||(()=>{}))()}
 
 /* ---------- Sauvegarde / restauration ---------- */
 function exportBackup(){const exportAcademicYear=activeAcademicYear();const payload={exportedAt:new Date().toISOString(),data:db,note:'Les fichiers joints sont stockés dans Supabase Storage. La sauvegarde JSON contient leurs références.'};downloadText(`Pilotage_Service_Technique_sauvegarde_${todayISO()}.json`,JSON.stringify(payload,null,2),'application/json')}
@@ -5846,12 +5978,6 @@ function bindReliableDynamicActions(){
  if(window.__pstDynamicActionsBound)return;
  window.__pstDynamicActionsBound=true;
  document.addEventListener('click',e=>{
-   const vacationPrint=e.target.closest?.('[data-print-vacation]');
-   if(vacationPrint){
-     e.preventDefault();e.stopPropagation();
-     printVacationChecklist(vacationPrint.dataset.printVacation);
-     return;
-   }
    const edit=e.target.closest?.('[data-edit-type]');
    if(edit){
      const type=edit.dataset.editType,id=edit.dataset.editId;
@@ -5984,7 +6110,7 @@ function bindEvents(){
           recordId:auditRecordId,no:auditNo,itemTitle:auditItemTitle,location:auditLocation
         });
 
-        // V147.147 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
+        // V147.146 — l'historique est créé APRÈS la sauvegarde principale du formulaire.
         // Il faut donc synchroniser cette dernière écriture elle aussi, sinon localDirty
         // reste vrai et le voyant reste orange indéfiniment.
         if(currentUser&&navigator.onLine){
@@ -6035,7 +6161,10 @@ function bindEvents(){
 $('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').onclick=()=>printView(document.querySelector('.view.active')?.id);
  const gay=$('#globalAcademicYear');if(gay)gay.onchange=e=>setActiveAcademicYear(e.target.value);const pay=$('#prevAcademicYear');if(pay)pay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),-1));const nay=$('#nextAcademicYear');if(nay)nay.onclick=()=>setActiveAcademicYear(shiftAcademicYear(activeAcademicYear(),1));
  {const q=$('#quickAdd');if(q)q.onclick=openQuickMenu;const f=$('#quickNoteFab');if(f)f.onclick=openQuickMenu;}
- $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;const legBtn=$('#addLegionellaSummerTasks');if(legBtn)legBtn.onclick=addLegionellaTasksToSummerVacations;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
+ const naa=$('#newAgentActivity');if(naa)naa.onclick=()=>openAgentActivity();
+ const paa=$('#printAgentActivity');if(paa)paa.onclick=printAgentActivityRegister;
+ for(const id of ['activityPeriodMode','activityReferenceDate','activityAgentFilter','activityTypeFilter']){const e=$(`#${id}`);if(e)e.onchange=renderAgentActivities}
+ $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
  $('#prevTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,-7);renderTeamCalendar()};$('#nextTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,7);renderTeamCalendar()};$('#prevTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,-1));renderTeamCalendar()};$('#nextTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,1));renderTeamCalendar()};$('#todayTeamWeek').onclick=()=>{teamWeek=startOfWeek(todayISO());renderTeamCalendar()};$('#teamDateJump').onchange=e=>{teamWeek=startOfWeek(e.target.value);renderTeamCalendar()};$('#prevPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,-7);renderPersonalCalendar()};$('#nextPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,7);renderPersonalCalendar()};$('#todayPersonalWeek').onclick=()=>{personalWeek=startOfWeek(todayISO());renderPersonalCalendar()};
  $('#saveSettings').onclick=saveSettings;const wizardOpen=$('#openAutoReportWizard');if(wizardOpen)wizardOpen.onclick=openAutoReportWizard;const wizardClose=$('#autoReportWizardClose');if(wizardClose)wizardClose.onclick=()=>wizardEl().close();const wizardBack=$('#autoReportWizardBack');if(wizardBack)wizardBack.onclick=()=>{saveWizardStep();autoReportWizardStep=Math.max(0,autoReportWizardStep-1);renderAutoReportWizard()};const wizardNext=$('#autoReportWizardNext');if(wizardNext)wizardNext.onclick=()=>{saveWizardStep();if(autoReportWizardStep===3){wizardEl().close();return}autoReportWizardStep=Math.min(3,autoReportWizardStep+1);renderAutoReportWizard()};document.addEventListener('click',e=>{const p=e.target.closest('[data-wizard-provider]');if(p){autoReportWizardData.provider=p.dataset.wizardProvider;renderAutoReportWizard()}});const sart=$('#sendAutomaticReportTest');if(sart)sart.onclick=sendAutomaticReportTest;function openNotificationCenter(){window.PSTNotificationCenter?.open?.()}
 function closeNotificationCenter(){window.PSTNotificationCenter?.close?.()}
@@ -6077,7 +6206,7 @@ const dsn=$('#dashboardSyncNow');if(dsn)dsn.onclick=dashboardSyncNow;
  else if(source==='roomprep'){setView('room-prep');setTimeout(()=>window.PSTRoomPrep?.edit?.(id),60)}
  else if(source==='waste')setView('waste');
  return
-}const perm=e.target.closest('[data-permanence-agent]');if(perm){openAgentPermanence(perm.dataset.permanenceAgent);return}const pvc=e.target.closest('[data-print-vacation]');if(pvc){e.preventDefault();printVacationChecklist(pvc.dataset.printVacation);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date,null,ad.dataset.dayType||'');return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
+}const perm=e.target.closest('[data-permanence-agent]');if(perm){openAgentPermanence(perm.dataset.permanenceAgent);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date,null,ad.dataset.dayType||'');return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})
 }
 
 
@@ -6389,7 +6518,7 @@ window.addEventListener('pst:data-loaded',()=>{
 });
 
 
-// ===== V147.147 — Analyse IA sécurisée photo/PDF =====
+// ===== V147.146 — Analyse IA sécurisée photo/PDF =====
 // Aucune clé OpenAI n'est stockée dans le navigateur.
 // L'application appelle une Edge Function Supabase authentifiée.
 async function fileToBase64Payload(file){

@@ -724,17 +724,48 @@
 }
 </style>
 
-<style id="v147146-legionella-vacations">
-.legionella-vacation-panel{border-left:5px solid #0ea5e9;margin:14px 0}
-.legionella-regulatory{padding:12px 14px;border-radius:12px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;margin-bottom:12px}
-.legionella-regulatory p{margin:5px 0}
-.legionella-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.legionella-steps section{padding:13px;border:1px solid #dbeafe;border-radius:12px;background:#f8fbff}
-.legionella-steps h4{margin:0 0 8px;color:#075ca8}
-.legionella-steps ul{margin:7px 0 0 18px;padding:0}
-.legionella-steps li{margin:5px 0;line-height:1.35}
-@media(max-width:900px){.legionella-steps{grid-template-columns:1fr}}
-@media print{#addLegionellaSummerTasks{display:none!important}.legionella-vacation-panel{break-inside:avoid}}
+<style id="v147145-agent-activity">
+.activity-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;margin:0 0 14px}
+.activity-summary-grid article{padding:13px 15px;border:1px solid #dbe5ef;border-radius:14px;background:#fff;display:grid;gap:4px}
+.activity-summary-grid span{font-size:.76rem;color:#64748b;font-weight:700}
+.activity-summary-grid strong{font-size:1.35rem;color:#123b69}
+.activity-filters label{display:grid;gap:4px;font-size:.76rem;font-weight:700;color:#475569}
+.activity-period-label{margin:-3px 0 10px;font-size:.82rem;font-weight:800;color:#36536f}
+.activity-link-badge{display:inline-flex;margin-top:4px;padding:3px 7px;border-radius:999px;background:#eef6ff;color:#175a9b;font-size:.72rem;font-weight:800}
+.activity-spontaneous{background:#f0fdf4;color:#166534}
+.activity-modal-link{grid-column:1/-1;padding:10px;border:1px solid #bfdbfe;border-radius:11px;background:#eff6ff}
+.activity-modal-link label{margin-bottom:7px}
+.activity-modal-link .linked-close-line{display:flex;align-items:center;gap:8px;margin-top:8px}
+.activity-modal-link .linked-close-line input{width:auto}
+@media(max-width:900px){
+  .activity-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:520px){
+  .activity-summary-grid{grid-template-columns:1fr 1fr}
+  .activity-filters{display:grid!important;grid-template-columns:1fr}
+}
+</style>
+
+<style id="v147146-meter-readings">
+.meter-readings-agenda{display:grid;gap:8px}
+.meter-reading-row{
+  display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:10px 12px;border:1px solid #dbe5ef;border-radius:11px;background:#fff
+}
+.meter-reading-row.current{border-color:#60a5fa;background:#eff6ff}
+.meter-reading-row.past{opacity:.62}
+.meter-reading-row strong{color:#173e69}
+.meter-reading-row small{color:#64748b}
+.meter-reading-chip{
+  display:inline-flex;padding:4px 8px;border-radius:999px;background:#e0f2fe;color:#075985;
+  font-size:.72rem;font-weight:800;white-space:nowrap
+}
+.mini-event.meter-reading{border-left:4px solid #0284c7}
+.today-agenda-row.meter-reading{border-left:4px solid #0284c7}
+@media(max-width:600px){
+ .meter-reading-row{grid-template-columns:1fr auto}
+ .meter-reading-row>small{grid-column:1/-1}
+}
 </style>
 </head>
 <body data-layout="auto">
@@ -770,6 +801,7 @@
       <button class="nav-btn" data-view="cleaning"><span>✓</span>Contrôle ménage</button>
       <button class="nav-btn" data-view="room-prep"><span>☕</span>Préparation salle & café</button>
       <button class="nav-btn" data-view="maintenance"><span>⚙</span>Maintenance</button>
+      <button class="nav-btn" data-view="agent-activity"><span>✓</span>Activité des agents</button>
       <button class="nav-btn" data-view="requests"><span>↗</span>Demandes direction</button>
       <button class="nav-btn" data-view="works"><span>▦</span>Chantiers & GPA</button>
       <button class="nav-btn" data-view="meetings"><span>◫</span>Réunions & rendez-vous</button>
@@ -784,7 +816,7 @@
       <button class="nav-btn" data-view="help"><span>?</span>FAQ / Aide</button>
       <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.147 — 26/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.146 — 27/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -817,6 +849,7 @@
         <button data-quick="agent-day">👤 Jour agent</button>
         <button data-quick="note">✎ Note</button>
         <button data-quick="maintenance">⚙ Intervention</button>
+        <button data-quick="agent-activity">＋ Activité agent</button>
         <button data-quick="cleaning">✓ Contrôle ménage</button>
         <button data-quick="meeting">◫ Rendez-vous</button>
         <button data-quick="request">↗ Demande</button>
@@ -892,6 +925,17 @@
       <div id="personalCards" class="mobile-cards"></div>
       <div class="table-wrap desktop-table"><table><thead><tr><th>Date</th><th>Horaire</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="personalTable"></tbody></table></div>
     
+
+      <article class="panel meter-reading-panel">
+        <div class="panel-head">
+          <div>
+            <h3>Compteurs à relever</h3>
+            <p class="muted">Relevé automatique prévu le dernier jour ouvré de chaque mois.</p>
+          </div>
+        </div>
+        <div id="meterReadingsAgenda" class="meter-readings-agenda"></div>
+      </article>
+
       <article class="panel">
         <div class="panel-head">
           <div><h3>Préparations de salle & café</h3><p class="muted">Préparations synchronisées avec votre agenda personnel.</p></div>
@@ -944,59 +988,6 @@
     <section class="view" id="vacations">
       <div class="section-actions"><div><h3>Vacances scolaires & fermetures</h3><p>Préparation des alarmes, du chauffage, des réseaux, des accès et de la remise en service.</p></div><div><button class="ghost" id="loadSchoolHolidays">Charger le calendrier officiel</button><button class="primary" id="newVacation">＋ Période</button></div></div>
       <div class="filters"><select id="vacationZone"><option value="A">Zone A</option><option value="B">Zone B</option><option value="C">Zone C</option></select><select id="vacationYear"></select><select id="vacationStatus"><option value="">Tous les états</option><option>À préparer</option><option>En cours</option><option>Prête</option><option>Clôturée</option></select><button class="ghost" data-print="vacations">Imprimer</button></div>
-
-      <article class="panel legionella-vacation-panel">
-        <div class="panel-head">
-          <div>
-            <span class="calendar-kicker">PRÉVENTION SANITAIRE</span>
-            <h3>💧 Prévention du risque légionelle — fermeture estivale</h3>
-            <p class="muted">Consignes Région Auvergne-Rhône-Alpes · courrier reçu le 25 août 2026.</p>
-          </div>
-          <button type="button" class="primary" id="addLegionellaSummerTasks">Ajouter à la checklist été</button>
-        </div>
-
-        <div class="legionella-regulatory">
-          <strong>⚠ Après plusieurs semaines d’inutilisation</strong>
-          <p>Des analyses de légionelle doivent être réalisées sur les installations d’eau chaude sanitaire comportant des points d’usage à risque.</p>
-          <p><b>Points concernés :</b> douches, douchettes et tout point de puisage susceptible de générer de la vapeur d’eau.</p>
-        </div>
-
-        <div class="legionella-steps">
-          <section>
-            <h4>1. Avant la fermeture estivale</h4>
-            <p><b>Idéalement début juillet, dès la mise en non-utilisation des points.</b></p>
-            <ul>
-              <li>Entretien, détartrage et désinfection des mousseurs de robinets.</li>
-              <li>Entretien, détartrage et désinfection des pommeaux de douche et douchettes.</li>
-              <li>Déposer les pommeaux de douche et les douchettes.</li>
-              <li>Désinfecter les équipements déposés.</li>
-              <li>Les laisser sécher complètement à l’air libre.</li>
-              <li>Ne pas les réinstaller pendant toute la période d’inoccupation estivale.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h4>2. Pendant l’inoccupation</h4>
-            <ul>
-              <li>Conserver les pommeaux et douchettes démontés et parfaitement secs.</li>
-              <li>Coordonner les interventions prévues avec l’exploitant chauffage / ECS.</li>
-              <li>Prévoir les opérations de soutirage des réseaux avant remise en service.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h4>3. Retour du personnel / avant la rentrée</h4>
-            <ul>
-              <li>Après les interventions des exploitants et les soutirages des réseaux, remettre en place pommeaux et douchettes.</li>
-              <li>Effectuer un nouveau soutirage sur <b>tous les points ECS</b> et sur les <b>points d’eau froide associés</b>.</li>
-              <li>Pour l’ECS : faire couler au moins <b>3 minutes après obtention de la température d’eau chaude</b>.</li>
-              <li>Vérifier le bon fonctionnement des équipements avant remise en service.</li>
-              <li>Réaliser les analyses légionelle requises après plusieurs semaines d’inutilisation sur les installations comportant des points à risque.</li>
-            </ul>
-          </section>
-        </div>
-      </article>
-
       <div id="vacationCards" class="vacation-grid"></div>
     </section>
 
@@ -1155,6 +1146,46 @@
       <div class="section-actions"><div><h3>Interventions de maintenance</h3><p>Demandes, diagnostic, affectation, suivi et clôture.</p></div><button class="primary" id="newMaintenance">＋ Intervention</button></div>
       <div class="filters"><select id="maintenanceStatus"><option value="">Tous les statuts</option></select><select id="maintenancePriority"><option value="">Toutes les priorités</option></select><select id="maintenanceFamily"><option value="">Tous les domaines</option></select><button class="ghost" data-print="maintenance">Imprimer</button></div>
       <div class="table-wrap"><table><thead><tr><th>N°</th><th>Date</th><th>Lieu</th><th>Domaine</th><th>Problème</th><th>Priorité</th><th>Affecté à</th><th>Échéance</th><th>Statut</th><th></th></tr></thead><tbody id="maintenanceTable"></tbody></table></div>
+    </section>
+
+
+    <section class="view" id="agent-activity">
+      <div class="section-actions">
+        <div>
+          <h3>Journal d’activité des agents</h3>
+          <p>Traçabilité du travail réellement effectué : tâches prévues ou imprévues, interventions, demandes et actions du quotidien.</p>
+        </div>
+        <button class="primary" id="newAgentActivity">＋ Ajout activité agent</button>
+      </div>
+
+      <div class="activity-summary-grid">
+        <article><span>Activités</span><strong id="activityCount">0</strong></article>
+        <article><span>Temps tracé</span><strong id="activityHours">0 h</strong></article>
+        <article><span>Liées à une demande</span><strong id="activityLinked">0</strong></article>
+        <article><span>Imprévues / spontanées</span><strong id="activitySpontaneous">0</strong></article>
+      </div>
+
+      <div class="filters activity-filters">
+        <label>Période
+          <select id="activityPeriodMode">
+            <option value="day">Journée</option>
+            <option value="week">Semaine</option>
+            <option value="month">Mois</option>
+          </select>
+        </label>
+        <label>Date de référence<input type="date" id="activityReferenceDate"></label>
+        <label>Agent<select id="activityAgentFilter"><option value="">Tous les agents</option></select></label>
+        <label>Type<select id="activityTypeFilter"><option value="">Tous les types</option></select></label>
+        <button class="ghost" id="printAgentActivity">Imprimer / PDF</button>
+      </div>
+      <div id="activityPeriodLabel" class="activity-period-label"></div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Heure</th><th>Agent</th><th>Type</th><th>Travail réalisé</th><th>Lieu</th><th>Origine / lien</th><th>Durée</th><th></th></tr></thead>
+          <tbody id="agentActivityTable"></tbody>
+        </table>
+      </div>
     </section>
 
     <section class="view" id="requests">
@@ -1358,7 +1389,7 @@
           <select id="pstHelpCategory" aria-label="Catégorie d’aide">
             <option value="">Toutes les catégories</option>
             <option>Horaires</option><option>Agents</option><option>Absences</option><option>Chronotime</option>
-            <option>Contrôle ménage</option><option>Maintenance</option><option>Vacances</option><option>Contrôles périodiques</option>
+            <option>Contrôle ménage</option><option>Maintenance</option><option>Contrôles périodiques</option>
             <option>Import / export</option><option>Connexions</option><option>Archivage</option><option>Navigation</option>
           </select>
           <button type="button" class="primary" id="pstHelpSearchBtn">Rechercher</button>

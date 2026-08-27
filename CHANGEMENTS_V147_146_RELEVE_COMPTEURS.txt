@@ -1,0 +1,17 @@
+V147.146 — RELEVÉ MENSUEL DES COMPTEURS
+
+Base stricte : V147.145.
+
+- Aucun rappel externe : la fonction est intégrée uniquement dans Pilotage Service Technique.
+- Nouvelle section « Compteurs à relever » dans Agenda personnel.
+- Tâche récurrente : « Relevé des compteurs ».
+- Date automatique : dernier jour ouvré de chaque mois.
+- Les samedis, dimanches et jours fériés français connus par l'application sont évités.
+- La tâche apparaît :
+  * dans le tableau et les cartes de l'Agenda personnel du mois ;
+  * dans le calendrier hebdomadaire de l'Agenda personnel ;
+  * dans l'agenda du jour / tableau de bord quand l'échéance tombe ce jour-là ;
+  * dans la section dédiée « Compteurs à relever » pour l'année scolaire active.
+- Aucun texte supplémentaire sur photos ou e-mail : intitulé volontairement simple « Relevé des compteurs ».
+
+Aucune règle métier existante n'a été modifiée.
