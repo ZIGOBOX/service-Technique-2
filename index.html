@@ -819,6 +819,21 @@
 @media (min-width:1280px){#dashboard.daily-dashboard-v149{gap:12px}#dashboard .panel{border-radius:16px}#dashboard .panel-head{margin-bottom:7px}#dashboard .panel-head h3{font-size:.96rem}#dashboard .daily-reminders-panel-v149,#dashboard .daily-week-panel-v149,#dashboard .daily-watch-panel-v149{padding:12px 14px!important}#dashboard .daily-reminders-panel-v149 .panel-head,#dashboard .daily-week-panel-v149 .panel-head,#dashboard .daily-watch-panel-v149 .panel-head{margin-bottom:7px}}
 @media (max-width:1100px){#dashboard.daily-dashboard-v149{display:block}#dashboard.daily-dashboard-v149>*{margin-bottom:12px!important}#dashboard .daily-hero-v149{align-items:flex-start;flex-direction:column}#dashboard .daily-quick-v149{justify-content:flex-start}#dashboard .today-kpis-v149{grid-template-columns:repeat(2,1fr)}#dashboard .daily-team-panel-v149,#dashboard .daily-agenda-panel-v149,#dashboard .daily-priority-panel-v149{height:auto!important;max-height:none}#dashboard .dashboard-team-today-v149,#dashboard .daily-priority-list-v149,#dashboard .daily-agenda-panel-v149 .dashboard-today-agenda{max-height:360px}#dashboard .dashboard-reminders-v149{grid-template-columns:repeat(2,1fr)}#dashboard .dashboard-week-strip-v149{grid-template-columns:1fr;gap:7px}#dashboard .dashboard-watch-grid-v149{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:600px){#dashboard .daily-hero-v149{padding:13px}.daily-hero-logo-v149{width:52px!important;height:52px!important}#dashboard .today-kpis-v149{grid-template-columns:1fr 1fr;gap:8px}#dashboard .today-kpi-v149{padding:9px;gap:8px}#dashboard .today-kpi-icon-v149{width:36px;height:36px;font-size:1rem}#dashboard .today-kpi-v149 strong{font-size:1.35rem}#dashboard .dashboard-reminders-v149,#dashboard .dashboard-watch-grid-v149{grid-template-columns:1fr}#dashboard .daily-quick-more-v149{display:none}}
+
+/* V147.150 — Vue directe des horaires agents de la semaine en cours. */
+#dashboard .dashboard-team-actions-v150{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#dashboard .dashboard-team-actions-v150 button[data-agent-week-open]{background:#eaf4ff;border-color:#b9d9f6;color:#075eaa;font-weight:850}
+.agent-week-toolbar-v150{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid #dbe7f2;border-radius:12px;background:#f8fbff}
+.agent-week-toolbar-v150 strong{color:#0b4f88}.agent-week-toolbar-actions-v150{display:flex;gap:6px;flex-wrap:wrap}
+.agent-week-table-wrap-v150{overflow:auto;border:1px solid #d9e5f0;border-radius:13px;background:#fff}
+.agent-week-table-v150{width:100%;min-width:780px;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.agent-week-table-v150 th,.agent-week-table-v150 td{padding:9px 8px;border-right:1px solid #e3ebf3;border-bottom:1px solid #e3ebf3;text-align:center;vertical-align:middle}
+.agent-week-table-v150 th{position:sticky;top:0;z-index:1;background:#eaf4ff;color:#164b78;font-size:.75rem}.agent-week-table-v150 th:first-child{width:160px;text-align:left}.agent-week-table-v150 th:last-child{width:74px}
+.agent-week-table-v150 tr:last-child td{border-bottom:0}.agent-week-table-v150 th:last-child,.agent-week-table-v150 td:last-child{border-right:0}
+.agent-week-table-v150 td:first-child{text-align:left;background:#fbfdff}.agent-week-agent-v150{display:flex;align-items:center;gap:8px}.agent-week-avatar-v150{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#eaf4ff;color:#075eaa;font-weight:900;flex:0 0 auto}.agent-week-agent-v150 strong{font-size:.79rem;color:#17365d}
+.agent-week-cell-v150{width:100%;min-height:42px;border:0;border-radius:9px;background:#f7fbff;color:#17365d;padding:6px 5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.74rem;font-weight:800}.agent-week-cell-v150:hover{background:#e8f4ff}.agent-week-cell-v150 small{font-size:.61rem;color:#73859a;font-weight:700}.agent-week-cell-v150.absent{background:#fff1ea;color:#ad551b}.agent-week-cell-v150.rest{background:#f1f3f6;color:#6d7885}.agent-week-cell-v150.today{outline:2px solid #3192eb;outline-offset:-2px}.agent-week-total-v150{font-weight:900;color:#075eaa;white-space:nowrap}.agent-week-legend-v150{margin:9px 2px 0;color:#6d7f92;font-size:.7rem}
+@media(max-width:700px){#dashboard .dashboard-team-actions-v150{justify-content:flex-start}.agent-week-table-v150{min-width:720px}}
+
 </style>
 
 </head>
@@ -948,7 +963,7 @@
       </div>
 
       <article class="panel daily-team-panel-v149">
-        <div class="panel-head"><div><span class="calendar-kicker">ÉQUIPE</span><h3>Équipe aujourd’hui</h3></div><button class="ghost small" data-go="agents">Voir tout</button></div>
+        <div class="panel-head"><div><span class="calendar-kicker">ÉQUIPE</span><h3>Équipe aujourd’hui</h3></div><div class="dashboard-team-actions-v150"><button class="ghost small" type="button" data-agent-week-open="1">Horaires semaine</button><button class="ghost small" data-go="agents">Voir tout</button></div></div>
         <div id="dashboardTeamToday" class="dashboard-team-today-v149"></div>
       </article>
 
