@@ -185,7 +185,7 @@ function addMonthsSafe(date,months){
 function nextServiceDate(rec){return rec.nextServiceDateOverride||addMonthsSafe(rec.lastServiceDate,monthsFromPeriodicity(rec.periodicity))}
 
 
-// V147.163 — le fichier Excel est aussi une source directe des contrôles périodiques.
+// V147.164 — le fichier Excel est aussi une source directe des contrôles périodiques.
 // Toutes les lignes reconnues sont reliées automatiquement au contrôle correspondant.
 // Les dates contenues dans un texte (ex. « contrôle fait le 23/04/2026 » ou plusieurs dates EPS) sont également reprises.
 function excelPeriodicNorm(v){return norm(v||'')}
@@ -231,7 +231,7 @@ function autoLinkContractsToPeriodicFromExcel(){
   return linked;
 }
 
-// V147.163 — synchronisation sûre Excel → Contrôles périodiques.
+// V147.164 — synchronisation sûre Excel → Contrôles périodiques.
 // La date « Dernière prestation » du contrat devient le « Dernier contrôle » du contrôle lié.
 // La prochaine échéance suit la périodicité DU CONTRÔLE ; une échéance manuelle différente est protégée.
 function contractLinkedToPeriodic(rec,pid){return (rec?.linkedPeriodicIds||[]).map(String).includes(String(pid))}
