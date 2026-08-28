@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.160';
+const APP_VERSION='147.161';
 const APP_BUILD='28/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -205,7 +205,7 @@ const PERIODIC_CATALOG=[
 ];
 function makePeriodic(){return PERIODIC_CATALOG.map((x,i)=>({id:uid(),no:`CP-${String(i+1).padStart(3,'0')}`,name:x[0],family:x[1],intervalMonths:x[2],requirement:x[3],provider:x[4],register:x[5],building:'Tous bâtiments',lastDate:'',nextDate:'',time:'',floor:'',sector:'',room:'',status:'À planifier',notes:'',attachments:[]}))}
 
-const CONTRACT_CONTROLS_V14723=[["gaz", "Contrôle des installations de gaz", "Gaz / cuisine", 12, "annuelle", "2025-02-25", "", "Tous bâtiments", "Contrôle périodique des installations de gaz.", ""], ["electricite", "Contrôle des installations électriques", "Électricité", 12, "annuelle", "2025-06-17", "", "Tous bâtiments", "Contrôle périodique des installations électriques.", ""], ["electricite-algeco", "Contrôle des installations électriques ALGECO", "Électricité", 12, "annuelle", "2025-05-28", "", "Algeco", "Contrôle périodique des installations électriques de l'ALGECO.", ""], ["ssi-desenfumage", "Contrôle du SSI + désenfumage", "Incendie / SSI", 36, "triennale", "2024-05-02", "", "Tous bâtiments", "Contrôle du SSI et du désenfumage.", ""], ["colonne-seche", "Contrôle colonne sèche incendie", "Incendie / SSI", 12, "annuelle + contrôle approfondi tous les 5 ans", "2024-12-20", "", "Tous bâtiments", "Contrôle annuel de la colonne sèche.", "Contrôle approfondi tous les 5 ans ; le tableau source indiquait : à prévoir en 2025."], ["installations-thermiques", "Contrôle installations thermiques (efficacité énergétique chaudières et émissions polluantes)", "Chauffage / CVC", 36, "triennale", "2024-12-11", "", "Tous bâtiments", "Contrôle efficacité énergétique chaudières et émissions polluantes.", ""], ["ascenseur-rvre", "Vérification de l'ascenseur — contrôle technique + RVRE incendie", "Ascenseurs / levage", 60, "tous les 5 ans", "2026-04-23", "BUREAU VERITAS", "Bâtiment Noëlas", "Contrôle technique ascenseur + RVRE incendie.", "Mise en service à Noëlas : janvier 2022. Contrôle fait le 23/04/2026."], ["ligne-vie-gym-dp", "Contrôle des lignes de vie en toiture — gymnase + demi-pension", "Travail en hauteur", 12, "annuelle", "2026-01-22", "APAVE", "Gymnase", "Contrôle des lignes de vie en toiture gymnase + demi-pension.", ""], ["ligne-vie-noelas", "Contrôle des lignes de vie en toiture — bâtiment Noëlas", "Travail en hauteur", 12, "annuelle", "2026-04-28", "APAVE", "Bâtiment Noëlas", "Contrôle des lignes de vie en toiture bâtiment Noëlas.", ""], ["porte-automatique", "Contrôle porte automatique", "Portes / accès", 6, "semestrielle", "", "RECORD", "Tous bâtiments", "Contrôle périodique de la porte automatique.", "Dernière prestation non renseignée."], ["eps-espaliers", "Contrôle EPS : 2 espaliers + 1 barre de traction", "Équipements sportifs", 24, "biennale", "2025-12-02", "APAVE", "Gymnase", "Contrôle de 2 espaliers + 1 barre de traction.", "Historique : 04/10/2023 ; 01/10/2024 ; 02/12/2025 contrôle fait avec les poids."], ["eps-gymnase", "Contrôle EPS : gymnase (basket + hand)", "Équipements sportifs", 0, "à définir", "", "", "Gymnase", "Contrôle des équipements basket + hand.", "Périodicité et dernière prestation à compléter."], ["filtres-hottes-armoires", "Contrôle des filtres de hottes et armoires chimiques", "Gaz / cuisine", 12, "annuelle", "", "DALKIA marché Région", "Tous bâtiments", "Contrôle des filtres de hottes et armoires chimiques.", "Dernière prestation non renseignée."]];
+const CONTRACT_CONTROLS_V14723=[["gaz", "Contrôle des installations de gaz", "Gaz / cuisine", 12, "annuelle", "2026-06-13", "APAVE", "Tous bâtiments", "Contrôle périodique des installations de gaz.", ""], ["electricite", "Contrôle des installations électriques", "Électricité", 12, "annuelle", "2026-07-10", "APAVE", "Tous bâtiments", "Contrôle périodique des installations électriques.", ""], ["electricite-algeco", "Contrôle des installations électriques ALGECO", "Électricité", 12, "annuelle", "2025-05-28", "", "Algeco", "Contrôle périodique des installations électriques de l'ALGECO.", ""], ["ssi-desenfumage", "Contrôle du SSI + désenfumage", "Incendie / SSI", 36, "triennale", "2026-07-20", "", "Tous bâtiments", "Contrôle du SSI et du désenfumage.", ""], ["colonne-seche", "Contrôle colonne sèche incendie", "Incendie / SSI", 12, "annuelle + contrôle approfondi tous les 5 ans", "2024-12-20", "", "Tous bâtiments", "Contrôle annuel de la colonne sèche.", "Contrôle approfondi tous les 5 ans ; le tableau source indiquait : à prévoir en 2025."], ["installations-thermiques", "Contrôle installations thermiques (efficacité énergétique chaudières et émissions polluantes)", "Chauffage / CVC", 36, "triennale", "2024-12-11", "", "Tous bâtiments", "Contrôle efficacité énergétique chaudières et émissions polluantes.", ""], ["ascenseur-rvre", "Vérification de l'ascenseur — contrôle technique + RVRE incendie", "Ascenseurs / levage", 60, "tous les 5 ans", "2026-04-23", "BUREAU VERITAS", "Bâtiment Noëlas", "Contrôle technique ascenseur + RVRE incendie.", "Mise en service à Noëlas : janvier 2022. Contrôle fait le 23/04/2026."], ["ligne-vie-gym-dp", "Contrôle des lignes de vie en toiture — gymnase + demi-pension", "Travail en hauteur", 12, "annuelle", "2026-01-22", "APAVE", "Gymnase", "Contrôle des lignes de vie en toiture gymnase + demi-pension.", ""], ["ligne-vie-noelas", "Contrôle des lignes de vie en toiture — bâtiment Noëlas", "Travail en hauteur", 12, "annuelle", "2026-04-28", "APAVE", "Bâtiment Noëlas", "Contrôle des lignes de vie en toiture bâtiment Noëlas.", ""], ["porte-automatique", "Contrôle porte automatique", "Portes / accès", 6, "semestrielle", "", "RECORD", "Tous bâtiments", "Contrôle périodique de la porte automatique.", "Dernière prestation non renseignée."], ["eps-espaliers", "Contrôle EPS : 2 espaliers + 1 barre de traction", "Équipements sportifs", 24, "biennale", "2025-12-02", "APAVE", "Gymnase", "Contrôle de 2 espaliers + 1 barre de traction.", "Historique : 04/10/2023 ; 01/10/2024 ; 02/12/2025 contrôle fait avec les poids."], ["eps-gymnase", "Contrôle EPS : gymnase (basket + hand)", "Équipements sportifs", 0, "à définir", "", "", "Gymnase", "Contrôle des équipements basket + hand.", "Périodicité et dernière prestation à compléter."], ["filtres-hottes-armoires", "Contrôle des filtres de hottes et armoires chimiques", "Gaz / cuisine", 12, "annuelle", "", "DALKIA marché Région", "Tous bâtiments", "Contrôle des filtres de hottes et armoires chimiques.", "Dernière prestation non renseignée."]];
 function makeContractControls14723(){
  return CONTRACT_CONTROLS_V14723.map((x,i)=>({
    id:uid(),no:`CP-${String(i+1).padStart(3,'0')}`,contractControlKey:x[0],contractSource:'suivi des contrats bis',
@@ -239,6 +239,51 @@ function mergeContractControls14723(d){
    Object.assign(found,src,{id:found.id,no:keepNo,status:keepStatus,attachments:keepAttachments});
  }
  d.settings.contractControlsVersion='147.23';
+}
+
+
+// V147.161 — mise à jour des contrôles périodiques à partir du fichier Excel « suivi des contrats (2).xlsx », onglet Contrats 2026.
+// Règle terrain : la date la plus récente connue gagne. Une échéance réellement saisie à la main reste protégée.
+const PERIODIC_EXCEL_2026_V147161=[
+ {key:'gaz',tokens:['installation','gaz'],lastDate:'2026-06-13',nextDate:'2027-06-13',oldLast:'2025-02-25',provider:'APAVE'},
+ {key:'electricite',tokens:['installation','electri'],exclude:['algeco'],lastDate:'2026-07-10',nextDate:'2027-07-10',oldLast:'2025-06-17',provider:'APAVE'},
+ {key:'ssi-desenfumage',tokens:['ssi','desenfum'],lastDate:'2026-07-20',nextDate:'2029-07-20',oldLast:'2024-05-02',provider:''}
+];
+function migratePeriodicExcel2026V147161(d){
+ d.settings=d.settings||{};
+ if(String(d.settings.periodicExcel2026Version||'')==='147.161')return;
+ d.periodic=Array.isArray(d.periodic)?d.periodic:[];
+ const norm=s=>normalizeText(s);
+ for(const spec of PERIODIC_EXCEL_2026_V147161){
+  let p=d.periodic.find(x=>String(x.contractControlKey||'')===spec.key);
+  if(!p){
+   p=d.periodic.find(x=>{
+    const n=norm(x?.name||'');
+    return spec.tokens.every(t=>n.includes(t))&&!(spec.exclude||[]).some(t=>n.includes(t));
+   });
+  }
+  if(!p)continue;
+  const curLast=/^\d{4}-\d{2}-\d{2}$/.test(String(p.lastDate||''))?String(p.lastDate):'';
+  const curNext=/^\d{4}-\d{2}-\d{2}$/.test(String(p.nextDate||''))?String(p.nextDate):'';
+  const interval=Number(p.intervalMonths||0);
+  const oldAuto=spec.oldLast&&interval>0?addMonthsClamped(spec.oldLast,interval):'';
+  const syncManaged=String(p.contractSyncNextDate||'');
+  // Mettre à jour si l'application possède encore une date ancienne. Une date de contrôle plus récente que l'Excel est conservée.
+  if(!curLast||curLast<=spec.lastDate)p.lastDate=spec.lastDate;
+  // L'échéance est mise à jour seulement si elle est vide, issue de l'ancien calcul automatique, gérée par la synchro,
+  // ou devenue incohérente (antérieure/égale au dernier contrôle Excel). Une autre date manuelle reste intacte.
+  const nextLooksManaged=!curNext||curNext===oldAuto||(syncManaged&&curNext===syncManaged)||curNext<=spec.lastDate;
+  if(nextLooksManaged)p.nextDate=spec.nextDate;
+  if(spec.provider){
+   const current=String(p.provider||'').trim();
+   const previousManaged=String(p.contractSyncProvider||'').trim();
+   if(!current||current===previousManaged)p.provider=spec.provider;
+  }
+  p.contractSyncLastDate=spec.lastDate;
+  p.contractSyncSource='excel-2026-v147.161';
+  p.updatedAt=new Date().toISOString();
+ }
+ d.settings.periodicExcel2026Version='147.161';
 }
 
 const CANONICAL_FACILITY_SPACES={
@@ -347,6 +392,7 @@ function migrate(raw){
    if(!Array.isArray(d[k]))d[k]=base[k];
  }
  mergeContractControls14723(d);
+ migratePeriodicExcel2026V147161(d);
  ensureCanonicalFacilitySpaces(d);
  d.agentDays=normalizeAgentDaysStable(d.agentDays);
  d.maintenance=normalizeMaintenanceStable(d.maintenance);
