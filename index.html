@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#075ca8">
   <title>Pilotage Service Technique V147.80</title>
   <link rel="icon" href="./assets/logo-service-technique.png">
-  <link rel="stylesheet" href="./styles.css?v=147.83-20260821-audit">
+  <link rel="stylesheet" href="./styles.css?v=147.154-20260828-tactile">
 
 <style id="v14713-fixes">
 /* Barres horizontales locales aux plannings : elles ne repartent plus avec la page. */
@@ -820,7 +820,8 @@
 @media (max-width:1100px){#dashboard.daily-dashboard-v149{display:block}#dashboard.daily-dashboard-v149>*{margin-bottom:12px!important}#dashboard .daily-hero-v149{align-items:flex-start;flex-direction:column}#dashboard .daily-quick-v149{justify-content:flex-start}#dashboard .today-kpis-v149{grid-template-columns:repeat(2,1fr)}#dashboard .daily-team-panel-v149,#dashboard .daily-agenda-panel-v149,#dashboard .daily-priority-panel-v149{height:auto!important;max-height:none}#dashboard .dashboard-team-today-v149,#dashboard .daily-priority-list-v149,#dashboard .daily-agenda-panel-v149 .dashboard-today-agenda{max-height:360px}#dashboard .dashboard-reminders-v149{grid-template-columns:repeat(2,1fr)}#dashboard .dashboard-week-strip-v149{grid-template-columns:1fr;gap:7px}#dashboard .dashboard-watch-grid-v149{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:600px){#dashboard .daily-hero-v149{padding:13px}.daily-hero-logo-v149{width:52px!important;height:52px!important}#dashboard .today-kpis-v149{grid-template-columns:1fr 1fr;gap:8px}#dashboard .today-kpi-v149{padding:9px;gap:8px}#dashboard .today-kpi-icon-v149{width:36px;height:36px;font-size:1rem}#dashboard .today-kpi-v149 strong{font-size:1.35rem}#dashboard .dashboard-reminders-v149,#dashboard .dashboard-watch-grid-v149{grid-template-columns:1fr}#dashboard .daily-quick-more-v149{display:none}}
 
-/* V147.152 — Correctif compatibilité renderBrand + restauration du bouton Dashboard de la V147.148. */
+/* V147.153 — Agenda personnel en affichage calendrier mensuel. */
+/* V147.154 — Contrôle ménage tactile sans formulaire classique. */
 /* V147.151 — Restauration du dicton quotidien présent dans la V147.148. */
 #dashboard .daily-hero-v149 .daily-motivation-v151{
   margin:7px 0 0!important;
@@ -1040,9 +1041,16 @@
 
     <section class="view" id="personal">
       <div class="section-actions"><div><h3>Agenda personnel</h3><p>Rendez-vous, tâches, rappels et déplacements.</p></div><button class="primary" id="newPersonalEvent">＋ Ajouter</button></div>
-      <div class="filters"><input type="month" id="personalMonth"><select id="personalType"><option value="">Tous les types</option></select><select id="personalStatus"><option value="">Tous les statuts</option></select><button class="ghost" data-print="personal">Imprimer</button></div>
-      <div id="personalCards" class="mobile-cards"></div>
-      <div class="table-wrap desktop-table"><table><thead><tr><th>Date</th><th>Horaire</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="personalTable"></tbody></table></div>
+      <div class="filters personal-calendar-filters"><button type="button" class="ghost personal-month-nav" id="personalPrevMonth" aria-label="Mois précédent">‹</button><input type="month" id="personalMonth"><button type="button" class="ghost" id="personalTodayMonth">Aujourd’hui</button><button type="button" class="ghost personal-month-nav" id="personalNextMonth" aria-label="Mois suivant">›</button><select id="personalType"><option value="">Tous les types</option></select><select id="personalStatus"><option value="">Tous les statuts</option></select><button class="ghost" data-print="personal">Imprimer</button></div>
+      <article class="panel personal-month-panel">
+        <div class="panel-head personal-month-heading"><div><span class="calendar-kicker personal">CALENDRIER</span><h3 id="personalMonthTitle">Mois</h3><p class="muted" id="personalMonthSummary"></p></div><div class="personal-calendar-legend"><span><i class="personal-legend-dot appointment"></i>Rendez-vous</span><span><i class="personal-legend-dot task"></i>Tâche</span><span><i class="personal-legend-dot reminder"></i>Rappel</span><span><i class="personal-legend-dot outlook"></i>Outlook</span></div></div>
+        <div class="personal-month-scroll">
+          <div class="personal-month-weekdays" aria-hidden="true"><span>Lundi</span><span>Mardi</span><span>Mercredi</span><span>Jeudi</span><span>Vendredi</span><span>Samedi</span><span>Dimanche</span></div>
+          <div id="personalMonthCalendar" class="personal-month-calendar"></div>
+        </div>
+      </article>
+      <div id="personalCards" class="mobile-cards hidden"></div>
+      <div class="table-wrap desktop-table hidden"><table><thead><tr><th>Date</th><th>Horaire</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="personalTable"></tbody></table></div>
     
 
       <article class="panel meter-reading-panel">
@@ -1137,11 +1145,11 @@
         <div class="rc-picker-head"><strong>Locaux concernés</strong><div><button type="button" class="ghost small" id="rcAll">Tout sélectionner</button><button type="button" class="ghost small" id="rcNone">Tout décocher</button></div></div>
         <div id="rcRooms" class="rc-rooms"></div>
         <div id="rcSelectedHistory" class="rc-selected-history"></div>
-        <div class="rc-history-prompt"><strong>Besoin de faire un nouveau contrôle ?</strong> Utilisez le bouton « Nouveau contrôle » ci-dessus : il ouvre directement le formulaire de saisie existant.</div>
+        <div class="rc-history-prompt"><strong>Besoin de faire un nouveau contrôle ?</strong> Utilisez le bouton « Nouveau contrôle » ci-dessus : il ouvre le tableau tactile Bâtiment → Salle → Critère → Note.</div>
         <div id="rcForm" class="rc-form hidden"></div>
       </article>
 
-      <div class="section-actions"><div><h3>➕ Nouveau contrôle ménage & suivi général</h3><p>Le formulaire sert à enregistrer un nouveau contrôle. Les tableaux ci-dessous permettent ensuite le suivi global.</p></div><button class="primary" id="newCleaning">＋ Nouveau contrôle</button></div>
+      <div class="section-actions"><div><h3>➕ Contrôle ménage tactile & suivi général</h3><p>Le tableau tactile permet de contrôler les locaux par grosses touches, sans formulaire classique. Les tableaux ci-dessous permettent ensuite le suivi global.</p></div><button class="primary" id="newCleaning">＋ Nouveau contrôle</button></div>
       <div class="filters"><input type="month" id="cleanMonth"><select id="cleanBuilding"><option value="">Tous les bâtiments</option></select><select id="cleanRoomType"><option value="">Tous les types de zone</option></select><select id="cleanStatus"><option value="">Tous les résultats</option></select><button class="ghost" data-print="cleaning">Imprimer</button></div>
       <div id="cleaningSummary" class="summary-grid"></div>
       <article class="panel guide-panel"><div class="panel-head"><div><h3>Référentiel des fréquences d’entretien</h3><p>Issu du Guide de l’entretien dans les lycées de la Région Auvergne-Rhône-Alpes.</p></div><div class="panel-actions"><select id="cleaningGuideType"></select><button class="ghost" data-guide-path="guides/Guide_Entretien_Lycees_2023.pdf">Ouvrir le guide PDF</button></div></div><div id="cleaningGuideTable" class="table-wrap compact"></div></article>
@@ -1640,7 +1648,7 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
-  <script src="./app.js?v=147.83-20260821-audit"></script>
+  <script src="./app.js?v=147.154-20260828-tactile"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./schedule-import.js?v=147.83-20260821-audit"></script>
@@ -1648,7 +1656,7 @@
 
   <script src="./weather-waste.js?v=147.83-20260821-audit"></script>
 
-  <script src="./room-cleaning.js?v=147.83-20260821-audit"></script>
+  <script src="./room-cleaning.js?v=147.154-20260828-tactile"></script>
   <script src="./room-prep.js?v=147.83-20260821-audit"></script>
 
   <!-- V147 correctif : ne plus afficher le bandeau permanent de synchronisation calendrier. -->

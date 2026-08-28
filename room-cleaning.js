@@ -790,9 +790,182 @@ function pendingMainControlContext(){
   roomScopeRooms:rs.map(r=>({id:r.id,number:r.number||'',name:r.name||'',type:r.type||''}))
  };
 }
+
+/* V147.154 — Contrôle ménage tactile : Bâtiment → Salle → Critère → Note, sans formulaire classique. */
+let tactileState=null;
+const TACTILE_RATINGS=[
+ {value:5,label:'Très propre',icon:'★★★★★'},
+ {value:4,label:'Bien',icon:'★★★★☆'},
+ {value:3,label:'Correct',icon:'★★★☆☆'},
+ {value:2,label:'Insuffisant',icon:'★★☆☆☆'},
+ {value:1,label:'Mauvais',icon:'★☆☆☆☆'},
+ {value:0,label:'Non fait',icon:'○'},
+ {value:'na',label:'Non applicable',icon:'—'}
+];
+function tactileRoomLabel(r){return [r?.number,r?.name].filter(Boolean).join(' — ')||r?.name||r?.number||r?.type||'Local'}
+function tactileKey(v){return normalizeTextSimple(v)}
+function tactileCriteriaForRoom(r){
+ const k=tactileKey(`${r?.type||''} ${r?.name||''} ${r?.number||''}`);
+ if(/sanitaire|vestiaire|wc|douche/.test(k))return ['Sols','WC / urinoirs','Lavabos / robinetterie','Miroirs','Poubelles','Savon / papier','Poignées / interrupteurs','Odeur / état général'];
+ if(/gymnase|sport|musculation/.test(k))return ['Sol','Poussière','Matériel / équipements','Poubelles','Portes / poignées','Gradins / abords','État général'];
+ if(/circulation|hall|escalier/.test(k))return ['Sol','Rampes / poignées','Poussière','Vitres / traces','Poubelles','Tapis / abords','État général'];
+ if(/cuisine|laverie|self|restaurant|eau chaude/.test(k))return ['Sol','Plans / surfaces','Tables / assises','Points d’eau','Poubelles','Matériel','Portes / poignées','État général'];
+ if(/bureau|professeur|personnel|administration|vie scolaire/.test(k))return ['Sol','Mobilier','Poussière','Matériel informatique','Poubelles','Vitres / traces','État général'];
+ if(/atelier|chaufferie|technique|rangement|lingerie|menage/.test(k))return ['Sol','Poussière','Rangement','Matériel','Poubelles','Poignées / interrupteurs','État général'];
+ if(/chambre|internat|foyer/.test(k))return ['Sol','Mobilier','Poussière','Poubelles','Sanitaires si présents','Poignées / interrupteurs','État général'];
+ return ['Sol','Poussière','Mobilier / surfaces','Poubelles','Vitres / traces','Poignées / interrupteurs','État général'];
+}
+function tactileMainRoomType(r){
+ const k=tactileKey(`${r?.type||''} ${r?.name||''}`);
+ if(/sanitaire|vestiaire|wc|douche/.test(k))return 'Sanitaires / vestiaires';
+ if(/circulation|hall|escalier/.test(k))return 'Circulations / halls / escaliers';
+ if(/gymnase|sport|musculation/.test(k))return 'Salle de sport / gymnase';
+ if(/bureau|administration/.test(k))return 'Bureaux / administration';
+ if(/chambre|internat/.test(k))return 'Dortoirs internat';
+ if(/cdi/.test(k))return 'CDI';
+ if(/technique|chaufferie|rangement|atelier/.test(k))return 'Locaux techniques';
+ if(/salle|classe|informatique/.test(k))return 'Salle de classe / devoirs / informatique';
+ return 'Autre';
+}
+function tactileRoomState(r){
+ if(!tactileState.rooms[r.id]){
+  tactileState.rooms[r.id]={room:r,note:'',criteria:tactileCriteriaForRoom(r).map(name=>({name,value:null,na:false}))};
+ }
+ return tactileState.rooms[r.id];
+}
+function tactileStatusFromValue(v){if(v>=4)return 'Conforme';if(v>=2)return 'À reprendre';return 'Non conforme'}
+function tactileRoomStats(st){
+ const answered=st.criteria.filter(c=>c.na||Number.isFinite(c.value));
+ const rated=st.criteria.filter(c=>Number.isFinite(c.value));
+ const score=rated.length?Math.round(rated.reduce((a,c)=>a+c.value,0)/(rated.length*5)*100):0;
+ let status='Non contrôlé';
+ if(rated.some(c=>c.value<=1))status='Non conforme';
+ else if(rated.some(c=>c.value<=3))status='À reprendre';
+ else if(rated.length)status='Conforme';
+ else if(answered.length)status='Non contrôlé';
+ return {answered:answered.length,total:st.criteria.length,rated:rated.length,score,status};
+}
+function tactileRoomClass(st){const x=tactileRoomStats(st);if(!x.answered)return 'pending';if(x.status==='Conforme')return 'ok';if(x.status==='À reprendre')return 'warn';if(x.status==='Non conforme')return 'bad';return 'pending'}
+function tactileCurrentBuilding(){return Number.isInteger(tactileState?.bi)?data[tactileState.bi]:null}
+function tactileCurrentFloor(){return Number.isInteger(tactileState?.fi)?tactileCurrentBuilding()?.floors?.[tactileState.fi]:null}
+function tactileCurrentSector(){return Number.isInteger(tactileState?.si)?tactileCurrentFloor()?.sectors?.[tactileState.si]:null}
+function tactileRoomById(id){return tactileCurrentSector()?.rooms?.find(r=>String(r.id)===String(id))||null}
+function tactileOverlay(){return document.getElementById('rcTactileOverlay')}
+function tactileEnsureOverlay(){
+ let o=tactileOverlay();if(o)return o;
+ o=document.createElement('div');o.id='rcTactileOverlay';o.className='rc-pos-overlay hidden';
+ o.innerHTML='<div class="rc-pos-shell"><header class="rc-pos-head"><div><small>Contrôle ménage tactile</small><h2 id="rcPosTitle">Nouveau contrôle</h2><div id="rcPosBreadcrumb" class="rc-pos-breadcrumb"></div></div><div class="rc-pos-head-actions"><span id="rcPosProgress" class="rc-pos-progress"></span><button type="button" class="rc-pos-close" id="rcPosClose" aria-label="Fermer">×</button></div></header><main id="rcPosBody" class="rc-pos-body"></main><footer id="rcPosFooter" class="rc-pos-footer"></footer></div>';
+ document.body.appendChild(o);
+ o.querySelector('#rcPosClose').onclick=closeTactileControl;
+ return o;
+}
+function tactileBreadcrumb(parts){const b=document.getElementById('rcPosBreadcrumb');if(b)b.textContent=parts.filter(Boolean).join('  ›  ')}
+function tactileSessionProgress(){
+ if(!tactileState)return {done:0,total:0};
+ const vals=Object.values(tactileState.rooms||{});return {done:vals.filter(x=>tactileRoomStats(x).answered>0).length,total:vals.length};
+}
+function tactileSetFooter(html){const f=document.getElementById('rcPosFooter');if(f)f.innerHTML=html||''}
+function tactileSetProgress(){const p=document.getElementById('rcPosProgress'),x=tactileSessionProgress();if(p)p.textContent=x.done?`${x.done} local${x.done>1?'aux':''} renseigné${x.done>1?'s':''}`:'Aucun local renseigné'}
+function openTactileControl(pref={}){
+ const o=tactileEnsureOverlay();
+ tactileState={step:'building',bi:null,fi:null,si:null,roomId:null,criterionIndex:null,rooms:{},saving:false};
+ if(pref&&pref.building){
+  const bi=data.findIndex(b=>sameBuildingName(b.name,pref.building));if(bi>=0)tactileState.bi=bi;
+  const b=tactileCurrentBuilding();
+  if(b&&pref.floor){const fi=(b.floors||[]).findIndex(f=>sameFloorName(f.name,pref.floor,b.name));if(fi>=0)tactileState.fi=fi}
+  const f=tactileCurrentFloor();
+  if(f&&pref.sector){const si=(f.sectors||[]).findIndex(s=>sameSectorName(s.name,pref.sector,b?.name));if(si>=0)tactileState.si=si}
+ }
+ o.classList.remove('hidden');document.body.classList.add('rc-pos-open');
+ if(tactileState.bi!=null){tactileAdvanceFromBuilding()}else renderTactileBuilding();
+}
+function closeTactileControl(){const o=tactileOverlay();if(o)o.classList.add('hidden');document.body.classList.remove('rc-pos-open');tactileState=null}
+function tactileAdvanceFromBuilding(){
+ const b=tactileCurrentBuilding();if(!b)return renderTactileBuilding();
+ if(tactileState.fi==null){if((b.floors||[]).length===1)tactileState.fi=0;else return renderTactileFloors()}
+ const f=tactileCurrentFloor();
+ if(tactileState.si==null){if((f?.sectors||[]).length===1)tactileState.si=0;else return renderTactileSectors()}
+ renderTactileRooms();
+}
+function renderTactileBuilding(){
+ tactileState.step='building';tactileState.bi=tactileState.fi=tactileState.si=null;tactileState.roomId=null;
+ document.getElementById('rcPosTitle').textContent='Choisissez le bâtiment';tactileBreadcrumb(['Bâtiments']);tactileSetProgress();
+ const body=document.getElementById('rcPosBody');body.innerHTML=`<div class="rc-pos-help"><strong>Où faites-vous le contrôle ?</strong><span>Touchez simplement un bâtiment.</span></div><div class="rc-pos-grid rc-pos-buildings">${data.map((b,i)=>{const n=(b.floors||[]).reduce((a,f)=>a+(f.sectors||[]).reduce((c,s)=>c+(s.rooms||[]).length,0),0);return `<button class="rc-pos-tile building" data-bi="${i}"><span class="rc-pos-icon">🏢</span><strong>${esc(b.name)}</strong><small>${n} local${n>1?'aux':''}</small></button>`}).join('')}</div>`;
+ body.querySelectorAll('[data-bi]').forEach(btn=>btn.onclick=()=>{tactileState.bi=+btn.dataset.bi;tactileState.fi=tactileState.si=null;tactileAdvanceFromBuilding()});
+ tactileSetFooter('<span class="rc-pos-footer-hint">Les locaux non touchés ne seront pas comptés dans le contrôle.</span>');
+}
+function renderTactileFloors(){
+ const b=tactileCurrentBuilding();tactileState.step='floor';tactileState.fi=tactileState.si=null;
+ document.getElementById('rcPosTitle').textContent=b?.name||'Choisissez l’étage';tactileBreadcrumb([b?.name,'Étage / niveau']);tactileSetProgress();
+ document.getElementById('rcPosBody').innerHTML=`<div class="rc-pos-help"><strong>Choisissez l’étage ou le niveau</strong></div><div class="rc-pos-grid">${(b?.floors||[]).map((f,i)=>`<button class="rc-pos-tile" data-fi="${i}"><span class="rc-pos-icon">↕</span><strong>${esc(f.name)}</strong><small>${(f.sectors||[]).reduce((a,s)=>a+(s.rooms||[]).length,0)} locaux</small></button>`).join('')}</div>`;
+ document.querySelectorAll('#rcPosBody [data-fi]').forEach(btn=>btn.onclick=()=>{tactileState.fi=+btn.dataset.fi;tactileState.si=null;tactileAdvanceFromBuilding()});
+ tactileSetFooter('<button type="button" class="ghost" data-pos-back>← Bâtiments</button>');document.querySelector('[data-pos-back]').onclick=renderTactileBuilding;
+}
+function renderTactileSectors(){
+ const b=tactileCurrentBuilding(),f=tactileCurrentFloor();tactileState.step='sector';tactileState.si=null;
+ document.getElementById('rcPosTitle').textContent=f?.name||'Choisissez le secteur';tactileBreadcrumb([b?.name,f?.name,'Secteur']);tactileSetProgress();
+ document.getElementById('rcPosBody').innerHTML=`<div class="rc-pos-help"><strong>Choisissez le secteur</strong></div><div class="rc-pos-grid">${(f?.sectors||[]).map((s,i)=>`<button class="rc-pos-tile" data-si="${i}"><span class="rc-pos-icon">▦</span><strong>${esc(s.name)}</strong><small>${(s.rooms||[]).length} locaux</small></button>`).join('')}</div>`;
+ document.querySelectorAll('#rcPosBody [data-si]').forEach(btn=>btn.onclick=()=>{tactileState.si=+btn.dataset.si;renderTactileRooms()});
+ tactileSetFooter('<button type="button" class="ghost" data-pos-back>← Retour</button>');document.querySelector('[data-pos-back]').onclick=()=>{const b=tactileCurrentBuilding();if((b?.floors||[]).length>1)renderTactileFloors();else renderTactileBuilding()};
+}
+function renderTactileRooms(){
+ const b=tactileCurrentBuilding(),f=tactileCurrentFloor(),s=tactileCurrentSector();if(!s)return tactileAdvanceFromBuilding();
+ tactileState.step='rooms';tactileState.roomId=null;document.getElementById('rcPosTitle').textContent='Touchez une salle à contrôler';tactileBreadcrumb([b?.name,f?.name,s?.name]);tactileSetProgress();
+ const tiles=(s.rooms||[]).map(r=>{const st=tactileRoomState(r),x=tactileRoomStats(st),cls=tactileRoomClass(st);return `<button class="rc-pos-tile room ${cls}" data-room="${esc(r.id)}"><span class="rc-pos-room-mark">${x.answered?`${x.score}%`:'○'}</span><strong>${esc(tactileRoomLabel(r))}</strong><small>${x.answered?`${x.answered}/${x.total} critères · ${esc(x.status)}`:esc(r.type||'Local')}</small></button>`}).join('');
+ document.getElementById('rcPosBody').innerHTML=`<div class="rc-pos-help"><strong>Choisissez les locaux au fur et à mesure de votre tournée.</strong><span>Un local laissé gris n’est pas compté.</span></div><div class="rc-pos-grid rc-pos-rooms">${tiles}</div>`;
+ document.querySelectorAll('#rcPosBody [data-room]').forEach(btn=>btn.onclick=()=>{tactileState.roomId=btn.dataset.room;renderTactileCriteria()});
+ const completed=Object.values(tactileState.rooms).filter(x=>tactileRoomStats(x).answered>0).length;
+ tactileSetFooter(`<button type="button" class="ghost" data-pos-back>← Retour</button><div class="rc-pos-footer-main"><strong>${completed} local${completed>1?'aux':''} à enregistrer</strong><button type="button" class="primary" data-pos-save ${completed?'':'disabled'}>✓ Enregistrer le contrôle</button></div>`);
+ document.querySelector('[data-pos-back]').onclick=()=>{const b=tactileCurrentBuilding(),f=tactileCurrentFloor();if((f?.sectors||[]).length>1)renderTactileSectors();else if((b?.floors||[]).length>1)renderTactileFloors();else renderTactileBuilding()};
+ const saveBtn=document.querySelector('[data-pos-save]');if(saveBtn)saveBtn.onclick=saveTactileControl;
+}
+function renderTactileCriteria(){
+ const r=tactileRoomById(tactileState.roomId);if(!r)return renderTactileRooms();const st=tactileRoomState(r),x=tactileRoomStats(st);
+ tactileState.step='criteria';document.getElementById('rcPosTitle').textContent=tactileRoomLabel(r);tactileBreadcrumb([tactileCurrentBuilding()?.name,tactileCurrentFloor()?.name,tactileCurrentSector()?.name,tactileRoomLabel(r)]);tactileSetProgress();
+ const criteria=st.criteria.map((c,i)=>{let text='À contrôler',cls='pending';if(c.na){text='N/A';cls='na'}else if(Number.isFinite(c.value)){text=`${c.value}/5 · ${TACTILE_RATINGS.find(v=>v.value===c.value)?.label||''}`;cls=c.value>=4?'ok':c.value>=2?'warn':'bad'}return `<button class="rc-pos-tile criterion ${cls}" data-ci="${i}"><span class="rc-pos-room-mark">${c.na?'—':Number.isFinite(c.value)?c.value:'○'}</span><strong>${esc(c.name)}</strong><small>${esc(text)}</small></button>`}).join('');
+ document.getElementById('rcPosBody').innerHTML=`<div class="rc-pos-help"><strong>${x.answered}/${x.total} critères renseignés</strong><span>Touchez un critère, puis choisissez directement la note.</span></div><div class="rc-pos-grid rc-pos-criteria">${criteria}</div><div class="rc-pos-room-tools"><button type="button" class="rc-pos-tool" data-all-ok>✓ Tout mettre à 5/5</button><button type="button" class="rc-pos-tool" data-note>💬 ${st.note?'Modifier la remarque':'Ajouter une remarque'}</button><button type="button" class="rc-pos-tool danger-lite" data-clear-room>Effacer ce local</button></div><div id="rcPosNoteBox" class="rc-pos-note-box ${st.note?'open':''}">${st.note?`<textarea id="rcPosNote" rows="3" placeholder="Remarque facultative">${esc(st.note)}</textarea><button type="button" class="primary small" data-save-note>Valider la remarque</button>`:''}</div>`;
+ document.querySelectorAll('#rcPosBody [data-ci]').forEach(btn=>btn.onclick=()=>{tactileState.criterionIndex=+btn.dataset.ci;renderTactileRating()});
+ document.querySelector('[data-all-ok]').onclick=()=>{st.criteria.forEach(c=>{c.value=5;c.na=false});renderTactileCriteria()};
+ document.querySelector('[data-clear-room]').onclick=()=>{st.criteria.forEach(c=>{c.value=null;c.na=false});st.note='';renderTactileCriteria()};
+ document.querySelector('[data-note]').onclick=()=>{const box=document.getElementById('rcPosNoteBox');box.classList.add('open');box.innerHTML=`<textarea id="rcPosNote" rows="3" placeholder="Remarque facultative">${esc(st.note)}</textarea><button type="button" class="primary small" data-save-note>Valider la remarque</button>`;box.querySelector('[data-save-note]').onclick=()=>{st.note=document.getElementById('rcPosNote').value.trim();renderTactileCriteria()};document.getElementById('rcPosNote').focus()};
+ const noteSave=document.querySelector('#rcPosBody [data-save-note]');if(noteSave)noteSave.onclick=()=>{st.note=document.getElementById('rcPosNote').value.trim();renderTactileCriteria()};
+ tactileSetFooter(`<button type="button" class="ghost" data-pos-back>← Les locaux</button><div class="rc-pos-footer-main"><strong>${x.answered?`${x.score}% · ${esc(x.status)}`:'Local non renseigné'}</strong><button type="button" class="primary" data-room-done>✓ Local terminé</button></div>`);
+ document.querySelector('[data-pos-back]').onclick=renderTactileRooms;document.querySelector('[data-room-done]').onclick=renderTactileRooms;
+}
+function renderTactileRating(){
+ const r=tactileRoomById(tactileState.roomId);if(!r)return renderTactileRooms();const st=tactileRoomState(r),c=st.criteria[tactileState.criterionIndex];if(!c)return renderTactileCriteria();
+ tactileState.step='rating';document.getElementById('rcPosTitle').textContent=c.name;tactileBreadcrumb([tactileRoomLabel(r),c.name]);tactileSetProgress();
+ document.getElementById('rcPosBody').innerHTML=`<div class="rc-pos-help score-help"><strong>Quelle note pour « ${esc(c.name)} » ?</strong><span>Un seul toucher suffit.</span></div><div class="rc-pos-score-grid">${TACTILE_RATINGS.map(v=>`<button class="rc-pos-score ${v.value==='na'?'na':`s${v.value}`}" data-rating="${v.value}"><strong>${v.value==='na'?'N/A':`${v.value}/5`}</strong><span>${esc(v.label)}</span><small>${esc(v.icon)}</small></button>`).join('')}<button class="rc-pos-score clear" data-rating="clear"><strong>↺</strong><span>Effacer</span><small>Non renseigné</small></button></div>`;
+ document.querySelectorAll('#rcPosBody [data-rating]').forEach(btn=>btn.onclick=()=>{const v=btn.dataset.rating;if(v==='clear'){c.value=null;c.na=false}else if(v==='na'){c.value=null;c.na=true}else{c.value=Number(v);c.na=false}renderTactileCriteria()});
+ tactileSetFooter('<button type="button" class="ghost" data-pos-back>← Critères</button>');document.querySelector('[data-pos-back]').onclick=renderTactileCriteria;
+}
+async function saveTactileControl(){
+ if(!tactileState||tactileState.saving)return;
+ const entries=Object.values(tactileState.rooms).filter(st=>tactileRoomStats(st).answered>0);if(!entries.length)return;
+ const main=window.PSTMainState?.get?.();if(!main){alert('Impossible d’accéder aux données de l’application.');return}
+ const b=tactileCurrentBuilding(),f=tactileCurrentFloor(),sec=tactileCurrentSector();if(!b||!f||!sec)return;
+ tactileState.saving=true;const btn=document.querySelector('[data-pos-save]');if(btn){btn.disabled=true;btn.textContent='Enregistrement…'}
+ main.cleaning=Array.isArray(main.cleaning)?main.cleaning:[];main.settings=main.settings||{};main.settings.counters=main.settings.counters||{};
+ const now=new Date(),date=now.toISOString().slice(0,10),time=now.toTimeString().slice(0,5),created=[];
+ for(const st of entries){
+  const x=tactileRoomStats(st);main.settings.counters.cleaning=(main.settings.counters.cleaning||0)+1;
+  const no=`MEN-${now.getFullYear()}-${String(main.settings.counters.cleaning).padStart(4,'0')}`;
+  const tasks=st.criteria.map(c=>({name:c.name,frequency:'Contrôle tactile',status:c.na?'Non applicable':Number.isFinite(c.value)?tactileStatusFromValue(c.value):'Non contrôlé',comment:Number.isFinite(c.value)?`${c.value}/5`:''}));
+  const rec={id:uid(),no,date,time,inspector:main.settings.defaultInspector||'',agentId:'',building:b.name,floor:f.name,sector:sec.name,roomType:tactileMainRoomType(st.room),room:tactileRoomLabel(st.room),scopeMode:'single',roomScopeIds:[st.room.id],overallStatus:x.status,score:x.score,comment:st.note||'',tasks,attachments:[],source:'tactile',createdAt:now.toISOString(),updatedAt:now.toISOString()};
+  main.cleaning.push(rec);created.push(rec);
+ }
+ try{
+  window.PSTMainState?.save?.(true);
+  const result=window.PSTMainState?.persistNow?await window.PSTMainState.persistNow():{ok:true,offline:false};
+  closeTactileControl();
+  try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}
+  alert(result?.offline?`Contrôle enregistré sur cet appareil : ${created.length} local(aux). Synchronisation en attente.`:`Contrôle ménage enregistré : ${created.length} local(aux).`);
+ }catch(e){console.error('Contrôle ménage tactile',e);tactileState.saving=false;if(btn){btn.disabled=false;btn.textContent='✓ Enregistrer le contrôle'}alert('Le contrôle n’a pas pu être enregistré. Réessayez.')}
+}
+
 function openNewMainControlFromHistory(){
- try{localStorage.setItem('pst_cleaning_pending_scope_v147_57',JSON.stringify(pendingMainControlContext()))}catch(e){console.warn(e)}
- const b=$('newCleaning');if(b)b.click();
+ const ctx=pendingMainControlContext();
+ openTactileControl(ctx);
 }
 
 function init(){
@@ -840,5 +1013,5 @@ function syncRoomsFromMain(){
  }catch(e){console.warn('Chargement configuration salles Supabase',e)}
 }
 window.addEventListener('pst:data-loaded',syncRoomsFromMain);
-window.PSTCleaningRooms={get:()=>clone(data),saveAll:(v)=>{if(Array.isArray(v)){data=clone(v);save()}},reset:()=>{data=clone(DEF);save()},history:loadChecks,recordMainControl};
+window.PSTCleaningRooms={get:()=>clone(data),saveAll:(v)=>{if(Array.isArray(v)){data=clone(v);save()}},reset:()=>{data=clone(DEF);save()},history:loadChecks,recordMainControl,openTactileControl};
 })();

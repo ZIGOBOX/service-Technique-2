@@ -755,3 +755,108 @@ button{user-select:none;-webkit-user-select:none}
 .activity-hours-fields{display:contents}
 .activity-duration-note{grid-column:1/-1;padding:9px 11px;border-radius:10px;background:#eff6ff;color:#1e40af;font-size:.8rem;font-weight:700}
 @media(max-width:700px){.activity-agent-filter{width:100%}.activity-agent-filter-checks{position:static;min-width:0;box-shadow:none;border:0;border-top:1px solid #e2e8f0;border-radius:0}.activity-agent-picker-grid{grid-template-columns:1fr}}
+
+
+/* V147.153 — Agenda personnel : calendrier mensuel */
+#personal .personal-calendar-filters{align-items:center;gap:8px;flex-wrap:wrap}
+#personal .personal-calendar-filters #personalMonth{min-width:165px}
+#personal .personal-month-nav{min-width:44px;font-size:1.35rem;line-height:1;padding:9px 13px}
+#personal .personal-month-panel{padding:14px 14px 16px;overflow:hidden}
+#personal .personal-month-heading{align-items:flex-start;gap:16px;margin-bottom:12px}
+#personal .personal-month-heading h3{margin:2px 0 2px;font-size:1.35rem;text-transform:capitalize}
+#personal .personal-calendar-legend{display:flex;align-items:center;justify-content:flex-end;gap:8px 14px;flex-wrap:wrap;font-size:.76rem;color:#53697b}
+#personal .personal-calendar-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+#personal .personal-legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:#1976d2}
+#personal .personal-legend-dot.task{background:#f59e0b}
+#personal .personal-legend-dot.reminder{background:#7c3aed}
+#personal .personal-legend-dot.outlook{background:#0f9f8f}
+#personal .personal-month-scroll{overflow-x:auto;overflow-y:hidden;padding-bottom:3px}
+#personal .personal-month-weekdays,#personal .personal-month-calendar{display:grid;grid-template-columns:repeat(7,minmax(145px,1fr));min-width:1015px}
+#personal .personal-month-weekdays{border:1px solid #d8e4ed;border-bottom:0;border-radius:14px 14px 0 0;overflow:hidden;background:#f2f7fb}
+#personal .personal-month-weekdays span{padding:9px 10px;text-align:center;font-size:.76rem;font-weight:850;color:#244b6e;border-right:1px solid #dfe8ef}
+#personal .personal-month-weekdays span:last-child{border-right:0}
+#personal .personal-month-calendar{border-left:1px solid #d8e4ed;border-top:1px solid #d8e4ed;background:#fff}
+#personal .personal-month-day{min-height:154px;padding:7px;border-right:1px solid #d8e4ed;border-bottom:1px solid #d8e4ed;background:#fff;display:flex;flex-direction:column;gap:6px;min-width:0}
+#personal .personal-month-day.outside{background:#f7f9fb;color:#8c9ba8}
+#personal .personal-month-day.today{background:#f1f8ff;box-shadow:inset 0 0 0 2px #2b83cf}
+#personal .personal-month-day-head{width:100%;display:flex;align-items:center;gap:6px;background:transparent;border:0;box-shadow:none;color:inherit;padding:0 1px 3px;text-align:left;min-height:27px}
+#personal .personal-month-day-head:hover{background:transparent;transform:none}
+#personal .personal-month-day-head span{display:none;font-size:.68rem;text-transform:capitalize;color:#718596}
+#personal .personal-month-day-head strong{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;font-size:.82rem;color:#173b5b;background:#eff4f8}
+#personal .personal-month-day.today .personal-month-day-head strong{background:#147fc4;color:#fff}
+#personal .personal-month-day.outside .personal-month-day-head strong{background:transparent;color:#9aa7b3}
+#personal .personal-month-day-head em{margin-left:auto;font-style:normal;font-size:.62rem;font-weight:850;color:#147fc4;background:#e0f2ff;border-radius:999px;padding:3px 6px}
+#personal .personal-month-events{display:flex;flex-direction:column;gap:5px;min-width:0}
+#personal .personal-cal-event{width:100%;display:block;text-align:left;border:1px solid #c9dded;border-left:4px solid #1976d2;background:#edf6ff;color:#17364f;border-radius:8px;padding:6px 7px;box-shadow:none;min-width:0;overflow:hidden}
+#personal .personal-cal-event:hover{transform:none;filter:brightness(.985);border-color:#7fb7df}
+#personal .personal-cal-event.task{border-left-color:#f59e0b;background:#fff6e5;border-color:#f4d596}
+#personal .personal-cal-event.reminder{border-left-color:#7c3aed;background:#f4efff;border-color:#d5c4f6}
+#personal .personal-cal-event.outlook{border-left-color:#0f9f8f;background:#e9f8f5;border-color:#aee2d9}
+#personal .personal-cal-event.done{border-left-color:#6b7c89;background:#f1f4f6;border-color:#d3dce2;opacity:.78}
+#personal .personal-cal-event.recurring{border-left-color:#0284c7;background:#e9f7ff}
+#personal .personal-cal-event-time{display:block;font-size:.66rem;font-weight:900;color:#35627f;font-variant-numeric:tabular-nums;margin-bottom:2px}
+#personal .personal-cal-event strong{display:block;font-size:.74rem;line-height:1.18;white-space:normal;overflow-wrap:anywhere}
+#personal .personal-cal-event small{display:block;font-size:.62rem;color:#667c8b;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#personal .personal-month-empty{width:100%;min-height:28px;border:1px dashed transparent;background:transparent;color:#9aaab6;border-radius:7px;box-shadow:none;opacity:0}
+#personal .personal-month-day:hover .personal-month-empty{opacity:1;border-color:#c9d8e3;background:#f8fbfd}
+#personal .personal-month-empty:hover{transform:none!important;color:#147fc4!important;border-color:#8bc2e6!important}
+@media(max-width:900px){
+ #personal .personal-month-panel{padding:10px}
+ #personal .personal-month-heading{display:block}
+ #personal .personal-calendar-legend{justify-content:flex-start;margin-top:9px}
+ #personal .personal-month-weekdays,#personal .personal-month-calendar{grid-template-columns:repeat(7,150px);min-width:1050px}
+ #personal .personal-month-day{min-height:145px}
+ #personal .personal-month-day-head span{display:inline}
+}
+@media print{
+ #personal .personal-month-scroll{overflow:visible!important}
+ #personal .personal-month-weekdays,#personal .personal-month-calendar{grid-template-columns:repeat(7,1fr)!important;min-width:0!important}
+ #personal .personal-month-day{min-height:92px!important;padding:3px!important;break-inside:avoid}
+ #personal .personal-month-weekdays span{font-size:7pt!important;padding:4px!important}
+ #personal .personal-month-day-head span,#personal .personal-month-day-head em,#personal .personal-month-empty{display:none!important}
+ #personal .personal-month-day-head strong{width:20px!important;height:20px!important;font-size:7pt!important}
+ #personal .personal-cal-event{padding:3px 4px!important;border-left-width:2px!important}
+ #personal .personal-cal-event-time,#personal .personal-cal-event strong,#personal .personal-cal-event small{font-size:6pt!important}
+ #personal .personal-calendar-legend{display:none!important}
+}
+
+
+/* V147.154 — Contrôle ménage tactile type caisse / tableau de touches */
+body.rc-pos-open{overflow:hidden!important}
+.rc-pos-overlay{position:fixed;inset:0;z-index:10050;background:rgba(8,28,52,.55);backdrop-filter:blur(4px);padding:18px;display:flex;align-items:stretch;justify-content:center}
+.rc-pos-overlay.hidden{display:none!important}
+.rc-pos-shell{width:min(1540px,100%);height:100%;background:#f5f9fd;border:1px solid #cfe0ee;border-radius:24px;box-shadow:0 26px 80px rgba(4,31,63,.28);display:grid;grid-template-rows:auto 1fr auto;overflow:hidden}
+.rc-pos-head{min-height:92px;padding:16px 22px;background:#fff;border-bottom:1px solid #dbe7f1;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.rc-pos-head small{display:block;color:#5e7590;font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:.7rem}
+.rc-pos-head h2{margin:3px 0 3px;color:#0c315b;font-size:clamp(1.35rem,2.2vw,2rem)}
+.rc-pos-breadcrumb{color:#56708d;font-weight:700;font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:900px}
+.rc-pos-head-actions{display:flex;align-items:center;gap:12px}
+.rc-pos-progress{padding:9px 13px;border-radius:999px;background:#edf6ff;color:#075ca8;font-weight:900;font-size:.82rem;white-space:nowrap}
+.rc-pos-close{width:46px;height:46px;border:0;border-radius:14px;background:#eef4f9;color:#123b63;font-size:2rem;line-height:1;cursor:pointer}
+.rc-pos-body{padding:22px;overflow:auto;min-height:0}
+.rc-pos-help{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:18px;color:#31536f}
+.rc-pos-help strong{font-size:1.08rem;color:#0d315a}.rc-pos-help span{font-size:.9rem;color:#6d8298}
+.rc-pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.rc-pos-grid.rc-pos-buildings{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.rc-pos-grid.rc-pos-rooms{grid-template-columns:repeat(auto-fill,minmax(205px,1fr))}
+.rc-pos-grid.rc-pos-criteria{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.rc-pos-tile{min-height:125px;border:2px solid #d8e5ef;border-radius:18px;background:#fff;padding:16px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:6px;cursor:pointer;box-shadow:0 5px 16px rgba(18,68,112,.06);transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}
+.rc-pos-tile:hover,.rc-pos-tile:focus-visible{transform:translateY(-2px);border-color:#148ad4;box-shadow:0 10px 24px rgba(18,92,150,.13);outline:none}
+.rc-pos-tile strong{font-size:1.02rem;color:#12385d}.rc-pos-tile small{color:#6f8396;font-weight:700}.rc-pos-icon{font-size:1.65rem}
+.rc-pos-room-mark{align-self:flex-start;min-width:38px;height:38px;border-radius:11px;display:grid;place-items:center;padding:0 8px;background:#edf4fa;color:#496b88;font-weight:950}
+.rc-pos-tile.room.ok,.rc-pos-tile.criterion.ok{border-color:#8bd5b1;background:#f4fcf8}.rc-pos-tile.room.ok .rc-pos-room-mark,.rc-pos-tile.criterion.ok .rc-pos-room-mark{background:#dff6e9;color:#0d7c46}
+.rc-pos-tile.room.warn,.rc-pos-tile.criterion.warn{border-color:#f0c36c;background:#fffaf0}.rc-pos-tile.room.warn .rc-pos-room-mark,.rc-pos-tile.criterion.warn .rc-pos-room-mark{background:#fff0cd;color:#a96500}
+.rc-pos-tile.room.bad,.rc-pos-tile.criterion.bad{border-color:#ef9d9d;background:#fff6f6}.rc-pos-tile.room.bad .rc-pos-room-mark,.rc-pos-tile.criterion.bad .rc-pos-room-mark{background:#ffe0e0;color:#b32626}
+.rc-pos-tile.criterion.na{border-color:#cbd7e2;background:#f7f9fb}.rc-pos-tile.criterion.na .rc-pos-room-mark{background:#e8eef4;color:#617386}
+.rc-pos-score-grid{display:grid;grid-template-columns:repeat(4,minmax(155px,1fr));gap:14px;max-width:1080px;margin:10px auto 0}
+.rc-pos-score{min-height:150px;border:2px solid #d7e4ef;border-radius:20px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;padding:15px;box-shadow:0 6px 18px rgba(20,68,108,.07)}
+.rc-pos-score strong{font-size:1.7rem;color:#0b3762}.rc-pos-score span{font-weight:900;color:#244c6d}.rc-pos-score small{font-size:1rem;letter-spacing:.08em;color:#768b9e}
+.rc-pos-score.s5,.rc-pos-score.s4{border-color:#83d7aa;background:#f3fcf7}.rc-pos-score.s3,.rc-pos-score.s2{border-color:#f1c66f;background:#fffaf0}.rc-pos-score.s1,.rc-pos-score.s0{border-color:#ef9f9f;background:#fff6f6}.rc-pos-score.na,.rc-pos-score.clear{background:#f4f7fa}
+.rc-pos-room-tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.rc-pos-tool{min-height:46px;padding:0 15px;border:1px solid #cfe0ee;background:#fff;border-radius:12px;color:#16436b;font-weight:850;cursor:pointer}
+.rc-pos-note-box{display:none;margin-top:12px;max-width:720px;gap:10px}.rc-pos-note-box.open{display:flex;align-items:flex-end}.rc-pos-note-box textarea{flex:1;min-height:78px;border:1px solid #cbdce9;border-radius:12px;padding:12px;font:inherit;resize:vertical}
+.rc-pos-footer{min-height:72px;background:#fff;border-top:1px solid #dbe7f1;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.rc-pos-footer-main{display:flex;align-items:center;gap:14px;margin-left:auto}.rc-pos-footer-main strong{color:#31536f}.rc-pos-footer-hint{color:#667f96;font-size:.86rem;font-weight:700}
+.rc-pos-footer .primary,.rc-pos-footer .ghost{min-height:46px}
+@media(max-width:800px){
+ .rc-pos-overlay{padding:0}.rc-pos-shell{border-radius:0;border:0}.rc-pos-head{min-height:76px;padding:12px 13px}.rc-pos-progress{display:none}.rc-pos-close{width:42px;height:42px}.rc-pos-body{padding:13px}.rc-pos-grid,.rc-pos-grid.rc-pos-buildings,.rc-pos-grid.rc-pos-rooms,.rc-pos-grid.rc-pos-criteria{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.rc-pos-tile{min-height:108px;padding:12px;border-radius:15px}.rc-pos-tile strong{font-size:.92rem}.rc-pos-tile small{font-size:.74rem}.rc-pos-score-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.rc-pos-score{min-height:118px}.rc-pos-footer{padding:10px 12px;align-items:stretch}.rc-pos-footer-main{gap:8px}.rc-pos-footer-main strong{display:none}.rc-pos-footer .primary,.rc-pos-footer .ghost{min-height:48px}.rc-pos-note-box.open{display:block}.rc-pos-note-box .primary{margin-top:8px;width:100%}}
+@media(max-width:420px){.rc-pos-grid,.rc-pos-grid.rc-pos-buildings,.rc-pos-grid.rc-pos-rooms,.rc-pos-grid.rc-pos-criteria{grid-template-columns:1fr 1fr}.rc-pos-tile{min-height:100px}.rc-pos-head h2{font-size:1.15rem}.rc-pos-breadcrumb{font-size:.7rem}}

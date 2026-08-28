@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.152';
+const APP_VERSION='147.154';
 const APP_BUILD='27/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -3458,6 +3458,7 @@ function cleaningSectorOptions(building,floor,v=''){
 }
 
 function openCleaning(id){
+ if(!id&&window.PSTCleaningRooms?.openTactileControl){window.PSTCleaningRooms.openTactileControl();return}
  const old=id?byId('cleaning',id):null;
  const pending=old?null:consumeCleaningScopeContext();
  const b=old?.building||pending?.building||db.buildings[0]?.name||'';
@@ -4513,12 +4514,46 @@ function renderMaintenance(){const st=$('#maintenanceStatus').value,p=$('#mainte
 function renderRequests(){const st=$('#requestStatus').value,t=$('#requestType').value;const arr=db.requests.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#requestsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc(x.requester)}</td><td>${esc(x.type)}</td><td>${esc([x.building,x.room].filter(Boolean).join(' · '))}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('request',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderWorks(){const st=$('#workStatus').value,t=$('#workType').value;const arr=db.works.filter(x=>recordInAcademicYear(x,['date','dueDate','gpaEnd'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderMeetings(){const m=$('#meetingMonth').value,t=$('#meetingType').value;const arr=db.meetings.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));$('#meetingsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.time||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${esc(x.participants||'—')}</td><td>${badge(x.status)}</td><td>${editButton('meeting',x.id)}</td></tr>`).join(''):emptyRow(8)}
+function personalMonthEventClass(x){
+ const type=normalizeText(x?.type||''),title=normalizeText(x?.title||''),status=normalizeText(x?.status||'');
+ if(type.includes('outlook')||title.includes('outlook'))return 'outlook';
+ if(type.includes('tache')||type.includes('echeance'))return 'task';
+ if(type.includes('rappel')||type.includes('appel'))return 'reminder';
+ if(status.includes('clotur')||status.includes('termine'))return 'done';
+ return 'appointment';
+}
+function personalMonthEventHTML(x){
+ const cls=personalMonthEventClass(x),tm=[x.start,x.end].filter(Boolean).join('–'),place=x.location||'';
+ const body=`<span class="personal-cal-event-time">${esc(tm||'Toute la journée')}</span><strong>${esc(x.title||'Événement')}</strong>${place?`<small>📍 ${esc(place)}</small>`:''}`;
+ if(x.readOnlyRecurring)return `<button type="button" class="personal-cal-event ${cls} recurring" data-agenda-source="meter-reading" data-agenda-id="${esc(x.id||'')}" title="${esc(x.title||'Relevé des compteurs')}">${body}</button>`;
+ return `<button type="button" class="personal-cal-event ${cls}" data-edit-type="personal" data-edit-id="${esc(x.id||'')}" title="Modifier : ${esc(x.title||'Événement')}">${body}</button>`;
+}
+function renderPersonalMonthCalendar(arr,m){
+ const host=$('#personalMonthCalendar');if(!host)return;
+ const ym=/^\d{4}-\d{2}$/.test(String(m||''))?m:monthISO(),[y,mo]=ym.split('-').map(Number);
+ const first=`${ym}-01`,daysInMonth=new Date(y,mo,0).getDate(),offset=(parseDate(first).getDay()+6)%7;
+ const cells=Math.ceil((offset+daysInMonth)/7)*7,start=addDays(first,-offset),byDate=new Map();
+ for(const x of arr){const d=normalizeDateValue(x.date);if(!d)continue;if(!byDate.has(d))byDate.set(d,[]);byDate.get(d).push(x)}
+ const monthName=new Date(y,mo-1,1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+ const title=$('#personalMonthTitle');if(title)title.textContent=monthName.charAt(0).toUpperCase()+monthName.slice(1);
+ const summary=$('#personalMonthSummary');if(summary)summary.textContent=`${arr.length} élément${arr.length>1?'s':''} affiché${arr.length>1?'s':''} ce mois`;
+ host.innerHTML=Array.from({length:cells},(_,i)=>{
+   const d=addDays(start,i),inside=d.slice(0,7)===ym,today=d===todayISO(),items=(byDate.get(d)||[]).slice().sort((a,b)=>`${a.start||'99:99'}${a.title||''}`.localeCompare(`${b.start||'99:99'}${b.title||''}`));
+   const dayHead=inside
+     ?`<button type="button" class="personal-month-day-head" data-new-personal-date="${d}" title="Ajouter un événement le ${fmtDate(d)}"><span>${parseDate(d).toLocaleDateString('fr-FR',{weekday:'short'})}</span><strong>${parseDate(d).getDate()}</strong>${today?'<em>Aujourd’hui</em>':''}</button>`
+     :`<div class="personal-month-day-head"><span>${parseDate(d).toLocaleDateString('fr-FR',{weekday:'short'})}</span><strong>${parseDate(d).getDate()}</strong></div>`;
+   return `<section class="personal-month-day ${inside?'':'outside'} ${today?'today':''}" data-calendar-date="${d}">
+     ${dayHead}
+     <div class="personal-month-events">${items.length?items.map(personalMonthEventHTML).join(''):(inside?'<button type="button" class="personal-month-empty" data-new-personal-date="'+d+'">＋</button>':'')}</div>
+   </section>`;
+ }).join('');
+}
 function renderPersonal(){
- const m=$('#personalMonth').value,t=$('#personalType').value,st=$('#personalStatus').value;
+ const m=$('#personalMonth').value||monthISO(),t=$('#personalType').value,st=$('#personalStatus').value;
  const regular=(db.personalEvents||[]).filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)&&(!st||x.status===st));
  const recurring=meterReadingItemsForMonth(m).filter(x=>(!t||x.type===t)&&(!st||x.status===st));
  const arr=[...regular,...recurring].sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
- $('#personalTable').innerHTML=arr.length?arr.map(x=>`<tr>
+ const personalTable=$('#personalTable');if(personalTable)personalTable.innerHTML=arr.length?arr.map(x=>`<tr>
    <td>${fmtDate(x.date)}</td>
    <td>${esc([x.start,x.end].filter(Boolean).join('–')||'—')}</td>
    <td>${esc(x.type)}</td>
@@ -4528,12 +4563,13 @@ function renderPersonal(){
    <td>${badge(x.status)}</td>
    <td>${x.readOnlyRecurring?'<span class="meter-reading-chip">Automatique</span>':editButton('personal',x.id)}</td>
   </tr>`).join(''):emptyRow(8);
- $('#personalCards').innerHTML=cardList(arr.map(x=>`<article class="list-card">
+ const personalCards=$('#personalCards');if(personalCards)personalCards.innerHTML=cardList(arr.map(x=>`<article class="list-card">
    <div><strong>${fmtDate(x.date)} ${esc(x.start||'')}</strong>${badge(x.status)}</div>
    <h3>${esc(x.title)}</h3>
    <p>${esc(x.type)} · ${esc(x.location||'Sans lieu')}</p>
    ${x.readOnlyRecurring?'<span class="meter-reading-chip">Dernier jour ouvré du mois</span>':`<button type="button" data-edit-type="personal" data-edit-id="${x.id}">Modifier</button>`}
   </article>`));
+ renderPersonalMonthCalendar(arr,m);
  renderMeterReadingsAgenda();
 }
 function renderNotes(){const cat=$('#noteCategory').value,p=$('#notePriority').value,s=$('#noteStatus').value,q=($('#noteSearch').value||'').toLowerCase();const arr=db.notes.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!cat||x.category===cat)&&(!p||x.priority===p)&&(!s||x.status===s)&&(!q||`${x.title} ${x.text}`.toLowerCase().includes(q))).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#notesBoard').innerHTML=cardList(arr.map(x=>{const done=(x.items||[]).filter(i=>i.done).length;return `<article class="note-card"><div class="panel-head"><span>${esc(x.category)}</span>${badge(x.priority)}</div><h3>${esc(x.title)}</h3><p>${esc(x.text||'')}</p>${x.agentId?`<p>👤 ${esc(agentName(agentById(x.agentId)))}</p>`:''}<p>Échéance : ${fmtDate(x.dueDate)||'—'} · ${done}/${(x.items||[]).length} items</p><ul>${(x.items||[]).map(i=>`<li class="${i.done?'done':''}">${i.done?'✓':'○'} ${esc(i.text)}</li>`).join('')}</ul>${attachmentButtons(x.attachments)}<div class="card-actions"><span>${badge(x.status)}</span><button type="button" class="note-edit-button" data-edit-type="note" data-edit-id="${x.id}" aria-label="Modifier la note ${esc(x.title)}">Modifier</button></div></article>`}),'Aucune note.')}
@@ -5526,7 +5562,7 @@ function printableViewHTML(view){
  }
  // Les cases de calendriers sont des <button> à l'écran : en impression on les convertit
  // en cellules statiques afin qu'elles ne disparaissent jamais avec les contrôles interactifs.
- clone.querySelectorAll('.month-cell.day-state,.rotation-day').forEach(btn=>{
+ clone.querySelectorAll('.month-cell.day-state,.rotation-day,.personal-cal-event,.personal-month-day-head').forEach(btn=>{
   if(btn.tagName==='BUTTON'){
    const div=document.createElement('div');div.className=btn.className+' print-data-cell';div.innerHTML=btn.innerHTML;
    for(const a of [...btn.attributes]){if(a.name==='style'||a.name.startsWith('data-'))div.setAttribute(a.name,a.value)}
@@ -6364,6 +6400,7 @@ $('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').oncl
  const paa=$('#printAgentActivity');if(paa)paa.onclick=printAgentActivityRegister;
  for(const id of ['activityPeriodMode','activityReferenceDate','activityTypeFilter']){const e=$(`#${id}`);if(e)e.onchange=renderAgentActivities}
  $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
+ const ppm=$('#personalPrevMonth'),ptm=$('#personalTodayMonth'),pnm=$('#personalNextMonth');if(ppm)ppm.onclick=()=>{const e=$('#personalMonth');e.value=addMonths(`${e.value||monthISO()}-01`,-1).slice(0,7);renderPersonal()};if(ptm)ptm.onclick=()=>{const e=$('#personalMonth');e.value=monthISO();renderPersonal()};if(pnm)pnm.onclick=()=>{const e=$('#personalMonth');e.value=addMonths(`${e.value||monthISO()}-01`,1).slice(0,7);renderPersonal()};
  $('#prevTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,-7);renderTeamCalendar()};$('#nextTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,7);renderTeamCalendar()};$('#prevTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,-1));renderTeamCalendar()};$('#nextTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,1));renderTeamCalendar()};$('#todayTeamWeek').onclick=()=>{teamWeek=startOfWeek(todayISO());renderTeamCalendar()};$('#teamDateJump').onchange=e=>{teamWeek=startOfWeek(e.target.value);renderTeamCalendar()};$('#prevPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,-7);renderPersonalCalendar()};$('#nextPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,7);renderPersonalCalendar()};$('#todayPersonalWeek').onclick=()=>{personalWeek=startOfWeek(todayISO());renderPersonalCalendar()};
  $('#saveSettings').onclick=saveSettings;const wizardOpen=$('#openAutoReportWizard');if(wizardOpen)wizardOpen.onclick=openAutoReportWizard;const wizardClose=$('#autoReportWizardClose');if(wizardClose)wizardClose.onclick=()=>wizardEl().close();const wizardBack=$('#autoReportWizardBack');if(wizardBack)wizardBack.onclick=()=>{saveWizardStep();autoReportWizardStep=Math.max(0,autoReportWizardStep-1);renderAutoReportWizard()};const wizardNext=$('#autoReportWizardNext');if(wizardNext)wizardNext.onclick=()=>{saveWizardStep();if(autoReportWizardStep===3){wizardEl().close();return}autoReportWizardStep=Math.min(3,autoReportWizardStep+1);renderAutoReportWizard()};document.addEventListener('click',e=>{const p=e.target.closest('[data-wizard-provider]');if(p){autoReportWizardData.provider=p.dataset.wizardProvider;renderAutoReportWizard()}});const sart=$('#sendAutomaticReportTest');if(sart)sart.onclick=sendAutomaticReportTest;function openNotificationCenter(){window.PSTNotificationCenter?.open?.()}
 function closeNotificationCenter(){window.PSTNotificationCenter?.close?.()}
