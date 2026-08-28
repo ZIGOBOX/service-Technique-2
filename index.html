@@ -851,7 +851,25 @@
 .agent-week-cell-v150{width:100%;min-height:42px;border:0;border-radius:9px;background:#f7fbff;color:#17365d;padding:6px 5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.74rem;font-weight:800}.agent-week-cell-v150:hover{background:#e8f4ff}.agent-week-cell-v150 small{font-size:.61rem;color:#73859a;font-weight:700}.agent-week-cell-v150.absent{background:#fff1ea;color:#ad551b}.agent-week-cell-v150.rest{background:#f1f3f6;color:#6d7885}.agent-week-cell-v150.today{outline:2px solid #3192eb;outline-offset:-2px}.agent-week-total-v150{font-weight:900;color:#075eaa;white-space:nowrap}.agent-week-legend-v150{margin:9px 2px 0;color:#6d7f92;font-size:.7rem}
 @media(max-width:700px){#dashboard .dashboard-team-actions-v150{justify-content:flex-start}.agent-week-table-v150{min-width:720px}}
 
+
+/* V147.159 — Sélecteur Journée / Semaine + câblage contrats du tableau de bord. */
+#dashboard .dashboard-period-toolbar-v159{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid #dfeaf4;border-radius:15px;background:#f8fbff;box-shadow:0 4px 14px rgba(15,46,82,.04)}
+#dashboard .dashboard-period-switch-v159{display:inline-flex;padding:3px;border-radius:11px;background:#e9f1f9;border:1px solid #d5e4f1}
+#dashboard .dashboard-period-switch-v159 button{border:0;background:transparent;color:#41617f;font-weight:850;padding:7px 13px;border-radius:8px;cursor:pointer}
+#dashboard .dashboard-period-switch-v159 button.active{background:#075eaa;color:#fff;box-shadow:0 3px 8px rgba(7,94,170,.2)}
+#dashboard .dashboard-period-nav-v159{display:flex;align-items:center;gap:6px}
+#dashboard .dashboard-period-nav-v159 input{height:34px;border:1px solid #cadbeb;border-radius:9px;background:#fff;padding:0 8px;color:#17365d;font-weight:750}
+#dashboard .dashboard-period-label-v159{margin-left:auto;color:#0b4f88;font-size:.82rem}
+#dashboard .dashboard-week-day-v149.selected:not(.today){border-color:#8bbbe5;box-shadow:inset 3px 0 0 #6a9fd0}
+#dashboard .dashboard-week-day-v149.selected:not(.today) .dashboard-week-head-v149{background:#f0f7fd;color:#315f88}
+#dashboard .dashboard-team-row-v149.week-summary-v159{grid-template-columns:34px minmax(0,1fr) auto auto}
+#dashboard .dashboard-team-row-v149.week-summary-v159 small{max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dashboard .today-agenda-day-v159{font-size:.64rem;font-weight:900;color:#3973a6;text-transform:uppercase;letter-spacing:.03em;min-width:52px}
+@media(min-width:1101px){#dashboard .dashboard-watch-grid-v149{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(max-width:700px){#dashboard .dashboard-period-toolbar-v159{align-items:stretch}#dashboard .dashboard-period-nav-v159{width:100%}#dashboard .dashboard-period-nav-v159 input{flex:1;min-width:0}#dashboard .dashboard-period-label-v159{width:100%;margin-left:0}}
 </style>
+
+  <link rel="stylesheet" href="./contracts-tracker.css?v=147.159">
 
 </head>
 <body data-layout="auto">
@@ -859,7 +877,7 @@
     <form class="auth-card" id="authForm" novalidate>
       <img src="./assets/logo-service-technique.png" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.81 — 21/08/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.159 — 28/08/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -902,6 +920,7 @@
         <div class="nav-domain-items">
           <button class="nav-btn" data-view="issues"><span>⚠</span>Sécurité & qualité</button>
           <button class="nav-btn" data-view="periodic"><span>🛡</span>Contrôles périodiques</button>
+          <button class="nav-btn" data-view="contracts"><span>📑</span>Suivi des contrats</button>
           <button class="nav-btn" data-view="cleaning"><span>✓</span>Contrôle ménage</button>
           <button class="nav-btn" data-view="room-prep"><span>☕</span>Préparation salle & café</button>
           <button class="nav-btn" data-view="maintenance"><span>⚙</span>Maintenance</button>
@@ -931,7 +950,7 @@
         </div>
       </details>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.148 — 27/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.159 — 28/08/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -974,25 +993,39 @@
         </div>
       </article>
 
-      <div class="today-kpis-v149" aria-label="Indicateurs du jour">
-        <article class="today-kpi-v149"><span class="today-kpi-icon-v149">👥</span><div><small>Présents</small><strong id="todayKpiPresent">0</strong><em>aujourd’hui</em></div></article>
-        <article class="today-kpi-v149"><span class="today-kpi-icon-v149 warn">👤</span><div><small>Absents</small><strong id="todayKpiAbsent">0</strong><em>aujourd’hui</em></div></article>
-        <article class="today-kpi-v149"><span class="today-kpi-icon-v149">📅</span><div><small>Rendez-vous</small><strong id="todayKpiMeetings">0</strong><em>aujourd’hui</em></div></article>
-        <article class="today-kpi-v149"><span class="today-kpi-icon-v149 danger">⚠</span><div><small>Urgences</small><strong id="todayKpiUrgent">0</strong><em>à traiter</em></div></article>
+      <div class="dashboard-period-toolbar-v159" aria-label="Période du tableau de bord">
+        <div class="dashboard-period-switch-v159" role="group" aria-label="Mode d’affichage">
+          <button type="button" class="active" data-dashboard-period="day">Journée</button>
+          <button type="button" data-dashboard-period="week">Semaine</button>
+        </div>
+        <div class="dashboard-period-nav-v159">
+          <button type="button" class="ghost small" data-dashboard-period-nav="-1" aria-label="Période précédente">‹</button>
+          <input type="date" id="dashboardPeriodDateV159" aria-label="Date de référence du tableau de bord">
+          <button type="button" class="ghost small" data-dashboard-period-today="1">Aujourd’hui</button>
+          <button type="button" class="ghost small" data-dashboard-period-nav="1" aria-label="Période suivante">›</button>
+        </div>
+        <strong id="dashboardPeriodLabelV159" class="dashboard-period-label-v159"></strong>
+      </div>
+
+      <div class="today-kpis-v149" aria-label="Indicateurs de la période">
+        <article class="today-kpi-v149"><span class="today-kpi-icon-v149">👥</span><div><small id="todayKpiPresentLabel">Présents</small><strong id="todayKpiPresent">0</strong><em id="todayKpiPresentMeta">aujourd’hui</em></div></article>
+        <article class="today-kpi-v149"><span class="today-kpi-icon-v149 warn">👤</span><div><small id="todayKpiAbsentLabel">Absents</small><strong id="todayKpiAbsent">0</strong><em id="todayKpiAbsentMeta">aujourd’hui</em></div></article>
+        <article class="today-kpi-v149"><span class="today-kpi-icon-v149">📅</span><div><small id="todayKpiMeetingsLabel">Rendez-vous</small><strong id="todayKpiMeetings">0</strong><em id="todayKpiMeetingsMeta">aujourd’hui</em></div></article>
+        <article class="today-kpi-v149"><span class="today-kpi-icon-v149 danger">⚠</span><div><small id="todayKpiUrgentLabel">Urgences</small><strong id="todayKpiUrgent">0</strong><em id="todayKpiUrgentMeta">à traiter</em></div></article>
       </div>
 
       <article class="panel daily-team-panel-v149">
-        <div class="panel-head"><div><span class="calendar-kicker">ÉQUIPE</span><h3>Équipe aujourd’hui</h3></div><div class="dashboard-team-actions-v150"><button class="ghost small" type="button" data-agent-week-open="1">Horaires semaine</button><button class="ghost small" data-go="agents">Voir tout</button></div></div>
+        <div class="panel-head"><div><span class="calendar-kicker">ÉQUIPE</span><h3 id="dashboardTeamTitleV159">Équipe aujourd’hui</h3></div><div class="dashboard-team-actions-v150"><button class="ghost small" type="button" data-agent-week-open="1">Horaires semaine</button><button class="ghost small" data-go="agents">Voir tout</button></div></div>
         <div id="dashboardTeamToday" class="dashboard-team-today-v149"></div>
       </article>
 
       <article class="panel dashboard-today-panel daily-agenda-panel-v149">
-        <div class="panel-head"><div><span class="calendar-kicker personal">JOURNALIER</span><h3>Ma journée</h3></div><button class="ghost small" data-go="personal">Voir agenda</button></div>
+        <div class="panel-head"><div><span class="calendar-kicker personal" id="dashboardAgendaKickerV159">JOURNALIER</span><h3 id="dashboardAgendaTitleV159">Ma journée</h3></div><button class="ghost small" data-go="personal">Voir agenda</button></div>
         <div id="dashboardTodayAgenda" class="dashboard-today-agenda"></div>
       </article>
 
       <article class="panel daily-priority-panel-v149">
-        <div class="panel-head"><div><span class="calendar-kicker urgent">PRIORITÉS</span><h3>Priorités du jour</h3></div><button class="ghost small" data-go="issues-urgent">Voir toutes</button></div>
+        <div class="panel-head"><div><span class="calendar-kicker urgent">PRIORITÉS</span><h3 id="dashboardPriorityTitleV159">Priorités du jour</h3></div><button class="ghost small" data-go="issues-urgent">Voir toutes</button></div>
         <div id="priorityList" class="card-list daily-priority-list-v149"></div>
       </article>
 
@@ -1011,6 +1044,7 @@
         <div class="dashboard-watch-grid-v149">
           <button class="dashboard-watch-v149 danger" data-go="maintenance"><span>🔧</span><div><small>Interventions ouvertes</small><strong id="kpiMaintenance">0</strong><em id="kpiMaintenanceTodo">0 à faire</em></div></button>
           <button class="dashboard-watch-v149" data-go="periodic"><span>📋</span><div><small>Contrôles périodiques</small><strong id="kpiPeriodicLate">0</strong><em id="kpiPeriodicSoon">0 bientôt</em></div></button>
+          <button class="dashboard-watch-v149" data-go="contracts"><span>📑</span><div><small>Contrats</small><strong id="kpiContractsAlertV159">0</strong><em id="kpiContractsDetailV159">aucune alerte</em></div></button>
           <button class="dashboard-watch-v149 good" data-go="cleaning"><span>🧹</span><div><small>Conformité ménage</small><strong id="kpiCompliance">—</strong><em id="kpiCleaningWeak">0 point faible</em></div></button>
           <button class="dashboard-watch-v149" data-go="notes"><span>✎</span><div><small>Notes actives</small><strong id="kpiNotes">0</strong><em id="kpiNotesDue">0 échéance proche</em></div></button>
           <button class="dashboard-watch-v149" data-go="pdfimports"><span>◷</span><div><small>Chronotime</small><strong id="dashboardChronoCompact">Voir</strong><em>imports et delta annuel</em></div></button>
@@ -1131,6 +1165,30 @@
       <div id="periodicCards" class="periodic-grid"></div>
       <article class="panel control-import-panel"><div class="panel-head"><div><h3>📄 Rapports de contrôle importés</h3><p class="muted">Importez directement un PDF ici, ou utilisez <strong>＋ → Importer / Scanner</strong>. Après analyse, validez le rapport pour l’injecter dans le contrôle périodique et le rendre relisible.</p></div><label class="primary file-label">＋ Importer un rapport PDF<input type="file" id="controlPdfFile" accept="application/pdf,.pdf" hidden></label></div><div id="controlImportStatus" class="import-status"></div><div id="controlPreview" class="import-preview"></div></article>
       <article class="panel"><div class="panel-head"><div><h3>📚 Rapports de contrôle classés</h3><p class="muted">Les rapports électriques restent avec Électricité, les SSI avec SSI, etc. Le PDF original peut être rouvert à tout moment.</p></div><select id="controlReportFamily"><option value="">Toutes les familles</option></select></div><div id="controlReportLibrary" class="control-report-library"></div></article>
+    </section>
+
+    <section class="view contracts-view-v157" id="contracts">
+      <div class="section-actions contracts-head-v157">
+        <div>
+          <h3>📑 Suivi des contrats & prestations</h3>
+          <p>Le fichier Excel « suivi des contrats » reste le fichier d’échange de référence. Les données peuvent être modifiées ici ou dans Excel, puis réimportées et réexportées sans changer sa structure.</p>
+        </div>
+        <div class="contracts-actions-v157">
+          <label class="primary file-label">📥 Importer le fichier Excel<input type="file" id="contractsImportFile" accept=".xlsx,.xls" hidden></label>
+          <button type="button" class="primary" id="contractsExportFile">📤 Ré-exporter le même fichier</button>
+          <a class="ghost button-link" href="./suivi%20des%20contrats%20(2).xlsx" download>📄 Fichier d’origine</a>
+        </div>
+      </div>
+      <div class="notice contracts-notice-v157"><strong>Échange bidirectionnel + contrôles périodiques :</strong> si vous modifiez une date, un prestataire ou un montant dans Excel puis réimportez le fichier, l’application est mise à jour. Pour les contrats liés à un contrôle périodique, la « Dernière prestation » met aussi à jour le « Dernier contrôle » et le prestataire ; la prochaine échéance est recalculée avec la périodicité du contrôle, sauf si une date manuelle différente a été fixée. Le bouton « Ré-exporter » conserve la structure du classeur et les liens OneDrive.</div>
+      <div id="contractsFileState" class="contracts-file-state-v157"></div>
+      <div class="filters contracts-filters-v157">
+        <select id="contractsYear" aria-label="Année du fichier"></select>
+        <select id="contractsCategory" aria-label="Catégorie"><option value="">Toutes les catégories</option></select>
+        <select id="contractsStatus" aria-label="État"><option value="">Tous les états</option><option>Actif</option><option>À renouveler</option><option>Échu</option><option>À compléter</option></select>
+        <input id="contractsSearch" type="search" placeholder="Rechercher contrat, prestataire…">
+      </div>
+      <div id="contractsSummary" class="summary-grid contracts-summary-v157"></div>
+      <div id="contractsCards" class="contracts-grid-v157"></div>
     </section>
 
     <section class="view" id="cleaning">
@@ -1579,7 +1637,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.81 — 21/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.159 — 28/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -1648,9 +1706,11 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
-  <script src="./app.js?v=147.155-20260828-tactile-frequencies"></script>
+  <script src="./app.js?v=147.159-20260828-dashboard-day-week"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="./jszip.min.js?v=3.10.1"></script>
+  <script src="./contracts-tracker.js?v=147.159-20260828-dashboard-day-week"></script>
   <script src="./schedule-import.js?v=147.83-20260821-audit"></script>
   <script src="./report-import.js?v=147.83-20260821-audit"></script>
 
