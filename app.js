@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.159';
+const APP_VERSION='147.160';
 const APP_BUILD='28/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -5381,8 +5381,8 @@ function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnectio
 }
 
 
-/* V147.159 — Tableau de bord sélectionnable par journée / semaine.
-   Les modules historiques restent inchangés ; cette couche ne fait qu'agréger leurs données. */
+/* V147.160 — Tableau de bord journée / semaine recentré sur le pilotage technique.
+   Le fichier contrats reste un outil de synchronisation en arrière-plan ; ses échéances administratives ne remontent plus sur le tableau de bord. */
 let dashboardPeriodModeV159='day';
 let dashboardPeriodDateV159=todayISO();
 function dashboardPeriodRangeV159(){
@@ -5409,8 +5409,10 @@ function dashboardContractEventsForDateV159(d){
  return rows;
 }
 function dashboardEventsForDateV159(d){
- const rows=[...eventsForDate(d).filter(e=>e.source!=='agent-real-schedule'),...dashboardContractEventsForDateV159(d)],seen=new Set();
- return rows.filter(e=>{const k=`${e.source||''}:${e.id||''}:${e.dashboardContractKind||e.title||''}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>`${agendaTime(a)||'99:99'}${a.title||''}`.localeCompare(`${agendaTime(b)||'99:99'}${b.title||''}`));
+ // Pilotage terrain : les échéances administratives des contrats ne remontent pas ici.
+ // Les contrôles périodiques liés restent visibles via eventsForDate(), avec leurs vraies dates de contrôle.
+ const rows=[...eventsForDate(d).filter(e=>e.source!=='agent-real-schedule')],seen=new Set();
+ return rows.filter(e=>{const k=`${e.source||''}:${e.id||''}:${e.title||''}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>`${agendaTime(a)||'99:99'}${a.title||''}`.localeCompare(`${agendaTime(b)||'99:99'}${b.title||''}`));
 }
 function renderDashboardTeamTodayV149(){
  const el=$('#dashboardTeamToday');if(!el)return;const range=dashboardPeriodRangeV159(),agents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif');
@@ -5468,10 +5470,13 @@ function renderDashboardWeekV149(){
  const label=$('#dashboardWeekLabel');if(label)label.textContent=`Du ${fmtDate(days[0])} au ${fmtDate(days[4])}`;
  el.innerHTML=days.map(d=>{const date=parseDate(d),events=dashboardEventsForDateV159(d).slice(0,4),selected=d>=range.start&&d<=range.end;return `<section class="dashboard-week-day-v149 ${d===today?'today':''} ${selected?'selected':''}"><header class="dashboard-week-head-v149"><strong>${esc(date.toLocaleDateString('fr-FR',{weekday:'long'}))} ${date.getDate()}</strong><small>${events.length} élément${events.length>1?'s':''}</small></header><div class="dashboard-week-events-v149">${events.length?events.map(e=>`<button class="dashboard-week-event-v149 agenda-action" data-agenda-source="${esc(e.source||'personal')}" data-agenda-id="${esc(e.id||'')}"><time>${esc(agendaTime(e)||'—')}</time><span title="${esc(e.title||'Événement')}">${esc(e.title||'Événement')}</span></button>`).join(''):'<div class="dashboard-week-empty-v149">Rien de prévu</div>'}</div></section>`}).join('');
 }
-function renderDashboardContractsWatchV159(){
- const n=$('#kpiContractsAlertV159'),d=$('#kpiContractsDetailV159');if(!n||!d)return;const api=window.PSTContracts,today=todayISO(),year=Number(today.slice(0,4));
- const all=(db.contracts||[]).filter(x=>!x.sourceYear||Number(x.sourceYear)===year),expired=all.filter(x=>(api?.contractStatus?.(x)||'')==='Échu').length,renew=all.filter(x=>(api?.contractStatus?.(x)||'')==='À renouveler').length,late=all.filter(x=>{const next=api?.nextServiceDate?.(x);return next&&next<today}).length;
- n.textContent=expired+renew+late;d.textContent=[expired?`${expired} échu${expired>1?'s':''}`:'',renew?`${renew} à renouveler`:'',late?`${late} prestation${late>1?'s':''} en retard`:'' ].filter(Boolean).join(' · ')||'aucune alerte';
+function renderDashboardPeriodicNextV160(){
+ const n=$('#kpiPeriodicNextCountV160'),d=$('#kpiPeriodicNextDetailV160');if(!n||!d)return;
+ const today=todayISO(),limit=addDays(today,30);
+ const rows=(db.periodic||[]).filter(x=>!isClosedStatus(x.status)&&normalizeText(x.status)!=='non applicable').map(x=>({x,due:periodicDue(x)})).filter(r=>r.due&&r.due>=today&&r.due<=limit).sort((a,b)=>a.due.localeCompare(b.due));
+ n.textContent=rows.length;
+ if(!rows.length){d.textContent='aucune échéance dans les 30 jours';return}
+ const first=rows[0];d.textContent=`prochain : ${fmtDate(first.due)} · ${first.x.name||first.x.no||'contrôle'}`;
 }
 function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnections();renderGlobalAcademicYear();
  const range=dashboardPeriodRangeV159(),activeAgents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif'),dates=range.dates;
@@ -5495,7 +5500,7 @@ function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnectio
  $('#kpiAgents').textContent=activeAgents.length;$('#kpiPresent').textContent=`${present} présence${present>1?'s':''}`;$('#kpiUrgentActions').textContent=urgentActions.length;$('#kpiLate').textContent=`${lateActions.length} en retard`;$('#kpiMaintenance').textContent=maintCounts.open;$('#kpiMaintenanceTodo').textContent=`${maintCounts.todo} à faire`;$('#kpiCompliance').textContent=comp==null?'—':`${comp} %`;$('#kpiCleaningWeak').textContent=`${weak} point${weak>1?'s':''} faible${weak>1?'s':''}`;$('#kpiPeriodicLate').textContent=pLate.length;$('#kpiPeriodicSoon').textContent=`${pSoon.length} bientôt`;$('#kpiNotes').textContent=notes.length;$('#kpiNotesDue').textContent=`${notesDue} échéance${notesDue>1?'s':''} proche${notesDue>1?'s':''}`;
  $('#dashboardNotes').innerHTML=cardList(notes.slice().sort((a,b)=>(recordDueDate(a)||'9999').localeCompare(recordDueDate(b)||'9999')).slice(0,5).map(x=>itemCard('✎',x.title,`${esc(x.category)} · ${fmtDate(recordDueDate(x))||'Sans échéance'}`,'note',x.id)),'Aucune note active.');$('#maintenancePreview').innerHTML=cardList(openMaint.filter(x=>{const st=normalizeText(x.status);return st==='en cours'||st.startsWith('en attente')}).slice(0,5).map(x=>itemCard('⚙',x.title,`${esc(x.building)} · ${badge(x.status)}`,'maintenance',x.id)),'Aucune intervention en cours.');$('#maintenanceTodoPreview').innerHTML=cardList(todoMaint.slice(0,5).map(x=>itemCard('🧰',x.title,`${badge(x.priority)} · ${fmtDate(recordDueDate(x))||'Sans échéance'}`,'maintenance',x.id)),'Aucune intervention à faire.');
  const weakRows=[];recentClean.forEach(c=>(c.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).forEach(t=>weakRows.push({c,t})));$('#cleaningWeakPreview').innerHTML=cardList(weakRows.slice(0,5).map(({c,t})=>itemCard('🧹',t.name,`${esc(c.building)} · ${esc(c.room)} · ${badge(t.status)}`,'cleaning',c.id)),'Aucun point faible récent.');const nextMeet=(db.meetings||[]).filter(x=>normalizeDateValue(x.date)>=todayISO()&&!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule').sort((a,b)=>`${normalizeDateValue(a.date)}${a.time||''}`.localeCompare(`${normalizeDateValue(b.date)}${b.time||''}`)).slice(0,5);$('#meetingPreview').innerHTML=cardList(nextMeet.map(x=>itemCard('📅',x.title,`${fmtDate(normalizeDateValue(x.date))} ${esc(x.time||'')} · ${esc(x.location||'')}`,'meeting',x.id)),'Aucun rendez-vous à venir.');
- renderDashboardContractsWatchV159();renderDashboardTeamTodayV149();renderDashboardTodayAgenda();renderDashboardPrioritiesV149(urgentActions,lateActions);renderDashboardRemindersV149(notes,pSoon);renderDashboardWeekV149();renderTeamCalendar();renderPersonalCalendar();window.PDFImportModule?.renderDashboard?.();
+ renderDashboardPeriodicNextV160();renderDashboardTeamTodayV149();renderDashboardTodayAgenda();renderDashboardPrioritiesV149(urgentActions,lateActions);renderDashboardRemindersV149(notes,pSoon);renderDashboardWeekV149();renderTeamCalendar();renderPersonalCalendar();window.PDFImportModule?.renderDashboard?.();
 }
 
 
