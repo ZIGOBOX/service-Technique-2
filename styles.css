@@ -865,3 +865,17 @@ body.rc-pos-open{overflow:hidden!important}
 .rc-pos-frequency{display:inline-flex;align-self:flex-start;max-width:100%;padding:4px 7px;border-radius:8px;background:#e9f4ff;color:#26669c!important;font-size:.72rem!important;font-weight:900!important;line-height:1.15}
 .rc-pos-frequency-head{align-self:auto;margin-left:2px}
 @media(max-width:800px){.rc-pos-frequency{font-size:.65rem!important;padding:3px 6px}.rc-pos-tile.criterion{min-height:126px}}
+
+
+/* V147.162 — historique des passages des contrôles périodiques */
+.periodic-history{margin:12px 0;border:1px solid #d8e4ef;border-radius:12px;background:#f8fbfe;overflow:hidden}
+.periodic-history summary{cursor:pointer;padding:10px 12px;font-weight:800;color:#174a75;list-style:none}
+.periodic-history summary::-webkit-details-marker{display:none}
+.periodic-history ul,.periodic-history-form ul{list-style:none;margin:0;padding:0}
+.periodic-history-item{display:grid;grid-template-columns:minmax(125px,.7fr) minmax(130px,1fr);gap:3px 12px;padding:8px 12px;border-top:1px solid #e5edf4;align-items:center}
+.periodic-history-item>span:first-child{display:flex;align-items:center;gap:7px}
+.periodic-history-item em{font-style:normal;font-size:.68rem;font-weight:800;color:#087443;background:#dcfce7;border-radius:999px;padding:2px 7px}
+.periodic-history-item small{grid-column:1/-1;line-height:1.25}
+.periodic-history-form{grid-column:1/-1;margin:12px 0 2px;padding:14px;border:1px solid #d8e4ef;border-radius:14px;background:#f8fbfe}
+.periodic-history-form h4{margin:0 0 5px;color:#173d62}
+@media(max-width:700px){.periodic-history-item{grid-template-columns:1fr}.periodic-history-item small{grid-column:1}.periodic-history-form{padding:10px}}

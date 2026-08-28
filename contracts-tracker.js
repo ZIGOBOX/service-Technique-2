@@ -145,6 +145,7 @@ function parseWorkbook(arrayBuffer,{fileName=TEMPLATE_FILE_NAME}={}){
 async function importWorkbookBuffer(arrayBuffer,{fileName=TEMPLATE_FILE_NAME,persist=true,seed=false}={}){
   ensureState();const parsed=parseWorkbook(arrayBuffer,{fileName});
   db.contracts=parsed.records;
+  autoLinkContractsToPeriodicFromExcel();
   const periodicSync=syncPeriodicFromContracts({source:seed?'contracts-seed':'excel-import'});
   db.settings.contractsInitialized=true;
   db.settings.contractWorkbookBase64=arrayBufferToBase64(arrayBuffer);
@@ -171,7 +172,7 @@ async function importWorkbookFile(file){
 }
 function monthsFromPeriodicity(text){
   const s=norm(text);if(!s)return 0;
-  if(/\bmensuel/.test(s))return 1;if(/trimestr/.test(s))return 3;if(/semestr/.test(s))return 6;
+  if(/\bmensuel|tous les mois|chaque mois/.test(s))return 1;if(/trimestr/.test(s))return 3;if(/semestr/.test(s))return 6;
   if(/biennal|tous les 2 ans|tous les deux ans/.test(s))return 24;if(/triennal|tous les 3 ans|tous les trois ans/.test(s))return 36;
   if(/tous les 5 ans|quinquenn/.test(s))return 60;if(/annuel|annuelle|chaque an/.test(s))return 12;
   const m=s.match(/tous les\s+(\d+)\s+ans?/);return m?Number(m[1])*12:0;
@@ -183,13 +184,60 @@ function addMonthsSafe(date,months){
 }
 function nextServiceDate(rec){return rec.nextServiceDateOverride||addMonthsSafe(rec.lastServiceDate,monthsFromPeriodicity(rec.periodicity))}
 
-// V147.158 — synchronisation sûre Contrats Excel → Contrôles périodiques.
+
+// V147.163 — le fichier Excel est aussi une source directe des contrôles périodiques.
+// Toutes les lignes reconnues sont reliées automatiquement au contrôle correspondant.
+// Les dates contenues dans un texte (ex. « contrôle fait le 23/04/2026 » ou plusieurs dates EPS) sont également reprises.
+function excelPeriodicNorm(v){return norm(v||'')}
+function contractServiceDates(rec){
+  const out=new Set();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(String(rec?.lastServiceDate||'')))out.add(String(rec.lastServiceDate));
+  const text=String(rec?.lastServiceText||'');
+  let m;
+  const iso=/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/g;
+  while((m=iso.exec(text))){const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);const dt=new Date(y,mo-1,d,12);if(dt.getFullYear()===y&&dt.getMonth()===mo-1&&dt.getDate()===d)out.add(`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`)}
+  const fr=/\b(\d{1,2})\s*[/,.\-]\s*(\d{1,2})\s*[/,.\-]\s*(\d{2,4})\b/g;
+  while((m=fr.exec(text))){let d=Number(m[1]),mo=Number(m[2]),y=Number(m[3]);if(y<100)y+=2000;const dt=new Date(y,mo-1,d,12);if(dt.getFullYear()===y&&dt.getMonth()===mo-1&&dt.getDate()===d)out.add(`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`)}
+  return [...out].sort();
+}
+function contractProviderValue(rec){
+  const raw=String(rec?.provider||'').trim(),n=norm(raw);
+  if(!raw)return '';
+  if(n.includes('contrat a refaire')||n.includes('pas de contrat')||n==='a faire')return '';
+  return raw;
+}
+function linkedContractsForPeriodic(pid){return (db.contracts||[]).filter(c=>contractLinkedToPeriodic(c,pid))}
+function currentProviderForPeriodic(pid){
+  const rows=linkedContractsForPeriodic(pid).slice().sort((a,b)=>Number(b.sourceYear||0)-Number(a.sourceYear||0)||Number(b.sourceRow||0)-Number(a.sourceRow||0));
+  for(const r of rows){
+    const raw=String(r.provider||'').trim();
+    if(!raw)continue;
+    const n=norm(raw);
+    if(n.includes('contrat a refaire')||n.includes('pas de contrat')||n==='a faire')return '';
+    return raw;
+  }
+  return '';
+}
+function autoLinkContractsToPeriodicFromExcel(){
+  if(!ensureState())return 0;
+  let linked=0;
+  const controls=(db.periodic||[]).map(p=>({p,names:new Set([p.name,...(Array.isArray(p.excelSourceNames)?p.excelSourceNames:[])].map(excelPeriodicNorm).filter(Boolean))}));
+  for(const rec of (db.contracts||[])){
+    const rn=excelPeriodicNorm(rec.object);if(!rn)continue;
+    const hit=controls.find(x=>x.names.has(rn));if(!hit)continue;
+    rec.linkedPeriodicIds=Array.isArray(rec.linkedPeriodicIds)?rec.linkedPeriodicIds:[];
+    if(!rec.linkedPeriodicIds.map(String).includes(String(hit.p.id))){rec.linkedPeriodicIds.push(hit.p.id);linked++}
+  }
+  return linked;
+}
+
+// V147.163 — synchronisation sûre Excel → Contrôles périodiques.
 // La date « Dernière prestation » du contrat devient le « Dernier contrôle » du contrôle lié.
 // La prochaine échéance suit la périodicité DU CONTRÔLE ; une échéance manuelle différente est protégée.
 function contractLinkedToPeriodic(rec,pid){return (rec?.linkedPeriodicIds||[]).map(String).includes(String(pid))}
 function bestContractForPeriodic(pid){
-  const rows=(db.contracts||[]).filter(c=>contractLinkedToPeriodic(c,pid)&&String(c.lastServiceDate||'').match(/^\d{4}-\d{2}-\d{2}$/));
-  rows.sort((a,b)=>String(b.lastServiceDate||'').localeCompare(String(a.lastServiceDate||''))||Number(b.sourceYear||0)-Number(a.sourceYear||0)||String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+  const rows=linkedContractsForPeriodic(pid).map(rec=>({rec,date:(contractServiceDates(rec).at(-1)||'')}));
+  rows.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.rec?.sourceYear||0)-Number(a.rec?.sourceYear||0)||Number(b.rec?.sourceRow||0)-Number(a.rec?.sourceRow||0));
   return rows[0]||null;
 }
 function periodicSyncComparableDate(v){return /^\d{4}-\d{2}-\d{2}$/.test(String(v||''))?String(v):''}
@@ -201,39 +249,60 @@ function syncPeriodicFromContracts({periodicIds=null,source='contracts'}={}){
   const now=new Date().toISOString();
   for(const p of db.periodic){
     if(filter&&!filter.has(String(p.id)))continue;
-    const rec=bestContractForPeriodic(p.id);if(!rec)continue;
-    const newLast=periodicSyncComparableDate(rec.lastServiceDate);if(!newLast)continue;
+    const linked=linkedContractsForPeriodic(p.id);if(!linked.length)continue;
+
+    // Historique : reprendre toutes les dates trouvées dans tous les onglets Excel liés.
+    if(typeof mergePeriodicHistoryEntry==='function'){
+      for(const rec of linked){
+        for(const date of contractServiceDates(rec)){
+          mergePeriodicHistoryEntry(p,{date,provider:contractProviderValue(rec),source:`Excel — ${rec.sourceSheet||`Contrats ${rec.sourceYear||''}`}`});
+        }
+      }
+    }
+
+    const best=bestContractForPeriodic(p.id);
+    const newLast=periodicSyncComparableDate(best?.date||'');
     const oldLast=periodicSyncComparableDate(p.lastDate),oldNext=periodicSyncComparableDate(p.nextDate);
     const interval=Number(p.intervalMonths||0);
     const oldAuto=oldLast&&interval>0?addMonthsSafe(oldLast,interval):'';
-    const previousManaged=periodicSyncComparableDate(p.contractSyncNextDate);
-    const nextWasManaged=!oldNext||!!(previousManaged&&oldNext===previousManaged)||!!(oldAuto&&oldNext===oldAuto);
-    const newAuto=interval>0?addMonthsSafe(newLast,interval):'';
+    const previousManaged=periodicSyncComparableDate(p.contractSyncNextDate||p.excelPeriodicManagedNext);
+    const nextWasManaged=!oldNext||!!(previousManaged&&oldNext===previousManaged)||!!(oldAuto&&oldNext===oldAuto)||!!(oldLast&&oldNext<=oldLast);
     let changed=false;
-    if(p.lastDate!==newLast){p.lastDate=newLast;summary.lastDate++;changed=true}
-    if(rec.provider){
-      const previousProvider=String(p.contractSyncProvider||'');
+
+    // Ne jamais remplacer une saisie de terrain plus récente par une ancienne date Excel.
+    if(newLast&&(!oldLast||newLast>=oldLast)&&p.lastDate!==newLast){p.lastDate=newLast;summary.lastDate++;changed=true}
+
+    // Le prestataire courant est lu dans l'onglet le plus récent, indépendamment de la date de dernière prestation.
+    const newProvider=currentProviderForPeriodic(p.id);
+    if(newProvider){
+      const previousProvider=String(p.contractSyncProvider||p.excelPeriodicManagedProvider||'');
       const currentProvider=String(p.provider||'');
-      const providerWasManaged=!previousProvider||!currentProvider||currentProvider===previousProvider;
+      const knownExcelProviders=new Set(linked.map(contractProviderValue).filter(Boolean));
+      const providerWasManaged=!currentProvider||!!(previousProvider&&currentProvider===previousProvider)||knownExcelProviders.has(currentProvider);
       if(providerWasManaged){
-        if(currentProvider!==String(rec.provider)){p.provider=rec.provider;summary.provider++;changed=true}
-        p.contractSyncProvider=rec.provider;
-      }else if(currentProvider!==String(rec.provider))summary.preservedProvider++;
+        if(currentProvider!==newProvider){p.provider=newProvider;summary.provider++;changed=true}
+        p.contractSyncProvider=newProvider;p.excelPeriodicManagedProvider=newProvider;
+      }else if(currentProvider!==newProvider)summary.preservedProvider++;
     }
+
+    const effectiveLast=periodicSyncComparableDate(p.lastDate);
+    const newAuto=effectiveLast&&interval>0?addMonthsSafe(effectiveLast,interval):'';
     if(newAuto){
       if(nextWasManaged){
         if(p.nextDate!==newAuto){p.nextDate=newAuto;summary.nextDate++;changed=true}
-        p.contractSyncNextDate=newAuto;
+        p.contractSyncNextDate=newAuto;p.excelPeriodicManagedNext=newAuto;
       }else if(oldNext!==newAuto){summary.preservedNext++}
     }
-    p.contractSyncContractId=rec.id;
-    p.contractSyncContractObject=rec.object||'';
-    p.contractSyncLastDate=newLast;
+
+    const bestRec=best?.rec||linked.slice().sort((a,b)=>Number(b.sourceYear||0)-Number(a.sourceYear||0))[0];
+    p.contractSyncContractId=bestRec?.id||p.contractSyncContractId||'';
+    p.contractSyncContractObject=bestRec?.object||p.contractSyncContractObject||'';
+    if(newLast)p.contractSyncLastDate=newLast;
     p.contractSyncSource=source;
     p.contractSyncAt=now;
     if(changed){
-      p.updatedAt=now;summary.updated++;summary.controls.push({id:p.id,name:p.name||p.no||'Contrôle',contract:rec.object||'',lastDate:p.lastDate,nextDate:p.nextDate||'',manualNext:!!(oldNext&&!nextWasManaged)});
-      try{if(typeof pstMutationStamp==='function')pstMutationStamp();if(typeof pstNormalizeMutationRecord==='function')pstNormalizeMutationRecord(p,{source:'contract-sync'});if(typeof pstQueueMutation==='function')pstQueueMutation('periodic',p,{label:'Synchronisation contrat'});}catch(e){console.warn('File sync contrôle périodique',e)}
+      p.updatedAt=now;summary.updated++;summary.controls.push({id:p.id,name:p.name||p.no||'Contrôle',contract:bestRec?.object||'',lastDate:p.lastDate,nextDate:p.nextDate||'',manualNext:!!(oldNext&&!nextWasManaged)});
+      try{if(typeof pstMutationStamp==='function')pstMutationStamp();if(typeof pstNormalizeMutationRecord==='function')pstNormalizeMutationRecord(p,{source:'contract-sync'});if(typeof pstQueueMutation==='function')pstQueueMutation('periodic',p,{label:'Synchronisation Excel → contrôle périodique'});}catch(e){console.warn('File sync contrôle périodique',e)}
     }
   }
   if(summary.updated){try{if(typeof renderPeriodic==='function')renderPeriodic()}catch(_){}try{augmentPeriodicCards()}catch(_){} }
