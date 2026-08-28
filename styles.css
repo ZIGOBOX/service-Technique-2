@@ -821,7 +821,7 @@ button{user-select:none;-webkit-user-select:none}
 }
 
 
-/* V147.154 — Contrôle ménage tactile type caisse / tableau de touches */
+/* V147.155 — Contrôle ménage tactile type caisse / tableau de touches */
 body.rc-pos-open{overflow:hidden!important}
 .rc-pos-overlay{position:fixed;inset:0;z-index:10050;background:rgba(8,28,52,.55);backdrop-filter:blur(4px);padding:18px;display:flex;align-items:stretch;justify-content:center}
 .rc-pos-overlay.hidden{display:none!important}
@@ -860,3 +860,8 @@ body.rc-pos-open{overflow:hidden!important}
 @media(max-width:800px){
  .rc-pos-overlay{padding:0}.rc-pos-shell{border-radius:0;border:0}.rc-pos-head{min-height:76px;padding:12px 13px}.rc-pos-progress{display:none}.rc-pos-close{width:42px;height:42px}.rc-pos-body{padding:13px}.rc-pos-grid,.rc-pos-grid.rc-pos-buildings,.rc-pos-grid.rc-pos-rooms,.rc-pos-grid.rc-pos-criteria{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.rc-pos-tile{min-height:108px;padding:12px;border-radius:15px}.rc-pos-tile strong{font-size:.92rem}.rc-pos-tile small{font-size:.74rem}.rc-pos-score-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.rc-pos-score{min-height:118px}.rc-pos-footer{padding:10px 12px;align-items:stretch}.rc-pos-footer-main{gap:8px}.rc-pos-footer-main strong{display:none}.rc-pos-footer .primary,.rc-pos-footer .ghost{min-height:48px}.rc-pos-note-box.open{display:block}.rc-pos-note-box .primary{margin-top:8px;width:100%}}
 @media(max-width:420px){.rc-pos-grid,.rc-pos-grid.rc-pos-buildings,.rc-pos-grid.rc-pos-rooms,.rc-pos-grid.rc-pos-criteria{grid-template-columns:1fr 1fr}.rc-pos-tile{min-height:100px}.rc-pos-head h2{font-size:1.15rem}.rc-pos-breadcrumb{font-size:.7rem}}
+
+/* V147.155 — Fréquences visibles dans les cases du contrôle ménage tactile. */
+.rc-pos-frequency{display:inline-flex;align-self:flex-start;max-width:100%;padding:4px 7px;border-radius:8px;background:#e9f4ff;color:#26669c!important;font-size:.72rem!important;font-weight:900!important;line-height:1.15}
+.rc-pos-frequency-head{align-self:auto;margin-left:2px}
+@media(max-width:800px){.rc-pos-frequency{font-size:.65rem!important;padding:3px 6px}.rc-pos-tile.criterion{min-height:126px}}

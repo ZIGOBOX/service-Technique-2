@@ -791,7 +791,7 @@ function pendingMainControlContext(){
  };
 }
 
-/* V147.154 — Contrôle ménage tactile : Bâtiment → Salle → Critère → Note, sans formulaire classique. */
+/* V147.155 — Contrôle ménage tactile : fréquences visibles dans les cases et enregistrées. */
 let tactileState=null;
 const TACTILE_RATINGS=[
  {value:5,label:'Très propre',icon:'★★★★★'},
@@ -815,6 +815,81 @@ function tactileCriteriaForRoom(r){
  if(/chambre|internat|foyer/.test(k))return ['Sol','Mobilier','Poussière','Poubelles','Sanitaires si présents','Poignées / interrupteurs','État général'];
  return ['Sol','Poussière','Mobilier / surfaces','Poubelles','Vitres / traces','Poignées / interrupteurs','État général'];
 }
+function tactileFrequencyFor(r,name){
+ const type=tactileMainRoomType(r),n=tactileKey(name);
+ const everyControl='À chaque contrôle';
+ if(type==='Sanitaires / vestiaires'){
+  if(/wc|urinoir/.test(n))return 'Journalière (2 fois)';
+  if(/sol/.test(n))return 'Journalière (1 fois)';
+  if(/lavabo|robinetterie|miroir|poubelle|savon|papier|poignee|interrupteur/.test(n))return 'Journalière (1 fois)';
+  return everyControl;
+ }
+ if(type==='Salle de sport / gymnase'){
+  if(/^sol/.test(n))return 'Balayage 2×/sem. · lavage 1×/sem.';
+  if(/materiel|equipement/.test(n))return 'Journalière (1 fois)';
+  if(/poubelle/.test(n))return 'Journalière (1 fois)';
+  if(/porte|poignee/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/poussiere|gradin|abord/.test(n))return 'Si nécessaire';
+  return everyControl;
+ }
+ if(type==='Circulations / halls / escaliers'){
+  if(/^sol/.test(n))return 'Balayage 1×/jour · lavage 1×/sem.';
+  if(/rampe|poignee/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/poussiere/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/vitre|trace/.test(n))return 'Si nécessaire';
+  if(/poubelle/.test(n))return 'Journalière (1 fois)';
+  if(/tapis|abord/.test(n))return 'Hebdomadaire (1 fois)';
+  return everyControl;
+ }
+ if(type==='Bureaux / administration'){
+  if(/^sol/.test(n))return 'Balayage 2×/sem. · lavage 1×/sem.';
+  if(/mobilier|poussiere|informatique/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/poubelle/.test(n))return 'Hebdomadaire (3 fois)';
+  if(/vitre|trace/.test(n))return 'Si nécessaire';
+  if(/poignee|interrupteur/.test(n))return 'Hebdomadaire (1 fois)';
+  return everyControl;
+ }
+ if(type==='Locaux techniques'){
+  if(/^sol/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/poussiere/.test(n))return 'Mensuelle (1 fois)';
+  if(/materiel|rangement/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/poignee|interrupteur/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/poubelle/.test(n))return 'Si nécessaire';
+  return everyControl;
+ }
+ if(type==='Dortoirs internat'){
+  if(/^sol/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/mobilier|poussiere/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/poubelle/.test(n))return 'Journalière (1 fois)';
+  if(/sanitaire/.test(n))return 'Journalière (1 fois)';
+  if(/poignee|interrupteur/.test(n))return 'À chaque permanence';
+  return everyControl;
+ }
+ if(type==='CDI'){
+  if(/^sol/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/mobilier|poussiere|informatique/.test(n))return 'Hebdomadaire (1 fois)';
+  if(/poubelle/.test(n))return 'Journalière (1 fois)';
+  if(/vitre|trace/.test(n))return 'Si nécessaire';
+  if(/poignee|interrupteur/.test(n))return 'Hebdomadaire (1 fois)';
+  return everyControl;
+ }
+ if(type==='Salle de classe / devoirs / informatique'){
+  if(/^sol/.test(n))return 'Balayage 1×/jour · lavage 1×/sem.';
+  if(/mobilier|surface/.test(n))return 'Tables 3×/sem.';
+  if(/poussiere/.test(n))return 'À chaque permanence';
+  if(/poubelle/.test(n))return 'Journalière (1 fois)';
+  if(/vitre|trace/.test(n))return 'Si nécessaire';
+  if(/poignee|interrupteur/.test(n))return 'Hebdomadaire (1 fois)';
+  return everyControl;
+ }
+ const roomKey=tactileKey(`${r?.type||''} ${r?.name||''}`);
+ if(/cuisine|laverie|self|restaurant|eau chaude/.test(roomKey)){
+  if(/^sol|surface|table|assise|point d eau|poubelle|materiel/.test(n))return 'Journalière (1 fois)';
+  if(/porte|poignee/.test(n))return 'Journalière (1 fois)';
+  return everyControl;
+ }
+ return everyControl;
+}
 function tactileMainRoomType(r){
  const k=tactileKey(`${r?.type||''} ${r?.name||''}`);
  if(/sanitaire|vestiaire|wc|douche/.test(k))return 'Sanitaires / vestiaires';
@@ -829,7 +904,7 @@ function tactileMainRoomType(r){
 }
 function tactileRoomState(r){
  if(!tactileState.rooms[r.id]){
-  tactileState.rooms[r.id]={room:r,note:'',criteria:tactileCriteriaForRoom(r).map(name=>({name,value:null,na:false}))};
+  tactileState.rooms[r.id]={room:r,note:'',criteria:tactileCriteriaForRoom(r).map(name=>({name,frequency:tactileFrequencyFor(r,name),value:null,na:false}))};
  }
  return tactileState.rooms[r.id];
 }
@@ -922,7 +997,7 @@ function renderTactileRooms(){
 function renderTactileCriteria(){
  const r=tactileRoomById(tactileState.roomId);if(!r)return renderTactileRooms();const st=tactileRoomState(r),x=tactileRoomStats(st);
  tactileState.step='criteria';document.getElementById('rcPosTitle').textContent=tactileRoomLabel(r);tactileBreadcrumb([tactileCurrentBuilding()?.name,tactileCurrentFloor()?.name,tactileCurrentSector()?.name,tactileRoomLabel(r)]);tactileSetProgress();
- const criteria=st.criteria.map((c,i)=>{let text='À contrôler',cls='pending';if(c.na){text='N/A';cls='na'}else if(Number.isFinite(c.value)){text=`${c.value}/5 · ${TACTILE_RATINGS.find(v=>v.value===c.value)?.label||''}`;cls=c.value>=4?'ok':c.value>=2?'warn':'bad'}return `<button class="rc-pos-tile criterion ${cls}" data-ci="${i}"><span class="rc-pos-room-mark">${c.na?'—':Number.isFinite(c.value)?c.value:'○'}</span><strong>${esc(c.name)}</strong><small>${esc(text)}</small></button>`}).join('');
+ const criteria=st.criteria.map((c,i)=>{let text='À contrôler',cls='pending';if(c.na){text='N/A';cls='na'}else if(Number.isFinite(c.value)){text=`${c.value}/5 · ${TACTILE_RATINGS.find(v=>v.value===c.value)?.label||''}`;cls=c.value>=4?'ok':c.value>=2?'warn':'bad'}const freq=c.frequency||tactileFrequencyFor(r,c.name);c.frequency=freq;return `<button class="rc-pos-tile criterion ${cls}" data-ci="${i}"><span class="rc-pos-room-mark">${c.na?'—':Number.isFinite(c.value)?c.value:'○'}</span><strong>${esc(c.name)}</strong><span class="rc-pos-frequency">${esc(freq)}</span><small>${esc(text)}</small></button>`}).join('');
  document.getElementById('rcPosBody').innerHTML=`<div class="rc-pos-help"><strong>${x.answered}/${x.total} critères renseignés</strong><span>Touchez un critère, puis choisissez directement la note.</span></div><div class="rc-pos-grid rc-pos-criteria">${criteria}</div><div class="rc-pos-room-tools"><button type="button" class="rc-pos-tool" data-all-ok>✓ Tout mettre à 5/5</button><button type="button" class="rc-pos-tool" data-note>💬 ${st.note?'Modifier la remarque':'Ajouter une remarque'}</button><button type="button" class="rc-pos-tool danger-lite" data-clear-room>Effacer ce local</button></div><div id="rcPosNoteBox" class="rc-pos-note-box ${st.note?'open':''}">${st.note?`<textarea id="rcPosNote" rows="3" placeholder="Remarque facultative">${esc(st.note)}</textarea><button type="button" class="primary small" data-save-note>Valider la remarque</button>`:''}</div>`;
  document.querySelectorAll('#rcPosBody [data-ci]').forEach(btn=>btn.onclick=()=>{tactileState.criterionIndex=+btn.dataset.ci;renderTactileRating()});
  document.querySelector('[data-all-ok]').onclick=()=>{st.criteria.forEach(c=>{c.value=5;c.na=false});renderTactileCriteria()};
@@ -935,7 +1010,7 @@ function renderTactileCriteria(){
 function renderTactileRating(){
  const r=tactileRoomById(tactileState.roomId);if(!r)return renderTactileRooms();const st=tactileRoomState(r),c=st.criteria[tactileState.criterionIndex];if(!c)return renderTactileCriteria();
  tactileState.step='rating';document.getElementById('rcPosTitle').textContent=c.name;tactileBreadcrumb([tactileRoomLabel(r),c.name]);tactileSetProgress();
- document.getElementById('rcPosBody').innerHTML=`<div class="rc-pos-help score-help"><strong>Quelle note pour « ${esc(c.name)} » ?</strong><span>Un seul toucher suffit.</span></div><div class="rc-pos-score-grid">${TACTILE_RATINGS.map(v=>`<button class="rc-pos-score ${v.value==='na'?'na':`s${v.value}`}" data-rating="${v.value}"><strong>${v.value==='na'?'N/A':`${v.value}/5`}</strong><span>${esc(v.label)}</span><small>${esc(v.icon)}</small></button>`).join('')}<button class="rc-pos-score clear" data-rating="clear"><strong>↺</strong><span>Effacer</span><small>Non renseigné</small></button></div>`;
+ const freq=c.frequency||tactileFrequencyFor(r,c.name);c.frequency=freq;document.getElementById('rcPosBody').innerHTML=`<div class="rc-pos-help score-help"><strong>Quelle note pour « ${esc(c.name)} » ?</strong><span class="rc-pos-frequency rc-pos-frequency-head">${esc(freq)}</span><span>Un seul toucher suffit.</span></div><div class="rc-pos-score-grid">${TACTILE_RATINGS.map(v=>`<button class="rc-pos-score ${v.value==='na'?'na':`s${v.value}`}" data-rating="${v.value}"><strong>${v.value==='na'?'N/A':`${v.value}/5`}</strong><span>${esc(v.label)}</span><small>${esc(v.icon)}</small></button>`).join('')}<button class="rc-pos-score clear" data-rating="clear"><strong>↺</strong><span>Effacer</span><small>Non renseigné</small></button></div>`;
  document.querySelectorAll('#rcPosBody [data-rating]').forEach(btn=>btn.onclick=()=>{const v=btn.dataset.rating;if(v==='clear'){c.value=null;c.na=false}else if(v==='na'){c.value=null;c.na=true}else{c.value=Number(v);c.na=false}renderTactileCriteria()});
  tactileSetFooter('<button type="button" class="ghost" data-pos-back>← Critères</button>');document.querySelector('[data-pos-back]').onclick=renderTactileCriteria;
 }
@@ -950,7 +1025,7 @@ async function saveTactileControl(){
  for(const st of entries){
   const x=tactileRoomStats(st);main.settings.counters.cleaning=(main.settings.counters.cleaning||0)+1;
   const no=`MEN-${now.getFullYear()}-${String(main.settings.counters.cleaning).padStart(4,'0')}`;
-  const tasks=st.criteria.map(c=>({name:c.name,frequency:'Contrôle tactile',status:c.na?'Non applicable':Number.isFinite(c.value)?tactileStatusFromValue(c.value):'Non contrôlé',comment:Number.isFinite(c.value)?`${c.value}/5`:''}));
+  const tasks=st.criteria.map(c=>({name:c.name,frequency:c.frequency||tactileFrequencyFor(st.room,c.name),status:c.na?'Non applicable':Number.isFinite(c.value)?tactileStatusFromValue(c.value):'Non contrôlé',comment:Number.isFinite(c.value)?`${c.value}/5`:''}));
   const rec={id:uid(),no,date,time,inspector:main.settings.defaultInspector||'',agentId:'',building:b.name,floor:f.name,sector:sec.name,roomType:tactileMainRoomType(st.room),room:tactileRoomLabel(st.room),scopeMode:'single',roomScopeIds:[st.room.id],overallStatus:x.status,score:x.score,comment:st.note||'',tasks,attachments:[],source:'tactile',createdAt:now.toISOString(),updatedAt:now.toISOString()};
   main.cleaning.push(rec);created.push(rec);
  }
