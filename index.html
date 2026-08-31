@@ -1043,8 +1043,8 @@
         <div class="panel-head"><div><span class="calendar-kicker">SYNTHÈSE</span><h3>À surveiller</h3></div></div>
         <div class="dashboard-watch-grid-v149">
           <button class="dashboard-watch-v149 danger" data-go="maintenance"><span>🔧</span><div><small>Interventions ouvertes</small><strong id="kpiMaintenance">0</strong><em id="kpiMaintenanceTodo">0 à faire</em></div></button>
-          <button class="dashboard-watch-v149" data-go="periodic"><span>📋</span><div><small>Contrôles périodiques</small><strong id="kpiPeriodicLate">0</strong><em id="kpiPeriodicSoon">0 bientôt</em></div></button>
-          <button class="dashboard-watch-v149" data-go="periodic"><span>🛡️</span><div><small>Prochains contrôles</small><strong id="kpiPeriodicNextCountV160">0</strong><em id="kpiPeriodicNextDetailV160">aucune échéance proche</em></div></button>
+          <button class="dashboard-watch-v149" data-go="periodic"><span>📋</span><div><small id="kpiPeriodicLabelV165">Contrôles à faire</small><strong id="kpiPeriodicLate">0</strong><em id="kpiPeriodicSoon">0 bientôt</em></div></button>
+          <button class="dashboard-watch-v149" data-go="periodic"><span>🛡️</span><div><small id="kpiPeriodicPeriodLabelV165">Contrôles de l’année</small><strong id="kpiPeriodicNextCountV160">0</strong><em id="kpiPeriodicNextDetailV160">aucune échéance proche</em></div></button>
           <button class="dashboard-watch-v149 good" data-go="cleaning"><span>🧹</span><div><small>Conformité ménage</small><strong id="kpiCompliance">—</strong><em id="kpiCleaningWeak">0 point faible</em></div></button>
           <button class="dashboard-watch-v149" data-go="notes"><span>✎</span><div><small>Notes actives</small><strong id="kpiNotes">0</strong><em id="kpiNotesDue">0 échéance proche</em></div></button>
           <button class="dashboard-watch-v149" data-go="pdfimports"><span>◷</span><div><small>Chronotime</small><strong id="dashboardChronoCompact">Voir</strong><em>imports et delta annuel</em></div></button>
@@ -1159,10 +1159,10 @@
     </section>
 
     <section class="view" id="periodic">
-      <div class="section-actions"><div><h3>Contrôles périodiques du lycée</h3><p>Catalogue préchargé et modifiable : incendie, électricité, chauffage, cuisine, ascenseurs, eau, équipements sportifs, portes et levage. Le suivi est permanent et indépendant de l’année scolaire : chaque contrôle reste actif jusqu’à sa vraie prochaine échéance.</p></div><div><button class="ghost" id="resetPeriodicCatalog">Restaurer le catalogue</button><button class="primary" id="newPeriodic">＋ Contrôle</button></div></div>
-      <div class="notice"><strong>Important :</strong> les périodicités proposées servent de base de pilotage. Elles doivent être confirmées avec le registre de sécurité, la catégorie ERP, les contrats et les équipements réellement présents.</div>
+      <div class="section-actions"><div><h3>Contrôles périodiques du lycée</h3><p>Une ligne par contrôle. L’année scolaire choisie sur le tableau de bord pilote aussi cette liste : les anciennes dates restent de l’historique et ne sont pas transformées en retard.</p><p id="periodicAcademicYearLabelV165" class="periodic-year-label-v165"></p></div><div><button class="ghost" id="resetPeriodicCatalog">Restaurer le catalogue</button><button class="primary" id="newPeriodic">＋ Contrôle</button></div></div>
+      <div class="notice"><strong>Lecture :</strong> Le contrôle reste valable selon son cycle réel, même s’il a été réalisé avant le 1er septembre. Exemple : un contrôle annuel réalisé en juillet 2026 reste « À jour » au début de 2026-2027 ; seule sa prochaine échéance réelle en 2027 est surveillée. Les anciennes années restent de l’historique et ne deviennent jamais des retards actuels.</div>
       <div class="filters"><select id="periodicFamily"><option value="">Toutes les familles</option></select><select id="periodicStatus"><option value="">Tous les états</option></select><select id="periodicBuilding"><option value="">Tous les bâtiments</option></select><button class="ghost" data-print="periodic">Imprimer le registre</button></div>
-      <div id="periodicCards" class="periodic-grid"></div>
+      <div id="periodicCards"></div>
       <article class="panel control-import-panel"><div class="panel-head"><div><h3>📄 Rapports de contrôle importés</h3><p class="muted">Importez directement un PDF ici, ou utilisez <strong>＋ → Importer / Scanner</strong>. Après analyse, validez le rapport pour l’injecter dans le contrôle périodique et le rendre relisible.</p></div><label class="primary file-label">＋ Importer un rapport PDF<input type="file" id="controlPdfFile" accept="application/pdf,.pdf" hidden></label></div><div id="controlImportStatus" class="import-status"></div><div id="controlPreview" class="import-preview"></div></article>
       <article class="panel"><div class="panel-head"><div><h3>📚 Rapports de contrôle classés</h3><p class="muted">Les rapports électriques restent avec Électricité, les SSI avec SSI, etc. Le PDF original peut être rouvert à tout moment.</p></div><select id="controlReportFamily"><option value="">Toutes les familles</option></select></div><div id="controlReportLibrary" class="control-report-library"></div></article>
     </section>
@@ -1706,11 +1706,11 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
-  <script src="./app.js?v=147.164-20260828-all-periodic-excel"></script>
+  <script src="./app.js?v=147.166-20260829-periodic-cycle-continuity"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./jszip.min.js?v=3.10.1"></script>
-  <script src="./contracts-tracker.js?v=147.164-20260828-all-periodic-excel"></script>
+  <script src="./contracts-tracker.js?v=147.166-20260829-periodic-cycle-continuity"></script>
   <script src="./schedule-import.js?v=147.83-20260821-audit"></script>
   <script src="./report-import.js?v=147.83-20260821-audit"></script>
 

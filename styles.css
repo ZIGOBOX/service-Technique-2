@@ -879,3 +879,25 @@ body.rc-pos-open{overflow:hidden!important}
 .periodic-history-form{grid-column:1/-1;margin:12px 0 2px;padding:14px;border:1px solid #d8e4ef;border-radius:14px;background:#f8fbfe}
 .periodic-history-form h4{margin:0 0 5px;color:#173d62}
 @media(max-width:700px){.periodic-history-item{grid-template-columns:1fr}.periodic-history-item small{grid-column:1}.periodic-history-form{padding:10px}}
+
+
+/* V147.166 — Contrôles périodiques : continuité du cycle entre années scolaires */
+.periodic-year-label-v165{margin:.35rem 0 0;font-weight:800;color:#0b5ea8}
+.periodic-list-wrap-v165{overflow:auto;border:1px solid #dbe5ef;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(31,56,88,.06)}
+.periodic-list-v165{width:100%;border-collapse:separate;border-spacing:0;min-width:980px}
+.periodic-list-v165 th{position:sticky;top:0;z-index:1;text-align:left;padding:12px 14px;background:#eef5fb;color:#34516e;font-size:.78rem;text-transform:uppercase;letter-spacing:.035em;border-bottom:1px solid #d7e3ee}
+.periodic-list-v165 td{padding:12px 14px;border-bottom:1px solid #e7edf3;vertical-align:middle;color:#20364b}
+.periodic-list-v165 tbody tr:last-child td{border-bottom:0}
+.periodic-list-v165 tbody tr:hover{background:#f8fbfe}
+.periodic-list-v165 td:first-child{min-width:300px}
+.periodic-list-v165 td:first-child strong{display:block;font-size:.98rem;color:#123c64}
+.periodic-list-v165 td:first-child small{display:block;margin-top:4px;color:#718296;line-height:1.3}
+.periodic-done-date-v165{white-space:nowrap}
+.periodic-year-status-v165{display:inline-flex;align-items:center;justify-content:center;min-width:92px;padding:6px 9px;border-radius:999px;font-size:.78rem;font-weight:900;background:#edf2f7;color:#526170}
+.periodic-year-status-v165.done{background:#e5f7ed;color:#157342}
+.periodic-year-status-v165.todo{background:#fff0da;color:#9a5700}
+.periodic-year-status-v165.soon{background:#eaf3ff;color:#185fa7}
+.periodic-edit-cell-v165{width:58px;text-align:right}
+.periodic-pencil-v165{width:40px;height:40px;border:1px solid #cddbe8;border-radius:11px;background:#fff;cursor:pointer;font-size:1.05rem;display:inline-grid;place-items:center}
+.periodic-pencil-v165:hover{background:#eaf4ff;border-color:#87b9e5}
+@media(max-width:760px){.periodic-list-wrap-v165{border-radius:12px}.periodic-list-v165 th,.periodic-list-v165 td{padding:10px}.periodic-list-v165{min-width:900px}}
