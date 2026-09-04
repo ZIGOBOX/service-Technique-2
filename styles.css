@@ -902,16 +902,18 @@ body.rc-pos-open{overflow:hidden!important}
 .periodic-pencil-v165:hover{background:#eaf4ff;border-color:#87b9e5}
 @media(max-width:760px){.periodic-list-wrap-v165{border-radius:12px}.periodic-list-v165 th,.periodic-list-v165 td{padding:10px}.periodic-list-v165{min-width:900px}}
 
+/* V147.167 — horaires réels visibles immédiatement dans le tableau de bord */
+.dashboard-team-row-v149.real-schedule-row-v167,
+.today-agenda-row.real-schedule-row-v167{
+  border-color:#8cc9e8;
+  box-shadow:inset 4px 0 0 #1687bd;
+}
+.dashboard-team-status-v149.real-schedule-v167{
+  font-weight:800;
+}
+.agent-week-cell-v150.real-schedule-v167{
+  box-shadow:inset 0 0 0 2px #1687bd;
+}
 
-/* V147.168 — Dictée vocale du Bloc-notes */
-.note-voice-field{gap:8px}
-.note-voice-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:5px 0 3px}
-.note-voice-button{border:2px solid #2563eb;background:#eff6ff;color:#1d4ed8;border-radius:12px;padding:10px 15px;font-weight:800;cursor:pointer;min-height:44px;box-shadow:0 2px 8px rgba(37,99,235,.10)}
-.note-voice-button:hover{background:#dbeafe}
-.note-voice-button.is-listening{border-color:#dc2626;background:#fee2e2;color:#b91c1c;animation:noteVoicePulse 1.2s ease-in-out infinite}
-.note-voice-button.is-unavailable{opacity:.55;cursor:not-allowed}
-.note-voice-toolbar small{color:#64748b;font-weight:600}
-.note-voice-field textarea{min-height:140px}
-@keyframes noteVoicePulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.22)}50%{box-shadow:0 0 0 8px rgba(220,38,38,0)}}
-@media(max-width:700px){.note-voice-button{width:100%;font-size:16px}.note-voice-toolbar small{width:100%}}
-
+/* V147.170 — système d'envoi automatique explicite */
+.auto-mail-v170{grid-column:1/-1}.auto-mail-explainer-v170{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#eef8ff;border:1px solid #cce6f7;border-radius:14px;padding:12px 14px;margin:10px 0 14px}.auto-mail-explainer-v170 strong{color:#075ca8}.auto-mail-explainer-v170 span{color:#36566f}.auto-mail-destination-v170{background:#fbfdff}.automatic-mail-status-v170{display:grid;gap:8px;margin:8px 0 12px}.mail-status-row{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;background:#f7fafc;border:1px solid #dbe6ee;border-radius:12px;padding:10px 12px}.mail-status-row strong,.mail-status-row small{display:block}.mail-status-row small{margin-top:2px;color:#607386;line-height:1.35}.mail-status-icon{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-weight:900;background:#e8eef4;color:#536879}.mail-status-icon.ok{background:#e1f5e8;color:#247040}.mail-status-icon.warn{background:#fff1cf;color:#8a6100}.mail-status-icon.bad{background:#ffe2e2;color:#9a2f2f}.mail-status-icon.neutral{background:#e8eef4;color:#536879}.auto-mail-technical-v170{margin-top:12px;border-top:1px solid #dbe5ed;padding-top:12px}.auto-mail-technical-v170 summary{cursor:pointer;font-weight:800;color:#365a75}.auto-mail-technical-v170 p{margin:.6rem 0}.auto-mail-technical-v170 button{margin:.3rem 0}.auto-mail-v170 fieldset>legend{font-size:.95rem}@media(max-width:700px){.auto-mail-explainer-v170{display:grid}.mail-status-row{grid-template-columns:32px 1fr}.auto-mail-v170{grid-column:auto}}

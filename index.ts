@@ -86,6 +86,12 @@ async function sendWithResend(subject:string,html:string,to:string[],cc:string[]
  const res=await fetch('https://api.resend.com/emails',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify({from,to,cc,bcc,subject,html})})
  if(!res.ok)throw new Error(`Resend: ${await res.text()}`)
 }
+function mailProviderStatus(){
+ const microsoft=Boolean(Deno.env.get('MS_TENANT_ID')&&Deno.env.get('MS_CLIENT_ID')&&Deno.env.get('MS_CLIENT_SECRET')&&Deno.env.get('MS_SENDER_EMAIL'))
+ const resend=Boolean(Deno.env.get('RESEND_API_KEY'))
+ return {provider:microsoft?'microsoft':resend?'resend':'none',sender:microsoft?(Deno.env.get('MS_SENDER_EMAIL')||''):(resend?(Deno.env.get('REPORT_FROM_EMAIL')||''):''),cronSecretConfigured:Boolean(Deno.env.get('CRON_SECRET'))}
+}
+
 async function sendMail(subject:string,html:string,to:string[],cc:string[],bcc:string[]){
  if(!to.length)throw new Error('Aucun destinataire configuré')
  if(Deno.env.get('MS_TENANT_ID')&&Deno.env.get('MS_CLIENT_ID')&&Deno.env.get('MS_CLIENT_SECRET')&&Deno.env.get('MS_SENDER_EMAIL'))return sendWithGraph(subject,html,to,cc,bcc)
@@ -108,30 +114,32 @@ Deno.serve(async req=>{
    const {data,error}=await admin.auth.getUser(token);if(error||!data.user)throw new Error('Utilisateur non authentifié')
    userId=data.user.id
   }
+  const providerInfo=mailProviderStatus()
+  if(body.mode==='status')return new Response(JSON.stringify({ok:true,...providerInfo}),{headers:{...corsHeaders,'content-type':'application/json'}})
   let q=admin.from('app_state').select('user_id,data')
   if(userId)q=q.eq('user_id',userId)
   const {data:rows,error}=await q;if(error)throw error
   const results:any[]=[]
   for(const row of rows||[]){
    const data=row.data||{},s=data.settings||{},now=parisParts(new Date(),s.autoReportTimezone||'Europe/Paris')
-   const to=splitEmails(s.emailsTo),cc=splitEmails(s.emailsCc),bcc=splitEmails(s.emailsBcc)
+   const to=splitEmails(s.autoReportTo||s.emailsTo||'adelin.vignal.running@outlook.fr'),cc=splitEmails(s.autoReportCc||s.emailsCc),bcc=splitEmails(s.autoReportBcc||s.emailsBcc)
    const targetHour=(s.autoReportHour||'07:00').slice(0,2)
    const dueHour=body.mode==='test'||now.hour.slice(0,2)===targetHour
    let sent=false
    if(body.mode==='test'){
-    const r=buildDaily(data,addDays(now.date,-1));await sendMail(`[TEST] ${r.subject}`,r.html,to,cc,bcc);sent=true;results.push({user_id:row.user_id,type:'test'})
+    const r=buildDaily(data,addDays(now.date,-1));await sendMail(`[TEST] ${r.subject}`,r.html,to,cc,bcc);sent=true;s.lastAutoReportType='test';s.lastAutoReportStatus='ok';s.lastAutoReportError='';s.lastAutoReportSentAt=new Date().toISOString();s.lastAutoReportTestAt=s.lastAutoReportSentAt;results.push({user_id:row.user_id,type:'test'})
    }else if(dueHour){
     const allowed=String(s.autoReportWeekdays||'1,2,3,4,5').split(',').map((x:string)=>Number(x.trim())).includes(now.weekday)
     if(s.autoDailyEnabled&&allowed&&s.lastDailyEmailDate!==now.date){
-     const r=buildDaily(data,addDays(now.date,-1));if(!s.autoReportOnlyIfEvents||r.eventCount>0){await sendMail(r.subject,r.html,to,cc,bcc);sent=true;results.push({user_id:row.user_id,type:'daily'})}s.lastDailyEmailDate=now.date
+     const r=buildDaily(data,addDays(now.date,-1));if(!s.autoReportOnlyIfEvents||r.eventCount>0){await sendMail(r.subject,r.html,to,cc,bcc);sent=true;s.lastAutoReportType='daily';s.lastAutoReportStatus='ok';s.lastAutoReportError='';s.lastAutoReportSentAt=new Date().toISOString();results.push({user_id:row.user_id,type:'daily'})}s.lastDailyEmailDate=now.date
     }
     const weekStart=startMonday(now.date),previousStart=addDays(weekStart,-7),previousEnd=addDays(weekStart,-1),key=previousStart
     if(s.autoWeeklyEnabled&&now.weekday===1&&s.lastWeeklyEmailKey!==key){
-     const r=buildWeekly(data,previousStart,previousEnd);if(!s.autoReportOnlyIfEvents||r.eventCount>0){await sendMail(r.subject,r.html,to,cc,bcc);sent=true;results.push({user_id:row.user_id,type:'weekly'})}s.lastWeeklyEmailKey=key
+     const r=buildWeekly(data,previousStart,previousEnd);if(!s.autoReportOnlyIfEvents||r.eventCount>0){await sendMail(r.subject,r.html,to,cc,bcc);sent=true;s.lastAutoReportType='weekly';s.lastAutoReportStatus='ok';s.lastAutoReportError='';s.lastAutoReportSentAt=new Date().toISOString();results.push({user_id:row.user_id,type:'weekly'})}s.lastWeeklyEmailKey=key
     }
    }
    if(sent||body.mode!=='test')await admin.from('app_state').update({data:{...data,settings:s},updated_at:new Date().toISOString()}).eq('user_id',row.user_id)
   }
-  return new Response(JSON.stringify({ok:true,message:body.mode==='test'?'Rapport test envoyé':'Traitement terminé',results}),{headers:{...corsHeaders,'content-type':'application/json'}})
+  return new Response(JSON.stringify({ok:true,message:body.mode==='test'?'Rapport test envoyé':'Traitement terminé',results,provider:providerInfo.provider,sender:providerInfo.sender,cronSecretConfigured:providerInfo.cronSecretConfigured,sentAt:results.length?new Date().toISOString():''}),{headers:{...corsHeaders,'content-type':'application/json'}})
  }catch(e){return new Response(JSON.stringify({ok:false,error:String(e?.message||e)}),{status:400,headers:{...corsHeaders,'content-type':'application/json'}})}
 })
