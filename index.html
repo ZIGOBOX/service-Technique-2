@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#075ca8">
   <title>Pilotage Service Technique V147.80</title>
   <link rel="icon" href="./assets/logo-service-technique.png">
-  <link rel="stylesheet" href="./styles.css?v=147.155-20260828-tactile-frequencies">
+  <link rel="stylesheet" href="./styles.css?v=147.168-20260904-voice-notes">
 
 <style id="v14713-fixes">
 /* Barres horizontales locales aux plannings : elles ne repartent plus avec la page. */
@@ -867,6 +867,23 @@
 #dashboard .today-agenda-day-v159{font-size:.64rem;font-weight:900;color:#3973a6;text-transform:uppercase;letter-spacing:.03em;min-width:52px}
 @media(min-width:1101px){#dashboard .dashboard-watch-grid-v149{grid-template-columns:repeat(6,minmax(0,1fr))}}
 @media(max-width:700px){#dashboard .dashboard-period-toolbar-v159{align-items:stretch}#dashboard .dashboard-period-nav-v159{width:100%}#dashboard .dashboard-period-nav-v159 input{flex:1;min-width:0}#dashboard .dashboard-period-label-v159{width:100%;margin-left:0}}
+
+/* V147.167 — horaires réels / changements agents très visibles sur le tableau de bord */
+#dashboard .dashboard-team-row-v149.schedule-changed{
+  background:#fff3dc!important;
+  border-left:5px solid #e77800!important;
+  box-shadow:inset 0 0 0 1px #ffc56f,0 2px 8px rgba(191,92,0,.12);
+  padding-left:7px!important;
+}
+#dashboard .dashboard-team-row-v149.schedule-changed:hover{background:#ffe9c4!important}
+#dashboard .dashboard-team-row-v149.schedule-changed strong{color:#9a3f00;font-weight:900}
+#dashboard .dashboard-team-row-v149.schedule-changed small{color:#9a3f00;font-weight:800}
+#dashboard .dashboard-team-status-v149.changed{background:#c93d16!important;color:#fff!important;letter-spacing:.02em}
+#dashboard .dashboard-team-status-v149.real{background:#e8f5ff;color:#086aa7}
+.agent-week-cell-v150.schedule-changed{background:#fff3dc!important;border-color:#e77800!important;box-shadow:inset 0 0 0 1px #ffc56f}
+.agent-week-cell-v150.schedule-changed span,.agent-week-cell-v150.schedule-changed small{color:#9a3f00!important;font-weight:900}
+.today-agenda-row.agent-real-schedule{border-left:5px solid #1683b8;background:#f0f9ff}
+.today-agenda-row.agent-real-schedule strong{color:#075f8b}
 </style>
 
   <link rel="stylesheet" href="./contracts-tracker.css?v=147.164">
@@ -877,7 +894,7 @@
     <form class="auth-card" id="authForm" novalidate>
       <img src="./assets/logo-service-technique.png" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.164 — 28/08/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.168 — 04/09/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -950,7 +967,7 @@
         </div>
       </details>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.164 — 28/08/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.168 — 04/09/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -1637,7 +1654,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.164 — 28/08/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.168 — 04/09/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -1706,7 +1723,7 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
-  <script src="./app.js?v=147.166-20260829-periodic-cycle-continuity"></script>
+  <script src="./app.js?v=147.168-20260904-voice-notes"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./jszip.min.js?v=3.10.1"></script>

@@ -2356,11 +2356,88 @@ const BUILTIN_GUIDES=[
 async function openGuide(path){await openStoragePath(path)}
 /* ---------- Fenêtres ---------- */
 function openModal(title,html,onSave,opts={}){modalHandler=onSave;modalDeleteHandler=opts.onDelete||null;modalAuditTitle=title;modalAuditContext=opts.audit||null;$('#modalTitle').textContent=title;$('#modalBody').innerHTML=html;const saveBtn=$('#modalSave');saveBtn.textContent=opts.saveLabel||'Enregistrer';saveBtn.disabled=false;saveBtn.dataset.directSave=opts.directSave?'1':'';saveBtn.dataset.directSaving='';$('#modalDelete').classList.toggle('hidden',!modalDeleteHandler);const d=$('#modal');if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','');setTimeout(()=>{const f=$('#modalForm');modalAuditInitial={};if(f)for(const e of [...f.elements])if(e.name&&e.type!=='file'&&e.type!=='button'&&e.type!=='submit')modalAuditInitial[e.name]=e.type==='checkbox'?e.checked:e.value;$('#modalBody input:not([type="hidden"]),#modalBody select,#modalBody textarea')?.focus()},60)}
-function closeModal(){const d=$('#modal');if(d.open)d.close();else d.removeAttribute('open');const b=$('#modalSave');if(b){b.disabled=false;b.dataset.directSave='';b.dataset.directSaving='';b.textContent='Enregistrer'}modalHandler=null;modalDeleteHandler=null;modalAuditInitial=null;modalAuditTitle='';modalAuditContext=null}
+function closeModal(){stopNoteSpeechDictation();const d=$('#modal');if(d.open)d.close();else d.removeAttribute('open');const b=$('#modalSave');if(b){b.disabled=false;b.dataset.directSave='';b.dataset.directSaving='';b.textContent='Enregistrer'}modalHandler=null;modalDeleteHandler=null;modalAuditInitial=null;modalAuditTitle='';modalAuditContext=null}
 function openDetail(title,html){$('#detailTitle').textContent=title;$('#detailBody').innerHTML=html;const d=$('#detailModal');if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','')}
 function field(label,name,value='',type='text',extra=''){return `<label>${esc(label)}<input name="${esc(name)}" type="${esc(type)}" value="${esc(value)}" ${extra}></label>`}
 function selectField(label,name,items,value='',extra=''){return `<label>${esc(label)}<select name="${esc(name)}" ${extra}>${selectOptions(items,value)}</select></label>`}
 function textareaField(label,name,value='',rows=3,extra=''){return `<label class="span2">${esc(label)}<textarea name="${esc(name)}" rows="${rows}" ${extra}>${esc(value)}</textarea></label>`}
+
+/* ---------- Dictée vocale des notes (V147.168) ---------- */
+let noteSpeechRecognition=null;
+let noteSpeechListening=false;
+function noteSpeechCtor(){return window.SpeechRecognition||window.webkitSpeechRecognition||null}
+function noteSpeechJoin(base,spoken){
+ const a=String(base||'').trimEnd(),b=String(spoken||'').trim();
+ if(!a)return b;
+ if(!b)return a;
+ return `${a} ${b}`;
+}
+function stopNoteSpeechDictation(){
+ noteSpeechListening=false;
+ if(noteSpeechRecognition){try{noteSpeechRecognition.stop()}catch(_){}}
+ noteSpeechRecognition=null;
+ const btn=document.querySelector('[data-note-dictate]');
+ const status=document.querySelector('[data-note-dictate-status]');
+ if(btn){btn.classList.remove('is-listening');btn.setAttribute('aria-pressed','false');btn.innerHTML='🎤 Dicter la note'}
+ if(status&&!status.dataset.keepMessage)status.textContent='Appuyez sur le micro puis parlez normalement.';
+}
+function bindNoteSpeechDictation(){
+ const btn=document.querySelector('[data-note-dictate]');
+ const textarea=document.querySelector('#modalForm textarea[name="text"]');
+ const status=document.querySelector('[data-note-dictate-status]');
+ if(!btn||!textarea)return;
+ const Recognition=noteSpeechCtor();
+ if(!Recognition){
+  btn.disabled=true;btn.classList.add('is-unavailable');
+  if(status){status.textContent='Dictée vocale non disponible dans ce navigateur. Essayez Chrome ou Edge et autorisez le microphone.';status.dataset.keepMessage='1'}
+  return;
+ }
+ btn.onclick=()=>{
+  if(noteSpeechListening){stopNoteSpeechDictation();return}
+  const recognition=new Recognition();
+  noteSpeechRecognition=recognition;
+  recognition.lang='fr-FR';
+  recognition.continuous=true;
+  recognition.interimResults=true;
+  recognition.maxAlternatives=1;
+  const base=textarea.value;
+  noteSpeechListening=true;
+  btn.classList.add('is-listening');btn.setAttribute('aria-pressed','true');btn.innerHTML='⏹ Arrêter la dictée';
+  if(status){status.textContent='🔴 Écoute en cours… Parlez, le texte apparaît ci-dessous.';delete status.dataset.keepMessage}
+  recognition.onresult=e=>{
+   let finalText='',interim='';
+   for(let i=0;i<e.results.length;i++){
+    const transcript=String(e.results[i][0]?.transcript||'').trim();
+    if(!transcript)continue;
+    if(e.results[i].isFinal)finalText=noteSpeechJoin(finalText,transcript);else interim=noteSpeechJoin(interim,transcript);
+   }
+   const spoken=noteSpeechJoin(finalText,interim);
+   textarea.value=noteSpeechJoin(base,spoken);
+   textarea.dispatchEvent(new Event('input',{bubbles:true}));
+  };
+  recognition.onerror=e=>{
+   const code=String(e?.error||'');
+   let msg='La dictée vocale a été interrompue.';
+   if(code==='not-allowed'||code==='service-not-allowed')msg='Microphone non autorisé. Autorisez le micro pour cette application puis réessayez.';
+   else if(code==='no-speech')msg='Aucune voix détectée. Appuyez de nouveau sur le micro pour recommencer.';
+   else if(code==='audio-capture')msg='Aucun microphone disponible ou accessible.';
+   if(status){status.textContent=msg;status.dataset.keepMessage='1'}
+  };
+  recognition.onend=()=>{
+   const keep=status?.dataset.keepMessage;
+   noteSpeechListening=false;noteSpeechRecognition=null;
+   btn.classList.remove('is-listening');btn.setAttribute('aria-pressed','false');btn.innerHTML='🎤 Dicter la note';
+   if(status&&!keep)status.textContent='Dictée terminée. Vous pouvez corriger le texte ou relancer le micro.';
+  };
+  try{recognition.start()}catch(e){
+   console.warn('Dictée vocale',e);stopNoteSpeechDictation();
+   if(status){status.textContent='Impossible de démarrer le microphone. Vérifiez son autorisation.';status.dataset.keepMessage='1'}
+  }
+ };
+}
+function noteVoiceField(value=''){
+ return `<label class="span2 note-voice-field"><span>Note</span><div class="note-voice-toolbar"><button type="button" class="note-voice-button" data-note-dictate aria-pressed="false">🎤 Dicter la note</button><small data-note-dictate-status>Appuyez sur le micro puis parlez normalement.</small></div><textarea name="text" rows="5" spellcheck="true" placeholder="Écrivez votre note ou utilisez le micro…">${esc(value)}</textarea></label>`;
+}
 function formDataObj(form){return Object.fromEntries(new FormData(form).entries())}
 async function deleteRecord(type,id,label='élément'){
  if(!confirm(`Supprimer cet ${label} ?`))return;
@@ -3909,7 +3986,7 @@ function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=ol
 function openRequest(id){const old=id?byId('requests',id):null;const x=old||{id:uid(),no:nextNo('request','DIR'),date:todayISO(),time:'',type:'Aménagement de salle',title:'',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'Direction',dueDate:'',description:'',response:'',attachments:[]};openModal(old?'Modifier la demande':'Nouvelle demande de la direction',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure prévue','time',x.time,'time')}<label>Type<select name="type">${selectOptions(db.lists.requestTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${centralLocationFields(x,'reqLoc')}${field('Demandeur','requester',x.requester)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Demande','description',x.description)}${textareaField('Réponse / réalisation','response',x.response)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'requests');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Demande','requests',x);if(!persisted.ok)return;closeModal();toast(`✅ Demande enregistrée — statut : ${x.status||'—'}`)},{audit:{track:!!old,type:'Demande',recordId:x.id,no:x.no,title:x.title,entity:(form)=>[x.no,form?.elements?.title?.value||x.title].filter(Boolean).join(' — '),date:x.date},onDelete:old?()=>deleteRecord('requests',x.id,'demande'):null});bindCentralLocation('reqLoc')}
 function openWork(id){const old=id?byId('works',id):null;const x=old||{id:uid(),no:nextNo('work','CHT'),date:todayISO(),time:'',type:'Réunion de chantier',title:'',company:'',architect:'',building:'',floor:'',sector:'',room:'',priority:'Normale',status:'À faire',dueDate:'',description:'',decision:'',gpaEnd:'',attachments:[]};openModal(old?'Modifier le suivi chantier':'Nouveau suivi chantier / GPA',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure prévue','time',x.time,'time')}<label>Type<select name="type">${selectOptions(db.lists.workTypes,x.type)}</select></label>${field('Objet / réserve','title',x.title,'text','required')}${field('Entreprise','company',x.company)}${field('Architecte / maîtrise d’œuvre','architect',x.architect)}${centralLocationFields(x,'workLoc')}<label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${field('Échéance','dueDate',x.dueDate,'date')}${field('Fin GPA','gpaEnd',x.gpaEnd,'date')}${textareaField('Constat / description','description',x.description)}${textareaField('Décision / suite','decision',x.decision)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const attachmentCheck=await processAttachments(form,x,'works');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Chantier / GPA','works',x);if(!persisted.ok)return;closeModal();toast(`✅ Suivi chantier enregistré — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('works',x.id,'suivi'):null});bindCentralLocation('workLoc')}
 function openMeeting(id,date=todayISO()){const old=id?byId('meetings',id):null;const x=old||{id:uid(),no:nextNo('meeting','RDV'),date,time:'',end:'',type:'Rendez-vous',title:'',building:'',floor:'',sector:'',room:'',participants:'',status:'Planifié',notes:'',actions:'',attachments:[]};openModal(old?'Modifier le rendez-vous':'Nouvelle réunion / rendez-vous',`<div class="form-grid">${field('Date','date',x.date,'date','required')}${field('Heure','time',x.time,'time')}${field('Fin','end',x.end,'time')}<label>Type<select name="type">${selectOptions(db.lists.meetingTypes,x.type)}</select></label>${field('Objet','title',x.title,'text','required')}${centralLocationFields(x,'meetLoc')}${field('Participants','participants',x.participants)}<label>Statut<select name="status">${selectOptions(['Planifié','Réalisé','Reporté','Annulé'],x.status)}</select></label>${textareaField('Compte rendu','notes',x.notes)}${textareaField('Actions décidées','actions',x.actions)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;x.location=[x.building,x.floor,x.sector,x.room].filter(Boolean).join(' · ');const attachmentCheck=await processAttachments(form,x,'meetings');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Réunion / rendez-vous','meetings',x);if(!persisted.ok)return;closeModal();toast(`✅ Rendez-vous enregistré — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('meetings',x.id,'rendez-vous'):null});bindCentralLocation('meetLoc')}
-function openNote(id,category='Autre'){const old=id?byId('notes',id):null;const x=old||{id:uid(),no:nextNo('note','NOT'),date:todayISO(),time:'',category,agentId:'',title:'',text:'',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',dueDate:'',items:[],attachments:[]};openModal(old?'Modifier la note':'Nouvelle note',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure','time',x.time,'time')}<label>Catégorie<select name="category">${selectOptions(db.lists.noteCategories,x.category)}</select></label><label>Agent concerné<select name="agentId">${agentOptions(x.agentId,true)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label>${field('Titre','title',x.title,'text','required')}<label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${field('Échéance','dueDate',x.dueDate,'date')}${centralLocationFields(x,'noteLoc')}${textareaField('Note','text',x.text,5)}</div><fieldset><legend>Liste d’items</legend>${noteItemsHTML(x.items)}</fieldset>${attachmentField(x.attachments)}`,async form=>{const o=formDataObj(form);const rows=$$('.item-row',form).map(r=>({text:r.querySelector('[name="itemText"]').value.trim(),done:r.querySelector('[name="itemDone"]').checked})).filter(i=>i.text);Object.assign(x,o,{items:rows});const attachmentCheck=await processAttachments(form,x,'notes');if(!attachmentCheck?.ok)return;if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const persisted=await commitFormRecordVerified('Note','notes',x);if(!persisted.ok)return;closeModal();toast(`✅ Note enregistrée — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('notes',x.id,'note'):null});bindCentralLocation('noteLoc');function bindItems(){const box=$('#noteItems');if(!box)return;$$('[data-remove-item]',box).forEach(b=>b.onclick=()=>b.closest('.item-row')?.remove())}bindItems();const add=$('#addNoteItem');if(add)add.onclick=()=>{const box=$('#noteItems');if(!box)return;box.insertAdjacentHTML('beforeend','<div class="item-row"><input name="itemText" placeholder="Nouvelle action"><label class="inline-check"><input name="itemDone" type="checkbox"> Fait</label><button type="button" data-remove-item>×</button></div>');bindItems()}}
+function openNote(id,category='Autre'){const old=id?byId('notes',id):null;const x=old||{id:uid(),no:nextNo('note','NOT'),date:todayISO(),time:'',category,agentId:'',title:'',text:'',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',dueDate:'',items:[],attachments:[]};openModal(old?'Modifier la note':'Nouvelle note',`<div class="form-grid">${field('Date','date',x.date,'date')}${field('Heure','time',x.time,'time')}<label>Catégorie<select name="category">${selectOptions(db.lists.noteCategories,x.category)}</select></label><label>Agent concerné<select name="agentId">${agentOptions(x.agentId,true)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label>${field('Titre','title',x.title,'text','required')}<label>Statut<select name="status">${selectOptions(db.lists.generalStatuses,x.status)}</select></label>${field('Échéance','dueDate',x.dueDate,'date')}${centralLocationFields(x,'noteLoc')}${noteVoiceField(x.text)}</div><fieldset><legend>Liste d’items</legend>${noteItemsHTML(x.items)}</fieldset>${attachmentField(x.attachments)}`,async form=>{const o=formDataObj(form);const rows=$$('.item-row',form).map(r=>({text:r.querySelector('[name="itemText"]').value.trim(),done:r.querySelector('[name="itemDone"]').checked})).filter(i=>i.text);Object.assign(x,o,{items:rows});const attachmentCheck=await processAttachments(form,x,'notes');if(!attachmentCheck?.ok)return;if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;const persisted=await commitFormRecordVerified('Note','notes',x);if(!persisted.ok)return;closeModal();toast(`✅ Note enregistrée — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('notes',x.id,'note'):null});bindCentralLocation('noteLoc');bindNoteSpeechDictation();function bindItems(){const box=$('#noteItems');if(!box)return;$$('[data-remove-item]',box).forEach(b=>b.onclick=()=>b.closest('.item-row')?.remove())}bindItems();const add=$('#addNoteItem');if(add)add.onclick=()=>{const box=$('#noteItems');if(!box)return;box.insertAdjacentHTML('beforeend','<div class="item-row"><input name="itemText" placeholder="Nouvelle action"><label class="inline-check"><input name="itemDone" type="checkbox"> Fait</label><button type="button" data-remove-item>×</button></div>');bindItems()}}
 function openVacation(id){const old=id?byId('vacations',id):null;const x=old||{id:uid(),name:'Fermeture / vacances',zone:db.settings.schoolZone,start:todayISO(),end:addDays(todayISO(),7),status:'À préparer',tasks:VACATION_TASKS.map(t=>({text:t,done:false})),notes:'',attachments:[]};openModal(old?'Modifier la période':'Nouvelle période de vacances / fermeture',`<div class="form-grid">${field('Nom','name',x.name,'text','required')}<label>Zone<select name="zone">${selectOptions(['A','B','C','Toutes'],x.zone)}</select></label>${field('Début','start',x.start,'date','required')}${field('Fin','end',x.end,'date','required')}<label>Statut<select name="status">${selectOptions(['À préparer','En préparation','Prête','Terminée'],x.status)}</select></label>${textareaField('Notes','notes',x.notes)}</div><fieldset><legend>Checklist de fermeture / reprise</legend>${noteItemsHTML(x.tasks)}</fieldset>${attachmentField(x.attachments)}`,async form=>{const o=formDataObj(form);const tasks=$$('.item-row',form).map(r=>({text:r.querySelector('[name="itemText"]').value.trim(),done:r.querySelector('[name="itemDone"]').checked})).filter(i=>i.text);Object.assign(x,o,{tasks});const attachmentCheck=await processAttachments(form,x,'vacations');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Vacances / fermeture','vacations',x);if(!persisted.ok)return;closeModal();toast(`✅ Période enregistrée — statut : ${x.status||'—'}`)},{onDelete:old?()=>deleteRecord('vacations',x.id,'période'):null});function bind(){const box=$('#noteItems');if(!box)return;$$('[data-remove-item]',box).forEach(b=>b.onclick=()=>b.closest('.item-row')?.remove())}bind();const add=$('#addNoteItem');if(add)add.onclick=()=>{const box=$('#noteItems');if(!box)return;box.insertAdjacentHTML('beforeend','<div class="item-row"><input name="itemText" placeholder="Nouvelle action"><label class="inline-check"><input name="itemDone" type="checkbox"> Fait</label><button type="button" data-remove-item>×</button></div>');bind()}}
 function openDocument(id){const old=id?byId('documents',id):null;const x=old||{id:uid(),no:nextNo('document','DOC'),date:todayISO(),title:'',category:'Guide / procédure',description:'',linkedModule:'Général',attachments:[]};openModal(old?'Modifier le document':'Ajouter un document',`<div class="form-grid">${field('Date','date',x.date,'date')}<label>Catégorie<select name="category">${selectOptions(db.lists.documentCategories,x.category)}</select></label>${field('Titre','title',x.title,'text','required')}<label>Rattacher à<select name="linkedModule">${selectOptions(['Général','Ménage','Maintenance','Chantier / GPA','Contrôles périodiques','Agents','Vacances','Sécurité / qualité'],x.linkedModule)}</select></label>${textareaField('Description','description',x.description)}${attachmentField(x.attachments)}</div>`,async form=>{Object.assign(x,formDataObj(form));const attachmentCheck=await processAttachments(form,x,'documents');if(!attachmentCheck?.ok)return;const persisted=await commitFormRecordVerified('Document','documents',x);if(!persisted.ok)return;closeModal();toast('✅ Document enregistré')},{onDelete:old?()=>deleteRecord('documents',x.id,'document'):null})}
 function openSpace(id){const old=id?byId('spaces',id):null;const x=old||{id:uid(),building:db.buildings[0]?.name||'',floor:db.buildings[0]?.floors?.[0]||'',type:db.lists.roomTypes[0],name:''};openModal(old?'Modifier le local':'Ajouter un local',`<div class="form-grid"><label>Bâtiment<select name="building" id="mBuilding">${buildingOptions(x.building)}</select></label><label>Étage<select name="floor" id="mFloor">${floorOptions(x.building,x.floor)}</select></label><label>Type<select name="type">${selectOptions(db.lists.roomTypes,x.type)}</select></label>${field('Nom / numéro du local','name',x.name,'text','required')}</div>`,async form=>{Object.assign(x,formDataObj(form));const persisted=await commitFormRecordVerified('Local','spaces',x);if(!persisted.ok)return;closeModal();toast('✅ Local enregistré')},{onDelete:old?()=>deleteRecord('spaces',x.id,'local'):null});$('#mBuilding').onchange=()=>$('#mFloor').innerHTML=floorOptions($('#mBuilding').value)}
@@ -4055,17 +4132,19 @@ function eventsForDate(d){
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`})),
   ...([meterReadingItemForDate(d)].filter(Boolean))
  ];
- // V147.148 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
+ // V147.167 — tout horaire réel complet apparaît dans l'agenda.
+ // S'il diffère du théorique, le changement est signalé visuellement et le théorique reste rappelé.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
    const info=dayInfo(r.agentId,d);
    const thStart=String(info.plannedStart||'').trim(), thEnd=String(info.plannedEnd||'').trim();
    const realStart=String(r.actualStart||'').trim(), realEnd=String(r.actualEnd||'').trim();
-   if(realStart && realEnd && (realStart!==thStart || realEnd!==thEnd)){
+   if(realStart && realEnd){
+     const changed=Boolean(thStart&&thEnd&&(realStart!==thStart || realEnd!==thEnd));
      const realAgentName=agentName(agentById(r.agentId))||'Agent';
      rows.push({id:r.id,date:d,start:realStart,time:realStart,source:'agent-real-schedule',
-       title:`${realAgentName} · Horaire réel : ${realStart}–${realEnd}`,
-       location:'',note:r.note||'',agentId:r.agentId,
-       calendarInfo:r.note?`ⓘ ${realAgentName} — ${r.note}`:`ⓘ ${realAgentName}`});
+       title:changed?`⚠ ${realAgentName} · Horaire modifié : ${realStart}–${realEnd}`:`${realAgentName} · Horaire réel : ${realStart}–${realEnd}`,
+       location:'',note:r.note||'',agentId:r.agentId,scheduleChanged:changed,
+       calendarInfo:[changed&&thStart&&thEnd?`Prévu ${thStart}–${thEnd}`:'',r.note?`ⓘ ${r.note}`:''].filter(Boolean).join(' · ')});
    }
  }
  const waste=wasteAgendaItemForDate(d);if(waste)rows.push(waste);
@@ -5680,12 +5759,12 @@ function dashboardAgentWeekDatesV150(offset=0){
 }
 let dashboardAgentWeekOffsetV150=0;
 function dashboardAgentWeekCellV150(agent,date){
- const info=dayInfo(agent.id,date),type=String(info.dayType||'Présence'),norm=normalizeText(type),start=String(info.plannedStart||''),end=String(info.plannedEnd||'');
+ const info=dayInfo(agent.id,date),type=String(info.dayType||'Présence'),norm=normalizeText(type),plannedStart=String(info.plannedStart||''),plannedEnd=String(info.plannedEnd||''),realStart=String(info.actualStart||''),realEnd=String(info.actualEnd||''),hasReal=Boolean(realStart&&realEnd),changed=Boolean(hasReal&&plannedStart&&plannedEnd&&(realStart!==plannedStart||realEnd!==plannedEnd)),start=hasReal?realStart:plannedStart,end=hasReal?realEnd:plannedEnd;
  let cls='',main='—',sub='Horaire non défini';
  if(norm==='repos'){cls='rest';main='Repos';sub='';}
  else if(isAbsenceType(type)){cls='absent';main=type;sub='';}
- else if(start&&end){main=`${start}–${end}`;sub=info.shift&&normalizeText(info.shift)!=='standard'?String(info.shift):'';}
- return {html:`<button type="button" class="agent-week-cell-v150 ${cls} ${date===todayISO()?'today':''}" data-agent-day="${agent.id}" data-date="${date}" title="${esc(agentName(agent))} — ${fmtDate(date)}"><span>${esc(main)}</span>${sub?`<small>${esc(sub)}</small>`:''}</button>`,hours:norm==='repos'||isAbsenceType(type)?0:Number(dayHours(info).planned||0)};
+ else if(start&&end){main=`${start}–${end}`;if(changed){cls='schedule-changed';sub=`⚠ Réel · prévu ${plannedStart}–${plannedEnd}`;}else if(hasReal)sub='Horaire réel';else sub=info.shift&&normalizeText(info.shift)!=='standard'?String(info.shift):'';}
+ return {html:`<button type="button" class="agent-week-cell-v150 ${cls} ${date===todayISO()?'today':''}" data-agent-day="${agent.id}" data-date="${date}" title="${esc(agentName(agent))} — ${fmtDate(date)}"><span>${esc(main)}</span>${sub?`<small>${esc(sub)}</small>`:''}</button>`,hours:norm==='repos'||isAbsenceType(type)?0:Number(dayHours(info).total||0)};
 }
 function openDashboardAgentWeekV150(offset=0){
  dashboardAgentWeekOffsetV150=Number(offset||0);const days=dashboardAgentWeekDatesV150(dashboardAgentWeekOffsetV150),agents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif').slice().sort((a,b)=>agentName(a).localeCompare(agentName(b),'fr'));
@@ -5722,7 +5801,7 @@ function renderDashboardRemindersV149(notes,pSoon){
 function renderDashboardWeekV149(){
  const el=$('#dashboardWeekStrip');if(!el)return;const today=todayISO(),monday=startOfWeek(today),days=Array.from({length:5},(_,i)=>addDays(monday,i));
  const label=$('#dashboardWeekLabel');if(label)label.textContent=`Du ${fmtDate(days[0])} au ${fmtDate(days[4])}`;
- el.innerHTML=days.map(d=>{const date=parseDate(d),events=eventsForDate(d).filter(e=>e.source!=='agent-real-schedule').slice(0,3);return `<section class="dashboard-week-day-v149 ${d===today?'today':''}"><header class="dashboard-week-head-v149"><strong>${esc(date.toLocaleDateString('fr-FR',{weekday:'long'}))} ${date.getDate()}</strong><small>${events.length} élément${events.length>1?'s':''}</small></header><div class="dashboard-week-events-v149">${events.length?events.map(e=>`<button class="dashboard-week-event-v149 agenda-action" data-agenda-source="${esc(e.source||'personal')}" data-agenda-id="${esc(e.id||'')}"><time>${esc(agendaTime(e)||'—')}</time><span title="${esc(e.title||'Événement')}">${esc(e.title||'Événement')}</span></button>`).join(''):'<div class="dashboard-week-empty-v149">Rien de prévu</div>'}</div></section>`}).join('');
+ el.innerHTML=days.map(d=>{const date=parseDate(d),events=eventsForDate(d).slice(0,3);return `<section class="dashboard-week-day-v149 ${d===today?'today':''}"><header class="dashboard-week-head-v149"><strong>${esc(date.toLocaleDateString('fr-FR',{weekday:'long'}))} ${date.getDate()}</strong><small>${events.length} élément${events.length>1?'s':''}</small></header><div class="dashboard-week-events-v149">${events.length?events.map(e=>`<button class="dashboard-week-event-v149 agenda-action" data-agenda-source="${esc(e.source||'personal')}" data-agenda-id="${esc(e.id||'')}"><time>${esc(agendaTime(e)||'—')}</time><span title="${esc(e.title||'Événement')}">${esc(e.title||'Événement')}</span></button>`).join(''):'<div class="dashboard-week-empty-v149">Rien de prévu</div>'}</div></section>`}).join('');
 }
 function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnections();
  renderGlobalAcademicYear();
@@ -5784,23 +5863,32 @@ function dashboardContractEventsForDateV159(d){
  return rows;
 }
 function dashboardEventsForDateV159(d){
+ // V147.167 — les horaires réels des agents font partie de « Ma journée ».
  // Pilotage terrain : les échéances administratives des contrats ne remontent pas ici.
- // Les contrôles périodiques liés restent visibles via eventsForDate(), avec leurs vraies dates de contrôle.
- const rows=[...eventsForDate(d).filter(e=>e.source!=='agent-real-schedule')],seen=new Set();
+ const rows=[...eventsForDate(d)],seen=new Set();
  return rows.filter(e=>{const k=`${e.source||''}:${e.id||''}:${e.title||''}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>`${agendaTime(a)||'99:99'}${a.title||''}`.localeCompare(`${agendaTime(b)||'99:99'}${b.title||''}`));
 }
 function renderDashboardTeamTodayV149(){
  const el=$('#dashboardTeamToday');if(!el)return;const range=dashboardPeriodRangeV159(),agents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif');
  if(dashboardPeriodModeV159==='week'){
   el.innerHTML=agents.length?agents.map(a=>{
-   let presence=0,absence=0,total=0;const reasons=[];
-   for(const d of range.dates){const info=dayInfo(a.id,d),type=String(info.dayType||'Présence'),norm=normalizeText(type);if(norm==='repos')continue;if(isAbsenceType(type)){absence++;reasons.push(type)}else{presence++;total+=Number(dayHours(info).planned||0)}}
-   const detail=absence?`${absence} absence${absence>1?'s':''} · ${[...new Set(reasons)].slice(0,2).join(', ')}`:`${presence} jour${presence>1?'s':''} planifié${presence>1?'s':''}`;
-   return `<button class="dashboard-team-row-v149 week-summary-v159" data-agent-week-open="1"><span class="dashboard-team-avatar-v149">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong><small>${esc(detail)}</small><span class="dashboard-team-status-v149 ${absence?'absent':''}">${esc(fmtHours(total))}</span></button>`;
+   let presence=0,absence=0,total=0,changes=0;const reasons=[];
+   for(const d of range.dates){const info=dayInfo(a.id,d),type=String(info.dayType||'Présence'),norm=normalizeText(type);if(norm==='repos')continue;if(isAbsenceType(type)){absence++;reasons.push(type)}else{presence++;total+=Number(dayHours(info).total||0);const rs=String(info.actualStart||''),re=String(info.actualEnd||''),ps=String(info.plannedStart||''),pe=String(info.plannedEnd||'');if(rs&&re&&ps&&pe&&(rs!==ps||re!==pe))changes++;}}
+   const baseDetail=absence?`${absence} absence${absence>1?'s':''} · ${[...new Set(reasons)].slice(0,2).join(', ')}`:`${presence} jour${presence>1?'s':''} planifié${presence>1?'s':''}`;
+   const detail=changes?`⚠ ${changes} horaire${changes>1?'s':''} modifié${changes>1?'s':''} · ${baseDetail}`:baseDetail;
+   return `<button class="dashboard-team-row-v149 week-summary-v159 ${changes?'schedule-changed':''}" data-agent-week-open="1"><span class="dashboard-team-avatar-v149">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong><small>${esc(detail)}</small><span class="dashboard-team-status-v149 ${changes?'changed':absence?'absent':''}">${changes?'MODIFIÉ':esc(fmtHours(total))}</span></button>`;
   }).join(''):'<div class="empty-card">Aucun agent actif.</div>';return;
  }
  const d=range.start,nowTime=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),isToday=d===todayISO();
- el.innerHTML=agents.length?agents.map(a=>{const info=dayInfo(a.id,d),type=String(info.dayType||'Présence'),norm=normalizeText(type),start=String(info.plannedStart||''),end=String(info.plannedEnd||'');let status='Présent',cls='',schedule=start&&end?`${start} – ${end}`:'Horaire non défini';if(norm==='repos'){status='Repos';cls='rest';schedule='Journée';}else if(isAbsenceType(type)){status=type;cls='absent';schedule='Journée';}else if(isToday&&start&&start>nowTime){status='À venir';cls='future';schedule=`Prend à ${start}`;}return `<button class="dashboard-team-row-v149" data-agent-day="${a.id}" data-date="${d}"><span class="dashboard-team-avatar-v149">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong><small>${esc(schedule)}</small><span class="dashboard-team-status-v149 ${cls}">${esc(status)}</span></button>`}).join(''):'<div class="empty-card">Aucun agent actif.</div>';
+ el.innerHTML=agents.length?agents.map(a=>{
+  const info=dayInfo(a.id,d),type=String(info.dayType||'Présence'),norm=normalizeText(type),plannedStart=String(info.plannedStart||''),plannedEnd=String(info.plannedEnd||''),realStart=String(info.actualStart||''),realEnd=String(info.actualEnd||''),hasReal=Boolean(realStart&&realEnd),changed=Boolean(hasReal&&plannedStart&&plannedEnd&&(realStart!==plannedStart||realEnd!==plannedEnd)),start=hasReal?realStart:plannedStart,end=hasReal?realEnd:plannedEnd;
+  let status=hasReal?'Réel':'Présent',cls=hasReal?'real':'',rowCls=changed?'schedule-changed':'',schedule=start&&end?(hasReal?`Réel ${start} – ${end}`:`${start} – ${end}`):'Horaire non défini';
+  if(norm==='repos'){status='Repos';cls='rest';rowCls='';schedule='Journée';}
+  else if(isAbsenceType(type)){status=type;cls='absent';rowCls='';schedule='Journée';}
+  else if(changed){status='HORAIRE MODIFIÉ';cls='changed';schedule=`⚠ Réel ${realStart}–${realEnd} · prévu ${plannedStart}–${plannedEnd}`;}
+  else if(isToday&&start&&start>nowTime){status=hasReal?'Réel · à venir':'À venir';cls=hasReal?'real':'future';schedule=hasReal?`Réel · prend à ${start}`:`Prend à ${start}`;}
+  return `<button class="dashboard-team-row-v149 ${rowCls}" data-agent-day="${a.id}" data-date="${d}"><span class="dashboard-team-avatar-v149">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong><small>${esc(schedule)}</small><span class="dashboard-team-status-v149 ${cls}">${esc(status)}</span></button>`;
+ }).join(''):'<div class="empty-card">Aucun agent actif.</div>';
 }
 function renderDashboardTodayAgenda(){
  const el=$('#dashboardTodayAgenda');if(!el)return;const range=dashboardPeriodRangeV159();
@@ -6951,6 +7039,7 @@ document.addEventListener('click',async e=>{const ni=e.target.closest('[data-not
  else if(source==='contract')window.PSTContracts?.open?.(id);
  else if(source==='vacation')openVacation(id);
  else if(source==='roomprep'){setView('room-prep');setTimeout(()=>window.PSTRoomPrep?.edit?.(id),60)}
+ else if(source==='agent-real-schedule'){const rec=byId('agentDays',id);if(rec)openAgentDay(rec.agentId,rec.date,null,rec.dayType||'Présence')}
  else if(source==='waste')setView('waste');
  return
 }const perm=e.target.closest('[data-permanence-agent]');if(perm){openAgentPermanence(perm.dataset.permanenceAgent);return}const ed=e.target.closest('[data-edit-type]');if(ed){dispatchEdit(ed.dataset.editType,ed.dataset.editId);return}const ad=e.target.closest('[data-agent-day]');if(ad){openAgentDay(ad.dataset.agentDay,ad.dataset.date,null,ad.dataset.dayType||'');return}const np=e.target.closest('[data-new-personal-date]');if(np){openPersonalEvent(null,np.dataset.newPersonalDate);return}const nr=e.target.closest('[data-new-rotation-agent]');if(nr){openRotation(null,nr.dataset.newRotationAgent);return}const sc=e.target.closest('[data-sync-import-cloud]');if(sc){await syncAttachmentToCloud(sc.dataset.syncImportCloud);return}const vc=e.target.closest('[data-verify-import-cloud]');if(vc){await verifyAttachmentCloud(vc.dataset.verifyImportCloud);return}const di=e.target.closest('[data-delete-import]');if(di){await deleteImportedArchive(di.dataset.deleteImport);return}const dl=e.target.closest('[data-download]');if(dl){await downloadAttachment(dl.dataset.download);return}const gd=e.target.closest('[data-guide-path]');if(gd){await openGuide(gd.dataset.guidePath);return}const rb=e.target.closest('[data-remove-building]');if(rb){if(confirm('Supprimer ce bâtiment et ses niveaux de la liste ?')){const b=db.buildings.find(x=>x.id===rb.dataset.removeBuilding);db.buildings=db.buildings.filter(x=>x.id!==rb.dataset.removeBuilding);db.spaces=db.spaces.filter(s=>s.building!==b?.name);save()}return}const af=e.target.closest('[data-add-floor]');if(af){db.buildings.find(x=>x.id===af.dataset.addFloor)?.floors.push(`Nouvel étage`);renderSettings();return}const rf=e.target.closest('[data-remove-floor]');if(rf){const card=rf.closest('[data-building-id]'),b=db.buildings.find(x=>x.id===card.dataset.buildingId);b?.floors.splice(Number(rf.dataset.removeFloor),1);renderSettings();return}const al=e.target.closest('[data-add-list]');if(al){db.lists[al.dataset.addList].push('Nouveau choix');renderSettings();return}const rl=e.target.closest('[data-remove-list]');if(rl){const ed=rl.closest('[data-list-key]');db.lists[ed.dataset.listKey].splice(Number(rl.dataset.removeList),1);renderSettings();return}})

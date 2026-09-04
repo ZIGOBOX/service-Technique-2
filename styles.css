@@ -901,3 +901,17 @@ body.rc-pos-open{overflow:hidden!important}
 .periodic-pencil-v165{width:40px;height:40px;border:1px solid #cddbe8;border-radius:11px;background:#fff;cursor:pointer;font-size:1.05rem;display:inline-grid;place-items:center}
 .periodic-pencil-v165:hover{background:#eaf4ff;border-color:#87b9e5}
 @media(max-width:760px){.periodic-list-wrap-v165{border-radius:12px}.periodic-list-v165 th,.periodic-list-v165 td{padding:10px}.periodic-list-v165{min-width:900px}}
+
+
+/* V147.168 — Dictée vocale du Bloc-notes */
+.note-voice-field{gap:8px}
+.note-voice-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:5px 0 3px}
+.note-voice-button{border:2px solid #2563eb;background:#eff6ff;color:#1d4ed8;border-radius:12px;padding:10px 15px;font-weight:800;cursor:pointer;min-height:44px;box-shadow:0 2px 8px rgba(37,99,235,.10)}
+.note-voice-button:hover{background:#dbeafe}
+.note-voice-button.is-listening{border-color:#dc2626;background:#fee2e2;color:#b91c1c;animation:noteVoicePulse 1.2s ease-in-out infinite}
+.note-voice-button.is-unavailable{opacity:.55;cursor:not-allowed}
+.note-voice-toolbar small{color:#64748b;font-weight:600}
+.note-voice-field textarea{min-height:140px}
+@keyframes noteVoicePulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.22)}50%{box-shadow:0 0 0 8px rgba(220,38,38,0)}}
+@media(max-width:700px){.note-voice-button{width:100%;font-size:16px}.note-voice-toolbar small{width:100%}}
+
