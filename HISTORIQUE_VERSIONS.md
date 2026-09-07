@@ -3375,3 +3375,13 @@ SYNCHRONISATION COMPLÈTE DES CONTRÔLES PÉRIODIQUES
 - En cas de synchronisation non confirmée, les modifications sont conservées localement et le statut en attente est affiché.
 - La logique précédente de priorité des horaires réels reste inchangée.
 ```
+
+
+## V147.171 — 7 septembre 2026 — Planning entretien & loge
+
+Ajout du module `entretien-planning.js` et d’un écran dédié aux missions hebdomadaires. Source unique : feuille Tario Ascension, affichée Tarrio Ascension, avec correction du nom Berthoux Corinne. Import initial de 83 créneaux et conservation des références de cellules. La loge d’Anthony le mercredi est bornée à 07:15–12:15. Collection indépendante `cleaningDutyPlans`, initialisation idempotente, migration des bases existantes, sauvegarde et suppression sécurisées, filtres, édition, export Excel et impression. Aucun remplacement des horaires réels, roulements ou contrôles effectués. Version nettoyée maintenue sous 100 fichiers.
+
+
+## V147.172 — 7 septembre 2026 — Validation matrice périodique
+
+Correction de l’interface d’import : bouton de validation toujours visible, désactivé sans changements valides, état de lecture et motifs de blocage explicites, réinitialisation de l’aperçu lors d’un nouveau choix de fichier. Les confirmations de suppression, la sauvegarde préalable et la logique de synchronisation complète sont conservées. Aucune modification des autres modules ou du jeu de données initial.

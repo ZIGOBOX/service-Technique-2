@@ -918,3 +918,36 @@ body.rc-pos-open{overflow:hidden!important}
 /* V147.170 — avertissement de synchronisation complète du registre */
 .periodic-sync-warning{grid-column:1/-1;margin:10px 0 0;padding:12px 14px;border:1px solid #f0b46b;border-radius:8px;background:#fff8ec;color:#854d0e;line-height:1.5}
 #periodicImportSummary .import-stat.error{overflow-wrap:anywhere}
+
+/* V147.171 — Planning des missions entretien / loge */
+#cleaning-duty-plans .filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+#cleaning-duty-plans .filters label{display:grid;gap:5px;min-width:170px;font-weight:600}
+#cleaning-duty-plans .filters select{min-width:170px}
+#cleaning-duty-plans .duty-summary{margin:16px 0}
+#cleaning-duty-plans td{vertical-align:top}
+#cleaning-duty-plans td:nth-child(2){white-space:nowrap;font-variant-numeric:tabular-nums}
+#cleaning-duty-plans td small{display:block;margin-top:5px;color:#64748b}
+#cleaning-duty-plans .duty-tag{display:inline-block;border-radius:100px;padding:4px 9px;background:#edf2f7;color:#334155;font-size:12px;font-weight:600}
+#cleaning-duty-plans .duty-kind-Entretien .duty-tag{background:#e0f2fe;color:#075985}
+#cleaning-duty-plans .duty-kind-Loge .duty-tag{background:#ede9fe;color:#5b21b6}
+#cleaning-duty-plans .duty-kind-Lingerie .duty-tag{background:#fce7f3;color:#9d174d}
+#cleaning-duty-plans .duty-kind-Repas .duty-tag{background:#fef3c7;color:#92400e}
+#cleaning-duty-plans .duty-kind-Repos .duty-tag{background:#f1f5f9;color:#475569}
+.duty-dialog{width:min(760px,96vw);max-height:92vh;overflow:auto;border:0;border-radius:16px;padding:24px;background:#fff;color:#17253b}
+.duty-dialog::backdrop{background:rgba(15,23,42,.58)}
+.duty-dialog .duty-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}
+.duty-dialog .duty-form-grid label{display:grid;gap:6px;font-weight:600}
+.duty-dialog .duty-form-grid input,.duty-dialog .duty-form-grid select,.duty-dialog .duty-form-grid textarea{width:100%;box-sizing:border-box;min-width:0;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}
+.duty-dialog .duty-wide{grid-column:1/-1}
+@media(max-width:600px){.duty-dialog .duty-form-grid{grid-template-columns:1fr}.duty-dialog{padding:16px}#cleaning-duty-plans .section-actions{align-items:flex-start}#cleaning-duty-plans .section-actions>div:last-child{display:flex;flex-wrap:wrap;gap:8px}}
+
+/* V147.172 — Validation de la matrice toujours visible et état explicite. */
+.periodic-import-status{padding:12px 14px;margin:12px 0;border:1px solid #cbdde9;border-radius:10px;background:#f1f7fc;color:#24445f;line-height:1.5;font-size:13px;overflow-wrap:anywhere}
+.periodic-import-status[data-state="ready"]{background:#e9f7ef;border-color:#b8e1c4;color:#19683a}
+.periodic-import-status[data-state="error"]{background:#fff3f1;border-color:#e9b5ae;color:#922b21}
+.periodic-import-status[data-state="busy"]{background:#fff8e5;border-color:#ead18c;color:#795700}
+#confirmPeriodicImport:disabled{opacity:.52;cursor:not-allowed;box-shadow:none;filter:grayscale(.2)}
+.periodic-import-check-v169{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.periodic-import-check-v169>div{min-width:0;flex:1 1 340px}
+.periodic-import-check-v169>button{flex:0 1 auto;min-height:46px}
+@media(max-width:820px){.periodic-import-check-v169>button{width:100%;flex:1 1 100%}}

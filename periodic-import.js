@@ -1,8 +1,25 @@
-/* Pilotage Service Technique V147.170 — synchronisation complète de la matrice des contrôles périodiques */
+/* Pilotage Service Technique V147.172 — synchronisation complète et validation visible de la matrice des contrôles périodiques */
 (() => {
   'use strict';
 
-  let pending=null, applying=false;
+  let pending=null, applying=false, reading=false, readSequence=0;
+  const status=(message,state='idle')=>{
+    const el=$i('periodicImportStatus');if(!el)return;
+    el.textContent=message;el.dataset.state=state;
+  };
+  const updateControls=()=>{
+    const btn=$i('confirmPeriodicImport'),file=$i('periodicImportFile');
+    const ready=!!pending&&!pending.fatal&&Array.isArray(pending.valid)&&pending.valid.length>0;
+    if(btn){btn.classList.remove('hidden');btn.disabled=applying||reading||!ready;btn.setAttribute('aria-disabled',String(btn.disabled));}
+    if(file)file.disabled=applying||reading;
+  };
+  const clearPreview=()=>{
+    pending=null;
+    const box=$i('periodicImportPreview'),sum=$i('periodicImportSummary');
+    if(box)box.innerHTML='';
+    if(sum){sum.className='import-summary empty';sum.textContent='Aucun aperçu en attente.';}
+    updateControls();
+  };
   const MATRIX_SCHEMA="pst-periodic-matrix", MATRIX_VERSION=2, META_SHEET="_PST_Matrice";
   const $i=id=>document.getElementById(id);
   const norm=v=>String(v??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -313,7 +330,10 @@
     const created=data.results.filter(x=>x.action==='Créer'),updated=data.results.filter(x=>x.action==='Modifier'),deleted=data.results.filter(x=>x.action==='Supprimer'),same=data.results.filter(x=>x.action==='Identique'),errors=data.results.filter(x=>x.errors.length),warnings=data.results.filter(x=>!x.errors.length&&x.warnings.length);
     sum.className='import-summary';
     sum.innerHTML=`${data.fatal?`<div class="import-stat error"><strong>Import bloqué</strong><span>${esc(data.fatal)}</span></div>`:''}<div class="import-stat ok"><strong>${updated.length}</strong><span>à modifier</span></div><div class="import-stat ok"><strong>${created.length}</strong><span>à créer</span></div><div class="import-stat error"><strong>${deleted.length}</strong><span>à supprimer</span></div><div class="import-stat"><strong>${same.length}</strong><span>identiques</span></div><div class="import-stat warning"><strong>${warnings.length}</strong><span>à vérifier</span></div><div class="import-stat error"><strong>${errors.length}</strong><span>erreurs bloquantes</span></div>${deleted.length?'<p class="periodic-sync-warning"><strong>⚠️ Synchronisation complète :</strong> les contrôles absents du fichier seront supprimés du registre après confirmation. Une sauvegarde sera téléchargée avant application.</p>':''}`;
-    btn.classList.toggle('hidden',Boolean(data.fatal)||data.valid.length===0);
+    if(data.fatal)status(`Import bloqué : ${data.fatal} Aucune donnée n’a été modifiée.`,'error');
+    else if(data.valid.length)status(`${data.fileName?data.fileName+' — ':''}${data.valid.length} changement(s) prêt(s) : ${updated.length} modification(s), ${created.length} création(s), ${deleted.length} suppression(s). Vérifiez le tableau, puis cliquez sur « Valider les modifications ».`, 'ready');
+    else status('Matrice vérifiée : aucune modification détectée. Le registre est déjà identique au fichier ; il n’y a rien à valider.','idle');
+    updateControls();
     box.innerHTML=data.results.length?`<table><thead><tr><th>État</th><th>Ligne</th><th>N°</th><th>Contrôle</th><th>Changements détectés</th><th>Avertissements / erreurs</th></tr></thead><tbody>${data.results.map(x=>{
       const cls=x.errors.length||x.action==='Supprimer'?'error':x.warnings.length?'warning':x.action==='Identique'?'':'ok';
       const change=x.action==='Créer'?'Nouveau contrôle':x.action==='Supprimer'?'Absent de la matrice : suppression du registre':x.action==='Identique'?'Aucune modification':x.changes.map(c=>`${fieldLabels[c.field]||c.field} : ${String(c.from||'—')} → ${String(c.to||'—')}`).join(' · ');
@@ -323,9 +343,21 @@
   };
   const importFile=async file=>{
     if(applying)return;
-    if(!window.XLSX){alert('Le composant Excel ne s’est pas chargé. Vérifiez Internet.');return;}
-    try{const buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true});preview(validateWorkbook(wb));}
-    catch(e){console.error(e);alert(`Impossible de lire le fichier : ${e.message}`);}
+    const sequence=++readSequence;
+    reading=false;clearPreview();
+    if(!window.XLSX){status('Le composant Excel ne s’est pas chargé. Vérifiez la connexion Internet, puis réessayez. Aucune donnée n’a été modifiée.','error');return;}
+    reading=true;updateControls();status(`Lecture de « ${file.name} » et comparaison avec le registre…`,'busy');
+    try{
+      const buf=await file.arrayBuffer();
+      if(sequence!==readSequence)return;
+      const wb=XLSX.read(buf,{type:'array',cellDates:true});
+      const result=validateWorkbook(wb);
+      result.fileName=file.name;
+      preview(result);
+    }catch(e){
+      console.error('Lecture matrice contrôles périodiques',e);
+      if(sequence===readSequence){clearPreview();status(`Impossible de lire le fichier : ${e.message||String(e)}. Choisissez une matrice Excel valide. Aucune donnée n’a été modifiée.`,'error');}
+    }finally{if(sequence===readSequence){reading=false;updateControls();}}
   };
 
   function rememberDate(record,date,provider,source){
@@ -355,6 +387,7 @@
   };
   const refreshAfterImport=()=>{if(typeof safeRenderAll==='function')safeRenderAll();else if(typeof renderPeriodic==='function')renderPeriodic();};
   const showImportResult=(message,error=false)=>{
+    status(message,error?'error':'ready');
     const sum=$i('periodicImportSummary');if(sum)sum.innerHTML=`<div class="import-stat ${error?'error':'ok'}"><strong>${error?'Import non confirmé':'Import terminé'}</strong><span>${esc(message)}</span></div>`;
     if(typeof toast==='function')toast(message);
   };
@@ -366,8 +399,9 @@
     return [...deletedIds].every(id=>!ids.has(id)&&tombstones.has(id));
   };
   async function applyImport(){
-    if(applying||!pending||pending.fatal||!pending.valid.length)return;
-    applying=true;const btn=$i('confirmPeriodicImport');if(btn)btn.disabled=true;
+    if(applying||reading||!pending||pending.fatal||!pending.valid.length){updateControls();return;}
+    applying=true;const btn=$i('confirmPeriodicImport');updateControls();
+    status('Validation en cours : vérification du registre et sauvegarde avant application…','busy');
     try{
       const data=pending;
       // Never apply a preview against a registry that changed after the preview.
@@ -375,9 +409,9 @@
       const deleted=data.valid.filter(x=>x.action==='Supprimer');
       if(deleted.length){
         const names=deleted.map(x=>`${x.values.no||'—'} — ${x.values.name}`).join('\n');
-        if(!confirm(`SUPPRESSION DE ${deleted.length} CONTRÔLE(S)\n\n${names}\n\nLes contrôles ci-dessus et leur historique intégré seront retirés du registre. Les autres données du logiciel et les archives indépendantes sont conservées. Une sauvegarde complète sera téléchargée.\n\nConfirmer ces suppressions ?`))return;
+        if(!confirm(`SUPPRESSION DE ${deleted.length} CONTRÔLE(S)\n\n${names}\n\nLes contrôles ci-dessus et leur historique intégré seront retirés du registre. Les autres données du logiciel et les archives indépendantes sont conservées. Une sauvegarde complète sera téléchargée.\n\nConfirmer ces suppressions ?`)){status('Suppression annulée. Le registre n’a pas été modifié ; vous pouvez vérifier le tableau ou choisir un autre fichier.','idle');return;}
         if(deleted.length===currentRecords().length&&deleted.length){
-          if(prompt('Vous allez vider entièrement le registre des contrôles périodiques. Pour confirmer, écrivez SUPPRIMER TOUS :')!=='SUPPRIMER TOUS')return;
+          if(prompt('Vous allez vider entièrement le registre des contrôles périodiques. Pour confirmer, écrivez SUPPRIMER TOUS :')!=='SUPPRIMER TOUS'){status('Vidage du registre annulé. Aucune donnée n’a été modifiée.','idle');return;}
         }
       }
       // Check the remote state before a destructive replacement: stale exports cannot erase newer work.
@@ -438,20 +472,21 @@
       else if(window.PSTMainState?.persistNow)persisted=await window.PSTMainState.persistNow();
       else if(typeof save==='function')persisted={ok:save(false),offline:!navigator.onLine};
       if(!persisted?.ok||persisted.offline||persisted.pending){
-        pending=null;if(btn)btn.classList.add('hidden');
+        pending=null;updateControls();
         showImportResult(`Modifications appliquées localement (${updated} modifié(s), ${created} créé(s), ${removed} supprimé(s)). Synchronisation serveur non confirmée : ${persisted?.error||'en attente de connexion'}. Sauvegarde : ${backupName}.`,true);
         return;
       }
-      pending=null;if(btn)btn.classList.add('hidden');
+      pending=null;updateControls();
       if($i('periodicImportPreview'))$i('periodicImportPreview').innerHTML='';
       showImportResult(`${updated} contrôle(s) modifié(s), ${created} créé(s), ${removed} supprimé(s). Registre synchronisé. Sauvegarde : ${backupName}.`);
       refreshAfterImport();
     }catch(e){console.error('Synchronisation matrice contrôles périodiques',e);showImportResult(e.message||String(e),true);}
-    finally{applying=false;if(btn)btn.disabled=false;}
+    finally{applying=false;updateControls();}
   }
   window.PSTPeriodicMatrix={exportMatrix,validateWorkbook,applyImport,preview,readMetadata};
   function init(){
     const d=$i('downloadPeriodicMatrix'),f=$i('periodicImportFile'),c=$i('confirmPeriodicImport');if(!d||!f||!c)return;
+    updateControls();
     d.addEventListener('click',exportMatrix);
     f.addEventListener('change',e=>{const file=e.target.files?.[0];if(file)importFile(file);e.target.value='';});
     c.addEventListener('click',applyImport);

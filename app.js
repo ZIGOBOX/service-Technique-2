@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.170';
-const APP_BUILD='04/09/2026';
+const APP_VERSION='147.171';
+const APP_BUILD='07/09/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -563,8 +563,8 @@ function clone(x){return structuredClone(x)}
 
 const BUNDLED_CONTROL_REPORTS=[{"key":"apave-135054046-001-1-rvre","title":"RVRE — Installations électriques et éclairages","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"RVRE ERP — aucune non-conformité identifiée dans le périmètre de la vérification.","observations":0,"subtype":"RVRE ERP","sha256":"fbcc7667636c65c9a134f6421ab4056fd9fcaedb586bd58f9aa34410dd89759a","size":1344942,"path":"reports/2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf","file":"2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf"},{"key":"apave-135054046-001-1-rvp","title":"Vérification périodique des installations électriques","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"Vérification périodique des installations électriques — 23 observations signalées dans le rapport.","observations":23,"subtype":"Vérification périodique","sha256":"cda549f71a666baaf27efddd3fa653b5a7725910497e2c81403eadc7438fcc01","size":3680309,"path":"reports/2025-07-07_APAVE_Verification_Installations_Electriques.pdf","file":"2025-07-07_APAVE_Verification_Installations_Electriques.pdf"},{"key":"apave-135046511-001-1-gaz","title":"Installations thermiques / réseau gaz","org":"APAVE","family":"Gaz","date":"2025-09-05","ref":"135046511-001-1","summary":"Vérification des installations thermiques fluide / réseau gaz — 1 observation.","observations":1,"subtype":"Thermique / Gaz","sha256":"f5ffc7006ae754c35ce9dbd4a82611eeb6d2e64878f6583e31112cf051588906","size":1497083,"path":"reports/2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf","file":"2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf"},{"key":"apave-a513283837-004-1-sport","title":"Vérification périodique des équipements sportifs","org":"APAVE","family":"Équipements sportifs","date":"2025-12-05","ref":"A513283837-004-1","summary":"Vérification visuelle et manuelle des équipements sportifs — 26 observations.","observations":26,"subtype":"Équipements sportifs","sha256":"423aa2fd3840deafbd2daab0dae3df00f449f40a1b9f3f314f1b44bbdc249f9e","size":4445518,"path":"reports/2025-12-05_APAVE_Equipements_Sportifs.pdf","file":"2025-12-05_APAVE_Equipements_Sportifs.pdf"},{"key":"apave-a513283836-004-1-ancrage","title":"Vérification des dispositifs d’ancrage pour EPI","org":"APAVE","family":"Autres contrôles","date":"2026-02-02","ref":"A513283836-004-1","summary":"Vérification générale périodique des dispositifs d’ancrage pour EPI — 5 observations.","observations":5,"subtype":"Ancrages / EPI","sha256":"fcf149dfb1e45c0e1dab938b86dbee07fcf9839d3b8180734abb92155c2f3e50","size":135938,"path":"reports/2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf","file":"2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf"},{"key":"bv-28016576-155-1-1-cta-vmc","title":"Contrôle des CTA et VMC sanitaires","org":"Bureau Veritas","family":"VMC / Ventilation","date":"2026-03-20","ref":"28016576/155.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — CTA et VMC sanitaires — écarts et non-conformités présents dans le rapport.","observations":null,"subtype":"CTA / VMC sanitaires","sha256":"aadb4258da54a155ca98194d8602d3bef1ff46a26236911f82388766f39fdb96","size":5246665,"path":"reports/2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf","file":"2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf"},{"key":"bv-28016576-152-1-1-hottes","title":"Contrôle des hottes de cuisines","org":"Bureau Veritas","family":"Cuisine / Cuisson","date":"2026-03-20","ref":"28016576/152.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — hottes de cuisines — observations présentes dans le rapport.","observations":null,"subtype":"Hottes de cuisines","sha256":"144566b4d982b7a241b3400b91f0ce4396b13f1026dbfeabd91b4aa024c3b912","size":3374751,"path":"reports/2026-03-20_BureauVeritas_Hottes_Cuisines.pdf","file":"2026-03-20_BureauVeritas_Hottes_Cuisines.pdf"}];
 
-function defaultData(){const buildings=clone(initialBuildings);const agents=[['Mme','Tarrio','Agent d’accueil'],['Mme','Delorme','Agent d’accueil / lingerie'],['Complément','accueil','Agent d’accueil'],['Mme','Berthoux','Agent de restauration'],['Mme','Bozio','Agent d’accueil']].map((n,i)=>({id:uid(),no:`AGT-${String(i+1).padStart(3,'0')}`,firstName:n[0],lastName:n[1],role:n[2],weeklyHours:35,email:'',phone:'',assignment:'',status:'Actif',arrivalDate:'',workdays:[1,2,3,4,5],notes:''}));const monday=startOfWeek(todayISO());const maintenance=IMPORTED_INTERVENTIONS.map((x,i)=>({id:uid(),no:`MAI-2026-${String(i+1).padStart(4,'0')}`,date:todayISO(),title:x[0],family:x[1],priority:x[2],status:x[3],building:x[5]||'',floor:'',room:x[5]||'',requester:'Direction',assigned:'',dueDate:'',cost:'',description:x[4]||'',action:'',attachments:[],importBatch:'excel-2026-08'}));return {version:31,settings:{initialSeedCompleted:true,seedVersion:31,cleaningAlertDays:30,cleaningNotificationsEnabled:true,cleaningNotifyNever:true,cleaningNotifyOverdue:true,cleaningNotifyPlanned:true,meetingAlertDays:3,
-autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:academicYearFor(todayISO()),defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:[],rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],agentActivities:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contracts:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],cleaningDeletedIds:[],notificationDismissals:{},importOriginalBindings:{}}}
+function defaultData(){const buildings=clone(initialBuildings);const agents=[['Mme','Tarrio','Agent d’accueil'],['Mme','Delorme','Agent d’accueil / lingerie'],['Complément','accueil','Agent d’accueil'],['Mme','Berthoux','Agent de restauration'],['Mme','Bozio','Agent d’accueil']].map((n,i)=>({id:uid(),no:`AGT-${String(i+1).padStart(3,'0')}`,firstName:n[0],lastName:n[1],role:n[2],weeklyHours:35,email:'',phone:'',assignment:'',status:'Actif',arrivalDate:'',workdays:[1,2,3,4,5],notes:''}));const monday=startOfWeek(todayISO());const maintenance=IMPORTED_INTERVENTIONS.map((x,i)=>({id:uid(),no:`MAI-2026-${String(i+1).padStart(4,'0')}`,date:todayISO(),title:x[0],family:x[1],priority:x[2],status:x[3],building:x[5]||'',floor:'',room:x[5]||'',requester:'Direction',assigned:'',dueDate:'',cost:'',description:x[4]||'',action:'',attachments:[],importBatch:'excel-2026-08'}));const data={version:31,cleaningDutyPlans:[],cleaningDutySourceVersion:0,settings:{initialSeedCompleted:true,seedVersion:31,cleaningAlertDays:30,cleaningNotificationsEnabled:true,cleaningNotifyNever:true,cleaningNotifyOverdue:true,cleaningNotifyPlanned:true,meetingAlertDays:3,
+autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:academicYearFor(todayISO()),defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:[],rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],agentActivities:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contracts:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],cleaningDeletedIds:[],notificationDismissals:{},importOriginalBindings:{}};window.PSTCleaningDuty?.seed?.(data);return data}
 function nextSeedNo(rows){return `MAI-2026-${String((rows?.length||0)+1).padStart(4,'0')}`}
 
 function normalizedReportFileKey(name=''){
@@ -621,7 +621,9 @@ function migrate(raw){
  const base=defaultData();
  if(!raw||typeof raw!=='object'){mergeContractControls14723(base);migratePeriodicExcel2026V147161(base);migratePeriodicExcelHistoryV147162(base);migratePeriodicExcelFullV147163(base);migratePeriodicFixesV147164(base);ensureCanonicalFacilitySpaces(base);mergeBundledControlReports(base);return base;}
  const d={...base,...raw,settings:{...base.settings,...(raw.settings||{}),counters:{...base.settings.counters,...(raw.settings?.counters||{})}},lists:{...base.lists,...(raw.lists||{})}};
- for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','agentActivities','issues','periodic','contracts','cleaning','maintenance','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
+ d.cleaningDutySourceVersion=Number(raw.cleaningDutySourceVersion||0);
+ if(!Array.isArray(raw.cleaningDutyPlans))d.cleaningDutyPlans=[];
+ for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','agentActivities','cleaningDutyPlans','issues','periodic','contracts','cleaning','maintenance','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
    if(!Array.isArray(d[k]))d[k]=base[k];
  }
  mergeContractControls14723(d);
@@ -642,6 +644,7 @@ function migrate(raw){
    if(!x.agentId&&x.agentIds.length)x.agentId=x.agentIds[0];
    if(!['hours','full-day','half-day'].includes(String(x.durationMode||'')))x.durationMode='hours';
  }
+ window.PSTCleaningDuty?.seed?.(d);
  if(!Array.isArray(d.cleaningRoomChecks))d.cleaningRoomChecks=[];
  if(!Array.isArray(d.cleaningDeletedIds))d.cleaningDeletedIds=[];
  mergeBundledControlReports(d);
@@ -1023,7 +1026,7 @@ function readJson(key){try{const raw=localStorage.getItem(key);return raw?JSON.p
 function writeJson(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true}catch(error){console.error('Écriture locale impossible',error);return false}}
 function readOfflinePending(){return readJson(OFFLINE_CACHE_KEY)}
 function writeMirror(){if(!currentUser)return false;return writeJson(OFFLINE_MIRROR_KEY,{userId:currentUser.id,savedAt:new Date().toISOString(),data:db})}
-function loadMirrorIntoMemory(){const m=readJson(OFFLINE_MIRROR_KEY);if(!m?.data)return false;if(currentUser?.id&&m.userId&&m.userId!==currentUser.id)return false;db=migrate(m.data);safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}return true}
+function loadMirrorIntoMemory(){const m=readJson(OFFLINE_MIRROR_KEY);if(!m?.data)return false;if(currentUser?.id&&m.userId&&m.userId!==currentUser.id)return false;const needsDutySeed=Number(m.data.cleaningDutySourceVersion||0)<1;db=migrate(m.data);if(needsDutySeed){localDirty=true;writeOfflinePending('import initial du planning entretien / loge')}safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}return true}
 function writeOfflinePending(reason='hors ligne'){
  try{
    lastLocalMutationAt=Date.now();
@@ -1058,7 +1061,9 @@ async function cloudLoad({silent=false}={}){
  try{
    const data=await fetchRemote();
    if(data?.data&&hasUsefulData(data.data)){
+     const needsDutySeed=Number(data.data.cleaningDutySourceVersion||0)<1;
      db=migrate(data.data);lastCloudData=deepClone(db);lastCloudUpdatedAt=data.updated_at||lastCloudUpdatedAt;
+     if(needsDutySeed)localDirty=true;
      if(Number(db.settings?.seedVersion||0)<26){restoreSuppliedData(false);db.settings.initialSeedCompleted=true;db.settings.seedVersion=31;localDirty=true}
    }else{
      db=defaultData();runAutomaticHousekeeping();restoreSuppliedData(false);db.settings.initialSeedCompleted=true;db.settings.seedVersion=31;lastCloudData=null;localDirty=true;
@@ -1322,7 +1327,7 @@ async function waitForCloudIdle(maxMs=18000){
  return !cloudBusy;
 }
 
-const STABLE_FORM_COLLECTIONS=['requests','works','meetings','notes','issues','periodic','contracts','cleaning','vacations','personalEvents','agentActivities','documents','agents','rotations','weeklyPlans','spaces'];
+const STABLE_FORM_COLLECTIONS=['requests','works','meetings','notes','issues','periodic','contracts','cleaning','vacations','personalEvents','agentActivities','cleaningDutyPlans','documents','agents','rotations','weeklyPlans','spaces'];
 
 function stableRecordTime(r){
  const t=Date.parse(r?.updatedAt||r?.createdAt||r?.modifiedAt||'');
@@ -1377,6 +1382,7 @@ function mergeStableCollectionsInto(target,snapshots,deletedSnapshot=null){
 }
 window.PSTMainState={
  get:()=>db,
+ removeRecord:(collection,id,label)=>deleteRecord(collection,id,label),
  save:(render=true)=>save(render),
  // Sauvegarde immédiate utilisée par les formulaires sensibles (ex. salle/café).
  // En ligne : attend la confirmation Supabase. Hors ligne : met explicitement en attente locale.
@@ -1642,6 +1648,7 @@ function safeRenderAll(){
    cleaning:['Ménage',renderCleaning],
    maintenance:['Maintenance',renderMaintenance],
    'agent-activity':['Activité agents',renderAgentActivities],
+   'cleaning-duty-plans':['Planning entretien & loge',()=>window.PSTCleaningDuty?.render?.()],
    requests:['Demandes',renderRequests],
    works:['Chantiers',renderWorks],
    meetings:['Réunions',renderMeetings],
@@ -1733,7 +1740,7 @@ function pstApplyQueuedMutationsToPayload(payload){
 }
 function pstMergeRemoteWithoutOverwritingLocal(remote,local=db){
   const out=migrate(deepClone(remote||{})),loc=migrate(deepClone(local||{}));
-  const collections=['agentDays','personalEvents','agents','rotations','weeklyPlans','vacations','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','documents','oneDriveLinks','contracts','spaces','roomPreps'];
+  const collections=['agentDays','personalEvents','agents','rotations','weeklyPlans','cleaningDutyPlans','vacations','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','documents','oneDriveLinks','contracts','spaces','roomPreps'];
   for(const c of collections){
     const map=new Map((Array.isArray(out[c])?out[c]:[]).map(r=>[String(r.id),r]));
     for(const lr of (Array.isArray(loc[c])?loc[c]:[])){
@@ -2512,7 +2519,7 @@ function bindHelpCenter(){
 window.PSTHelp={search:searchHelp,render:renderHelp,entries:PST_HELP_ENTRIES};
 
 /* ---------- Navigation ---------- */
-const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',contracts:'Suivi des contrats',cleaning:'Contrôle ménage','room-prep':'Préparation salle & café',maintenance:'Maintenance','agent-activity':'Activité des agents',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',connections:'Connexions',help:'FAQ / Aide',settings:'Paramètres'};
+const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',contracts:'Suivi des contrats',cleaning:'Contrôle ménage','cleaning-duty-plans':'Planning entretien & loge','room-prep':'Préparation salle & café',maintenance:'Maintenance','agent-activity':'Activité des agents',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',connections:'Connexions',help:'FAQ / Aide',settings:'Paramètres'};
 function setView(view){
  if(!document.getElementById(view))return;
  const previous=document.querySelector('.view.active')?.id||currentView||'dashboard';
@@ -3630,7 +3637,7 @@ function upsertDbRecord(collection,record){
 function refreshCollectionView(collection){
  capturePlanningScroll();
  const map={
-   maintenance:renderMaintenance,agentActivities:renderAgentActivities,requests:renderRequests,works:renderWorks,meetings:renderMeetings,
+   maintenance:renderMaintenance,agentActivities:renderAgentActivities,cleaningDutyPlans:()=>window.PSTCleaningDuty?.render?.(),requests:renderRequests,works:renderWorks,meetings:renderMeetings,
    notes:renderNotes,issues:renderIssues,periodic:renderPeriodic,contracts:()=>window.PSTContracts?.render?.(),cleaning:renderCleaning,
    vacations:renderVacations,personalEvents:renderPersonal,documents:renderDocuments,
    agents:renderAgents,rotations:renderRotations,weeklyPlans:renderPlanning,
@@ -6389,7 +6396,7 @@ function auditMaintenanceCounts(){
 window.PSTMaintenanceAudit={run:auditMaintenanceCounts};
 
 function auditFormPersistence(){
- const collections=['personalEvents','agents','rotations','weeklyPlans','agentDays','vacations','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','documents'];
+ const collections=['personalEvents','agents','rotations','weeklyPlans','cleaningDutyPlans','agentDays','vacations','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','documents'];
  const state={};
  for(const c of collections)state[c]=Array.isArray(db?.[c])?db[c].length:0;
  console.table(state);
