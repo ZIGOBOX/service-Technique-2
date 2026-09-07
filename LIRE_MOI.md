@@ -47,3 +47,8 @@ Le bouton « Valider les modifications » est désormais toujours visible dans C
 Après un import avec changements, vérifiez le tableau puis cliquez sur le bouton. Les suppressions restent soumises à confirmation, avec une confirmation spéciale pour vider le registre. Une sauvegarde est téléchargée avant l’application. En cas de refus d’une ancienne matrice, exportez une nouvelle matrice depuis cette version et reportez-y vos corrections. Ne supprimez pas la feuille technique masquée ni les identifiants.
 
 Le correctif ne modifie ni les données intégrées, ni les horaires, ni ChronoTime, ni les autres modules. Il ne lance aucune réimportation automatique.
+
+
+## Correction affichage de version V147.172
+
+Le numéro affiché sur la page de connexion, dans le menu, dans À propos et dans le titre du navigateur est maintenant 147.172. La version précédente du paquet contenait déjà le correctif de validation, mais affichait encore 147.171. Aucun changement de données ni de logique métier n’est apporté par cette correction.
