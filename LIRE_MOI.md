@@ -1,3 +1,37 @@
+# Pilotage Service Technique — V147.174
+
+## Synchronisation complète Excel — 8 septembre 2026
+
+Cette version rétablit le fonctionnement demandé : **la matrice Excel est la liste de référence du registre des contrôles périodiques**. Il n'existe plus de mode « conserver toutes les fiches », de cases de sélection des suppressions ni de deuxième confirmation.
+
+### Installation
+
+Décompressez le ZIP complet dans un dossier neuf, sans mélanger les fichiers de plusieurs versions. Publiez le contenu sur votre hébergement habituel, puis vérifiez que la page de connexion et l'application affichent **147.174**. Rechargez la page si l'ancien code est encore en cache. Ne réinitialisez ni Supabase ni le stockage du navigateur. Aucun script SQL supplémentaire n'est requis.
+
+### Import / export des contrôles périodiques
+
+Téléchargez la matrice depuis cette version, modifiez les lignes dans Excel, puis réimportez le fichier complet. Gardez les identifiants des fiches existantes et laissez l'identifiant vide pour une création. Ne supprimez pas la feuille technique masquée. Les dates et champs inconnus peuvent rester vides ; aucune date de passage n'est inventée.
+
+Le bouton **Valider les modifications** applique en une seule opération toutes les modifications, toutes les créations et **toutes les suppressions correspondant aux identifiants absents du fichier**. Il n'y a aucune sélection ni confirmation supplémentaire. Une matrice entièrement vide vide le registre après cette validation. Les fiches conservées gardent leurs identifiants, historiques, pièces et métadonnées non modifiables.
+
+Avant l'écriture, le logiciel relit le serveur et déclenche le téléchargement d'une sauvegarde JSON complète. L'UPDATE Supabase est conditionné par la révision lue. En cas de conflit réel, de fiche ajoutée depuis l'ancien export ou de modification d'une fiche à supprimer, l'ensemble de l'import est refusé : il n'y a pas d'application partielle. Les changements de simples métadonnées de synchronisation ne provoquent plus à eux seuls de faux conflits.
+
+Les anciens exports V2/V3 restent lisibles. Pour un ancien V3 qui ne contenait pas les historiques et pièces dans son instantané, une suppression concernant une fiche avec ces données nécessite une matrice actualisée. Le bouton **Télécharger la matrice actualisée avec les corrections sans conflit** reprend les corrections sûres et les suppressions déjà autorisées ; les fiches ajoutées ou modifiées depuis l'export sont conservées jusqu'à ce que vous les supprimiez volontairement dans cette nouvelle matrice. L'export V4 conserve désormais l'état complet pour vérifier les suppressions.
+
+Les suppressions enregistrent des marqueurs persistants afin d'éviter la réapparition des fiches lors des synchronisations. Les anciennes migrations de catalogue ne réinjectent plus de fiches dans un registre déjà présent, même vide. Les autres modules sont conservés à partir de l'état serveur actuel. Les rapports et archives indépendants ne sont pas supprimés par ce nettoyage ; les pièces intégrées aux fiches supprimées restent dans la sauvegarde JSON, avec leurs références externes.
+
+### Vérification et limites
+
+Le paquet comporte moins de 100 fichiers. Les tests locaux couvrent la suppression automatique, le registre vide, les 66 copies répétées, les conflits, les numéros, les anciennes matrices, les historiques/pièces, les marqueurs de suppression et l'écriture conditionnelle. Le contenu de la matrice corrigée fournie a été testé contre une copie simulée de l'export initial : 73 lignes, 66 suppressions et une création. Le résultat du serveur réel peut différer si le registre a changé. Voir `RAPPORT_TESTS_V147.174.md`.
+
+**Aucun import n'a été exécuté sur votre base Supabase réelle.** Le fichier Excel n'est pas une attestation de conformité : vérifiez les dates, périodicités et équipements avec les rapports et prestataires compétents.
+
+---
+
+## Historique des versions précédentes
+
+Les instructions d'import antérieures ci-dessous sont conservées uniquement à titre historique. La synchronisation complète V147.174 les remplace.
+
 # Pilotage Service Technique — V147.172
 
 ## Planning entretien & loge — 7 septembre 2026

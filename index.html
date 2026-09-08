@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#075ca8">
-  <title>Pilotage Service Technique V147.172</title>
+  <title>Pilotage Service Technique V147.174</title>
   <link rel="icon" href="./assets/logo-service-technique.png">
   <link rel="stylesheet" href="./styles.css?v=147.171-20260907-entretien-loge">
 
@@ -877,7 +877,7 @@
     <form class="auth-card" id="authForm" novalidate>
       <img src="./assets/logo-service-technique.png" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.172 — 07/09/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.174 — 08/09/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -951,7 +951,7 @@
         </div>
       </details>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.172 — 07/09/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.174 — 08/09/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -1169,7 +1169,12 @@
           <div><h4>2. Modifier dans Excel</h4><p>Corrigez les contrôles, dates, périodicités, prestataires, lieux ou statuts. Ne modifiez pas l’identifiant d’une ligne existante.</p></div>
           <div><h4>3. Réimporter</h4><p>Le logiciel compare le fichier avec la base actuelle et affiche les créations, modifications et suppressions avant validation.</p><label class="primary file-label schedule-file-label">📤 Choisir le fichier Excel<input type="file" id="periodicImportFile" accept=".xlsx,.xls"></label></div>
         </div>
-        <div class="panel-head periodic-import-check-v169"><div><h4>Contrôle avant import</h4><p class="muted">Aucune modification n’est appliquée avant votre validation. Le fichier Excel devient le registre de référence : les contrôles dont les lignes ont été supprimées seront également supprimés du logiciel. Une sauvegarde est téléchargée avant application.</p></div><button type="button" class="primary" id="confirmPeriodicImport" disabled aria-disabled="true">Valider les modifications</button></div>
+        <div class="panel-head periodic-import-check-v169"><div><h4>Contrôle avant import</h4><p class="muted">La matrice Excel est la référence complète. À la validation, les fiches absentes sont supprimées automatiquement, sans sélection ni confirmation supplémentaire. Une sauvegarde complète est téléchargée avant l’écriture.</p></div><button type="button" class="primary" id="confirmPeriodicImport" disabled aria-disabled="true">Valider les modifications</button></div>
+        <div class="periodic-recovery-controls" id="periodicRecoveryControls">
+          <p class="hint">Les identifiants existants doivent être conservés. Une ligne supprimée dans Excel supprime la fiche correspondante dans l’application. Un nouveau contrôle possède un identifiant vide. Si le registre a réellement changé depuis l’export, aucun changement n’est appliqué avant résolution des conflits.</p>
+          <button type="button" class="ghost" id="periodicImportRecheck">🔄 Refaire le contrôle</button>
+          <button type="button" class="ghost hidden" id="periodicImportRecovery">📥 Télécharger la matrice actualisée avec les corrections sans conflit</button>
+        </div>
         <div id="periodicImportStatus" class="periodic-import-status" role="status" aria-live="polite">Aucun fichier chargé. Choisissez votre matrice Excel corrigée pour afficher les changements avant validation.</div>
         <div id="periodicImportSummary" class="import-summary empty">Choisissez un fichier Excel corrigé.</div>
         <div id="periodicImportPreview" class="table-wrap"></div>
@@ -1661,7 +1666,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.172 — 07/09/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.174 — 08/09/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -1731,13 +1736,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
   <script src="./entretien-planning.js?v=147.171-20260907"></script>
-  <script src="./app.js?v=147.172-20260907-validation-visible-affichage-corrige"></script>
+  <script src="./app.js?v=147.174-20260908-sync-complete"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./jszip.min.js?v=3.10.1"></script>
   <script src="./contracts-tracker.js?v=147.166-20260829-periodic-cycle-continuity"></script>
   <script src="./schedule-import.js?v=147.83-20260821-audit"></script>
-  <script src="./periodic-import.js?v=147.172-20260907-validation-visible"></script>
+  <script src="./periodic-matrix-core.js?v=147.174-20260908-sync-complete"></script>
+  <script src="./periodic-import.js?v=147.174-20260908-sync-complete"></script>
   <script src="./report-import.js?v=147.83-20260821-audit"></script>
 
   <script src="./weather-waste.js?v=147.83-20260821-audit"></script>

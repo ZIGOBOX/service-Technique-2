@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.172';
-const APP_BUILD='07/09/2026';
+const APP_VERSION='147.174';
+const APP_BUILD='08/09/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -626,11 +626,17 @@ function migrate(raw){
  for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','agentActivities','cleaningDutyPlans','issues','periodic','contracts','cleaning','maintenance','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
    if(!Array.isArray(d[k]))d[k]=base[k];
  }
- mergeContractControls14723(d);
- migratePeriodicExcel2026V147161(d);
- migratePeriodicExcelHistoryV147162(d);
- migratePeriodicExcelFullV147163(d);
- migratePeriodicFixesV147164(d);
+ // V147.173 : un registre déjà présent, même vide, est une donnée utilisateur.
+ // Les anciennes migrations de catalogue ne peuvent plus réinjecter ni fusionner
+ // ses fiches. Elles restent réservées à la création initiale d'un registre absent.
+ if(!Array.isArray(raw.periodic)){
+   mergeContractControls14723(d);
+   migratePeriodicExcel2026V147161(d);
+   migratePeriodicExcelHistoryV147162(d);
+   migratePeriodicExcelFullV147163(d);
+   migratePeriodicFixesV147164(d);
+ }
+ d.settings.periodicCatalogMigrationVersion='147.174';
  ensureCanonicalFacilitySpaces(d);
  d.agentDays=normalizeAgentDaysStable(d.agentDays);
  d.maintenance=normalizeMaintenanceStable(d.maintenance);
@@ -1380,7 +1386,140 @@ function mergeStableCollectionsInto(target,snapshots,deletedSnapshot=null){
  }
  return target;
 }
+
+// V147.174 — Synchronisation complète : Excel est la liste de référence.
+// Une validation applique TOUS les retraits, jamais un sous-ensemble coché.
+// La sauvegarde précède une écriture conditionnelle sur la révision Supabase.
+async function pstCommitPeriodicMatrix({expectedSnapshot,operations,desiredIds,deletedIds,deletionBaseline,label='Synchronisation complète matrice'}={}){
+ if(!currentUser||!supabaseClient||!navigator.onLine)throw new Error('Connexion au serveur nécessaire. Aucune modification appliquée.');
+ if(cloudBusy||readOfflinePending()||pstPendingMutationCount()||localDirty)throw new Error('Une synchronisation est en attente. Attendez sa confirmation avant de valider la matrice.');
+ const core=window.PSTPeriodicMatrixCore;
+ if(!core)throw new Error('Moteur de sécurité de la matrice indisponible.');
+ if(!Array.isArray(expectedSnapshot)||!Array.isArray(operations)||!Array.isArray(desiredIds)||!Array.isArray(deletedIds)||!Array.isArray(deletionBaseline))throw new Error('Plan de synchronisation complet manquant. Relancez le contrôle avant import.');
+ const expected=new Map(expectedSnapshot);
+ if(expected.size!==expectedSnapshot.length)throw new Error('Instantané comportant des identifiants répétés.');
+ const matches=rows=>core.snapshotEquals(expected,core.snapshot(rows));
+ if(!matches(db.periodic))throw new Error('Le registre a changé depuis la prévisualisation. Relancez le contrôle avant import.');
+ const wanted=new Set(desiredIds.map(String));
+ if(wanted.size!==desiredIds.length||[...wanted].some(id=>!expected.has(id)))throw new Error('Identifiants de la matrice incomplets ou non reconnus.');
+ // Derive deletions from the desired registry, not from a user-selected list.
+ const removed=new Set([...expected.keys()].filter(id=>!wanted.has(id)));
+ const supplied=new Set(deletedIds.map(String));
+ if(supplied.size!==deletedIds.length||supplied.size!==removed.size||[...removed].some(id=>!supplied.has(id)))throw new Error('Le plan de suppression ne correspond pas exactement à la matrice.');
+ const fingerprints=new Map(deletionBaseline);
+ if(fingerprints.size!==deletionBaseline.length||fingerprints.size!==removed.size||[...removed].some(id=>!fingerprints.has(id)))throw new Error('Instantané de suppression incomplet.');
+ const remoteRow=await fetchRemote();
+ if(!remoteRow||!remoteRow.data||!remoteRow.updated_at)throw new Error('Lecture de référence du serveur indisponible. Import annulé.');
+ const raw=deepClone(remoteRow.data);
+ const remote=migrate(deepClone(raw));
+ if(!matches(remote.periodic))throw new Error('Le registre du serveur contient de nouvelles modifications. Relancez le contrôle avant import.');
+ const byId=new Map((remote.periodic||[]).map(x=>[String(x.id),x]));
+ if(byId.size!==remote.periodic.length)throw new Error('Identifiants répétés dans le registre du serveur.');
+ for(const id of removed){
+   const record=byId.get(id);
+   if(!record||core.deletionFingerprint(record)!==fingerprints.get(id))throw new Error('Une fiche à supprimer a changé depuis la prévisualisation. Relancez le contrôle avant import.');
+ }
+ const changedIds=new Set(),now=new Date().toISOString(),stamp=Date.now();
+ const usedNumbers=new Set([...byId.values()].map(x=>String(x.no||'').trim().toLowerCase()).filter(Boolean));
+ for(const op of operations){
+   if(!op||!['update','create'].includes(op.type))throw new Error('Opération de matrice non reconnue.');
+   if(op.type==='update'){
+     if(!wanted.has(String(op.id)))throw new Error('Une modification vise une fiche absente de la matrice.');
+     const r=byId.get(String(op.id));if(!r)throw new Error('Fiche modifiée ou supprimée entre-temps : '+op.id);
+     if(!op.values||Object.keys(op.values).some(f=>!core.fields.includes(f)))throw new Error('Champ de modification non autorisé.');
+     const values=Object.fromEntries(Object.entries(op.values).map(([f,v])=>[f,core.canonical({[f]:v})[f]]));
+     const oldLast=r.lastDate||'',oldProvider=r.provider||'';
+     if(Object.prototype.hasOwnProperty.call(values,'lastDate')&&oldLast&&oldLast!==values.lastDate){
+       r.history=Array.isArray(r.history)?r.history:[];
+       if(!r.history.some(h=>String(h.date)===String(oldLast)))r.history.push({date:oldLast,provider:oldProvider,source:'Avant synchronisation matrice'});
+     }
+     Object.assign(r,values);
+     if(Object.prototype.hasOwnProperty.call(values,'lastDate')&&r.lastDate){
+       r.history=Array.isArray(r.history)?r.history:[];
+       if(!r.history.some(h=>String(h.date)===String(r.lastDate)))r.history.push({date:r.lastDate,provider:r.provider||'',source:'Synchronisation matrice'});
+     }
+     r.updatedAt=now;r._pstVersion=Math.max(Number(r._pstVersion||0)+1,stamp);
+     r._pstUpdatedAt=now;r._pstDeviceId=pstDeviceId();r._pstSource='import-periodic-matrix';
+     changedIds.add(String(r.id));
+   }else{
+     const values=core.canonical(op.values||{});
+     if(!values.name)throw new Error('Nom de la nouvelle fiche manquant.');
+     const r={id:uid(),history:[],attachments:[],...values,createdAt:now,updatedAt:now,
+       _pstVersion:stamp,_pstUpdatedAt:now,_pstDeviceId:pstDeviceId(),_pstSource:'import-periodic-matrix'};
+     if(byId.has(String(r.id)))throw new Error('Nouvel identifiant déjà utilisé.');
+     if(!r.no){let n=1;do{r.no='CP-'+String(n++).padStart(3,'0')}while(usedNumbers.has(r.no.toLowerCase()));}
+     usedNumbers.add(String(r.no).trim().toLowerCase());
+     if(!r.family)r.family=remote.lists?.periodicFamilies?.[0]||'Autre';
+     if(!r.building)r.building='Tous bâtiments';
+     if(!r.register)r.register='Registre de sécurité';
+     if(r.lastDate)r.history.push({date:r.lastDate,provider:r.provider||'',source:'Synchronisation matrice'});
+     byId.set(String(r.id),r);changedIds.add(String(r.id));
+   }
+ }
+ for(const id of removed){if(!byId.has(id))throw new Error('Suppression devenue obsolète : '+id);byId.delete(id);}
+ const proposed=[...byId.values()];
+ const finalNumbers=new Set(),finalSignatures=new Set();
+ for(const r of proposed){
+   const n=core.norm(r.no),sig=core.signature(r);
+   if(n&&finalNumbers.has(n))throw new Error('Numéro en double dans le registre final : '+r.no);
+   if(n)finalNumbers.add(n);
+   if(r.name&&finalSignatures.has(sig))throw new Error('Fiche identique en double dans le registre final : '+r.name);
+   if(r.name)finalSignatures.add(sig);
+ }
+ remote.periodic=proposed;
+ remote.deletedRecords=mergeDeletedRecordsSafe(remote.deletedRecords,raw.deletedRecords);
+ if(removed.size){
+   const store=remote.deletedRecords||{},arr=Array.isArray(store.periodic)?store.periodic:[];
+   for(const id of removed){if(!arr.some(x=>String(typeof x==='object'?x.id:x)===id))arr.push({id,deletedAt:now});}
+   store.periodic=arr;remote.deletedRecords=store;
+ }
+ remote.lists=remote.lists||{};remote.lists.periodicFamilies=Array.isArray(remote.lists.periodicFamilies)?remote.lists.periodicFamilies:[];
+ for(const r of proposed)if(r.family&&!remote.lists.periodicFamilies.some(f=>normalizeText(f)===normalizeText(r.family)))remote.lists.periodicFamilies.push(r.family);
+ // Do not overwrite other server modules with a stale Excel export.
+ raw.periodic=remote.periodic;raw.deletedRecords=remote.deletedRecords;raw.lists=raw.lists||{};
+ raw.lists.periodicFamilies=remote.lists.periodicFamilies;
+ raw.settings=raw.settings||{};raw.settings.periodicCatalogMigrationVersion='147.174';
+ const rawBackup={exportedAt:now,note:'Sauvegarde complète du serveur avant synchronisation Excel. Les fichiers joints restent dans leur stockage externe.',data:remoteRow.data};
+ const backupBlob=new Blob([JSON.stringify(rawBackup,null,2)],{type:'application/json'});
+ const backupName='Pilotage_sauvegarde_avant_matrice_'+now.replace(/[:.]/g,'-')+'.json';
+ if(typeof triggerDownloadBlob!=='function')throw new Error('Téléchargement de sauvegarde indisponible. Import annulé.');
+ triggerDownloadBlob(backupName,backupBlob);
+ // Optimistic concurrency: no unconditional upsert fallback.
+ const nextRevision=new Date().toISOString();
+ const write=await withTimeout(supabaseClient.from('app_state').update({data:raw,updated_at:nextRevision})
+   .eq('user_id',currentUser.id).eq('updated_at',remoteRow.updated_at).select('updated_at'),18000);
+ if(write?.error)throw write.error;
+ if(!Array.isArray(write?.data)||write.data.length!==1)throw new Error('Le serveur a changé pendant la validation. Aucune écriture de cette matrice n’a été effectuée.');
+ const read=await fetchRemote();
+ if(!read?.data)throw new Error('Écriture effectuée, mais relecture serveur indisponible. Vérifiez le registre avant de recommencer.');
+ const checked=migrate(deepClone(read.data));
+ const checkedIds=new Set((checked.periodic||[]).map(x=>String(x.id))),checkedMap=new Map((checked.periodic||[]).map(x=>[String(x.id),x]));
+ for(const id of removed)if(checkedIds.has(id))throw new Error('Suppression non confirmée par le serveur : '+id);
+ const tombstones=deletedIdsFor('periodic',checked);
+ for(const id of removed)if(!tombstones.has(id))throw new Error('Marqueur de suppression absent du serveur : '+id);
+ for(const id of changedIds)if(!checkedIds.has(id))throw new Error('Fiche non retrouvée après écriture : '+id);
+ for(const op of operations){
+   if(op.type==='update')for(const [field,value] of Object.entries(op.values)){
+     if(core.canonical(checkedMap.get(String(op.id)))[field]!==core.canonical({[field]:value})[field])throw new Error('Valeur non confirmée après écriture : '+field);
+   }
+ }
+ const expectedIds=new Set(proposed.map(x=>String(x.id)));
+ if(checkedIds.size!==expectedIds.size||[...expectedIds].some(id=>!checkedIds.has(id)))throw new Error('Le nombre ou les identifiants des fiches ont changé pendant la confirmation. Vérifiez le registre avant de recommencer.');
+ const localBefore=db,concurrentLocalChanges=!matches(localBefore.periodic);
+ db=pstMergeRemoteWithoutOverwritingLocal(checked,localBefore);
+ db.deletedRecords=mergeDeletedRecordsSafe(db.deletedRecords,checked.deletedRecords);
+ enforceAllDeletedRecords('synchronisation complète matrice');
+ lastCloudData=deepClone(db);lastCloudUpdatedAt=read.updated_at||nextRevision;
+ lastCloudError='';cloudReady=true;localDirty=concurrentLocalChanges;lastConfirmedSupabaseAt=Date.now();
+ if(concurrentLocalChanges)writeOfflinePending('Modifications locales apparues pendant la synchronisation matrice');
+ writeMirror();safeRenderAll();
+ try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}
+ return {ok:true,backupName,created:operations.filter(x=>x.type==='create').length,
+   updated:operations.filter(x=>x.type==='update').length,removed:removed.size};
+}
+
 window.PSTMainState={
+ commitPeriodicMatrix:pstCommitPeriodicMatrix,
  get:()=>db,
  removeRecord:(collection,id,label)=>deleteRecord(collection,id,label),
  save:(render=true)=>save(render),

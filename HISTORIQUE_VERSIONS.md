@@ -1,3 +1,7 @@
+## V147.174 — 08/09/2026 — synchronisation complète Excel
+
+Retour à une seule validation : toute fiche absente de la matrice est supprimée automatiquement, sans sélection ni confirmation supplémentaire. Contrôle des conflits réels, export V4 avec instantané complet, sauvegarde préalable, écriture conditionnelle Supabase et marqueurs anti-réapparition. Les modes de préservation et de sélection des suppressions de la V147.173 sont retirés. Aucune migration de catalogue n’est rejouée sur un registre existant.
+
 # Historique des anciennes versions
 
 Archive documentaire consolidée lors du nettoyage du 7 septembre 2026.
@@ -3385,3 +3389,8 @@ Ajout du module `entretien-planning.js` et d’un écran dédié aux missions he
 ## V147.172 — 7 septembre 2026 — Validation matrice périodique
 
 Correction de l’interface d’import : bouton de validation toujours visible, désactivé sans changements valides, état de lecture et motifs de blocage explicites, réinitialisation de l’aperçu lors d’un nouveau choix de fichier. Les confirmations de suppression, la sauvegarde préalable et la logique de synchronisation complète sont conservées. Aucune modification des autres modules ou du jeu de données initial.
+
+
+## V147.173 — 08/09/2026 — reprise des matrices périodiques
+
+Le moteur de matrice accepte les anciens instantanés V2, exporte désormais un instantané métier V3 et propose une reprise à trois voies sans suppression par défaut. Les champs concurrents sont conservés et signalés. Le mode complet exige un instantané à jour et la sélection individuelle des suppressions. Les anciennes migrations de catalogue sont désactivées sur les registres déjà présents. Une écriture Supabase conditionnelle protège contre les changements de révision. Les autres modules sont conservés. Aucun changement automatique n'est appliqué aux données existantes.

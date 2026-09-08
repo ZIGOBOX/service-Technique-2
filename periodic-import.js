@@ -1,17 +1,11 @@
-/* Pilotage Service Technique V147.172 — synchronisation complète et validation visible de la matrice des contrôles périodiques */
+/* Pilotage Service Technique V147.174 — synchronisation complète Excel, suppressions automatiques à la validation. */
 (() => {
   'use strict';
 
-  let pending=null, applying=false, reading=false, readSequence=0;
+  let pending=null, applying=false, reading=false, readSequence=0, loadedWorkbook=null, loadedFileName='', exportOverride=null;
   const status=(message,state='idle')=>{
     const el=$i('periodicImportStatus');if(!el)return;
     el.textContent=message;el.dataset.state=state;
-  };
-  const updateControls=()=>{
-    const btn=$i('confirmPeriodicImport'),file=$i('periodicImportFile');
-    const ready=!!pending&&!pending.fatal&&Array.isArray(pending.valid)&&pending.valid.length>0;
-    if(btn){btn.classList.remove('hidden');btn.disabled=applying||reading||!ready;btn.setAttribute('aria-disabled',String(btn.disabled));}
-    if(file)file.disabled=applying||reading;
   };
   const clearPreview=()=>{
     pending=null;
@@ -20,7 +14,7 @@
     if(sum){sum.className='import-summary empty';sum.textContent='Aucun aperçu en attente.';}
     updateControls();
   };
-  const MATRIX_SCHEMA="pst-periodic-matrix", MATRIX_VERSION=2, META_SHEET="_PST_Matrice";
+  const MATRIX_SCHEMA="pst-periodic-matrix", MATRIX_VERSION=4, META_SHEET="_PST_Matrice";
   const $i=id=>document.getElementById(id);
   const norm=v=>String(v??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const text=v=>String(v??'').trim();
@@ -72,6 +66,7 @@
       if(ws[a])ws[a].s={fill:{fgColor:{rgb:r%2?'F7FAFC':'FFFFFF'}},alignment:{vertical:'top',wrapText:c>=14}};
     }
   };
+  const core=()=>window.PSTPeriodicMatrixCore;
   const stableValue=v=>{
     if(Array.isArray(v))return v.map(stableValue);
     if(v&&typeof v==='object'){
@@ -82,12 +77,12 @@
     }
     return v;
   };
-  const snapshotRecord=x=>JSON.stringify(stableValue(x));
+  const snapshotRecord=x=>JSON.stringify(core().canonical(x));
   const currentRecords=()=>Array.isArray(db.periodic)?db.periodic:[];
-  const currentSnapshot=()=>new Map(currentRecords().map(x=>[String(x.id),snapshotRecord(x)]));
+  const currentSnapshot=()=>core().snapshot(currentRecords());
   const snapshotEquals=(a,b)=>a.size===b.size&&[...a].every(([id,value])=>b.get(id)===value);
-  const snapshotFromMetadata=meta=>new Map(meta.records.map(([id,value])=>[String(id),value]));
-  const metadataForExport=()=>({schema:MATRIX_SCHEMA,version:MATRIX_VERSION,exportedAt:new Date().toISOString(),userId:typeof currentUser!=='undefined'?String(currentUser?.id||''):'',records:[...currentSnapshot()]});
+  const snapshotFromMetadata=meta=>new Map(meta.records.map(([id,value])=>[String(id),JSON.parse(value)]));
+  const metadataForExport=()=>({schema:MATRIX_SCHEMA,version:MATRIX_VERSION,exportedAt:new Date().toISOString(),userId:typeof currentUser!=='undefined'?String(currentUser?.id||''):'',records:currentRecords().map(x=>[String(x.id),JSON.stringify(core().exportState(x))])});
   const metadataSheet=meta=>{
     const chunks=[];
     for(const [id,value] of meta.records){
@@ -103,7 +98,7 @@
   const readMetadata=wb=>{
     const ws=wb.Sheets[META_SHEET];if(!ws)throw new Error('Matrice complète non reconnue. Téléchargez une nouvelle matrice depuis cette version du logiciel.');
     const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
-    if(rows[0]?.[1]!==MATRIX_SCHEMA||Number(rows[1]?.[1])!==MATRIX_VERSION)throw new Error('Version de matrice incompatible : effectuez un nouvel export.');
+    if(rows[0]?.[1]!==MATRIX_SCHEMA||![2,3,4].includes(Number(rows[1]?.[1])))throw new Error('Version de matrice incompatible : effectuez un nouvel export.');
     const meta={schema:MATRIX_SCHEMA,version:MATRIX_VERSION,exportedAt:String(rows[2]?.[1]||''),userId:String(rows[3]?.[1]||''),records:[]};
     if(meta.userId&&typeof currentUser!=='undefined'&&currentUser?.id&&meta.userId!==String(currentUser.id))throw new Error('Cette matrice appartient à un autre compte.');
     const groups=new Map();
@@ -119,7 +114,7 @@
       if(parts.size!==Math.max(...parts.keys()))throw new Error('Une partie de l’instantané de matrice est manquante.');
       let value;try{value=JSON.parse([...parts].sort((a,b)=>a[0]-b[0]).map(x=>x[1]).join(''));}catch(_){throw new Error('Instantané de matrice endommagé : effectuez un nouvel export.');}
       if(!value||typeof value!=='object'||Array.isArray(value)||String(value.id)!==id)throw new Error('Instantané de matrice invalide.');
-      meta.records.push([id,snapshotRecord(value)]);
+      meta.records.push([id,JSON.stringify({...value,id,__pstSnapshotComplete:Number(rows[1][1])!==3})]);
     }
     return meta;
   };
@@ -145,7 +140,7 @@
   function exportMatrix(){
     if(!window.XLSX){alert('Le composant Excel ne s’est pas chargé. Vérifiez la connexion Internet, puis réessayez.');return;}
     const wb=XLSX.utils.book_new();
-    const rows=(db.periodic||[]).slice().sort((a,b)=>String(a.no||a.name||'').localeCompare(String(b.no||b.name||''),'fr')).map(x=>({
+    const rows=(exportOverride||db.periodic||[]).slice().sort((a,b)=>String(a.no||a.name||'').localeCompare(String(b.no||b.name||''),'fr')).map(x=>({
       'Identifiant contrôle':x.id||'',
       'N° contrôle':x.no||'',
       'Contrôle':x.name||'',
@@ -183,7 +178,7 @@
     XLSX.utils.book_append_sheet(wb,ws,'Contrôles périodiques');
 
     const hist=[];
-    for(const x of (db.periodic||[]))for(const h of historyRows(x))hist.push({
+    for(const x of (exportOverride||db.periodic||[]))for(const h of historyRows(x))hist.push({
       'Identifiant contrôle':x.id||'',
       'N° contrôle':x.no||'',
       'Contrôle':x.name||'',
@@ -202,14 +197,14 @@
       ['3. Ne modifiez pas la colonne « Identifiant contrôle » pour une ligne existante : elle permet de mettre à jour exactement le bon contrôle.'],
       ['4. Vous pouvez laisser l’identifiant vide uniquement pour AJOUTER un nouveau contrôle.'],
       ['5. La feuille est une photographie complète : une ligne supprimée dans Excel supprime le contrôle correspondant du logiciel après validation.'],
-      ['6. Avant validation, Pilotage affiche les lignes identiques, modifiées, nouvelles et supprimées. Les suppressions doivent être confirmées explicitement.'],
+      ['6. Le bouton « Valider les modifications » applique toutes les corrections et supprime automatiquement toutes les fiches absentes du fichier, sans sélection ni confirmation supplémentaire.'],
       ['7. La feuille « Historique - lecture » est fournie pour contrôle visuel. Elle n’est pas utilisée pour supprimer ou réécrire l’historique.'],
       ['8. Si vous modifiez « Dernier contrôle », l’ancienne date est conservée dans l’historique et la nouvelle date y est ajoutée automatiquement.'],
       ['9. « Échéance calculée / affichée », « État calculé », « Historique existant (lecture) » et « Contrôle import » sont des colonnes d’information : elles ne pilotent pas les données.'],
       ['10. Ne supprimez pas la feuille technique masquée _PST_Matrice : elle prouve que le fichier est un export complet et permet de détecter un export devenu obsolète.'],
-      ['11. Si le registre a changé depuis l’export, effectuez un nouvel export. Une ancienne matrice ou un fichier partiel ne peut pas déclencher de suppressions.'],
+      ['11. Les anciens exports V2/V3 sont lisibles. Un conflit réel ou une fiche ajoutée depuis l’export exige une matrice actualisée avant toute écriture.'],
       ['12. Une sauvegarde JSON complète est téléchargée avant l’application des modifications. Les rapports et archives indépendants ne sont pas effacés.'],
-      ['13. Même un fichier sans aucune ligne de contrôle est accepté : il propose de vider le registre après une confirmation spéciale.']
+      ['13. Une matrice complète vide supprime tous les contrôles à la validation. La sauvegarde préalable conserve les anciennes fiches et leurs historiques.']
     ];
     const wsM=XLSX.utils.aoa_to_sheet(instructions);setWidths(wsM,[120]);
     if(wsM.A1)wsM.A1.s={font:{bold:true,color:{rgb:'FFFFFF'},sz:16},fill:{fgColor:{rgb:'1F4E78'}},alignment:{horizontal:'center'}};
@@ -217,7 +212,7 @@
     XLSX.utils.book_append_sheet(wb,metadataSheet(metadataForExport()),META_SHEET);
     wb.Workbook=wb.Workbook||{};wb.Workbook.Sheets=wb.SheetNames.map(name=>({name,Hidden:name===META_SHEET?1:0}));
     wb.Workbook=wb.Workbook||{};wb.Workbook.Views=[{RTL:false}];
-    const fileName=`Matrice_Controles_Periodiques_${new Date().toISOString().slice(0,10)}.xlsx`;
+    const fileName=`Matrice_Controles_Periodiques_${new Date().toISOString().slice(0,10)}${exportOverride?'_ACTUALISEE':''}.xlsx`;
     const dataOut=XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true,bookSST:true});
     const blob=new Blob([dataOut],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     if(typeof triggerDownloadBlob==='function')triggerDownloadBlob(fileName,blob);else XLSX.writeFile(wb,fileName);
@@ -258,12 +253,7 @@
     const oneDriveUrl=text(get(row,'Lien OneDrive','OneDrive','Lien'));
     const notes=text(get(row,'Notes','Commentaire'));
 
-    let existing=null;
-    if(id){existing=maps.byId.get(id)||null;if(!existing)errors.push('Identifiant de contrôle inconnu : ne modifiez pas l’identifiant exporté');}
-    if(!id){
-      if(no&&maps.byNo.has(norm(no)))errors.push('Numéro déjà utilisé : conservez l’identifiant exporté pour modifier ce contrôle');
-      if(name&&maps.bySignature.has([name,family,building].map(norm).join('|')))warnings.push('Contrôle similaire existant : vérifiez qu’il ne s’agit pas d’un doublon');
-    }
+    const existing=id?maps.byId.get(id)||null:null;
     if(!name)errors.push('Nom du contrôle manquant');
     if(Number.isNaN(intervalMonths)||intervalMonths<0)errors.push('Périodicité en mois invalide');
     if(String(lastRaw).trim()&&!lastDate)errors.push('Date du dernier contrôle invalide');
@@ -286,80 +276,76 @@
 
   function validateWorkbook(wb){
     try{
+      if(!core())throw new Error('Moteur de sécurité de la matrice indisponible.');
       const meta=readMetadata(wb),baseline=snapshotFromMetadata(meta);
       const ws=wb.Sheets['Contrôles périodiques']||wb.Sheets['Controles periodiques'];
       if(!ws)throw new Error('Feuille « Contrôles périodiques » introuvable.');
       workbookHeaders(ws);
       const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
-      const maps=recordMap(),results=[],seenIds=new Set(),seenNos=new Map();
+      const maps=recordMap(),parsed=[];
       rows.forEach((row,index)=>{
         if(Object.values(row).every(v=>String(v).trim()===''))return;
-        const item=normalizedRecordFromRow(row,index,maps);
-        // Un identifiant manquant ne doit pas transformer un ancien contrôle en création.
-        if(item.id){
-          if(seenIds.has(item.id))item.errors.push('Identifiant répété dans le fichier');
-          seenIds.add(item.id);
-          if(!baseline.has(item.id))item.errors.push('Identifiant absent de la matrice d’origine : effectuez un nouvel export');
-        }
-        const no=norm(item.values.no);
-        if(no){
-          if(seenNos.has(no)){
-            item.errors.push('Numéro de contrôle en double');
-            seenNos.get(no).errors.push('Numéro de contrôle en double');
-          }else seenNos.set(no,item);
-        }
-        if(item.errors.length)item.action='Erreur';
-        results.push(item);
+        parsed.push(normalizedRecordFromRow(row,index,maps));
       });
-      const usedIds=new Set(results.filter(x=>x.id).map(x=>x.id));
-      const deleted=currentRecords().filter(x=>!usedIds.has(String(x.id))).map(x=>({
-        line:'—',id:String(x.id),existing:x,values:{no:x.no||'',name:x.name||''},changes:[],errors:[],warnings:[],action:'Supprimer'
-      }));
-      results.push(...deleted);
-      const stale=!snapshotEquals(baseline,currentSnapshot());
-      const errors=results.filter(x=>x.errors.length);
-      const fatal=stale?'Le registre a changé depuis cet export. Pour éviter toute perte de données, téléchargez une nouvelle matrice et reportez vos corrections avant de réimporter.':errors.length?`${errors.length} ligne(s) contiennent des erreurs. Corrigez tout le fichier avant de valider.`:'';
-      const valid=fatal?[]:results.filter(x=>!['Identique','Erreur'].includes(x.action));
-      return {results,valid,fatal,meta,baseline};
-    }catch(e){return {results:[],valid:[],fatal:e.message||String(e)};}
+      const plan=core().build({baseline,current:currentRecords(),rows:parsed});
+      const fatal=plan.fatal||'';
+      return {...plan,baseline,meta,parsed,fatal,valid:fatal?[]:plan.operations,
+        sourceSnapshot:core().snapshot(currentRecords()),fileName:loadedFileName};
+    }catch(e){return {results:[],operations:[],deletions:[],conflicts:[],errors:[],warnings:[],valid:[],fatal:e.message||String(e),fileName:loadedFileName};}
   }
   const fieldLabels={no:'N° contrôle',name:'Contrôle',family:'Famille',building:'Bâtiment',floor:'Étage / niveau',sector:'Secteur',room:'Local / zone',intervalMonths:'Périodicité',periodicityText:'Précision',lastDate:'Dernier contrôle',nextDate:'Prochaine échéance',time:'Heure',status:'Statut',provider:'Prestataire',register:'Registre',requirement:'Exigence',oneDriveUrl:'OneDrive',notes:'Notes'};
+  const updateControls=()=>{
+    const btn=$i('confirmPeriodicImport'),file=$i('periodicImportFile');
+    const ready=!!pending&&!pending.fatal&&Array.isArray(pending.operations)&&
+      (pending.operations.length>0||pending.deletedIds?.length>0);
+    if(btn){btn.classList.remove('hidden');btn.disabled=applying||reading||!ready;btn.setAttribute('aria-disabled',String(btn.disabled));}
+    if(file)file.disabled=applying||reading;
+    const recovery=$i('periodicImportRecovery');
+    if(recovery)recovery.classList.toggle('hidden',!pending?.fatal||!pending?.rebaseRows);
+  };
   const preview=data=>{
     pending=data;
     const box=$i('periodicImportPreview'),sum=$i('periodicImportSummary'),btn=$i('confirmPeriodicImport');if(!box||!sum||!btn)return;
-    const created=data.results.filter(x=>x.action==='Créer'),updated=data.results.filter(x=>x.action==='Modifier'),deleted=data.results.filter(x=>x.action==='Supprimer'),same=data.results.filter(x=>x.action==='Identique'),errors=data.results.filter(x=>x.errors.length),warnings=data.results.filter(x=>!x.errors.length&&x.warnings.length);
+    const created=data.results.filter(x=>x.action==='Créer'),updated=data.results.filter(x=>x.action==='Modifier'),
+      deleted=data.deletions||[],same=data.results.filter(x=>x.action==='Identique'),errors=data.errors||[],warnings=data.warnings||[],conflicts=data.conflicts||[];
     sum.className='import-summary';
-    sum.innerHTML=`${data.fatal?`<div class="import-stat error"><strong>Import bloqué</strong><span>${esc(data.fatal)}</span></div>`:''}<div class="import-stat ok"><strong>${updated.length}</strong><span>à modifier</span></div><div class="import-stat ok"><strong>${created.length}</strong><span>à créer</span></div><div class="import-stat error"><strong>${deleted.length}</strong><span>à supprimer</span></div><div class="import-stat"><strong>${same.length}</strong><span>identiques</span></div><div class="import-stat warning"><strong>${warnings.length}</strong><span>à vérifier</span></div><div class="import-stat error"><strong>${errors.length}</strong><span>erreurs bloquantes</span></div>${deleted.length?'<p class="periodic-sync-warning"><strong>⚠️ Synchronisation complète :</strong> les contrôles absents du fichier seront supprimés du registre après confirmation. Une sauvegarde sera téléchargée avant application.</p>':''}`;
+    sum.innerHTML=`${data.fatal?`<div class="import-stat error"><strong>Import bloqué</strong><span>${esc(data.fatal)}</span></div>`:''}<div class="import-stat ok"><strong>${updated.length}</strong><span>à modifier</span></div><div class="import-stat ok"><strong>${created.length}</strong><span>à créer</span></div><div class="import-stat ${deleted.length?'warning':''}"><strong>${deleted.length}</strong><span>à supprimer</span></div><div class="import-stat"><strong>${same.length}</strong><span>identiques</span></div><div class="import-stat warning"><strong>${conflicts.length}</strong><span>conflits</span></div><div class="import-stat error"><strong>${errors.length}</strong><span>erreurs bloquantes</span></div><p class="periodic-sync-warning"><strong>Synchronisation complète :</strong> à la validation, toutes les fiches absentes du fichier sont supprimées automatiquement. Aucun choix ni confirmation supplémentaire. Une sauvegarde complète est téléchargée avant l’écriture.</p>${data.fatal&&data.rebaseRows?'<p class="periodic-sync-warning">Aucune donnée n’a été modifiée. Vous pouvez télécharger une matrice actualisée pour reprendre les corrections sans conflit et vérifier les fiches modifiées depuis l’ancien export.</p>':''}`;
     if(data.fatal)status(`Import bloqué : ${data.fatal} Aucune donnée n’a été modifiée.`,'error');
-    else if(data.valid.length)status(`${data.fileName?data.fileName+' — ':''}${data.valid.length} changement(s) prêt(s) : ${updated.length} modification(s), ${created.length} création(s), ${deleted.length} suppression(s). Vérifiez le tableau, puis cliquez sur « Valider les modifications ».`, 'ready');
-    else status('Matrice vérifiée : aucune modification détectée. Le registre est déjà identique au fichier ; il n’y a rien à valider.','idle');
+    else if(data.operations.length||data.deletedIds?.length)status(`${data.fileName?data.fileName+' — ':''}${updated.length} correction(s), ${created.length} création(s) et ${(data.deletedIds||[]).length} suppression(s) à appliquer. Cliquez sur Valider les modifications pour synchroniser le registre.`, 'ready');
+    else status('Le registre correspond déjà à la matrice. Aucune modification à appliquer.','idle');
     updateControls();
-    box.innerHTML=data.results.length?`<table><thead><tr><th>État</th><th>Ligne</th><th>N°</th><th>Contrôle</th><th>Changements détectés</th><th>Avertissements / erreurs</th></tr></thead><tbody>${data.results.map(x=>{
-      const cls=x.errors.length||x.action==='Supprimer'?'error':x.warnings.length?'warning':x.action==='Identique'?'':'ok';
-      const change=x.action==='Créer'?'Nouveau contrôle':x.action==='Supprimer'?'Absent de la matrice : suppression du registre':x.action==='Identique'?'Aucune modification':x.changes.map(c=>`${fieldLabels[c.field]||c.field} : ${String(c.from||'—')} → ${String(c.to||'—')}`).join(' · ');
-      const msg=[...x.errors,...x.warnings].join(' · ');
-      return `<tr class="import-row-${cls||'ok'}"><td><span class="import-badge ${cls||'ok'}">${esc(x.action)}</span></td><td>${x.line}</td><td>${esc(x.values.no||'—')}</td><td><strong>${esc(x.values.name||'—')}</strong></td><td>${esc(change)}</td><td>${esc(msg||'—')}</td></tr>`;
-    }).join('')}</tbody></table>`:'<div class="empty-state">Aucun contrôle dans le fichier. Le registre sera vide après validation.</div>';
+    const show=v=>v===0?'0':v===null||v===undefined||v===''?'—':String(v);
+    box.innerHTML=data.results.length?`<table><thead><tr><th>État</th><th>Ligne</th><th>N°</th><th>Contrôle</th><th>Modifications</th><th>Conflits / avertissements</th></tr></thead><tbody>${data.results.map(x=>{
+      const cls=x.errors?.length||x.action==='Supprimer'?'error':x.conflicts?.length||x.warnings?.length?'warning':x.action==='Identique'?'':'ok';
+      const change=x.action==='Créer'?'Nouvelle fiche':x.action==='Supprimer'?'Absente du fichier : suppression automatique à la validation':x.action==='Identique'?'Aucune modification':(x.changes||[]).map(c=>`${fieldLabels[c.field]||c.field} : ${show(c.from)} → ${show(c.to)}`).join(' · ');
+      const conflictDetails=(x.conflicts||[]).map(c=>typeof c==='string'?c:`${fieldLabels[c.field]||c.field} : export ${show(c.original)} / actuel ${show(c.current)} / demandé ${show(c.requested)}`);
+      const msg=[...(x.errors||[]),...(x.warnings||[]),...conflictDetails].join(' · ');
+      return `<tr class="import-row-${cls||'ok'}"><td><span class="import-badge ${cls||'ok'}">${esc(x.action)}</span></td><td>${esc(x.line)}</td><td>${esc(x.values.no||'—')}</td><td><strong>${esc(x.values.name||'—')}</strong></td><td>${esc(change||'—')}</td><td>${esc(msg||'—')}</td></tr>`;
+    }).join('')}</tbody></table>`:'<div class="empty-state">La matrice est vide. La validation supprimera toutes les fiches du registre actuel.</div>';
+  };
+  const downloadRecovery=()=>{
+    if(!pending?.rebaseRows||!pending.fatal)return;
+    const previous=exportOverride;
+    try{exportOverride=pending.rebaseRows;exportMatrix();}
+    finally{exportOverride=previous;}
   };
   const importFile=async file=>{
     if(applying)return;
     const sequence=++readSequence;
-    reading=false;clearPreview();
-    if(!window.XLSX){status('Le composant Excel ne s’est pas chargé. Vérifiez la connexion Internet, puis réessayez. Aucune donnée n’a été modifiée.','error');return;}
+    reading=false;clearPreview();loadedWorkbook=null;loadedFileName=file.name;
+    if(!window.XLSX){status('Le composant Excel ne s’est pas chargé. Vérifiez la connexion Internet. Aucune donnée n’a été modifiée.','error');return;}
     reading=true;updateControls();status(`Lecture de « ${file.name} » et comparaison avec le registre…`,'busy');
     try{
-      const buf=await file.arrayBuffer();
-      if(sequence!==readSequence)return;
-      const wb=XLSX.read(buf,{type:'array',cellDates:true});
-      const result=validateWorkbook(wb);
-      result.fileName=file.name;
-      preview(result);
-    }catch(e){
-      console.error('Lecture matrice contrôles périodiques',e);
-      if(sequence===readSequence){clearPreview();status(`Impossible de lire le fichier : ${e.message||String(e)}. Choisissez une matrice Excel valide. Aucune donnée n’a été modifiée.`,'error');}
-    }finally{if(sequence===readSequence){reading=false;updateControls();}}
+      const buf=await file.arrayBuffer();if(sequence!==readSequence)return;
+      loadedWorkbook=XLSX.read(buf,{type:'array',cellDates:true});
+      const result=validateWorkbook(loadedWorkbook);preview(result);
+    }catch(e){console.error('Lecture matrice contrôles périodiques',e);if(sequence===readSequence){clearPreview();status(`Impossible de lire le fichier : ${e.message||String(e)}. Aucune donnée n’a été modifiée.`,'error');}}
+    finally{if(sequence===readSequence){reading=false;updateControls();}}
   };
-
+  const recheck=()=>{
+    if(applying||reading||!loadedWorkbook)return;
+    const result=validateWorkbook(loadedWorkbook);preview(result);
+  };
   function rememberDate(record,date,provider,source){
     if(!date)return;
     try{
@@ -399,97 +385,40 @@
     return [...deletedIds].every(id=>!ids.has(id)&&tombstones.has(id));
   };
   async function applyImport(){
-    if(applying||reading||!pending||pending.fatal||!pending.valid.length){updateControls();return;}
-    applying=true;const btn=$i('confirmPeriodicImport');updateControls();
-    status('Validation en cours : vérification du registre et sauvegarde avant application…','busy');
+    if(applying||reading||!pending||pending.fatal||!loadedWorkbook){updateControls();return;}
+    applying=true;updateControls();status('Vérification du registre et sauvegarde avant synchronisation…','busy');
     try{
-      const data=pending;
-      // Never apply a preview against a registry that changed after the preview.
-      if(!snapshotEquals(data.baseline,currentSnapshot()))throw new Error('Le registre a changé depuis l’export. Réexportez une matrice à jour avant de poursuivre.');
-      const deleted=data.valid.filter(x=>x.action==='Supprimer');
-      if(deleted.length){
-        const names=deleted.map(x=>`${x.values.no||'—'} — ${x.values.name}`).join('\n');
-        if(!confirm(`SUPPRESSION DE ${deleted.length} CONTRÔLE(S)\n\n${names}\n\nLes contrôles ci-dessus et leur historique intégré seront retirés du registre. Les autres données du logiciel et les archives indépendantes sont conservées. Une sauvegarde complète sera téléchargée.\n\nConfirmer ces suppressions ?`)){status('Suppression annulée. Le registre n’a pas été modifié ; vous pouvez vérifier le tableau ou choisir un autre fichier.','idle');return;}
-        if(deleted.length===currentRecords().length&&deleted.length){
-          if(prompt('Vous allez vider entièrement le registre des contrôles périodiques. Pour confirmer, écrivez SUPPRIMER TOUS :')!=='SUPPRIMER TOUS'){status('Vidage du registre annulé. Aucune donnée n’a été modifiée.','idle');return;}
-        }
+      const earlier=pending;
+      const data=validateWorkbook(loadedWorkbook);
+      if(data.fatal)throw new Error(data.fatal);
+      if(!core().snapshotEquals(earlier.sourceSnapshot,data.sourceSnapshot)){
+        preview(data);throw new Error('Le registre a changé depuis la prévisualisation. Le contrôle vient d’être actualisé.');
       }
-      // Check the remote state before a destructive replacement: stale exports cannot erase newer work.
-      if(typeof waitForCloudIdle==='function'&&!(await waitForCloudIdle(18000)))throw new Error('Une synchronisation est en cours. Réessayez après sa fin.');
-      if(!snapshotEquals(data.baseline,currentSnapshot()))throw new Error('Des données ont changé pendant la préparation. Import annulé.');
-      if(typeof currentUser!=='undefined'&&currentUser&&navigator.onLine){
-        if(typeof fetchRemote!=='function')throw new Error('Lecture de contrôle du serveur indisponible.');
-        const remote=await fetchRemote();
-        if(remote?.data){
-          const remoteState=migrate(remote.data);
-          const remoteSnapshot=new Map((remoteState.periodic||[]).map(x=>[String(x.id),snapshotRecord(x)]));
-          if(!snapshotEquals(data.baseline,remoteSnapshot))throw new Error('Le registre du serveur a changé depuis l’export. Réexportez une matrice à jour pour conserver les modifications récentes.');
-        }
-      }
-      // Download the recovery backup BEFORE modifying even a single record.
-      const backupName=backupBeforeImport();
-      let created=0,updated=0,removed=0;
-      for(const item of data.valid){
-        if(item.action==='Supprimer')continue;
-        let record=item.existing;
-        if(record){
-          const oldLast=isoDate(record.lastDate||''),oldProvider=record.provider||'';
-          if(oldLast&&oldLast!==item.values.lastDate)rememberDate(record,oldLast,oldProvider,'Import matrice — ancienne date');
-          Object.assign(record,item.values);
-          if(record.lastDate)rememberDate(record,record.lastDate,record.provider||'','Import matrice contrôles périodiques');
-          stampRecord(record);updated++;
-        }else{
-          record={id:typeof uid==='function'?uid():`CP-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,history:[],attachments:[],...item.values};
-          if(!record.no&&typeof nextNo==='function')record.no=nextNo('periodic','CP');
-          if(!record.family)record.family=db.lists?.periodicFamilies?.[0]||'Autre';
-          if(!record.building)record.building='Tous bâtiments';
-          if(!record.register)record.register='Registre de sécurité';
-          if(record.lastDate)rememberDate(record,record.lastDate,record.provider||'','Import matrice contrôles périodiques');
-          db.periodic.push(record);stampRecord(record);created++;
-        }
-        if(record.oneDriveUrl&&typeof savePeriodicOneDriveLink==='function')try{savePeriodicOneDriveLink(record,record.oneDriveUrl);}catch(_){}
-        if(record.family&&Array.isArray(db.lists?.periodicFamilies)&&!db.lists.periodicFamilies.some(v=>norm(v)===norm(record.family)))db.lists.periodicFamilies.push(record.family);
-      }
-      const deletedIds=new Set(deleted.map(x=>x.id));
-      for(const item of deleted){
-        markRecordDeleted('periodic',item.id);
-        if(typeof pstQueueMutation==='function')pstQueueMutation('periodic',{id:item.id,_pstVersion:Date.now()},{deleted:true,label:'Suppression par matrice contrôles périodiques'});
-        removed++;
-      }
-      db.periodic=currentRecords().filter(x=>!deletedIds.has(String(x.id)));
-      if(typeof enforceStableCollection==='function')enforceStableCollection('periodic','Synchronisation matrice complète');
-      if(typeof enforceAllDeletedRecords==='function')enforceAllDeletedRecords('Synchronisation matrice complète');
-      const expectedIds=new Set(currentRecords().map(x=>String(x.id)));
-      if(typeof pstMutationStamp==='function')pstMutationStamp();
-      if(typeof writeMirror==='function')writeMirror();
-      if(typeof writeOfflinePending==='function')writeOfflinePending('Synchronisation complète des contrôles périodiques');
-      refreshAfterImport();
-      let persisted={ok:false,error:'Sauvegarde indisponible'};
-      if(window.PSTMainState?.persistStateDirect)persisted=await window.PSTMainState.persistStateDirect({
-        label:'Synchronisation complète des contrôles périodiques',
-        verify:remote=>verifyResult(remote,expectedIds,deletedIds)
+      if(!data.operations.length&&!data.deletedIds.length){status('Aucune modification à appliquer.','idle');return;}
+      if(!window.PSTMainState?.commitPeriodicMatrix)throw new Error('Écriture sécurisée indisponible : installez le paquet logiciel complet V147.174.');
+      const result=await window.PSTMainState.commitPeriodicMatrix({
+        expectedSnapshot:[...data.sourceSnapshot],operations:data.operations,
+        desiredIds:data.desiredIds,deletedIds:data.deletedIds,
+        deletionBaseline:data.deletionBaseline,
+        label:'Synchronisation complète des contrôles périodiques'
       });
-      else if(window.PSTMainState?.persistNow)persisted=await window.PSTMainState.persistNow();
-      else if(typeof save==='function')persisted={ok:save(false),offline:!navigator.onLine};
-      if(!persisted?.ok||persisted.offline||persisted.pending){
-        pending=null;updateControls();
-        showImportResult(`Modifications appliquées localement (${updated} modifié(s), ${created} créé(s), ${removed} supprimé(s)). Synchronisation serveur non confirmée : ${persisted?.error||'en attente de connexion'}. Sauvegarde : ${backupName}.`,true);
-        return;
-      }
-      pending=null;updateControls();
-      if($i('periodicImportPreview'))$i('periodicImportPreview').innerHTML='';
-      showImportResult(`${updated} contrôle(s) modifié(s), ${created} créé(s), ${removed} supprimé(s). Registre synchronisé. Sauvegarde : ${backupName}.`);
+      if(!result?.ok)throw new Error(result?.error||'La sauvegarde serveur n’a pas été confirmée.');
+      loadedWorkbook=null;loadedFileName='';clearPreview();
+      showImportResult(`${result.updated} fiche(s) modifiée(s), ${result.created} créée(s), ${result.removed} supprimée(s). Synchronisation serveur confirmée. Sauvegarde : ${result.backupName}.`);
       refreshAfterImport();
     }catch(e){console.error('Synchronisation matrice contrôles périodiques',e);showImportResult(e.message||String(e),true);}
     finally{applying=false;updateControls();}
   }
-  window.PSTPeriodicMatrix={exportMatrix,validateWorkbook,applyImport,preview,readMetadata};
+  window.PSTPeriodicMatrix={exportMatrix,validateWorkbook,applyImport,preview,readMetadata,recheck,importFile,downloadRecovery};
   function init(){
     const d=$i('downloadPeriodicMatrix'),f=$i('periodicImportFile'),c=$i('confirmPeriodicImport');if(!d||!f||!c)return;
     updateControls();
     d.addEventListener('click',exportMatrix);
     f.addEventListener('change',e=>{const file=e.target.files?.[0];if(file)importFile(file);e.target.value='';});
     c.addEventListener('click',applyImport);
+    $i('periodicImportRecheck')?.addEventListener('click',recheck);
+    $i('periodicImportRecovery')?.addEventListener('click',downloadRecovery);
+    window.addEventListener('pst:data-loaded',()=>{if(loadedWorkbook&&!applying)recheck();});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
