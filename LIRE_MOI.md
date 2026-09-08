@@ -1,30 +1,36 @@
-# Pilotage Service Technique — V147.174
+# Pilotage Service Technique — V147.175
 
-## Synchronisation complète Excel — 8 septembre 2026
+## Excel prioritaire et suivi des contrôles — 8 septembre 2026
 
-Cette version rétablit le fonctionnement demandé : **la matrice Excel est la liste de référence du registre des contrôles périodiques**. Il n'existe plus de mode « conserver toutes les fiches », de cases de sélection des suppressions ni de deuxième confirmation.
+Cette version applique la règle demandée : **le registre des contrôles périodiques est remplacé par la liste complète de la matrice Excel lors de la validation**. Les corrections Excel priment sur les changements métier intervenus depuis l'export. Les fiches absentes sont supprimées automatiquement, sans cases à cocher ni confirmation supplémentaire.
 
 ### Installation
 
-Décompressez le ZIP complet dans un dossier neuf, sans mélanger les fichiers de plusieurs versions. Publiez le contenu sur votre hébergement habituel, puis vérifiez que la page de connexion et l'application affichent **147.174**. Rechargez la page si l'ancien code est encore en cache. Ne réinitialisez ni Supabase ni le stockage du navigateur. Aucun script SQL supplémentaire n'est requis.
+Décompressez le ZIP complet dans un dossier neuf, sans mélanger les fichiers de plusieurs versions. Publiez son contenu sur votre hébergement habituel et vérifiez la version **147.175**. Rechargez la page sans cache si l'ancienne version apparaît. Ne réinitialisez ni Supabase ni les données du navigateur. Aucun script SQL supplémentaire n'est requis.
 
-### Import / export des contrôles périodiques
+### Import et modifications dans l'aperçu
 
-Téléchargez la matrice depuis cette version, modifiez les lignes dans Excel, puis réimportez le fichier complet. Gardez les identifiants des fiches existantes et laissez l'identifiant vide pour une création. Ne supprimez pas la feuille technique masquée. Les dates et champs inconnus peuvent rester vides ; aucune date de passage n'est inventée.
+La matrice Excel complète contient les identifiants des fiches existantes. Conservez ces identifiants et laissez-les vides pour les créations. Ne supprimez pas la feuille technique masquée. Les anciens exports V2/V3 sont acceptés. Les cellules dates et informations inconnues peuvent rester vides.
 
-Le bouton **Valider les modifications** applique en une seule opération toutes les modifications, toutes les créations et **toutes les suppressions correspondant aux identifiants absents du fichier**. Il n'y a aucune sélection ni confirmation supplémentaire. Une matrice entièrement vide vide le registre après cette validation. Les fiches conservées gardent leurs identifiants, historiques, pièces et métadonnées non modifiables.
+Après sélection du fichier, l'aperçu permet de modifier les champs de chaque ligne, d'ajouter une fiche, de retirer une ligne et de télécharger une nouvelle matrice contenant les corrections. Les modifications de l'aperçu ne sont pas enregistrées sur le serveur tant que vous n'avez pas cliqué sur **Valider les modifications**. Les erreurs de saisie (date invalide, identifiant inconnu, numéro ou fiche en double, etc.) doivent être corrigées, mais les changements métier du serveur ne sont pas présentés comme des conflits à résoudre.
 
-Avant l'écriture, le logiciel relit le serveur et déclenche le téléchargement d'une sauvegarde JSON complète. L'UPDATE Supabase est conditionné par la révision lue. En cas de conflit réel, de fiche ajoutée depuis l'ancien export ou de modification d'une fiche à supprimer, l'ensemble de l'import est refusé : il n'y a pas d'application partielle. Les changements de simples métadonnées de synchronisation ne provoquent plus à eux seuls de faux conflits.
+La validation applique l'ensemble du fichier : valeurs corrigées, créations et suppressions. Une matrice vide vide le registre. Les fiches conservées gardent leurs identifiants, historiques, pièces jointes et métadonnées non modifiables. Une fiche supprimée depuis l'export mais toujours présente dans Excel peut être restaurée avec son identifiant d'origine. Les marqueurs de suppression empêchent les anciennes migrations et synchronisations de faire réapparaître les fiches retirées.
 
-Les anciens exports V2/V3 restent lisibles. Pour un ancien V3 qui ne contenait pas les historiques et pièces dans son instantané, une suppression concernant une fiche avec ces données nécessite une matrice actualisée. Le bouton **Télécharger la matrice actualisée avec les corrections sans conflit** reprend les corrections sûres et les suppressions déjà autorisées ; les fiches ajoutées ou modifiées depuis l'export sont conservées jusqu'à ce que vous les supprimiez volontairement dans cette nouvelle matrice. L'export V4 conserve désormais l'état complet pour vérifier les suppressions.
+### Statut et périodicité
 
-Les suppressions enregistrent des marqueurs persistants afin d'éviter la réapparition des fiches lors des synchronisations. Les anciennes migrations de catalogue ne réinjectent plus de fiches dans un registre déjà présent, même vide. Les autres modules sont conservés à partir de l'état serveur actuel. Les rapports et archives indépendants ne sont pas supprimés par ce nettoyage ; les pièces intégrées aux fiches supprimées restent dans la sauvegarde JSON, avec leurs références externes.
+Le statut est calculé à la lecture et pendant l'édition à partir du dernier passage et de la périodicité : **Fait** tant que la période de validité n'est pas dépassée, **En retard** après l'échéance, **À planifier** sans passage connu, et **À vérifier** lorsque la validité ne peut pas être établie. Une date de passage future n'est pas considérée comme réalisée. Les statuts explicites Clôturé et Non applicable sont conservés.
 
-### Vérification et limites
+L'échéance est calculée en mois calendaires, avec gestion des fins de mois. Une échéance explicite plus courte est respectée ; une date plus tardive ne prolonge pas silencieusement la périodicité renseignée. Lorsqu'un dernier passage ou une périodicité est corrigé sans modifier volontairement la date suivante, celle-ci est recalculée. Les anciennes dates de passage sont conservées dans l'historique. Les listes, le tableau de bord, les formulaires et les nouveaux exports Excel utilisent le statut calculé. L'affichage est actualisé au changement de date, sans inventer de passage ni prétendre attester la conformité réglementaire.
 
-Le paquet comporte moins de 100 fichiers. Les tests locaux couvrent la suppression automatique, le registre vide, les 66 copies répétées, les conflits, les numéros, les anciennes matrices, les historiques/pièces, les marqueurs de suppression et l'écriture conditionnelle. Le contenu de la matrice corrigée fournie a été testé contre une copie simulée de l'export initial : 73 lignes, 66 suppressions et une création. Le résultat du serveur réel peut différer si le registre a changé. Voir `RAPPORT_TESTS_V147.174.md`.
+### Sauvegarde et écriture serveur
 
-**Aucun import n'a été exécuté sur votre base Supabase réelle.** Le fichier Excel n'est pas une attestation de conformité : vérifiez les dates, périodicités et équipements avec les rapports et prestataires compétents.
+Avant chaque tentative d'écriture, le logiciel relit l'état serveur et déclenche le téléchargement d'une sauvegarde JSON complète. Il reconstruit le registre souhaité à partir de l'Excel, puis utilise une écriture conditionnelle sur la révision Supabase. Si une autre écriture intervient entre lecture et enregistrement, le logiciel relit le serveur et réapplique le même Excel, avec un nombre limité de tentatives. Il n'écrase pas les autres modules avec une ancienne sauvegarde Excel. Une indisponibilité du serveur, une sauvegarde impossible, une synchronisation locale encore en attente ou des erreurs de saisie empêchent la validation.
+
+**Aucun import n'a été effectué sur votre base Supabase réelle.** La sauvegarde JSON n'inclut pas les octets des fichiers stockés à l'extérieur ; elle conserve leurs références et l'état des fiches. Les rapports et archives indépendants ne sont pas supprimés par le nettoyage du registre.
+
+### Vérifications
+
+Les tests automatisés couvrent les dates, l'état Fait, les doublons, la matrice de 73 lignes/66 suppressions, les créations, les suppressions, le registre vide, l'historique, les pièces jointes, la restauration d'un identifiant, les révisions concurrentes et l'écriture conditionnelle. Le test d'interface dans Chromium n'a pas pu se terminer dans cet environnement ; le parcours complet reste donc à vérifier sur votre installation. Voir `RAPPORT_TESTS_V147.175.md`.
 
 ---
 

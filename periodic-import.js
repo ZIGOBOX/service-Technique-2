@@ -1,4 +1,4 @@
-/* Pilotage Service Technique V147.174 — synchronisation complète Excel, suppressions automatiques à la validation. */
+/* Pilotage Service Technique V147.175 — synchronisation complète Excel, suppressions automatiques à la validation. */
 (() => {
   'use strict';
 
@@ -152,10 +152,10 @@
       'Périodicité (mois)':Number(x.intervalMonths||0),
       'Périodicité / précision':x.periodicityText||'',
       'Dernier contrôle':x.lastDate||'',
-      'Prochaine échéance':x.nextDate||'',
+      'Prochaine échéance':computedDue(x)||'',
       'Échéance calculée / affichée':computedDue(x)||'',
       'Heure prévue':x.time||'',
-      'Statut':x.status||'',
+      'Statut':computedState(x)||'',
       'Prestataire / responsable':x.provider||'',
       'Registre / dossier':x.register||'',
       'Exigence / contenu':x.requirement||'',
@@ -202,9 +202,9 @@
       ['8. Si vous modifiez « Dernier contrôle », l’ancienne date est conservée dans l’historique et la nouvelle date y est ajoutée automatiquement.'],
       ['9. « Échéance calculée / affichée », « État calculé », « Historique existant (lecture) » et « Contrôle import » sont des colonnes d’information : elles ne pilotent pas les données.'],
       ['10. Ne supprimez pas la feuille technique masquée _PST_Matrice : elle prouve que le fichier est un export complet et permet de détecter un export devenu obsolète.'],
-      ['11. Les anciens exports V2/V3 sont lisibles. Un conflit réel ou une fiche ajoutée depuis l’export exige une matrice actualisée avant toute écriture.'],
+      ['11. L’Excel est prioritaire même si le registre a évolué. Les erreurs de saisie doivent être corrigées dans l’aperçu. Une nouvelle lecture du serveur et une sauvegarde précèdent chaque écriture.'],
       ['12. Une sauvegarde JSON complète est téléchargée avant l’application des modifications. Les rapports et archives indépendants ne sont pas effacés.'],
-      ['13. Une matrice complète vide supprime tous les contrôles à la validation. La sauvegarde préalable conserve les anciennes fiches et leurs historiques.']
+      ['13. Une matrice complète vide supprime tous les contrôles à la validation. Les fiches conservées gardent leurs historiques et pièces jointes. Le statut Fait est calculé depuis le dernier passage et la périodicité.']
     ];
     const wsM=XLSX.utils.aoa_to_sheet(instructions);setWidths(wsM,[120]);
     if(wsM.A1)wsM.A1.s={font:{bold:true,color:{rgb:'FFFFFF'},sz:16},fill:{fgColor:{rgb:'1F4E78'}},alignment:{horizontal:'center'}};
@@ -227,198 +227,164 @@
     }
     return {byId,byNo,bySignature};
   };
-  const normalizedRecordFromRow=(row,index,maps)=>{
-    const errors=[],warnings=[];
-    const id=text(get(row,'Identifiant contrôle','ID contrôle','Identifiant'));
-    const no=text(get(row,'N° contrôle','No contrôle','Numéro contrôle','Numero controle'));
-    const name=text(get(row,'Contrôle','Controle','Nom du contrôle','Nom du controle'));
-    const family=text(get(row,'Famille'));
-    const building=text(get(row,'Bâtiment','Batiment'));
-    const floor=text(get(row,'Étage / niveau','Etage / niveau','Étage','Etage'));
-    const sector=text(get(row,'Secteur'));
-    const room=text(get(row,'Local / zone','Local','Zone'));
-    const intervalRaw=get(row,'Périodicité (mois)','Periodicite (mois)','Périodicité mois','Periodicite mois');
-    const intervalMonths=num(intervalRaw);
-    const periodicityText=text(get(row,'Périodicité / précision','Periodicite / precision','Périodicité','Periodicite'));
-    const lastRaw=get(row,'Dernier contrôle','Dernier controle');
-    const nextRaw=get(row,'Prochaine échéance','Prochaine echeance');
-    const lastDate=String(lastRaw).trim()===''?'':isoDate(lastRaw);
-    const nextDate=String(nextRaw).trim()===''?'':isoDate(nextRaw);
-    const timeRaw=get(row,'Heure prévue','Heure prevue','Heure');
-    const time=String(timeRaw).trim()===''?'':timeText(timeRaw);
-    const status=text(get(row,'Statut'))||'À planifier';
-    const provider=text(get(row,'Prestataire / responsable','Prestataire','Responsable'));
-    const register=text(get(row,'Registre / dossier','Registre','Dossier'));
-    const requirement=text(get(row,'Exigence / contenu','Exigence','Contenu'));
-    const oneDriveUrl=text(get(row,'Lien OneDrive','OneDrive','Lien'));
-    const notes=text(get(row,'Notes','Commentaire'));
-
-    const existing=id?maps.byId.get(id)||null:null;
-    if(!name)errors.push('Nom du contrôle manquant');
-    if(Number.isNaN(intervalMonths)||intervalMonths<0)errors.push('Périodicité en mois invalide');
-    if(String(lastRaw).trim()&&!lastDate)errors.push('Date du dernier contrôle invalide');
-    if(String(nextRaw).trim()&&!nextDate)errors.push('Date de prochaine échéance invalide');
-    if(String(timeRaw).trim()&&!time)errors.push('Heure prévue invalide');
-    if(lastDate&&nextDate&&nextDate<lastDate)warnings.push('La prochaine échéance est antérieure au dernier contrôle');
-    if(building&&Array.isArray(db.buildings)&&!db.buildings.some(b=>norm(b.name)===norm(building))&&norm(building)!=='tous batiments')warnings.push('Bâtiment non présent dans le référentiel : valeur conservée');
-    if(family&&Array.isArray(db.lists?.periodicFamilies)&&!db.lists.periodicFamilies.some(v=>norm(v)===norm(family)))warnings.push('Nouvelle famille : elle sera ajoutée au référentiel');
-
-    const values={
-      no,name,family,building,floor,sector,room,
-      intervalMonths:Number.isNaN(intervalMonths)?0:intervalMonths,periodicityText,lastDate,nextDate,time,status,provider,register,requirement,oneDriveUrl,notes
-    };
-    const fields=['no','name','family','building','floor','sector','room','intervalMonths','periodicityText','lastDate','nextDate','time','status','provider','register','requirement','oneDriveUrl','notes'];
-    const changes=[];
-    if(existing){for(const f of fields){const a=f==='intervalMonths'?Number(existing[f]||0):String(existing[f]??'').trim();const b=f==='intervalMonths'?Number(values[f]||0):String(values[f]??'').trim();if(a!==b)changes.push({field:f,from:a,to:b});}}
-    const action=errors.length?'Erreur':existing?(changes.length?'Modifier':'Identique'):'Créer';
-    return {line:index+2,id,existing,values,changes,errors,warnings,action};
+  const fieldLabels={no:'N° contrôle',name:'Contrôle',family:'Famille',building:'Bâtiment',floor:'Étage / niveau',sector:'Secteur',room:'Local / zone',intervalMonths:'Périodicité (mois)',periodicityText:'Périodicité / précision',lastDate:'Dernier contrôle',nextDate:'Prochaine échéance',time:'Heure prévue',status:'Statut',provider:'Prestataire / responsable',register:'Registre / dossier',requirement:'Exigence / contenu',oneDriveUrl:'Lien OneDrive',notes:'Notes'};
+  const sourceKeys={id:'Identifiant contrôle',...fieldLabels};
+  const legacyBlank=(v,f,original)=>{
+    if((v===28||String(v).trim()==='28')&&f!=='intervalMonths'&&original&&String(original[f]??'').trim()==='')return '';
+    return v;
   };
-
+  let draftRows=null,sourceMeta=null,editor=null,editingIndex=-1,editedDue=false;
+  const normalizeRow=(row,index,baseline,maps)=>{
+    const id=text(get(row,'Identifiant contrôle','ID contrôle','Identifiant'));
+    const original=baseline.get(id)||null,errors=[],warnings=[];
+    const read=f=>legacyBlank(get(row,sourceKeys[f]),f,original);
+    const values={};
+    for(const f of core().fields){
+      const raw=read(f);
+      if(f==='intervalMonths'){values[f]=num(raw);if(!Number.isInteger(values[f])||values[f]<0)errors.push('Périodicité en mois invalide');}
+      else if(f==='lastDate'||f==='nextDate'){
+        values[f]=String(raw??'').trim()===''?'':isoDate(raw);
+        if(String(raw??'').trim()&&!values[f])errors.push((f==='lastDate'?'Date du dernier contrôle':'Date de prochaine échéance')+' invalide');
+      }else if(f==='time'){
+        values[f]=String(raw??'').trim()===''?'':timeText(raw);
+        if(String(raw??'').trim()&&!values[f])errors.push('Heure prévue invalide');
+      }else values[f]=text(raw);
+    }
+    if(!values.name)errors.push('Nom du contrôle manquant');
+    if(values.lastDate&&values.lastDate>isoDate(new Date()))warnings.push('La date du dernier passage est dans le futur : vérifier la saisie');
+    if(values.lastDate&&values.nextDate&&values.nextDate<values.lastDate)warnings.push('Échéance antérieure au dernier passage');
+    if(values.building&&Array.isArray(db.buildings)&&!db.buildings.some(b=>norm(b.name)===norm(values.building))&&norm(values.building)!=='tous batiments')warnings.push('Bâtiment non présent dans le référentiel : valeur conservée');
+    if(values.family&&Array.isArray(db.lists?.periodicFamilies)&&!db.lists.periodicFamilies.some(v=>norm(v)===norm(values.family)))warnings.push('Nouvelle famille : elle sera ajoutée au référentiel');
+    return {line:index+2,id,values,errors,warnings};
+  };
+  const buildPreview=()=>{
+    if(!sourceMeta)throw new Error('Aucune matrice Excel chargée.');
+    const baseline=snapshotFromMetadata(sourceMeta),maps=recordMap();
+    const parsed=(draftRows||[]).map((r,i)=>normalizeRow(r,i,baseline,maps));
+    const plan=core().build({baseline,current:currentRecords(),rows:parsed});
+    return {...plan,baseline,meta:sourceMeta,parsed,valid:plan.fullAllowed?plan.operations:[],sourceSnapshot:core().snapshot(currentRecords()),fileName:loadedFileName};
+  };
   function validateWorkbook(wb){
     try{
-      if(!core())throw new Error('Moteur de sécurité de la matrice indisponible.');
-      const meta=readMetadata(wb),baseline=snapshotFromMetadata(meta);
-      const ws=wb.Sheets['Contrôles périodiques']||wb.Sheets['Controles periodiques'];
+      const meta=readMetadata(wb),ws=wb.Sheets['Contrôles périodiques']||wb.Sheets['Controles periodiques'];
       if(!ws)throw new Error('Feuille « Contrôles périodiques » introuvable.');
       workbookHeaders(ws);
-      const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
-      const maps=recordMap(),parsed=[];
-      rows.forEach((row,index)=>{
-        if(Object.values(row).every(v=>String(v).trim()===''))return;
-        parsed.push(normalizedRecordFromRow(row,index,maps));
-      });
-      const plan=core().build({baseline,current:currentRecords(),rows:parsed});
-      const fatal=plan.fatal||'';
-      return {...plan,baseline,meta,parsed,fatal,valid:fatal?[]:plan.operations,
-        sourceSnapshot:core().snapshot(currentRecords()),fileName:loadedFileName};
-    }catch(e){return {results:[],operations:[],deletions:[],conflicts:[],errors:[],warnings:[],valid:[],fatal:e.message||String(e),fileName:loadedFileName};}
+      sourceMeta=meta;
+      draftRows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true}).filter(r=>Object.values(r).some(v=>String(v??'').trim()!==''));
+      return buildPreview();
+    }catch(e){return {results:[],operations:[],deletions:[],deletedIds:[],desiredRecords:[],errors:[],warnings:[],valid:[],fatal:e.message||String(e),fileName:loadedFileName};}
   }
-  const fieldLabels={no:'N° contrôle',name:'Contrôle',family:'Famille',building:'Bâtiment',floor:'Étage / niveau',sector:'Secteur',room:'Local / zone',intervalMonths:'Périodicité',periodicityText:'Précision',lastDate:'Dernier contrôle',nextDate:'Prochaine échéance',time:'Heure',status:'Statut',provider:'Prestataire',register:'Registre',requirement:'Exigence',oneDriveUrl:'OneDrive',notes:'Notes'};
   const updateControls=()=>{
     const btn=$i('confirmPeriodicImport'),file=$i('periodicImportFile');
-    const ready=!!pending&&!pending.fatal&&Array.isArray(pending.operations)&&
+    const ready=!!pending&&!pending.fatal&&Array.isArray(pending.desiredRecords)&&
       (pending.operations.length>0||pending.deletedIds?.length>0);
     if(btn){btn.classList.remove('hidden');btn.disabled=applying||reading||!ready;btn.setAttribute('aria-disabled',String(btn.disabled));}
     if(file)file.disabled=applying||reading;
-    const recovery=$i('periodicImportRecovery');
-    if(recovery)recovery.classList.toggle('hidden',!pending?.fatal||!pending?.rebaseRows);
+    for(const id of ['periodicImportAdd','periodicImportDownloadEdited']){const b=$i(id);if(b)b.disabled=applying||reading||!draftRows;}
   };
   const preview=data=>{
     pending=data;
-    const box=$i('periodicImportPreview'),sum=$i('periodicImportSummary'),btn=$i('confirmPeriodicImport');if(!box||!sum||!btn)return;
-    const created=data.results.filter(x=>x.action==='Créer'),updated=data.results.filter(x=>x.action==='Modifier'),
-      deleted=data.deletions||[],same=data.results.filter(x=>x.action==='Identique'),errors=data.errors||[],warnings=data.warnings||[],conflicts=data.conflicts||[];
+    const box=$i('periodicImportPreview'),sum=$i('periodicImportSummary');if(!box||!sum)return;
+    const created=data.results.filter(x=>x.action==='Créer'),updated=data.results.filter(x=>x.action==='Modifier'),deleted=data.deletions||[],same=data.results.filter(x=>x.action==='Identique'),errors=data.errors||[],warnings=data.warnings||[];
     sum.className='import-summary';
-    sum.innerHTML=`${data.fatal?`<div class="import-stat error"><strong>Import bloqué</strong><span>${esc(data.fatal)}</span></div>`:''}<div class="import-stat ok"><strong>${updated.length}</strong><span>à modifier</span></div><div class="import-stat ok"><strong>${created.length}</strong><span>à créer</span></div><div class="import-stat ${deleted.length?'warning':''}"><strong>${deleted.length}</strong><span>à supprimer</span></div><div class="import-stat"><strong>${same.length}</strong><span>identiques</span></div><div class="import-stat warning"><strong>${conflicts.length}</strong><span>conflits</span></div><div class="import-stat error"><strong>${errors.length}</strong><span>erreurs bloquantes</span></div><p class="periodic-sync-warning"><strong>Synchronisation complète :</strong> à la validation, toutes les fiches absentes du fichier sont supprimées automatiquement. Aucun choix ni confirmation supplémentaire. Une sauvegarde complète est téléchargée avant l’écriture.</p>${data.fatal&&data.rebaseRows?'<p class="periodic-sync-warning">Aucune donnée n’a été modifiée. Vous pouvez télécharger une matrice actualisée pour reprendre les corrections sans conflit et vérifier les fiches modifiées depuis l’ancien export.</p>':''}`;
-    if(data.fatal)status(`Import bloqué : ${data.fatal} Aucune donnée n’a été modifiée.`,'error');
-    else if(data.operations.length||data.deletedIds?.length)status(`${data.fileName?data.fileName+' — ':''}${updated.length} correction(s), ${created.length} création(s) et ${(data.deletedIds||[]).length} suppression(s) à appliquer. Cliquez sur Valider les modifications pour synchroniser le registre.`, 'ready');
+    sum.innerHTML=`${data.fatal?`<div class="import-stat error"><strong>À corriger</strong><span>${esc(data.fatal)}</span></div>`:''}<div class="import-stat ok"><strong>${updated.length}</strong><span>à modifier</span></div><div class="import-stat ok"><strong>${created.length}</strong><span>à créer</span></div><div class="import-stat ${deleted.length?'warning':''}"><strong>${deleted.length}</strong><span>à supprimer</span></div><div class="import-stat"><strong>${same.length}</strong><span>identiques</span></div><div class="import-stat error"><strong>${errors.length}</strong><span>erreurs de saisie</span></div><p class="periodic-sync-warning"><strong>Excel prioritaire :</strong> les valeurs du fichier remplacent celles du registre et toutes les fiches absentes sont supprimées à la validation. Vous pouvez corriger les lignes ci-dessous. Une sauvegarde du serveur est téléchargée avant l’écriture.</p>`;
+    if(data.fatal)status(`Corrigez les lignes signalées avant de valider. Aucune donnée n’a été modifiée.`,'error');
+    else if(data.operations.length||data.deletedIds?.length)status(`${updated.length} modification(s), ${created.length} création(s) et ${deleted.length} suppression(s). L’Excel sera appliqué intégralement à la validation.`, 'ready');
     else status('Le registre correspond déjà à la matrice. Aucune modification à appliquer.','idle');
     updateControls();
     const show=v=>v===0?'0':v===null||v===undefined||v===''?'—':String(v);
-    box.innerHTML=data.results.length?`<table><thead><tr><th>État</th><th>Ligne</th><th>N°</th><th>Contrôle</th><th>Modifications</th><th>Conflits / avertissements</th></tr></thead><tbody>${data.results.map(x=>{
-      const cls=x.errors?.length||x.action==='Supprimer'?'error':x.conflicts?.length||x.warnings?.length?'warning':x.action==='Identique'?'':'ok';
-      const change=x.action==='Créer'?'Nouvelle fiche':x.action==='Supprimer'?'Absente du fichier : suppression automatique à la validation':x.action==='Identique'?'Aucune modification':(x.changes||[]).map(c=>`${fieldLabels[c.field]||c.field} : ${show(c.from)} → ${show(c.to)}`).join(' · ');
-      const conflictDetails=(x.conflicts||[]).map(c=>typeof c==='string'?c:`${fieldLabels[c.field]||c.field} : export ${show(c.original)} / actuel ${show(c.current)} / demandé ${show(c.requested)}`);
-      const msg=[...(x.errors||[]),...(x.warnings||[]),...conflictDetails].join(' · ');
-      return `<tr class="import-row-${cls||'ok'}"><td><span class="import-badge ${cls||'ok'}">${esc(x.action)}</span></td><td>${esc(x.line)}</td><td>${esc(x.values.no||'—')}</td><td><strong>${esc(x.values.name||'—')}</strong></td><td>${esc(change||'—')}</td><td>${esc(msg||'—')}</td></tr>`;
-    }).join('')}</tbody></table>`:'<div class="empty-state">La matrice est vide. La validation supprimera toutes les fiches du registre actuel.</div>';
+    box.innerHTML=data.results.length?`<table><thead><tr><th>État</th><th>Ligne</th><th>N°</th><th>Contrôle</th><th>Modifications</th><th>Avertissements</th><th>Corriger</th></tr></thead><tbody>${data.results.map((x,i)=>{
+      const cls=x.errors?.length||x.action==='Supprimer'?'error':x.warnings?.length?'warning':x.action==='Identique'?'':'ok';
+      const change=x.action==='Créer'?'Nouvelle fiche':x.action==='Supprimer'?'Absente de l’Excel : suppression à la validation':x.action==='Identique'?'Aucune modification':(x.changes||[]).map(c=>`${fieldLabels[c.field]||c.field} : ${show(c.from)} → ${show(c.to)}`).join(' · ');
+      const edit=x.action==='Supprimer'?'':`<button type="button" class="ghost small" data-periodic-edit="${i}">✎ Modifier</button><button type="button" class="ghost small danger-mini" data-periodic-remove="${i}">Retirer</button>`;
+      return `<tr class="import-row-${cls||'ok'}"><td><span class="import-badge ${cls||'ok'}">${esc(x.action)}</span></td><td>${esc(x.line)}</td><td>${esc(x.values.no||'—')}</td><td><strong>${esc(x.values.name||'—')}</strong></td><td>${esc(change||'—')}</td><td>${esc([...(x.errors||[]),...(x.warnings||[])].join(' · ')||'—')}</td><td>${edit}</td></tr>`;
+    }).join('')}</tbody></table>`:'<div class="empty-state">La matrice est vide. La validation supprimera toutes les fiches du registre.</div>';
   };
-  const downloadRecovery=()=>{
-    if(!pending?.rebaseRows||!pending.fatal)return;
+  const redraw=()=>{try{preview(buildPreview());}catch(e){status(e.message||String(e),'error');}};
+  const editorValues=()=>{const o=Object.fromEntries(new FormData(editor.querySelector('form')).entries());o.intervalMonths=num(o.intervalMonths);return o;};
+  const refreshEditor=(changedField='')=>{
+    if(!editor)return;
+    const v=editorValues(),life=core().lifecycle(v);
+    const state=editor.querySelector('[data-periodic-editor-state]');if(state)state.textContent=`État calculé : ${life.status}${life.due?' · échéance '+life.due:''}`;
+    const due=editor.querySelector('[name="nextDate"]');
+    if(due&&!editedDue&&['lastDate','intervalMonths'].includes(changedField))due.value=core().addMonths(v.lastDate,v.intervalMonths);
+  };
+  function openEditor(index){
+    if(applying||reading||!draftRows||index<0||index>=draftRows.length)return;
+    editingIndex=index;editedDue=false;
+    const baseline=snapshotFromMetadata(sourceMeta),row=normalizeRow(draftRows[index],index,baseline,recordMap()),v=row.values;
+    if(!editor){editor=document.createElement('dialog');editor.id='periodicImportEditor';editor.className='periodic-import-editor';document.body.appendChild(editor);}
+    const f=(name,label,type='text')=>`<label>${esc(label)}<input name="${name}" type="${type}" value="${esc(v[name]??'')}" ${name==='name'?'required':''} ${name==='intervalMonths'?'min="0" step="1"':''}></label>`;
+    const select=`<label>Statut particulier<select name="status">${['À planifier','Fait','En retard','En attente','Clôturé','Non applicable'].map(s=>`<option value="${esc(s)}" ${s===v.status?'selected':''}>${esc(s)}</option>`).join('')}</select></label>`;
+    const inputs=core().fields.filter(x=>!['status','notes','requirement'].includes(x)).map(x=>f(x,fieldLabels[x],['lastDate','nextDate'].includes(x)?'date':x==='time'?'time':x==='intervalMonths'?'number':'text')).join('');
+    editor.innerHTML=`<form method="dialog"><div class="periodic-editor-head"><h3>Modifier la ligne ${index+2}</h3><button type="button" class="ghost" data-editor-cancel>✕</button></div><p class="hint">Les corrections restent dans l’aperçu jusqu’à « Valider les modifications ». Identifiant technique conservé : ${esc(row.id||'nouvelle fiche')}.</p><div class="form-grid">${inputs}${select}<label class="span2">Exigence / contenu<textarea name="requirement" rows="3">${esc(v.requirement)}</textarea></label><label class="span2">Notes<textarea name="notes" rows="4">${esc(v.notes)}</textarea></label></div><p class="periodic-editor-state" data-periodic-editor-state></p><p class="hint">« Fait » est calculé à partir du dernier passage et de la périodicité. Une échéance plus courte reste possible. Clôturé et Non applicable sont conservés.</p><div class="periodic-editor-actions"><button type="button" class="ghost" data-editor-cancel>Annuler</button><button type="submit" class="primary">Enregistrer la correction</button></div></form>`;
+    editor.querySelectorAll('[data-editor-cancel]').forEach(b=>b.addEventListener('click',()=>editor.close()));
+    editor.querySelector('form').addEventListener('input',e=>{if(e.target.name==='nextDate')editedDue=true;refreshEditor(e.target.name);});
+    editor.querySelector('form').addEventListener('submit',e=>{
+      e.preventDefault();const form=e.currentTarget;if(!form.reportValidity())return;
+      const values=editorValues();
+      if(!Number.isInteger(values.intervalMonths)||values.intervalMonths<0){status('La périodicité doit être un nombre entier de mois.','error');return;}
+      const current=core().canonical(v),old=core().canonical(values);
+      if(!editedDue&&(old.lastDate!==current.lastDate||old.intervalMonths!==current.intervalMonths))values.nextDate=core().addMonths(values.lastDate,values.intervalMonths);
+      values.nextDate=core().due(values);values.status=core().lifecycle(values).status;
+      const raw={...draftRows[editingIndex]};for(const [key,value] of Object.entries(values))raw[sourceKeys[key]]=value;
+      draftRows[editingIndex]=raw;editor.close();redraw();
+    });
+    refreshEditor();editor.showModal();
+  }
+  const addDraft=()=>{if(!draftRows)return;const r=Object.fromEntries(Object.values(sourceKeys).map(k=>[k,'']));r['Périodicité (mois)']=0;r['Statut']='À planifier';draftRows.push(r);redraw();openEditor(draftRows.length-1);};
+  const removeDraft=index=>{if(!draftRows||index<0||index>=draftRows.length)return;draftRows.splice(index,1);redraw();};
+  const exportEdited=()=>{
+    if(!draftRows||!sourceMeta)return;
     const previous=exportOverride;
-    try{exportOverride=pending.rebaseRows;exportMatrix();}
-    finally{exportOverride=previous;}
+    try{
+      const baseline=snapshotFromMetadata(sourceMeta),maps=recordMap();
+      exportOverride=draftRows.map((r,i)=>{const p=normalizeRow(r,i,baseline,maps),source=maps.byId.get(p.id)||baseline.get(p.id)||{};return {...source,...core().normalizeLifecycle(p.values),id:p.id};});
+      exportMatrix();
+    }finally{exportOverride=previous;}
   };
+  const downloadRecovery=exportEdited;
   const importFile=async file=>{
     if(applying)return;
-    const sequence=++readSequence;
-    reading=false;clearPreview();loadedWorkbook=null;loadedFileName=file.name;
-    if(!window.XLSX){status('Le composant Excel ne s’est pas chargé. Vérifiez la connexion Internet. Aucune donnée n’a été modifiée.','error');return;}
-    reading=true;updateControls();status(`Lecture de « ${file.name} » et comparaison avec le registre…`,'busy');
-    try{
-      const buf=await file.arrayBuffer();if(sequence!==readSequence)return;
-      loadedWorkbook=XLSX.read(buf,{type:'array',cellDates:true});
-      const result=validateWorkbook(loadedWorkbook);preview(result);
-    }catch(e){console.error('Lecture matrice contrôles périodiques',e);if(sequence===readSequence){clearPreview();status(`Impossible de lire le fichier : ${e.message||String(e)}. Aucune donnée n’a été modifiée.`,'error');}}
+    const sequence=++readSequence;reading=false;clearPreview();loadedWorkbook=null;draftRows=null;sourceMeta=null;loadedFileName=file.name;
+    if(!window.XLSX){status('Le composant Excel ne s’est pas chargé. Aucune donnée n’a été modifiée.','error');return;}
+    reading=true;updateControls();status(`Lecture de « ${file.name} »…`,'busy');
+    try{const buf=await file.arrayBuffer();if(sequence!==readSequence)return;loadedWorkbook=XLSX.read(buf,{type:'array',cellDates:true});preview(validateWorkbook(loadedWorkbook));}
+    catch(e){console.error('Lecture matrice',e);if(sequence===readSequence){clearPreview();status(`Impossible de lire le fichier : ${e.message||String(e)}.`,'error');}}
     finally{if(sequence===readSequence){reading=false;updateControls();}}
   };
-  const recheck=()=>{
-    if(applying||reading||!loadedWorkbook)return;
-    const result=validateWorkbook(loadedWorkbook);preview(result);
-  };
-  function rememberDate(record,date,provider,source){
-    if(!date)return;
-    try{
-      if(typeof mergePeriodicHistoryEntry==='function')mergePeriodicHistoryEntry(record,{date,provider:provider||'',source:source||'Import matrice'});
-      else{
-        record.history=Array.isArray(record.history)?record.history:[];
-        const i=record.history.findIndex(h=>String(h.date||'')===date);
-        if(i>=0)record.history[i]={...record.history[i],date,provider:record.history[i].provider||provider||'',source:record.history[i].source||source||''};
-        else record.history.push({date,provider:provider||'',source:source||''});
-      }
-    }catch(_){/* historique secondaire : ne bloque jamais l'import principal */}
-  }
-  const stampRecord=record=>{
-    const now=new Date().toISOString();if(!record.createdAt)record.createdAt=now;record.updatedAt=now;
-    try{if(typeof pstMutationStamp==='function')pstMutationStamp();if(typeof pstNormalizeMutationRecord==='function')pstNormalizeMutationRecord(record,{source:'import-periodic-matrix'});if(typeof pstQueueMutation==='function')pstQueueMutation('periodic',record,{label:'Import matrice contrôles périodiques'});}catch(e){console.warn('Marquage synchronisation contrôle périodique',e);}
-  };
-
-  const backupBeforeImport=()=>{
-    const payload={exportedAt:new Date().toISOString(),note:'Sauvegarde complète avant synchronisation de la matrice des contrôles périodiques. Les fichiers joints restent dans leur stockage externe.',data:deepClone(db)};
-    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
-    const name=`Pilotage_sauvegarde_avant_matrice_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
-    if(typeof triggerDownloadBlob==='function')triggerDownloadBlob(name,blob);
-    else{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-    return name;
-  };
-  const refreshAfterImport=()=>{if(typeof safeRenderAll==='function')safeRenderAll();else if(typeof renderPeriodic==='function')renderPeriodic();};
+  const recheck=()=>{if(applying||reading||!draftRows)return;redraw();};
   const showImportResult=(message,error=false)=>{
-    status(message,error?'error':'ready');
-    const sum=$i('periodicImportSummary');if(sum)sum.innerHTML=`<div class="import-stat ${error?'error':'ok'}"><strong>${error?'Import non confirmé':'Import terminé'}</strong><span>${esc(message)}</span></div>`;
+    status(message,error?'error':'ready');const sum=$i('periodicImportSummary');if(sum)sum.innerHTML=`<div class="import-stat ${error?'error':'ok'}"><strong>${error?'Import non confirmé':'Import terminé'}</strong><span>${esc(message)}</span></div>`;
     if(typeof toast==='function')toast(message);
   };
-  const verifyResult=(remote,expectedIds,deletedIds)=>{
-    const rows=Array.isArray(remote?.periodic)?remote.periodic:[];
-    const ids=new Set(rows.map(x=>String(x.id)));
-    if(ids.size!==expectedIds.size||[...expectedIds].some(id=>!ids.has(id)))return false;
-    const tombstones=deletedIdsFor('periodic',remote);
-    return [...deletedIds].every(id=>!ids.has(id)&&tombstones.has(id));
-  };
+  const refreshAfterImport=()=>{if(typeof safeRenderAll==='function')safeRenderAll();else if(typeof renderPeriodic==='function')renderPeriodic();};
   async function applyImport(){
-    if(applying||reading||!pending||pending.fatal||!loadedWorkbook){updateControls();return;}
-    applying=true;updateControls();status('Vérification du registre et sauvegarde avant synchronisation…','busy');
+    if(applying||reading||!pending||pending.fatal||!draftRows){updateControls();return;}
+    applying=true;updateControls();status('Sauvegarde et synchronisation complète du registre…','busy');
     try{
-      const earlier=pending;
-      const data=validateWorkbook(loadedWorkbook);
-      if(data.fatal)throw new Error(data.fatal);
-      if(!core().snapshotEquals(earlier.sourceSnapshot,data.sourceSnapshot)){
-        preview(data);throw new Error('Le registre a changé depuis la prévisualisation. Le contrôle vient d’être actualisé.');
-      }
+      const data=buildPreview();if(data.fatal){preview(data);throw new Error(data.fatal);}
       if(!data.operations.length&&!data.deletedIds.length){status('Aucune modification à appliquer.','idle');return;}
-      if(!window.PSTMainState?.commitPeriodicMatrix)throw new Error('Écriture sécurisée indisponible : installez le paquet logiciel complet V147.174.');
-      const result=await window.PSTMainState.commitPeriodicMatrix({
-        expectedSnapshot:[...data.sourceSnapshot],operations:data.operations,
-        desiredIds:data.desiredIds,deletedIds:data.deletedIds,
-        deletionBaseline:data.deletionBaseline,
-        label:'Synchronisation complète des contrôles périodiques'
-      });
+      if(!window.PSTMainState?.commitPeriodicMatrix)throw new Error('Écriture sécurisée indisponible : installez le paquet logiciel complet V147.175.');
+      const result=await window.PSTMainState.commitPeriodicMatrix({desiredRecords:data.desiredRecords,label:'Synchronisation complète Excel prioritaire'});
       if(!result?.ok)throw new Error(result?.error||'La sauvegarde serveur n’a pas été confirmée.');
-      loadedWorkbook=null;loadedFileName='';clearPreview();
+      loadedWorkbook=null;draftRows=null;sourceMeta=null;loadedFileName='';clearPreview();
       showImportResult(`${result.updated} fiche(s) modifiée(s), ${result.created} créée(s), ${result.removed} supprimée(s). Synchronisation serveur confirmée. Sauvegarde : ${result.backupName}.`);
       refreshAfterImport();
-    }catch(e){console.error('Synchronisation matrice contrôles périodiques',e);showImportResult(e.message||String(e),true);}
+    }catch(e){console.error('Synchronisation matrice',e);showImportResult(e.message||String(e),true);}
     finally{applying=false;updateControls();}
   }
-  window.PSTPeriodicMatrix={exportMatrix,validateWorkbook,applyImport,preview,readMetadata,recheck,importFile,downloadRecovery};
+  window.PSTPeriodicMatrix={exportMatrix,validateWorkbook,applyImport,preview,readMetadata,recheck,importFile,downloadRecovery,buildPreview,openEditor,removeDraft,addDraft,exportEdited};
   function init(){
     const d=$i('downloadPeriodicMatrix'),f=$i('periodicImportFile'),c=$i('confirmPeriodicImport');if(!d||!f||!c)return;
-    updateControls();
-    d.addEventListener('click',exportMatrix);
+    updateControls();d.addEventListener('click',exportMatrix);
     f.addEventListener('change',e=>{const file=e.target.files?.[0];if(file)importFile(file);e.target.value='';});
     c.addEventListener('click',applyImport);
     $i('periodicImportRecheck')?.addEventListener('click',recheck);
-    $i('periodicImportRecovery')?.addEventListener('click',downloadRecovery);
-    window.addEventListener('pst:data-loaded',()=>{if(loadedWorkbook&&!applying)recheck();});
+    $i('periodicImportAdd')?.addEventListener('click',addDraft);
+    $i('periodicImportDownloadEdited')?.addEventListener('click',exportEdited);
+    $i('periodicImportPreview')?.addEventListener('click',e=>{const edit=e.target.closest?.('[data-periodic-edit]'),remove=e.target.closest?.('[data-periodic-remove]');if(edit)openEditor(Number(edit.dataset.periodicEdit));else if(remove)removeDraft(Number(remove.dataset.periodicRemove));});
+    window.addEventListener('pst:data-loaded',()=>{if(draftRows&&!applying)recheck();});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

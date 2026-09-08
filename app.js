@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.174';
+const APP_VERSION='147.175';
 const APP_BUILD='08/09/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -636,7 +636,7 @@ function migrate(raw){
    migratePeriodicExcelFullV147163(d);
    migratePeriodicFixesV147164(d);
  }
- d.settings.periodicCatalogMigrationVersion='147.174';
+ d.settings.periodicCatalogMigrationVersion='147.175';
  ensureCanonicalFacilitySpaces(d);
  d.agentDays=normalizeAgentDaysStable(d.agentDays);
  d.maintenance=normalizeMaintenanceStable(d.maintenance);
@@ -768,7 +768,7 @@ function restoreSuppliedData(showMessage=true){
    }
  }
  // Contrôles périodiques et bâtiments de référence si absents.
- if(!Array.isArray(db.periodic)||!db.periodic.length) db.periodic=makePeriodic();
+ if(!Array.isArray(db.periodic)) db.periodic=makePeriodic();
  if(!Array.isArray(db.archives))db.archives=[];
  db.settings.cleaningAlertDays=Number(db.settings.cleaningAlertDays||30);db.settings.cleaningNotificationsEnabled=db.settings.cleaningNotificationsEnabled!==false;db.settings.cleaningNotifyNever=db.settings.cleaningNotifyNever!==false;db.settings.cleaningNotifyOverdue=db.settings.cleaningNotifyOverdue!==false;db.settings.cleaningNotifyPlanned=db.settings.cleaningNotifyPlanned!==false;db.settings.meetingAlertDays=Number(db.settings.meetingAlertDays||3);db.changeHistory=db.changeHistory||[];db.settings.lastWeeklyArchiveKey=db.settings.lastWeeklyArchiveKey||'';db.settings.lastAnnualResetYear=Number(db.settings.lastAnnualResetYear||0);
  if(!Array.isArray(db.buildings)||!db.buildings.length) db.buildings=clone(initialBuildings);
@@ -1387,135 +1387,93 @@ function mergeStableCollectionsInto(target,snapshots,deletedSnapshot=null){
  return target;
 }
 
-// V147.174 — Synchronisation complète : Excel est la liste de référence.
-// Une validation applique TOUS les retraits, jamais un sous-ensemble coché.
-// La sauvegarde précède une écriture conditionnelle sur la révision Supabase.
-async function pstCommitPeriodicMatrix({expectedSnapshot,operations,desiredIds,deletedIds,deletionBaseline,label='Synchronisation complète matrice'}={}){
+// V147.175 — Full Excel authority. The server revision remains a transport-level
+// CAS guard: a failed CAS reloads the server and reapplies the SAME complete Excel.
+// No business-field conflict prevents the user's requested replacement/deletion.
+async function pstCommitPeriodicMatrix({desiredRecords,label='Synchronisation complète matrice'}={}){
+ if(window.PSTPeriodicMatrixApplying)throw new Error('Une synchronisation de matrice est déjà en cours.');
  if(!currentUser||!supabaseClient||!navigator.onLine)throw new Error('Connexion au serveur nécessaire. Aucune modification appliquée.');
- if(cloudBusy||readOfflinePending()||pstPendingMutationCount()||localDirty)throw new Error('Une synchronisation est en attente. Attendez sa confirmation avant de valider la matrice.');
+ if(cloudBusy||readOfflinePending()||pstPendingMutationCount()||localDirty)throw new Error('Une synchronisation locale est en attente. Attendez sa confirmation avant de valider la matrice.');
  const core=window.PSTPeriodicMatrixCore;
- if(!core)throw new Error('Moteur de sécurité de la matrice indisponible.');
- if(!Array.isArray(expectedSnapshot)||!Array.isArray(operations)||!Array.isArray(desiredIds)||!Array.isArray(deletedIds)||!Array.isArray(deletionBaseline))throw new Error('Plan de synchronisation complet manquant. Relancez le contrôle avant import.');
- const expected=new Map(expectedSnapshot);
- if(expected.size!==expectedSnapshot.length)throw new Error('Instantané comportant des identifiants répétés.');
- const matches=rows=>core.snapshotEquals(expected,core.snapshot(rows));
- if(!matches(db.periodic))throw new Error('Le registre a changé depuis la prévisualisation. Relancez le contrôle avant import.');
- const wanted=new Set(desiredIds.map(String));
- if(wanted.size!==desiredIds.length||[...wanted].some(id=>!expected.has(id)))throw new Error('Identifiants de la matrice incomplets ou non reconnus.');
- // Derive deletions from the desired registry, not from a user-selected list.
- const removed=new Set([...expected.keys()].filter(id=>!wanted.has(id)));
- const supplied=new Set(deletedIds.map(String));
- if(supplied.size!==deletedIds.length||supplied.size!==removed.size||[...removed].some(id=>!supplied.has(id)))throw new Error('Le plan de suppression ne correspond pas exactement à la matrice.');
- const fingerprints=new Map(deletionBaseline);
- if(fingerprints.size!==deletionBaseline.length||fingerprints.size!==removed.size||[...removed].some(id=>!fingerprints.has(id)))throw new Error('Instantané de suppression incomplet.');
- const remoteRow=await fetchRemote();
- if(!remoteRow||!remoteRow.data||!remoteRow.updated_at)throw new Error('Lecture de référence du serveur indisponible. Import annulé.');
- const raw=deepClone(remoteRow.data);
- const remote=migrate(deepClone(raw));
- if(!matches(remote.periodic))throw new Error('Le registre du serveur contient de nouvelles modifications. Relancez le contrôle avant import.');
- const byId=new Map((remote.periodic||[]).map(x=>[String(x.id),x]));
- if(byId.size!==remote.periodic.length)throw new Error('Identifiants répétés dans le registre du serveur.');
- for(const id of removed){
-   const record=byId.get(id);
-   if(!record||core.deletionFingerprint(record)!==fingerprints.get(id))throw new Error('Une fiche à supprimer a changé depuis la prévisualisation. Relancez le contrôle avant import.');
- }
- const changedIds=new Set(),now=new Date().toISOString(),stamp=Date.now();
- const usedNumbers=new Set([...byId.values()].map(x=>String(x.no||'').trim().toLowerCase()).filter(Boolean));
- for(const op of operations){
-   if(!op||!['update','create'].includes(op.type))throw new Error('Opération de matrice non reconnue.');
-   if(op.type==='update'){
-     if(!wanted.has(String(op.id)))throw new Error('Une modification vise une fiche absente de la matrice.');
-     const r=byId.get(String(op.id));if(!r)throw new Error('Fiche modifiée ou supprimée entre-temps : '+op.id);
-     if(!op.values||Object.keys(op.values).some(f=>!core.fields.includes(f)))throw new Error('Champ de modification non autorisé.');
-     const values=Object.fromEntries(Object.entries(op.values).map(([f,v])=>[f,core.canonical({[f]:v})[f]]));
-     const oldLast=r.lastDate||'',oldProvider=r.provider||'';
-     if(Object.prototype.hasOwnProperty.call(values,'lastDate')&&oldLast&&oldLast!==values.lastDate){
-       r.history=Array.isArray(r.history)?r.history:[];
-       if(!r.history.some(h=>String(h.date)===String(oldLast)))r.history.push({date:oldLast,provider:oldProvider,source:'Avant synchronisation matrice'});
+ if(!core||!Array.isArray(desiredRecords))throw new Error('Plan de synchronisation complet manquant. Relancez le contrôle avant import.');
+ const sourceRows=deepClone(desiredRecords);
+ const createIds=sourceRows.map(x=>x.id?'':uid()),known=new Map(sourceRows.filter(x=>x.id&&x.original).map(x=>[String(x.id),x.original]));
+ const accountId=String(currentUser.id),localAtStart=db;
+ window.PSTPeriodicMatrixApplying=true;cloudBusy=true;cloudBusySince=Date.now();
+ try{
+   let lastFailure='';
+   for(let attempt=0;attempt<4;attempt++){
+     const remoteRow=await fetchRemote();
+     if(!remoteRow||!remoteRow.data||!remoteRow.updated_at)throw new Error('Lecture du serveur indisponible. Aucune modification appliquée.');
+     const raw=deepClone(remoteRow.data),remote=migrate(deepClone(raw)),live=Array.isArray(remote.periodic)?remote.periodic:[];
+     const baseline=new Map([...known,...live.map(x=>[String(x.id),x])]);
+     const plan=core.build({baseline,current:live,rows:sourceRows.map((x,i)=>({id:String(x.id||''),values:x.values,errors:[],warnings:[],line:i+2}))});
+     if(plan.fatal)throw new Error(plan.fatal);
+     const byId=new Map(live.map(x=>[String(x.id),x]));
+     const now=new Date().toISOString(),stamp=Date.now(),proposed=[],desiredIds=new Set(),createdIds=new Set(),updatedIds=new Set();
+     const remember=(r,d,provider,source)=>{if(!core.validDate(d))return;r.history=Array.isArray(r.history)?r.history:[];if(!r.history.some(h=>String(h.date)===d))r.history.push({date:d,provider:provider||'',source});};
+     for(let i=0;i<plan.desiredRecords.length;i++){
+       const row=plan.desiredRecords[i],id=row.id||createIds[i];
+       if(!id||desiredIds.has(id))throw new Error('Identifiant de fiche répété.');
+       desiredIds.add(id);
+       const existing=byId.get(id),original=known.get(id),r=deepClone(existing||original||{id,history:[],attachments:[]});
+       const oldLast=r.lastDate||'',oldProvider=r.provider||'';
+       const values=core.normalizeLifecycle(row.values);
+       if(oldLast&&oldLast!==values.lastDate)remember(r,oldLast,oldProvider,'Avant synchronisation matrice');
+       Object.assign(r,values,{id});
+       if(values.lastDate&&oldLast!==values.lastDate)remember(r,values.lastDate,r.provider,'Synchronisation matrice');
+       if(!r.no){const used=new Set(plan.desiredRecords.map(x=>core.norm(x.values.no)).filter(Boolean));let n=1;do{r.no='CP-'+String(n++).padStart(3,'0')}while(used.has(core.norm(r.no))||proposed.some(x=>core.norm(x.no)===core.norm(r.no)));}
+       if(!r.family)r.family='Autre';if(!r.building)r.building='Tous bâtiments';
+       if(!r.register)r.register='Registre de sécurité';
+       r.createdAt=r.createdAt||now;r.updatedAt=now;r._pstVersion=Math.max(Number(r._pstVersion||0)+1,stamp);r._pstUpdatedAt=now;r._pstDeviceId=pstDeviceId();r._pstSource='import-periodic-matrix';
+       delete r.__pstSnapshotComplete;
+       if(!existing)createdIds.add(id);else if(JSON.stringify(core.canonical(existing))!==JSON.stringify(core.canonical(r)))updatedIds.add(id);
+       proposed.push(r);
      }
-     Object.assign(r,values);
-     if(Object.prototype.hasOwnProperty.call(values,'lastDate')&&r.lastDate){
-       r.history=Array.isArray(r.history)?r.history:[];
-       if(!r.history.some(h=>String(h.date)===String(r.lastDate)))r.history.push({date:r.lastDate,provider:r.provider||'',source:'Synchronisation matrice'});
-     }
-     r.updatedAt=now;r._pstVersion=Math.max(Number(r._pstVersion||0)+1,stamp);
-     r._pstUpdatedAt=now;r._pstDeviceId=pstDeviceId();r._pstSource='import-periodic-matrix';
-     changedIds.add(String(r.id));
-   }else{
-     const values=core.canonical(op.values||{});
-     if(!values.name)throw new Error('Nom de la nouvelle fiche manquant.');
-     const r={id:uid(),history:[],attachments:[],...values,createdAt:now,updatedAt:now,
-       _pstVersion:stamp,_pstUpdatedAt:now,_pstDeviceId:pstDeviceId(),_pstSource:'import-periodic-matrix'};
-     if(byId.has(String(r.id)))throw new Error('Nouvel identifiant déjà utilisé.');
-     if(!r.no){let n=1;do{r.no='CP-'+String(n++).padStart(3,'0')}while(usedNumbers.has(r.no.toLowerCase()));}
-     usedNumbers.add(String(r.no).trim().toLowerCase());
-     if(!r.family)r.family=remote.lists?.periodicFamilies?.[0]||'Autre';
-     if(!r.building)r.building='Tous bâtiments';
-     if(!r.register)r.register='Registre de sécurité';
-     if(r.lastDate)r.history.push({date:r.lastDate,provider:r.provider||'',source:'Synchronisation matrice'});
-     byId.set(String(r.id),r);changedIds.add(String(r.id));
+     const removed=new Set([...byId.keys()].filter(id=>!desiredIds.has(id)));
+     // The final file is complete, including an intentionally empty matrix.
+     // Tombstones are retained for omitted IDs and removed only for explicitly
+     // restored IDs. No old migration can reinsert a deleted control.
+     const deleted=mergeDeletedRecordsSafe(raw.deletedRecords,remote.deletedRecords),store=deleted||{};
+     const oldMarks=Array.isArray(store.periodic)?store.periodic:[];
+     const marks=new Map(oldMarks.map(x=>{const o=typeof x==='object'&&x?x:{id:x,deletedAt:''};return [String(o.id),o]}));
+     for(const id of desiredIds)marks.delete(id);
+     for(const id of removed)marks.set(id,{id,deletedAt:now});
+     store.periodic=[...marks.values()];
+     raw.periodic=proposed;raw.deletedRecords=store;raw.lists=raw.lists||{};
+     const families=new Set(Array.isArray(raw.lists.periodicFamilies)?raw.lists.periodicFamilies:[]);
+     for(const r of proposed)if(r.family)families.add(r.family);
+     raw.lists.periodicFamilies=[...families];raw.settings=raw.settings||{};raw.settings.periodicCatalogMigrationVersion='147.175';
+     if(typeof triggerDownloadBlob!=='function')throw new Error('Téléchargement de sauvegarde indisponible. Aucune modification appliquée.');
+     const backupName='Pilotage_sauvegarde_avant_matrice_'+now.replace(/[:.]/g,'-')+'_'+attempt+'.json';
+     triggerDownloadBlob(backupName,new Blob([JSON.stringify({exportedAt:now,note:'Sauvegarde du serveur avant remplacement du registre par Excel. Les fichiers joints restent dans leur stockage externe.',data:remoteRow.data},null,2)],{type:'application/json'}));
+     const nextRevision=new Date(Math.max(Date.now(),Date.parse(remoteRow.updated_at)+1)).toISOString();
+     const write=await withTimeout(supabaseClient.from('app_state').update({data:raw,updated_at:nextRevision})
+       .eq('user_id',accountId).eq('updated_at',remoteRow.updated_at).select('updated_at'),18000);
+     if(write?.error)throw write.error;
+     if(!Array.isArray(write?.data)||write.data.length!==1){lastFailure='Le serveur a évolué pendant l’écriture.';continue;}
+     const read=await fetchRemote();
+     if(!read?.data)throw new Error('Écriture effectuée, mais relecture serveur indisponible. Vérifiez le registre avant de recommencer.');
+     const checked=migrate(deepClone(read.data)),checkedMap=new Map((checked.periodic||[]).map(x=>[String(x.id),x]));
+     const valid=checkedMap.size===desiredIds.size&&[...desiredIds].every(id=>checkedMap.has(id))&&
+       proposed.every(r=>JSON.stringify(core.canonical(checkedMap.get(String(r.id))))===JSON.stringify(core.canonical(r)))&&
+       [...removed].every(id=>deletedIdsFor('periodic',checked).has(id));
+     if(!valid){lastFailure='Une autre écriture a modifié le registre avant la relecture.';continue;}
+     const localAfter=db,hadLocalChanges=localDirty||pstPendingMutationCount()>0;
+     db=pstMergeRemoteWithoutOverwritingLocal(checked,localAfter);
+     db.periodic=deepClone(checked.periodic);
+     db.deletedRecords=mergeDeletedRecordsSafe(db.deletedRecords,checked.deletedRecords);
+     // Explicit restoration has priority over an obsolete local deletion marker.
+     db.deletedRecords.periodic=(db.deletedRecords.periodic||[]).filter(x=>!desiredIds.has(String(typeof x==='object'?x.id:x)));
+     enforceAllDeletedRecords('synchronisation complète matrice');
+     lastCloudData=deepClone(checked);lastCloudUpdatedAt=read.updated_at||nextRevision;
+     lastCloudError='';cloudReady=true;localDirty=hadLocalChanges;lastConfirmedSupabaseAt=Date.now();
+     if(hadLocalChanges)writeOfflinePending('Autres modifications locales à synchroniser après la matrice');
+     writeMirror();safeRenderAll();try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}
+     return {ok:true,backupName,created:createdIds.size,updated:updatedIds.size,removed:removed.size};
    }
- }
- for(const id of removed){if(!byId.has(id))throw new Error('Suppression devenue obsolète : '+id);byId.delete(id);}
- const proposed=[...byId.values()];
- const finalNumbers=new Set(),finalSignatures=new Set();
- for(const r of proposed){
-   const n=core.norm(r.no),sig=core.signature(r);
-   if(n&&finalNumbers.has(n))throw new Error('Numéro en double dans le registre final : '+r.no);
-   if(n)finalNumbers.add(n);
-   if(r.name&&finalSignatures.has(sig))throw new Error('Fiche identique en double dans le registre final : '+r.name);
-   if(r.name)finalSignatures.add(sig);
- }
- remote.periodic=proposed;
- remote.deletedRecords=mergeDeletedRecordsSafe(remote.deletedRecords,raw.deletedRecords);
- if(removed.size){
-   const store=remote.deletedRecords||{},arr=Array.isArray(store.periodic)?store.periodic:[];
-   for(const id of removed){if(!arr.some(x=>String(typeof x==='object'?x.id:x)===id))arr.push({id,deletedAt:now});}
-   store.periodic=arr;remote.deletedRecords=store;
- }
- remote.lists=remote.lists||{};remote.lists.periodicFamilies=Array.isArray(remote.lists.periodicFamilies)?remote.lists.periodicFamilies:[];
- for(const r of proposed)if(r.family&&!remote.lists.periodicFamilies.some(f=>normalizeText(f)===normalizeText(r.family)))remote.lists.periodicFamilies.push(r.family);
- // Do not overwrite other server modules with a stale Excel export.
- raw.periodic=remote.periodic;raw.deletedRecords=remote.deletedRecords;raw.lists=raw.lists||{};
- raw.lists.periodicFamilies=remote.lists.periodicFamilies;
- raw.settings=raw.settings||{};raw.settings.periodicCatalogMigrationVersion='147.174';
- const rawBackup={exportedAt:now,note:'Sauvegarde complète du serveur avant synchronisation Excel. Les fichiers joints restent dans leur stockage externe.',data:remoteRow.data};
- const backupBlob=new Blob([JSON.stringify(rawBackup,null,2)],{type:'application/json'});
- const backupName='Pilotage_sauvegarde_avant_matrice_'+now.replace(/[:.]/g,'-')+'.json';
- if(typeof triggerDownloadBlob!=='function')throw new Error('Téléchargement de sauvegarde indisponible. Import annulé.');
- triggerDownloadBlob(backupName,backupBlob);
- // Optimistic concurrency: no unconditional upsert fallback.
- const nextRevision=new Date().toISOString();
- const write=await withTimeout(supabaseClient.from('app_state').update({data:raw,updated_at:nextRevision})
-   .eq('user_id',currentUser.id).eq('updated_at',remoteRow.updated_at).select('updated_at'),18000);
- if(write?.error)throw write.error;
- if(!Array.isArray(write?.data)||write.data.length!==1)throw new Error('Le serveur a changé pendant la validation. Aucune écriture de cette matrice n’a été effectuée.');
- const read=await fetchRemote();
- if(!read?.data)throw new Error('Écriture effectuée, mais relecture serveur indisponible. Vérifiez le registre avant de recommencer.');
- const checked=migrate(deepClone(read.data));
- const checkedIds=new Set((checked.periodic||[]).map(x=>String(x.id))),checkedMap=new Map((checked.periodic||[]).map(x=>[String(x.id),x]));
- for(const id of removed)if(checkedIds.has(id))throw new Error('Suppression non confirmée par le serveur : '+id);
- const tombstones=deletedIdsFor('periodic',checked);
- for(const id of removed)if(!tombstones.has(id))throw new Error('Marqueur de suppression absent du serveur : '+id);
- for(const id of changedIds)if(!checkedIds.has(id))throw new Error('Fiche non retrouvée après écriture : '+id);
- for(const op of operations){
-   if(op.type==='update')for(const [field,value] of Object.entries(op.values)){
-     if(core.canonical(checkedMap.get(String(op.id)))[field]!==core.canonical({[field]:value})[field])throw new Error('Valeur non confirmée après écriture : '+field);
-   }
- }
- const expectedIds=new Set(proposed.map(x=>String(x.id)));
- if(checkedIds.size!==expectedIds.size||[...expectedIds].some(id=>!checkedIds.has(id)))throw new Error('Le nombre ou les identifiants des fiches ont changé pendant la confirmation. Vérifiez le registre avant de recommencer.');
- const localBefore=db,concurrentLocalChanges=!matches(localBefore.periodic);
- db=pstMergeRemoteWithoutOverwritingLocal(checked,localBefore);
- db.deletedRecords=mergeDeletedRecordsSafe(db.deletedRecords,checked.deletedRecords);
- enforceAllDeletedRecords('synchronisation complète matrice');
- lastCloudData=deepClone(db);lastCloudUpdatedAt=read.updated_at||nextRevision;
- lastCloudError='';cloudReady=true;localDirty=concurrentLocalChanges;lastConfirmedSupabaseAt=Date.now();
- if(concurrentLocalChanges)writeOfflinePending('Modifications locales apparues pendant la synchronisation matrice');
- writeMirror();safeRenderAll();
- try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){}
- return {ok:true,backupName,created:operations.filter(x=>x.type==='create').length,
-   updated:operations.filter(x=>x.type==='update').length,removed:removed.size};
+   throw new Error(lastFailure+' Plusieurs écritures concurrentes ont empêché la confirmation. Aucune nouvelle tentative automatique ne sera effectuée. Relancez la validation.');
+ }finally{window.PSTPeriodicMatrixApplying=false;cloudBusy=false;cloudBusySince=0;}
 }
 
 window.PSTMainState={
@@ -1845,6 +1803,7 @@ function pstNormalizeMutationRecord(record,{source='manual'}={}){
   return record;
 }
 function pstQueueMutation(collection,record,{deleted=false,label='Modification'}={}){
+ if(collection==='periodic'&&window.PSTPeriodicMatrixApplying)throw new Error('Synchronisation Excel en cours : modification du contrôle reportée.');
   const q=pstLoadSyncQueue();
   const recordId=String(record?.id||record?.recordId||'');
   const item={
@@ -2509,6 +2468,7 @@ function selectField(label,name,items,value='',extra=''){return `<label>${esc(la
 function textareaField(label,name,value='',rows=3,extra=''){return `<label class="span2">${esc(label)}<textarea name="${esc(name)}" rows="${rows}" ${extra}>${esc(value)}</textarea></label>`}
 function formDataObj(form){return Object.fromEntries(new FormData(form).entries())}
 async function deleteRecord(type,id,label='élément'){
+ if(type==='periodic'&&window.PSTPeriodicMatrixApplying){toast('Synchronisation Excel en cours.');return;}
  if(!confirm(`Supprimer cet ${label} ?`))return;
 
  const sid=String(id);
@@ -3786,6 +3746,7 @@ function refreshCollectionView(collection){
  try{map[collection]?.()}catch(error){console.warn('Rafraîchissement collection',collection,error)} restorePlanningScroll();
 }
 async function commitFormRecordVerified(label,collection,record){
+ if(collection==='periodic'&&window.PSTPeriodicMatrixApplying)return {ok:false,error:'Synchronisation Excel en cours.'};
  if(!record?.id)return {ok:false,error:'Identifiant manquant'};
 
  const nowIso=new Date().toISOString();
@@ -3842,9 +3803,15 @@ function addMonthsClamped(dateISO,months){
  const last=new Date(target.getFullYear(),target.getMonth()+1,0,12,0,0,0).getDate();target.setDate(Math.min(day,last));return localISO(target)
 }
 function periodicIsInactive(x){const s=normalizeText(x?.status);return s==='cloture'||s==='cloturee'||s==='non applicable'||s==='archive'||s==='archivee'}
-function periodicDue(x){if(x.nextDate)return normalizeDateValue(x.nextDate);if(x.lastDate&&Number(x.intervalMonths)>0)return addMonthsClamped(x.lastDate,x.intervalMonths);return ''}
-function periodicComputed(x){const due=periodicDue(x);if(periodicIsInactive(x))return x.status||'Clôturé';if(!due)return x.status||'À planifier';const diff=(parseDate(due)-parseDate(todayISO()))/86400000;if(diff<0)return 'En retard';if(diff<=60)return 'Bientôt';return 'À jour'}
-
+function periodicDue(x){return window.PSTPeriodicMatrixCore?.due(x)||''}
+function periodicComputed(x){return window.PSTPeriodicMatrixCore?.lifecycle(x,todayISO()).status||'À planifier'}
+// The displayed state is calculated at reading time. It is not proof of regulatory compliance.
+function periodicRefreshLifecycle(x){if(!x||periodicIsInactive(x))return x;const core=window.PSTPeriodicMatrixCore;if(!core)return x;const v=core.normalizeLifecycle(x,todayISO());x.nextDate=v.nextDate;x.status=v.status;return x}
+function periodicScheduleDailyRefresh(){
+ const now=new Date(),next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,2);
+ setTimeout(()=>{try{if(typeof safeRenderAll==='function')safeRenderAll();else renderPeriodic();}catch(e){console.warn('Actualisation des échéances',e)}periodicScheduleDailyRefresh();},Math.max(1000,next-now));
+}
+if(typeof window!=='undefined'&&typeof document!=='undefined')window.addEventListener('load',periodicScheduleDailyRefresh,{once:true});
 // V147.166 — lecture des contrôles par année scolaire et continuité du cycle réel.
 // Un contrôle réalisé avant le 1er septembre reste valable tant que sa vraie prochaine échéance n'est pas atteinte.
 // Exemple : contrôle annuel réalisé le 10/07/2026 => en 2026-2027 il est "À jour" jusqu'à l'approche du 10/07/2027,
@@ -3876,18 +3843,15 @@ function periodicAcademicYearInfoV165(x,label=activeAcademicYear()){
  if(periodicIsInactive(x)){state=x.status||'Clôturé';tone='neutral';}
  else if(isPast){
    // Une ancienne année est uniquement de l'historique : aucune alerte "en retard" aujourd'hui.
-   if(actualLast){state='Réalisé';tone='done';}
+   if(actualLast){state='Fait';tone='done';}
    else if(due){state='Non renseigné';tone='neutral';}
    else if(beforeLast&&coverageEnd&&coverageEnd>range.end){state='À jour';tone='done';}
    else if(beforeLast){state='À jour';tone='done';}
  }
  else if(isCurrent){
-   if(due){
-     const diff=(parseDate(due)-parseDate(today))/86400000;
-     if(diff<0){state='À faire';tone='todo';}
-     else if(diff<=60){state='À prévoir';tone='soon';}
-     else {state='À jour';tone='done';}
-   }else if(actualLast||beforeLast){state='À jour';tone='done';}
+   const life=window.PSTPeriodicMatrixCore?.lifecycle(x,today)||{status:'À planifier',due:''};
+   state=life.status;tone=state==='Fait'?'done':state==='En retard'?'todo':state==='À planifier'?'soon':'neutral';
+   if(life.due){coverageEnd=life.due;if(life.due>=range.start&&life.due<=range.end)due=life.due;}
  }
  else if(isFuture){
    // Pour une année à venir : "Prévu" signifie qu'une échéance tombe dans l'année,
@@ -3922,7 +3886,22 @@ function periodicRememberDate(x,date,provider='',source='Application',note=''){
  const d=normalizeDateValue(date||'');if(!d)return;
  mergePeriodicHistoryEntry(x,{date:d,provider:provider||'',source,note});
 }
-function openPeriodic(id){const old=id?byId('periodic',id):null;const x=old||{id:uid(),no:nextNo('periodic','CP'),name:'',family:db.lists.periodicFamilies[0],intervalMonths:12,requirement:'',provider:'',register:'Registre de sécurité',building:'Tous bâtiments',lastDate:'',nextDate:'',status:'À planifier',notes:'',oneDriveUrl:'',history:[],attachments:[]};const previousLast=normalizeDateValue(x.lastDate||''),previousProvider=String(x.provider||'');openModal(old?'Modifier le contrôle périodique':'Nouveau contrôle périodique',`<div class="form-grid">${field('N° contrôle','no',x.no||'')}${field('Contrôle','name',x.name,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.periodicFamilies,x.family)}</select></label><label>Bâtiment<select name="building"><option>Tous bâtiments</option>${buildingOptions(x.building)}</select></label>${field('Périodicité (mois, 0 = variable)','intervalMonths',x.intervalMonths,'number','min="0"')}${field('Périodicité / précision','periodicityText',x.periodicityText||'')}${field('Dernier contrôle','lastDate',x.lastDate,'date')}${field('Prochaine échéance','nextDate',periodicDue(x),'date')}${field('Heure prévue','time',x.time,'time')}${field('Étage / niveau','floor',x.floor)}${field('Secteur','sector',x.sector||'')}${field('Local / zone','room',x.room)}<label>Statut<select name="status">${selectOptions(['À planifier','Planifié','Réalisé','Clôturé','En attente','Non applicable'],x.status)}</select></label>${field('Prestataire / responsable','provider',x.provider)}${field('Registre / dossier','register',x.register)}${textareaField('Exigence / contenu','requirement',x.requirement)}${field('Lien OneDrive','oneDriveUrl',periodicOneDriveUrl(x),'url','placeholder="https://..."')}${textareaField('Notes','notes',x.notes)}</div>${periodicHistoryHtml(x,false)}<div class="form-grid"><p class="form-hint span2"><strong>Suivi par année scolaire :</strong> chaque date de passage est conservée dans l’historique. L’année choisie dans le tableau de bord permet de relire les contrôles réalisés et ceux prévus sur cette période.</p>${attachmentField(x.attachments)}</div>`,async form=>{const o=formDataObj(form),intervalMonths=Number(o.intervalMonths||0);Object.assign(x,o,{intervalMonths});if(x.lastDate&&intervalMonths>0&&!o.nextDate)x.nextDate=addMonthsClamped(x.lastDate,intervalMonths);if(previousLast&&previousLast!==normalizeDateValue(x.lastDate||''))periodicRememberDate(x,previousLast,previousProvider, 'Application — ancien dernier contrôle');if(x.lastDate)periodicRememberDate(x,x.lastDate,x.provider||'',old?'Application — modification':'Application — création');
+function periodicBindEditor(form){
+ if(!form)return;
+ if(form.__pstPeriodicCycleHandler)form.removeEventListener('input',form.__pstPeriodicCycleHandler);
+ form.dataset.pstPeriodicDueEdited='0';
+ const handler=e=>{
+  if(!form.elements?.lastDate||!form.elements?.intervalMonths||!form.elements?.nextDate)return;
+  const name=e.target?.name;if(!['lastDate','intervalMonths','nextDate','status'].includes(name))return;
+  if(name==='nextDate')form.dataset.pstPeriodicDueEdited='1';
+  if(['lastDate','intervalMonths'].includes(name)&&form.dataset.pstPeriodicDueEdited!=='1')form.elements.nextDate.value=window.PSTPeriodicMatrixCore?.addMonths(form.elements.lastDate.value,Number(form.elements.intervalMonths.value||0))||'';
+  const value={lastDate:form.elements.lastDate.value,intervalMonths:Number(form.elements.intervalMonths.value||0),nextDate:form.elements.nextDate.value,status:form.elements.status?.value||''};
+  const state=window.PSTPeriodicMatrixCore?.lifecycle(value,todayISO()).status||'À planifier';
+  if(form.elements.status)form.elements.status.value=state;
+ };
+ form.__pstPeriodicCycleHandler=handler;form.addEventListener('input',handler);
+}
+function openPeriodic(id){if(window.PSTPeriodicMatrixApplying){toast('La synchronisation Excel est en cours. Réessayez après son enregistrement.');return;}const old=id?byId('periodic',id):null;const x=old||{id:uid(),no:nextNo('periodic','CP'),name:'',family:db.lists.periodicFamilies[0],intervalMonths:12,requirement:'',provider:'',register:'Registre de sécurité',building:'Tous bâtiments',lastDate:'',nextDate:'',status:'À planifier',notes:'',oneDriveUrl:'',history:[],attachments:[]};const previousLast=normalizeDateValue(x.lastDate||''),previousProvider=String(x.provider||'');openModal(old?'Modifier le contrôle périodique':'Nouveau contrôle périodique',`<div class="form-grid">${field('N° contrôle','no',x.no||'')}${field('Contrôle','name',x.name,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.periodicFamilies,x.family)}</select></label><label>Bâtiment<select name="building"><option>Tous bâtiments</option>${buildingOptions(x.building)}</select></label>${field('Périodicité (mois, 0 = variable)','intervalMonths',x.intervalMonths,'number','min="0"')}${field('Périodicité / précision','periodicityText',x.periodicityText||'')}${field('Dernier contrôle','lastDate',x.lastDate,'date')}${field('Prochaine échéance','nextDate',periodicDue(x),'date')}${field('Heure prévue','time',x.time,'time')}${field('Étage / niveau','floor',x.floor)}${field('Secteur','sector',x.sector||'')}${field('Local / zone','room',x.room)}<label>Statut<select name="status">${selectOptions(['Fait','En retard','À planifier','Planifié','Clôturé','En attente','Non applicable'],periodicComputed(x))}</select></label>${field('Prestataire / responsable','provider',x.provider)}${field('Registre / dossier','register',x.register)}${textareaField('Exigence / contenu','requirement',x.requirement)}${field('Lien OneDrive','oneDriveUrl',periodicOneDriveUrl(x),'url','placeholder="https://..."')}${textareaField('Notes','notes',x.notes)}</div>${periodicHistoryHtml(x,false)}<div class="form-grid"><p class="form-hint span2"><strong>Suivi par année scolaire :</strong> chaque date de passage est conservée dans l’historique. L’année choisie dans le tableau de bord permet de relire les contrôles réalisés et ceux prévus sur cette période.</p>${attachmentField(x.attachments)}</div>`,async form=>{if(window.PSTPeriodicMatrixApplying){toast('Synchronisation Excel en cours.');return;}const o=formDataObj(form),intervalMonths=Number(o.intervalMonths||0);Object.assign(x,o,{intervalMonths});periodicRefreshLifecycle(x);if(previousLast&&previousLast!==normalizeDateValue(x.lastDate||''))periodicRememberDate(x,previousLast,previousProvider, 'Application — ancien dernier contrôle');if(x.lastDate)periodicRememberDate(x,x.lastDate,x.provider||'',old?'Application — modification':'Application — création');
 const oneDriveUrl=String(o.oneDriveUrl||'').trim();
 if(oneDriveUrl){
  x.oneDriveUrl=oneDriveUrl;
@@ -3934,13 +3913,13 @@ if(!attachResult?.ok){
  setSaveState('PDF non chargé — corrigez avant d’enregistrer','error');
  return;
 }
-const persisted=await commitFormRecordVerified('Contrôle périodique','periodic',x);
+periodicRefreshLifecycle(x);const persisted=await commitFormRecordVerified('Contrôle périodique','periodic',x);
 if(!persisted?.ok){
  toast('Le contrôle n’est pas confirmé dans Supabase. Le formulaire reste ouvert.');
  return;
 }
 closeModal();
-toast(persisted?.offline?'Contrôle enregistré hors ligne — synchronisation automatique':'✅ Contrôle périodique et fichiers confirmés dans Supabase')},{onDelete:old?()=>deleteRecord('periodic',x.id,'contrôle'):null})}
+toast(persisted?.offline?'Contrôle enregistré hors ligne — synchronisation automatique':'✅ Contrôle périodique et fichiers confirmés dans Supabase')},{onDelete:old?()=>deleteRecord('periodic',x.id,'contrôle'):null});periodicBindEditor($('#modalForm'))}
 function cleaningTasks(type,existing=[]){const oldMap=new Map((existing||[]).map(t=>[t.name,t]));return (GUIDE[type]||GUIDE['Autre']||[]).map(([name,freq])=>{const o=oldMap.get(name)||{name,frequency:freq,status:'Non contrôlé',comment:''};return `<div class="clean-task" data-clean-task><div><strong>${esc(name)}</strong><small>${esc(freq)}</small></div><select name="taskStatus">${selectOptions(db.lists.cleaningStatuses,o.status)}</select><input name="taskComment" value="${esc(o.comment||'')}" placeholder="Commentaire rapide"></div>`}).join('')}
 function consumeCleaningScopeContext(){
  if(arguments.length)return null;
@@ -4714,7 +4693,7 @@ function renderPeriodic(){
  const fam=$('#periodicFamily')?.value||'',status=$('#periodicStatus')?.value||'',bld=$('#periodicBuilding')?.value||'',year=activeAcademicYear();
  const yr=$('#periodicAcademicYearLabelV165');if(yr)yr.textContent=`Année scolaire affichée : ${year}`;
  let rows=periodicAcademicYearRowsV165(year).filter(({x,info})=>(!fam||x.family===fam)&&(!status||info.state===status||x.status===status)&&(!bld||x.building===bld||x.building==='Tous bâtiments'));
- const rank={"À faire":0,"À prévoir":1,"Prévu":2,"À jour":3,"Réalisé":4,"Non renseigné":5,"Pas prévu":6,"Clôturé":7,"Non applicable":8};
+ const rank={"En retard":0,"À faire":0,"À prévoir":1,"Prévu":2,"Fait":3,"À jour":3,"Réalisé":4,"À planifier":5,"Non renseigné":5,"Pas prévu":6,"Clôturé":7,"Non applicable":8};
  rows.sort((a,b)=>(rank[a.info.state]??9)-(rank[b.info.state]??9)||(a.info.due||a.info.lastKnown?.date||'9999').localeCompare(b.info.due||b.info.lastKnown?.date||'9999')||String(a.x.name||'').localeCompare(String(b.x.name||''),'fr'));
  const el=$('#periodicCards');if(!el)return;
  const statusHtml=info=>`<span class="periodic-year-status-v165 ${esc(info.tone)}">${esc(info.state)}</span>`;
@@ -5883,7 +5862,7 @@ function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnectio
  const allMaint=(db.maintenance||[]).filter(x=>recordInAcademicYear(x,['date','dueDate']));const closedMaint=allMaint.filter(x=>isClosedStatus(x.status));const openMaint=allMaint.filter(x=>!isClosedStatus(x.status));const todoMaint=allMaint.filter(x=>normalizeText(x.status)==='a faire');
  const maintCounts={total:allMaint.length,todo:todoMaint.length,open:openMaint.length,closed:closedMaint.length,byStatus:allMaint.reduce((acc,x)=>{const k=String(x.status||'Sans statut').trim()||'Sans statut';acc[k]=(acc[k]||0)+1;return acc},{})};window.PSTMaintenanceCounts=maintCounts;
  const recentClean=(db.cleaning||[]).filter(x=>recordInAcademicYear(x,['date']));const comp=recentClean.length?Math.round(recentClean.filter(x=>normalizeText(x.overallStatus)==='conforme').length/recentClean.length*100):null;const weak=recentClean.reduce((sum,x)=>sum+(x.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).length,0);
- const periodicYearRows=periodicAcademicYearRowsV165(activeAcademicYear()),pLate=periodicYearRows.filter(r=>r.info.state==='À faire').map(r=>r.x),pSoon=periodicYearRows.filter(r=>r.info.state==='À prévoir'&&r.info.due&&activeAcademicYear()===academicYearFor(todayISO())&&r.info.due<=addDays(todayISO(),60)).map(r=>r.x);
+ const periodicYearRows=periodicAcademicYearRowsV165(activeAcademicYear()),pLate=periodicYearRows.filter(r=>['En retard','À faire'].includes(r.info.state)).map(r=>r.x),pSoon=periodicYearRows.filter(r=>r.info.due&&activeAcademicYear()===academicYearFor(todayISO())&&r.info.due<=addDays(todayISO(),60)).map(r=>r.x);
  const notes=(db.notes||[]).filter(x=>recordInAcademicYear(x,['date','dueDate'])&&!isClosedStatus(x.status)),notesDue=notes.filter(x=>{const due=recordDueDate(x);return due&&due<=soon7}).length;
  // Informations strictement journalières en haut du tableau de bord.
  const dayLabel=parseDate(today).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});const hero=$('#dailyHeroDate');if(hero)hero.textContent=dayLabel.charAt(0).toUpperCase()+dayLabel.slice(1);
@@ -5891,7 +5870,7 @@ function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnectio
  if($('#todayKpiPresent'))$('#todayKpiPresent').textContent=present;if($('#todayKpiAbsent'))$('#todayKpiAbsent').textContent=absent;if($('#todayKpiMeetings'))$('#todayKpiMeetings').textContent=meetingsToday;if($('#todayKpiUrgent'))$('#todayKpiUrgent').textContent=urgentToday;
  // Indicateurs globaux, déplacés dans « À surveiller ».
  $('#kpiAgents').textContent=activeAgents.length;$('#kpiPresent').textContent=todayInActive?`${present} présents aujourd’hui`:`Année ${activeAcademicYear()}`;$('#kpiUrgentActions').textContent=urgentActions.length;$('#kpiLate').textContent=`${lateActions.length} en retard`;
- $('#kpiMaintenance').textContent=maintCounts.open;$('#kpiMaintenanceTodo').textContent=`${maintCounts.todo} à faire`;$('#kpiCompliance').textContent=comp==null?'—':`${comp} %`;$('#kpiCleaningWeak').textContent=`${weak} point${weak>1?'s':''} faible${weak>1?'s':''}`;{const _pRows=periodicAcademicYearRowsV165(activeAcademicYear()),_pDone=_pRows.filter(r=>r.info.actual?.length).length,_pMissing=_pRows.filter(r=>r.info.state==='Non renseigné').length,_pOk=_pRows.filter(r=>r.info.state==='À jour').length,_pPlanned=_pRows.filter(r=>r.info.due).length,_pSoonCount=_pRows.filter(r=>r.info.state==='À prévoir').length,_currentAy=activeAcademicYear()===academicYearFor(todayISO()),_pastAy=academicYearRange(activeAcademicYear()).end<todayISO();const _pl=$('#kpiPeriodicLabelV165');if(_pl)_pl.textContent=_pastAy?'Contrôles de l’année':(_currentAy?'Contrôles à surveiller':'Contrôles prévus');$('#kpiPeriodicLate').textContent=_pastAy?_pDone:(_currentAy?pLate.length:_pPlanned);$('#kpiPeriodicSoon').textContent=_pastAy?`${_pDone} réalisés · ${_pMissing} non renseignés`:_currentAy?`${_pSoonCount} bientôt · ${_pOk} à jour`:`${_pOk} couverts par un contrôle antérieur`; }$('#kpiNotes').textContent=notes.length;$('#kpiNotesDue').textContent=`${notesDue} échéance${notesDue>1?'s':''} proche${notesDue>1?'s':''}`;
+ $('#kpiMaintenance').textContent=maintCounts.open;$('#kpiMaintenanceTodo').textContent=`${maintCounts.todo} à faire`;$('#kpiCompliance').textContent=comp==null?'—':`${comp} %`;$('#kpiCleaningWeak').textContent=`${weak} point${weak>1?'s':''} faible${weak>1?'s':''}`;{const _pRows=periodicAcademicYearRowsV165(activeAcademicYear()),_pDone=_pRows.filter(r=>r.info.actual?.length).length,_pMissing=_pRows.filter(r=>r.info.state==='Non renseigné').length,_pOk=_pRows.filter(r=>['Fait','À jour'].includes(r.info.state)).length,_pPlanned=_pRows.filter(r=>r.info.due).length,_pSoonCount=_pRows.filter(r=>r.info.due&&r.info.due>=todayISO()&&daysBetweenDates(todayISO(),r.info.due)<=60).length,_currentAy=activeAcademicYear()===academicYearFor(todayISO()),_pastAy=academicYearRange(activeAcademicYear()).end<todayISO();const _pl=$('#kpiPeriodicLabelV165');if(_pl)_pl.textContent=_pastAy?'Contrôles de l’année':(_currentAy?'Contrôles à surveiller':'Contrôles prévus');$('#kpiPeriodicLate').textContent=_pastAy?_pDone:(_currentAy?pLate.length:_pPlanned);$('#kpiPeriodicSoon').textContent=_pastAy?`${_pDone} réalisés · ${_pMissing} non renseignés`:_currentAy?`${_pSoonCount} échéances proches · ${_pOk} faits / valides`:`${_pOk} couverts par un contrôle antérieur`; }$('#kpiNotes').textContent=notes.length;$('#kpiNotesDue').textContent=`${notesDue} échéance${notesDue>1?'s':''} proche${notesDue>1?'s':''}`;
  // Les anciens aperçus restent alimentés mais sont masqués pour préserver la compatibilité.
  $('#dashboardNotes').innerHTML=cardList(notes.slice().sort((a,b)=>(recordDueDate(a)||'9999').localeCompare(recordDueDate(b)||'9999')).slice(0,5).map(x=>itemCard('✎',x.title,`${esc(x.category)} · ${fmtDate(recordDueDate(x))||'Sans échéance'}`,'note',x.id)),'Aucune note active.');
  $('#maintenancePreview').innerHTML=cardList(openMaint.filter(x=>{const st=normalizeText(x.status);return st==='en cours'||st.startsWith('en attente')}).slice(0,5).map(x=>itemCard('⚙',x.title,`${esc(x.building)} · ${badge(x.status)}`,'maintenance',x.id)),'Aucune intervention en cours.');
@@ -6020,7 +5999,7 @@ function renderDashboardPeriodicNextV160(){
    const planned=rows.filter(r=>r.info.due).sort((a,b)=>a.info.due.localeCompare(b.info.due));n.textContent=planned.length;
    d.textContent=planned.length?`1er prévu : ${fmtDate(planned[0].info.due)} · ${planned[0].x.name||'contrôle'}`:'aucune échéance calculée';return;
  }
- const pending=rows.filter(r=>['À faire','À prévoir'].includes(r.info.state)&&r.info.due).sort((a,b)=>a.info.due.localeCompare(b.info.due));
+ const pending=rows.filter(r=>(r.info.state==='En retard'||(r.info.due&&r.info.due<=addDays(todayISO(),60)))&&r.info.due).sort((a,b)=>a.info.due.localeCompare(b.info.due));
  n.textContent=pending.length;
  d.textContent=pending.length?`prochain : ${fmtDate(pending[0].info.due)} · ${pending[0].x.name||'contrôle'}`:'aucun contrôle restant calculé dans l’année';
 }
@@ -6031,7 +6010,7 @@ function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnectio
  const urgentActions=collectUrgentDashboardActions(),lateActions=collectLateDashboardActions(range.start),urgentPeriod=urgentActions.filter(x=>!x.due||x.due<=range.end).length;
  const allMaint=(db.maintenance||[]).filter(x=>recordInAcademicYear(x,['date','dueDate'])),closedMaint=allMaint.filter(x=>isClosedStatus(x.status)),openMaint=allMaint.filter(x=>!isClosedStatus(x.status)),todoMaint=allMaint.filter(x=>normalizeText(x.status)==='a faire'),maintCounts={total:allMaint.length,todo:todoMaint.length,open:openMaint.length,closed:closedMaint.length,byStatus:allMaint.reduce((acc,x)=>{const k=String(x.status||'Sans statut').trim()||'Sans statut';acc[k]=(acc[k]||0)+1;return acc},{})};window.PSTMaintenanceCounts=maintCounts;
  const recentClean=(db.cleaning||[]).filter(x=>recordInAcademicYear(x,['date'])),comp=recentClean.length?Math.round(recentClean.filter(x=>normalizeText(x.overallStatus)==='conforme').length/recentClean.length*100):null,weak=recentClean.reduce((sum,x)=>sum+(x.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).length,0);
- const periodicYearRows=periodicAcademicYearRowsV165(activeAcademicYear()),pLate=periodicYearRows.filter(r=>r.info.state==='À faire').map(r=>r.x),pSoon=periodicYearRows.filter(r=>r.info.state==='À prévoir'&&r.info.due&&activeAcademicYear()===academicYearFor(todayISO())&&r.info.due<=addDays(todayISO(),60)).map(r=>r.x),notes=(db.notes||[]).filter(x=>recordInAcademicYear(x,['date','dueDate'])&&!isClosedStatus(x.status)),notesDue=notes.filter(x=>{const due=recordDueDate(x);return due&&due<=addDays(todayISO(),7)}).length;
+ const periodicYearRows=periodicAcademicYearRowsV165(activeAcademicYear()),pLate=periodicYearRows.filter(r=>['En retard','À faire'].includes(r.info.state)).map(r=>r.x),pSoon=periodicYearRows.filter(r=>r.info.due&&activeAcademicYear()===academicYearFor(todayISO())&&r.info.due<=addDays(todayISO(),60)).map(r=>r.x),notes=(db.notes||[]).filter(x=>recordInAcademicYear(x,['date','dueDate'])&&!isClosedStatus(x.status)),notesDue=notes.filter(x=>{const due=recordDueDate(x);return due&&due<=addDays(todayISO(),7)}).length;
  const eventCount=dates.reduce((sum,d)=>sum+dashboardEventsForDateV159(d).length,0),hero=$('#dailyHeroDate'),heroSummary=$('#dailyHeroSummary'),kicker=document.querySelector('#dashboard .daily-hero-kicker-v149');
  if(kicker)kicker.textContent=dashboardPeriodModeV159==='week'?'CETTE SEMAINE':'JOURNÉE';if(hero)hero.textContent=dashboardPeriodModeV159==='week'?`Semaine du ${fmtDate(range.start)} au ${fmtDate(range.end)}`:parseDate(range.start).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase());
  if(heroSummary)heroSummary.textContent=dashboardPeriodModeV159==='week'?`${present} présence${present>1?'s':''} planifiée${present>1?'s':''} · ${eventCount} élément${eventCount>1?'s':''} · ${urgentPeriod} priorité${urgentPeriod>1?'s':''} urgente${urgentPeriod>1?'s':''}`:`${present} présent${present>1?'s':''} · ${eventCount} élément${eventCount>1?'s':''} · ${urgentPeriod} urgence${urgentPeriod>1?'s':''} à traiter`;
@@ -6043,7 +6022,7 @@ function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnectio
  if($('#todayKpiMeetingsMeta'))$('#todayKpiMeetingsMeta').textContent=weekly?'dans la semaine':'sur la journée';if($('#todayKpiUrgentMeta'))$('#todayKpiUrgentMeta').textContent=weekly?'à traiter avant vendredi':'à traiter';
  if($('#todayKpiPresent'))$('#todayKpiPresent').textContent=present;if($('#todayKpiAbsent'))$('#todayKpiAbsent').textContent=absent;if($('#todayKpiMeetings'))$('#todayKpiMeetings').textContent=meetingsPeriod;if($('#todayKpiUrgent'))$('#todayKpiUrgent').textContent=urgentPeriod;
  if($('#dashboardTeamTitleV159'))$('#dashboardTeamTitleV159').textContent=weekly?'Équipe de la semaine':'Équipe du jour';if($('#dashboardAgendaKickerV159'))$('#dashboardAgendaKickerV159').textContent=weekly?'HEBDOMADAIRE':'JOURNALIER';if($('#dashboardAgendaTitleV159'))$('#dashboardAgendaTitleV159').textContent=weekly?'Agenda de la semaine':'Ma journée';if($('#dashboardPriorityTitleV159'))$('#dashboardPriorityTitleV159').textContent=weekly?'Priorités de la semaine':'Priorités du jour';
- $('#kpiAgents').textContent=activeAgents.length;$('#kpiPresent').textContent=`${present} présence${present>1?'s':''}`;$('#kpiUrgentActions').textContent=urgentActions.length;$('#kpiLate').textContent=`${lateActions.length} en retard`;$('#kpiMaintenance').textContent=maintCounts.open;$('#kpiMaintenanceTodo').textContent=`${maintCounts.todo} à faire`;$('#kpiCompliance').textContent=comp==null?'—':`${comp} %`;$('#kpiCleaningWeak').textContent=`${weak} point${weak>1?'s':''} faible${weak>1?'s':''}`;{const _pRows=periodicAcademicYearRowsV165(activeAcademicYear()),_pDone=_pRows.filter(r=>r.info.actual?.length).length,_pMissing=_pRows.filter(r=>r.info.state==='Non renseigné').length,_pOk=_pRows.filter(r=>r.info.state==='À jour').length,_pPlanned=_pRows.filter(r=>r.info.due).length,_pSoonCount=_pRows.filter(r=>r.info.state==='À prévoir').length,_currentAy=activeAcademicYear()===academicYearFor(todayISO()),_pastAy=academicYearRange(activeAcademicYear()).end<todayISO();const _pl=$('#kpiPeriodicLabelV165');if(_pl)_pl.textContent=_pastAy?'Contrôles de l’année':(_currentAy?'Contrôles à surveiller':'Contrôles prévus');$('#kpiPeriodicLate').textContent=_pastAy?_pDone:(_currentAy?pLate.length:_pPlanned);$('#kpiPeriodicSoon').textContent=_pastAy?`${_pDone} réalisés · ${_pMissing} non renseignés`:_currentAy?`${_pSoonCount} bientôt · ${_pOk} à jour`:`${_pOk} couverts par un contrôle antérieur`; }$('#kpiNotes').textContent=notes.length;$('#kpiNotesDue').textContent=`${notesDue} échéance${notesDue>1?'s':''} proche${notesDue>1?'s':''}`;
+ $('#kpiAgents').textContent=activeAgents.length;$('#kpiPresent').textContent=`${present} présence${present>1?'s':''}`;$('#kpiUrgentActions').textContent=urgentActions.length;$('#kpiLate').textContent=`${lateActions.length} en retard`;$('#kpiMaintenance').textContent=maintCounts.open;$('#kpiMaintenanceTodo').textContent=`${maintCounts.todo} à faire`;$('#kpiCompliance').textContent=comp==null?'—':`${comp} %`;$('#kpiCleaningWeak').textContent=`${weak} point${weak>1?'s':''} faible${weak>1?'s':''}`;{const _pRows=periodicAcademicYearRowsV165(activeAcademicYear()),_pDone=_pRows.filter(r=>r.info.actual?.length).length,_pMissing=_pRows.filter(r=>r.info.state==='Non renseigné').length,_pOk=_pRows.filter(r=>['Fait','À jour'].includes(r.info.state)).length,_pPlanned=_pRows.filter(r=>r.info.due).length,_pSoonCount=_pRows.filter(r=>r.info.due&&r.info.due>=todayISO()&&daysBetweenDates(todayISO(),r.info.due)<=60).length,_currentAy=activeAcademicYear()===academicYearFor(todayISO()),_pastAy=academicYearRange(activeAcademicYear()).end<todayISO();const _pl=$('#kpiPeriodicLabelV165');if(_pl)_pl.textContent=_pastAy?'Contrôles de l’année':(_currentAy?'Contrôles à surveiller':'Contrôles prévus');$('#kpiPeriodicLate').textContent=_pastAy?_pDone:(_currentAy?pLate.length:_pPlanned);$('#kpiPeriodicSoon').textContent=_pastAy?`${_pDone} réalisés · ${_pMissing} non renseignés`:_currentAy?`${_pSoonCount} échéances proches · ${_pOk} faits / valides`:`${_pOk} couverts par un contrôle antérieur`; }$('#kpiNotes').textContent=notes.length;$('#kpiNotesDue').textContent=`${notesDue} échéance${notesDue>1?'s':''} proche${notesDue>1?'s':''}`;
  $('#dashboardNotes').innerHTML=cardList(notes.slice().sort((a,b)=>(recordDueDate(a)||'9999').localeCompare(recordDueDate(b)||'9999')).slice(0,5).map(x=>itemCard('✎',x.title,`${esc(x.category)} · ${fmtDate(recordDueDate(x))||'Sans échéance'}`,'note',x.id)),'Aucune note active.');$('#maintenancePreview').innerHTML=cardList(openMaint.filter(x=>{const st=normalizeText(x.status);return st==='en cours'||st.startsWith('en attente')}).slice(0,5).map(x=>itemCard('⚙',x.title,`${esc(x.building)} · ${badge(x.status)}`,'maintenance',x.id)),'Aucune intervention en cours.');$('#maintenanceTodoPreview').innerHTML=cardList(todoMaint.slice(0,5).map(x=>itemCard('🧰',x.title,`${badge(x.priority)} · ${fmtDate(recordDueDate(x))||'Sans échéance'}`,'maintenance',x.id)),'Aucune intervention à faire.');
  const weakRows=[];recentClean.forEach(c=>(c.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).forEach(t=>weakRows.push({c,t})));$('#cleaningWeakPreview').innerHTML=cardList(weakRows.slice(0,5).map(({c,t})=>itemCard('🧹',t.name,`${esc(c.building)} · ${esc(c.room)} · ${badge(t.status)}`,'cleaning',c.id)),'Aucun point faible récent.');const nextMeet=(db.meetings||[]).filter(x=>normalizeDateValue(x.date)>=todayISO()&&!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule').sort((a,b)=>`${normalizeDateValue(a.date)}${a.time||''}`.localeCompare(`${normalizeDateValue(b.date)}${b.time||''}`)).slice(0,5);$('#meetingPreview').innerHTML=cardList(nextMeet.map(x=>itemCard('📅',x.title,`${fmtDate(normalizeDateValue(x.date))} ${esc(x.time||'')} · ${esc(x.location||'')}`,'meeting',x.id)),'Aucun rendez-vous à venir.');
  renderDashboardPeriodicNextV160();renderDashboardTeamTodayV149();renderDashboardTodayAgenda();renderDashboardPrioritiesV149(urgentActions,lateActions);renderDashboardRemindersV149(notes,pSoon);renderDashboardWeekV149();renderTeamCalendar();renderPersonalCalendar();window.PDFImportModule?.renderDashboard?.();
@@ -6414,7 +6393,7 @@ function exportCSV(module){
 function fillSelect(id,items,keep=true){const e=document.getElementById(id);if(!e)return;const old=keep?e.value:'';const first=e.querySelector('option[value=""]')?.outerHTML||'';e.innerHTML=first+selectOptions(items,old)}
 function hydrateSelects(){fillSelect('personalType',db.lists.personalTypes);fillSelect('personalStatus',db.lists.generalStatuses);for(const id of ['rotationAgent','planningAgent','absenceAgent','issueAgent']){const e=$(`#${id}`);if(e){const old=e.value;e.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','')}}renderActivityAgentFilter();
 fillSelect('activityTypeFilter',AGENT_ACTIVITY_TYPES);
-fillSelect('planningSignal',['Conforme','Heures supplémentaires','Heures manquantes','Absence']);fillSelect('absenceType',db.lists.dayTypes.filter(isAbsenceType));fillSelect('absenceStatus',['Demandée','Validée','Refusée','Annulée']);fillSelect('issueCategory',db.lists.issueCategories);fillSelect('issueStatus',db.lists.generalStatuses);fillSelect('periodicFamily',db.lists.periodicFamilies);fillSelect('periodicStatus',['Réalisé','À jour','À faire','À prévoir','Prévu','Non renseigné','Pas prévu','À planifier','Planifié','Clôturé','En attente','Non applicable']);const pb=$('#periodicBuilding');if(pb){const old=pb.value;pb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}const cb=$('#cleanBuilding');if(cb){const old=cb.value;cb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}fillSelect('cleanRoomType',db.lists.roomTypes);fillSelect('cleanStatus',db.lists.cleaningStatuses);fillSelect('cleaningGuideType',Object.keys(GUIDE));fillSelect('maintenanceStatus',db.lists.maintenanceStatuses);fillSelect('maintenancePriority',db.lists.priorities);fillSelect('maintenanceFamily',db.lists.maintenanceFamilies);fillSelect('requestStatus',db.lists.generalStatuses);fillSelect('requestType',db.lists.requestTypes);fillSelect('workStatus',db.lists.generalStatuses);fillSelect('workType',db.lists.workTypes);fillSelect('meetingType',db.lists.meetingTypes);fillSelect('noteCategory',db.lists.noteCategories);fillSelect('notePriority',db.lists.priorities);fillSelect('noteStatus',db.lists.generalStatuses);fillSelect('documentCategory',db.lists.documentCategories);const vp=$('#vacationReportPeriod');if(vp){const old=vp.value;vp.innerHTML=selectOptions(db.vacations,old,x=>`${x.name} — ${fmtDate(x.start)}`,x=>x.id)}const csv=$('#csvModule');if(csv){const opts=[['agents','Agents'],['agentDays','Horaires, congés et absences'],['agentActivities','Activité des agents'],['cleaning','Contrôles ménage'],['maintenance','Maintenance'],['requests','Demandes direction'],['works','Chantiers / GPA'],['meetings','Réunions'],['issues','Sécurité / qualité'],['periodic','Contrôles périodiques'],['notes','Notes'],['vacations','Vacances'],['documents','Documents']];const old=csv.value;csv.innerHTML=selectOptions(opts,old,x=>x[1],x=>x[0])}}
+fillSelect('planningSignal',['Conforme','Heures supplémentaires','Heures manquantes','Absence']);fillSelect('absenceType',db.lists.dayTypes.filter(isAbsenceType));fillSelect('absenceStatus',['Demandée','Validée','Refusée','Annulée']);fillSelect('issueCategory',db.lists.issueCategories);fillSelect('issueStatus',db.lists.generalStatuses);fillSelect('periodicFamily',db.lists.periodicFamilies);fillSelect('periodicStatus',['Fait','En retard','À jour','À faire','À prévoir','Prévu','Non renseigné','Pas prévu','À planifier','Planifié','Clôturé','En attente','Non applicable']);const pb=$('#periodicBuilding');if(pb){const old=pb.value;pb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}const cb=$('#cleanBuilding');if(cb){const old=cb.value;cb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}fillSelect('cleanRoomType',db.lists.roomTypes);fillSelect('cleanStatus',db.lists.cleaningStatuses);fillSelect('cleaningGuideType',Object.keys(GUIDE));fillSelect('maintenanceStatus',db.lists.maintenanceStatuses);fillSelect('maintenancePriority',db.lists.priorities);fillSelect('maintenanceFamily',db.lists.maintenanceFamilies);fillSelect('requestStatus',db.lists.generalStatuses);fillSelect('requestType',db.lists.requestTypes);fillSelect('workStatus',db.lists.generalStatuses);fillSelect('workType',db.lists.workTypes);fillSelect('meetingType',db.lists.meetingTypes);fillSelect('noteCategory',db.lists.noteCategories);fillSelect('notePriority',db.lists.priorities);fillSelect('noteStatus',db.lists.generalStatuses);fillSelect('documentCategory',db.lists.documentCategories);const vp=$('#vacationReportPeriod');if(vp){const old=vp.value;vp.innerHTML=selectOptions(db.vacations,old,x=>`${x.name} — ${fmtDate(x.start)}`,x=>x.id)}const csv=$('#csvModule');if(csv){const opts=[['agents','Agents'],['agentDays','Horaires, congés et absences'],['agentActivities','Activité des agents'],['cleaning','Contrôles ménage'],['maintenance','Maintenance'],['requests','Demandes direction'],['works','Chantiers / GPA'],['meetings','Réunions'],['issues','Sécurité / qualité'],['periodic','Contrôles périodiques'],['notes','Notes'],['vacations','Vacances'],['documents','Documents']];const old=csv.value;csv.innerHTML=selectOptions(opts,old,x=>x[1],x=>x[0])}}
 function renderReportPreview(){if(!$('#reportPreview'))return;const r=reportData('daily');$('#reportPreview').innerHTML=`<h3>${esc(r.title)} — ${esc(r.subtitle)}</h3>${r.html}`}
 
 const DAILY_MOTIVATION_SAYINGS=["Chaque jour fait avancer quand on garde le cap.","Chaque jour simplifie le chemin quand on ne lâche pas l’objectif.","Chaque jour construit du solide quand on apprend de chaque étape.","Un petit pas ouvre la voie quand on avance avec méthode.","Un petit pas transforme l’effort quand on transforme les difficultés en étapes.","Un petit pas fait gagner du temps quand on choisit d’avancer.","La constance renforce le résultat quand on reste concentré sur l’essentiel.","La constance prépare la réussite quand on fait simplement le prochain pas utile.","La constance rend l’objectif plus proche quand on travaille avec soin.","Le courage simplifie le chemin quand on agit avec régularité.","Le courage construit du solide quand on garde le cap.","La patience fait avancer quand on ne lâche pas l’objectif.","La patience transforme l’effort quand on apprend de chaque étape.","La patience fait gagner du temps quand on avance avec méthode.","L’attention ouvre la voie quand on transforme les difficultés en étapes.","L’attention prépare la réussite quand on choisit d’avancer.","L’attention rend l’objectif plus proche quand on reste concentré sur l’essentiel.","Une bonne méthode renforce le résultat quand on fait simplement le prochain pas utile.","Une bonne méthode donne de l’élan quand on travaille avec soin.","Le travail régulier fait avancer quand on agit avec régularité.","Le travail régulier transforme l’effort quand on garde le cap.","Le travail régulier construit du solide quand on ne lâche pas l’objectif.","La persévérance ouvre la voie quand on apprend de chaque étape.","La persévérance prépare la réussite quand on avance avec méthode.","La persévérance fait gagner du temps quand on transforme les difficultés en étapes.","Une priorité claire renforce le résultat quand on choisit d’avancer.","Une priorité claire donne de l’élan quand on reste concentré sur l’essentiel.","Une priorité claire rend l’objectif plus proche quand on fait simplement le prochain pas utile.","Le calme simplifie le chemin quand on travaille avec soin.","Le calme construit du solide quand on agit avec régularité.","L’organisation ouvre la voie quand on garde le cap.","L’organisation transforme l’effort quand on ne lâche pas l’objectif.","L’organisation fait gagner du temps quand on apprend de chaque étape.","Chaque effort renforce le résultat quand on avance avec méthode.","Chaque effort prépare la réussite quand on transforme les difficultés en étapes.","Chaque effort rend l’objectif plus proche quand on choisit d’avancer.","Une solution simplifie le chemin quand on reste concentré sur l’essentiel.","Une solution donne de l’élan quand on fait simplement le prochain pas utile.","Le progrès fait avancer quand on travaille avec soin.","Le progrès transforme l’effort quand on agit avec régularité.","Le progrès fait gagner du temps quand on garde le cap.","Chaque jour ouvre la voie quand on ne lâche pas l’objectif.","Chaque jour prépare la réussite quand on apprend de chaque étape.","Chaque jour rend l’objectif plus proche quand on avance avec méthode.","Un petit pas renforce le résultat quand on transforme les difficultés en étapes.","Un petit pas donne de l’élan quand on choisit d’avancer.","La constance fait avancer quand on reste concentré sur l’essentiel.","La constance simplifie le chemin quand on fait simplement le prochain pas utile.","La constance construit du solide quand on travaille avec soin.","Le courage ouvre la voie quand on agit avec régularité.","Le courage prépare la réussite quand on garde le cap.","Le courage fait gagner du temps quand on ne lâche pas l’objectif.","La patience renforce le résultat quand on apprend de chaque étape.","La patience donne de l’élan quand on avance avec méthode.","La patience rend l’objectif plus proche quand on transforme les difficultés en étapes.","L’attention simplifie le chemin quand on choisit d’avancer.","L’attention construit du solide quand on reste concentré sur l’essentiel.","Une bonne méthode fait avancer quand on fait simplement le prochain pas utile.","Une bonne méthode transforme l’effort quand on travaille avec soin.","Une bonne méthode fait gagner du temps quand on agit avec régularité.","Le travail régulier renforce le résultat quand on garde le cap.","Le travail régulier prépare la réussite quand on ne lâche pas l’objectif.","Le travail régulier rend l’objectif plus proche quand on apprend de chaque étape.","La persévérance simplifie le chemin quand on avance avec méthode.","La persévérance donne de l’élan quand on transforme les difficultés en étapes.","Une priorité claire fait avancer quand on choisit d’avancer.","Une priorité claire transforme l’effort quand on reste concentré sur l’essentiel.","Une priorité claire construit du solide quand on fait simplement le prochain pas utile.","Le calme ouvre la voie quand on travaille avec soin.","Le calme prépare la réussite quand on agit avec régularité.","Le calme rend l’objectif plus proche quand on garde le cap.","L’organisation renforce le résultat quand on ne lâche pas l’objectif.","L’organisation donne de l’élan quand on apprend de chaque étape.","Chaque effort fait avancer quand on avance avec méthode.","Chaque effort simplifie le chemin quand on transforme les difficultés en étapes.","Chaque effort construit du solide quand on choisit d’avancer.","Une solution ouvre la voie quand on reste concentré sur l’essentiel.","Une solution transforme l’effort quand on fait simplement le prochain pas utile.","Une solution fait gagner du temps quand on travaille avec soin.","Le progrès renforce le résultat quand on agit avec régularité.","Le progrès donne de l’élan quand on garde le cap.","Le progrès rend l’objectif plus proche quand on ne lâche pas l’objectif.","Chaque jour simplifie le chemin quand on apprend de chaque étape.","Chaque jour construit du solide quand on avance avec méthode.","Un petit pas fait avancer quand on transforme les difficultés en étapes.","Un petit pas transforme l’effort quand on choisit d’avancer.","Un petit pas fait gagner du temps quand on reste concentré sur l’essentiel.","La constance ouvre la voie quand on fait simplement le prochain pas utile.","La constance prépare la réussite quand on travaille avec soin.","La constance rend l’objectif plus proche quand on agit avec régularité.","Le courage simplifie le chemin quand on garde le cap.","Le courage donne de l’élan quand on ne lâche pas l’objectif.","La patience fait avancer quand on apprend de chaque étape.","La patience transforme l’effort quand on avance avec méthode.","La patience construit du solide quand on transforme les difficultés en étapes.","L’attention ouvre la voie quand on choisit d’avancer.","L’attention prépare la réussite quand on reste concentré sur l’essentiel.","L’attention fait gagner du temps quand on fait simplement le prochain pas utile.","Une bonne méthode renforce le résultat quand on travaille avec soin.","Une bonne méthode donne de l’élan quand on agit avec régularité.","Le travail régulier fait avancer quand on garde le cap.","Le travail régulier simplifie le chemin quand on ne lâche pas l’objectif.","Le travail régulier construit du solide quand on apprend de chaque étape.","La persévérance ouvre la voie quand on avance avec méthode.","La persévérance transforme l’effort quand on transforme les difficultés en étapes.","La persévérance fait gagner du temps quand on choisit d’avancer.","Une priorité claire renforce le résultat quand on reste concentré sur l’essentiel.","Une priorité claire prépare la réussite quand on fait simplement le prochain pas utile.","Une priorité claire rend l’objectif plus proche quand on travaille avec soin.","Le calme simplifie le chemin quand on agit avec régularité.","Le calme construit du solide quand on garde le cap.","L’organisation fait avancer quand on ne lâche pas l’objectif.","L’organisation transforme l’effort quand on apprend de chaque étape.","L’organisation fait gagner du temps quand on avance avec méthode.","Chaque effort ouvre la voie quand on transforme les difficultés en étapes.","Chaque effort prépare la réussite quand on choisit d’avancer.","Chaque effort rend l’objectif plus proche quand on reste concentré sur l’essentiel.","Une solution renforce le résultat quand on fait simplement le prochain pas utile.","Une solution donne de l’élan quand on travaille avec soin.","Le progrès fait avancer quand on agit avec régularité.","Le progrès transforme l’effort quand on garde le cap.","Le progrès construit du solide quand on ne lâche pas l’objectif.","Chaque jour ouvre la voie quand on apprend de chaque étape.","Chaque jour prépare la réussite quand on avance avec méthode.","Chaque jour fait gagner du temps quand on transforme les difficultés en étapes.","Un petit pas renforce le résultat quand on choisit d’avancer.","Un petit pas donne de l’élan quand on reste concentré sur l’essentiel.","Un petit pas rend l’objectif plus proche quand on fait simplement le prochain pas utile.","La constance simplifie le chemin quand on travaille avec soin.","La constance construit du solide quand on agit avec régularité.","Le courage ouvre la voie quand on garde le cap.","Le courage transforme l’effort quand on ne lâche pas l’objectif.","Le courage fait gagner du temps quand on apprend de chaque étape.","La patience renforce le résultat quand on avance avec méthode.","La patience prépare la réussite quand on transforme les difficultés en étapes.","La patience rend l’objectif plus proche quand on choisit d’avancer.","L’attention simplifie le chemin quand on reste concentré sur l’essentiel.","L’attention donne de l’élan quand on fait simplement le prochain pas utile.","Une bonne méthode fait avancer quand on travaille avec soin.","Une bonne méthode transforme l’effort quand on agit avec régularité.","Une bonne méthode fait gagner du temps quand on garde le cap.","Le travail régulier ouvre la voie quand on ne lâche pas l’objectif.","Le travail régulier prépare la réussite quand on apprend de chaque étape.","Le travail régulier rend l’objectif plus proche quand on avance avec méthode.","La persévérance renforce le résultat quand on transforme les difficultés en étapes.","La persévérance donne de l’élan quand on choisit d’avancer.","Une priorité claire fait avancer quand on reste concentré sur l’essentiel.","Une priorité claire simplifie le chemin quand on fait simplement le prochain pas utile.","Une priorité claire construit du solide quand on travaille avec soin.","Le calme ouvre la voie quand on agit avec régularité.","Le calme prépare la réussite quand on garde le cap.","Le calme fait gagner du temps quand on ne lâche pas l’objectif.","L’organisation renforce le résultat quand on apprend de chaque étape.","L’organisation donne de l’élan quand on avance avec méthode.","L’organisation rend l’objectif plus proche quand on transforme les difficultés en étapes.","Chaque effort simplifie le chemin quand on choisit d’avancer.","Chaque effort construit du solide quand on reste concentré sur l’essentiel.","Une solution fait avancer quand on fait simplement le prochain pas utile.","Une solution transforme l’effort quand on travaille avec soin.","Une solution fait gagner du temps quand on agit avec régularité.","Le progrès renforce le résultat quand on garde le cap.","Le progrès prépare la réussite quand on ne lâche pas l’objectif.","Le progrès rend l’objectif plus proche quand on apprend de chaque étape.","Chaque jour simplifie le chemin quand on avance avec méthode.","Chaque jour donne de l’élan quand on transforme les difficultés en étapes.","Un petit pas fait avancer quand on choisit d’avancer.","Un petit pas transforme l’effort quand on reste concentré sur l’essentiel.","Un petit pas construit du solide quand on fait simplement le prochain pas utile.","La constance ouvre la voie quand on travaille avec soin.","La constance prépare la réussite quand on agit avec régularité.","La constance rend l’objectif plus proche quand on garde le cap.","Le courage renforce le résultat quand on ne lâche pas l’objectif.","Le courage donne de l’élan quand on apprend de chaque étape.","La patience fait avancer quand on avance avec méthode.","La patience simplifie le chemin quand on transforme les difficultés en étapes.","La patience construit du solide quand on choisit d’avancer.","L’attention ouvre la voie quand on reste concentré sur l’essentiel.","L’attention transforme l’effort quand on fait simplement le prochain pas utile.","L’attention fait gagner du temps quand on travaille avec soin.","Une bonne méthode renforce le résultat quand on agit avec régularité.","Une bonne méthode donne de l’élan quand on garde le cap.","Une bonne méthode rend l’objectif plus proche quand on ne lâche pas l’objectif.","Le travail régulier simplifie le chemin quand on apprend de chaque étape.","Le travail régulier construit du solide quand on avance avec méthode.","La persévérance fait avancer quand on transforme les difficultés en étapes.","La persévérance transforme l’effort quand on choisit d’avancer.","La persévérance fait gagner du temps quand on reste concentré sur l’essentiel.","Une priorité claire ouvre la voie quand on fait simplement le prochain pas utile.","Une priorité claire prépare la réussite quand on travaille avec soin.","Une priorité claire rend l’objectif plus proche quand on agit avec régularité.","Le calme simplifie le chemin quand on garde le cap.","Le calme donne de l’élan quand on ne lâche pas l’objectif.","L’organisation fait avancer quand on apprend de chaque étape.","L’organisation transforme l’effort quand on avance avec méthode.","L’organisation construit du solide quand on transforme les difficultés en étapes.","Chaque effort ouvre la voie quand on choisit d’avancer.","Chaque effort prépare la réussite quand on reste concentré sur l’essentiel.","Chaque effort fait gagner du temps quand on fait simplement le prochain pas utile.","Une solution renforce le résultat quand on travaille avec soin.","Une solution donne de l’élan quand on agit avec régularité.","Le progrès fait avancer quand on garde le cap.","Le progrès simplifie le chemin quand on ne lâche pas l’objectif.","Le progrès construit du solide quand on apprend de chaque étape.","Chaque jour ouvre la voie quand on avance avec méthode.","Chaque jour transforme l’effort quand on transforme les difficultés en étapes.","Chaque jour fait gagner du temps quand on choisit d’avancer.","Un petit pas renforce le résultat quand on reste concentré sur l’essentiel.","Un petit pas prépare la réussite quand on fait simplement le prochain pas utile.","Un petit pas rend l’objectif plus proche quand on travaille avec soin.","La constance simplifie le chemin quand on agit avec régularité.","La constance construit du solide quand on garde le cap.","Le courage fait avancer quand on ne lâche pas l’objectif.","Le courage transforme l’effort quand on apprend de chaque étape.","Le courage fait gagner du temps quand on avance avec méthode.","La patience ouvre la voie quand on transforme les difficultés en étapes.","La patience prépare la réussite quand on choisit d’avancer.","La patience rend l’objectif plus proche quand on reste concentré sur l’essentiel.","L’attention renforce le résultat quand on fait simplement le prochain pas utile.","L’attention donne de l’élan quand on travaille avec soin.","Une bonne méthode fait avancer quand on agit avec régularité.","Une bonne méthode transforme l’effort quand on garde le cap.","Une bonne méthode construit du solide quand on ne lâche pas l’objectif.","Le travail régulier ouvre la voie quand on apprend de chaque étape.","Le travail régulier prépare la réussite quand on avance avec méthode.","Le travail régulier fait gagner du temps quand on transforme les difficultés en étapes.","La persévérance renforce le résultat quand on choisit d’avancer.","La persévérance donne de l’élan quand on reste concentré sur l’essentiel.","La persévérance rend l’objectif plus proche quand on fait simplement le prochain pas utile.","Une priorité claire simplifie le chemin quand on travaille avec soin.","Une priorité claire construit du solide quand on agit avec régularité.","Le calme ouvre la voie quand on garde le cap.","Le calme transforme l’effort quand on ne lâche pas l’objectif.","Le calme fait gagner du temps quand on apprend de chaque étape.","L’organisation renforce le résultat quand on avance avec méthode.","L’organisation prépare la réussite quand on transforme les difficultés en étapes.","L’organisation rend l’objectif plus proche quand on choisit d’avancer.","Chaque effort simplifie le chemin quand on reste concentré sur l’essentiel.","Chaque effort donne de l’élan quand on fait simplement le prochain pas utile.","Une solution fait avancer quand on travaille avec soin.","Une solution transforme l’effort quand on agit avec régularité.","Une solution fait gagner du temps quand on garde le cap.","Le progrès ouvre la voie quand on ne lâche pas l’objectif.","Le progrès prépare la réussite quand on apprend de chaque étape.","Le progrès rend l’objectif plus proche quand on avance avec méthode.","Chaque jour renforce le résultat quand on transforme les difficultés en étapes.","Chaque jour donne de l’élan quand on choisit d’avancer.","Un petit pas fait avancer quand on reste concentré sur l’essentiel.","Un petit pas simplifie le chemin quand on fait simplement le prochain pas utile.","Un petit pas construit du solide quand on travaille avec soin.","La constance ouvre la voie quand on agit avec régularité.","La constance prépare la réussite quand on garde le cap.","La constance fait gagner du temps quand on ne lâche pas l’objectif.","Le courage renforce le résultat quand on apprend de chaque étape.","Le courage donne de l’élan quand on avance avec méthode.","Le courage rend l’objectif plus proche quand on transforme les difficultés en étapes.","La patience simplifie le chemin quand on choisit d’avancer.","La patience construit du solide quand on reste concentré sur l’essentiel.","L’attention fait avancer quand on fait simplement le prochain pas utile.","L’attention transforme l’effort quand on travaille avec soin.","L’attention fait gagner du temps quand on agit avec régularité.","Une bonne méthode renforce le résultat quand on garde le cap.","Une bonne méthode prépare la réussite quand on ne lâche pas l’objectif.","Une bonne méthode rend l’objectif plus proche quand on apprend de chaque étape.","Le travail régulier simplifie le chemin quand on avance avec méthode.","Le travail régulier donne de l’élan quand on transforme les difficultés en étapes.","La persévérance fait avancer quand on choisit d’avancer.","La persévérance transforme l’effort quand on reste concentré sur l’essentiel.","La persévérance construit du solide quand on fait simplement le prochain pas utile.","Une priorité claire ouvre la voie quand on travaille avec soin.","Une priorité claire prépare la réussite quand on agit avec régularité.","Une priorité claire rend l’objectif plus proche quand on garde le cap.","Le calme renforce le résultat quand on ne lâche pas l’objectif.","Le calme donne de l’élan quand on apprend de chaque étape.","L’organisation fait avancer quand on avance avec méthode.","L’organisation simplifie le chemin quand on transforme les difficultés en étapes.","L’organisation construit du solide quand on choisit d’avancer.","Chaque effort ouvre la voie quand on reste concentré sur l’essentiel.","Chaque effort transforme l’effort quand on fait simplement le prochain pas utile.","Chaque effort fait gagner du temps quand on travaille avec soin.","Une solution renforce le résultat quand on agit avec régularité.","Une solution donne de l’élan quand on garde le cap.","Une solution rend l’objectif plus proche quand on ne lâche pas l’objectif.","Le progrès simplifie le chemin quand on apprend de chaque étape.","Le progrès construit du solide quand on avance avec méthode.","Chaque jour fait avancer quand on transforme les difficultés en étapes.","Chaque jour transforme l’effort quand on choisit d’avancer.","Chaque jour fait gagner du temps quand on reste concentré sur l’essentiel.","Un petit pas ouvre la voie quand on fait simplement le prochain pas utile.","Un petit pas prépare la réussite quand on travaille avec soin.","Un petit pas rend l’objectif plus proche quand on agit avec régularité.","La constance simplifie le chemin quand on garde le cap.","La constance donne de l’élan quand on ne lâche pas l’objectif.","Le courage fait avancer quand on apprend de chaque étape.","Le courage transforme l’effort quand on avance avec méthode.","Le courage construit du solide quand on transforme les difficultés en étapes.","La patience ouvre la voie quand on choisit d’avancer.","La patience prépare la réussite quand on reste concentré sur l’essentiel.","La patience fait gagner du temps quand on fait simplement le prochain pas utile.","L’attention renforce le résultat quand on travaille avec soin.","L’attention donne de l’élan quand on agit avec régularité."];
@@ -7725,6 +7704,7 @@ async function saveScannedNote(){
  }else if(destination==='meetings'){
    record={id,no:nextNo('meeting','RDV'),date:todayISO(),time:'',end:'',type:'Rendez-vous',title:title||'Compte rendu scanné',location:'',participants:'',status:'Planifié',notes:text,actions:'',attachments,source:'scan',importedAt};db.meetings.push(record);archiveType='Scan → Réunion / rendez-vous';
  }else if(destination==='periodic'){
+   if(window.PSTPeriodicMatrixApplying)throw new Error('Synchronisation Excel en cours. Importez ce rapport après la validation.');
    record={id,no:nextNo('periodic','CP'),name:title||'Contrôle périodique scanné',family:db.lists.periodicFamilies?.[0]||'Autre',intervalMonths:12,requirement:text,provider:'',register:'Registre de sécurité',building:'Tous bâtiments',lastDate:todayISO(),nextDate:addMonthsClamped(todayISO(),12),status:'Réalisé',notes:'Importé depuis un scan. Vérifier la périodicité et la prochaine échéance.',attachments,source:'scan',importedAt};db.periodic.push(record);archiveType='Scan → Contrôle périodique';
  }else{
    record={id,no:nextNo('document','DOC'),date:todayISO(),title:title||'Document scanné',category:'Autre',description:text,linkedModule:'Général',attachments,source:'scan',importedAt};db.documents.push(record);archiveType='Document scanné';view='documents';

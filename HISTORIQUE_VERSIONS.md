@@ -1,3 +1,7 @@
+## V147.175 — 08/09/2026 — Excel prioritaire, éditeur d’import et statuts calculés
+
+Le registre est remplacé par le contenu complet de la matrice Excel à la validation, même si des fiches ont changé depuis l’export. Suppressions automatiques, sauvegarde préalable et reprise de l’écriture en cas de révision concurrente. Édition des lignes dans l’aperçu, ajout/retrait avant validation et téléchargement des corrections. Statut Fait calculé depuis le dernier passage et la périodicité ; échéances dépassées en retard ; aucune date de passage inventée. Les autres modules et les données annexes des fiches conservées sont préservés.
+
 ## V147.174 — 08/09/2026 — synchronisation complète Excel
 
 Retour à une seule validation : toute fiche absente de la matrice est supprimée automatiquement, sans sélection ni confirmation supplémentaire. Contrôle des conflits réels, export V4 avec instantané complet, sauvegarde préalable, écriture conditionnelle Supabase et marqueurs anti-réapparition. Les modes de préservation et de sélection des suppressions de la V147.173 sont retirés. Aucune migration de catalogue n’est rejouée sur un registre existant.
