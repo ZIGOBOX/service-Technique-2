@@ -1,4 +1,4 @@
-# Pilotage Service Technique — V147.175
+# Pilotage Service Technique — V147.176
 
 ## Excel prioritaire et suivi des contrôles — 8 septembre 2026
 
@@ -6,7 +6,7 @@ Cette version applique la règle demandée : **le registre des contrôles pério
 
 ### Installation
 
-Décompressez le ZIP complet dans un dossier neuf, sans mélanger les fichiers de plusieurs versions. Publiez son contenu sur votre hébergement habituel et vérifiez la version **147.175**. Rechargez la page sans cache si l'ancienne version apparaît. Ne réinitialisez ni Supabase ni les données du navigateur. Aucun script SQL supplémentaire n'est requis.
+Décompressez le ZIP complet dans un dossier neuf, sans mélanger les fichiers de plusieurs versions. Publiez son contenu sur votre hébergement habituel et vérifiez la version **147.176**. Rechargez la page sans cache si l'ancienne version apparaît. Ne réinitialisez ni Supabase ni les données du navigateur. Aucun script SQL supplémentaire n'est requis.
 
 ### Import et modifications dans l'aperçu
 
@@ -92,3 +92,8 @@ Le correctif ne modifie ni les données intégrées, ni les horaires, ni ChronoT
 ## Correction affichage de version V147.172
 
 Le numéro affiché sur la page de connexion, dans le menu, dans À propos et dans le titre du navigateur est maintenant 147.172. La version précédente du paquet contenait déjà le correctif de validation, mais affichait encore 147.171. Aucun changement de données ni de logique métier n’est apporté par cette correction.
+
+
+## V147.176 — Agenda préparations de salle et cafés
+
+L’Agenda affiche désormais les préparations de salle et les cafés comme événements distincts. La préparation de salle utilise son heure de préparation ; le café utilise son heure de mise en place. Les événements sont visibles dans le calendrier mensuel et dans les vues agenda jour/semaine. Un clic ouvre directement la fiche « Préparation salle & café ». Les filtres « Préparation salle » et « Café » ont été ajoutés.

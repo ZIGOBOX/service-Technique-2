@@ -1,3 +1,12 @@
+## V147.176 — 18/09/2026 — Préparations de salle et cafés visibles dans l’Agenda
+
+- Ajout des préparations de salle dans le calendrier mensuel de l’Agenda personnel.
+- Affichage séparé du café à son heure de mise en place.
+- Même distinction salle/café dans les vues agenda jour/semaine et le tableau de bord.
+- Clic sur une entrée salle/café : ouverture de la fiche de préparation correspondante.
+- Ajout des filtres « Préparation salle » et « Café ».
+- Aucun changement de schéma Supabase requis.
+
 ## V147.175 — 08/09/2026 — Excel prioritaire, éditeur d’import et statuts calculés
 
 Le registre est remplacé par le contenu complet de la matrice Excel à la validation, même si des fiches ont changé depuis l’export. Suppressions automatiques, sauvegarde préalable et reprise de l’écriture en cas de révision concurrente. Édition des lignes dans l’aperçu, ajout/retrait avant validation et téléchargement des corrections. Statut Fait calculé depuis le dernier passage et la périodicité ; échéances dépassées en retard ; aucune date de passage inventée. Les autres modules et les données annexes des fiches conservées sont préservés.

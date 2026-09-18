@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.175';
-const APP_BUILD='08/09/2026';
+const APP_VERSION='147.176';
+const APP_BUILD='18/09/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -4097,6 +4097,33 @@ function renderTeamCalendar(){
 function roomPrepAgendaItems(){
  return Array.isArray(db.roomPreps)?db.roomPreps.filter(x=>!x?.deletedAt):[];
 }
+/* ---------- V147.176 : préparations de salle et cafés dans tous les agendas ---------- */
+function roomPrepAgendaRowsForDate(date,{includeDone=false}={}){
+ const d=normalizeDateValue(date),rows=[];
+ if(!d)return rows;
+ for(const x of roomPrepAgendaItems().filter(v=>normalizeDateValue(v.date)===d)){
+   if(!includeDone&&normalizeText(x.status)==='termine')continue;
+   const location=[x.room,x.building,x.floor].filter(Boolean).join(' · ');
+   const common={...x,date:d,end:'',location,priority:'Normale',source:'roomprep'};
+   rows.push({...common,start:x.time||'',time:x.time||'',type:'Préparation salle',title:`🪑 Préparation salle · ${x.room||'Salle'}`,roomPrepKind:'room'});
+   if(x.coffee?.enabled){
+     const people=Number(x.coffee?.people||x.people||0);
+     rows.push({...common,start:x.coffee?.time||x.time||'',time:x.coffee?.time||x.time||'',type:'Café',title:`☕ Café · ${x.room||'Salle'}${people?` · ${people} pers.`:''}`,roomPrepKind:'coffee'});
+   }
+ }
+ return rows.sort((a,b)=>`${a.start||'99:99'}${a.title||''}`.localeCompare(`${b.start||'99:99'}${b.title||''}`));
+}
+function roomPrepAgendaRowsForMonth(month){
+ const ym=String(month||'').slice(0,7);if(!/^\d{4}-\d{2}$/.test(ym))return [];
+ const rows=[];
+ for(const x of roomPrepAgendaItems().filter(v=>normalizeDateValue(v.date).slice(0,7)===ym)){
+   rows.push(...roomPrepAgendaRowsForDate(x.date,{includeDone:true}).filter(v=>String(v.id)===String(x.id)));
+ }
+ // roomPrepAgendaRowsForDate travaille par date : dédoublonnage par fiche + type.
+ const seen=new Set();
+ return rows.filter(x=>{const k=`${x.id}|${x.type}`;if(seen.has(k))return false;seen.add(k);return true})
+   .sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+}
 function wasteAgendaItemForDate(d){
  const api=window.PSTWeatherWaste;if(!api?.collectionInfo||!api?.binForDate||!api?.localISO)return null;
  const day=parseDate(d),wd=day.getDay();let friday=null;
@@ -4176,7 +4203,7 @@ function eventsForDate(d){
   ...(db.works||[]).filter(x=>onDateOrDue(x)&&active(x)).map(x=>({...x,date:d,start:x.time||'',source:'work',title:`Chantier/GPA · ${x.title||'Action'}`})),
   ...(db.issues||[]).filter(x=>onDateOrDue(x)&&active(x)).map(x=>({...x,date:d,start:x.time||'',source:'issue',title:`${normalizeText(x.priority)==='urgente'?'⚠️ ':''}Sécurité/qualité · ${x.title||x.description||'Action'}`})),
   ...periodicEventsForDateV165(d),
-  ...roomPrepAgendaItems().filter(x=>sameDay(x.date)&&normalizeText(x.status)!=='termine').map(x=>({...x,start:x.time||x.coffee?.time||'',source:'roomprep',title:`Préparation salle${x.coffee?.enabled?' + café':''} · ${x.room||'Salle'}`})),
+  ...roomPrepAgendaRowsForDate(d),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`})),
   ...([meterReadingItemForDate(d)].filter(Boolean))
  ];
@@ -5024,8 +5051,9 @@ function personalMonthEventClass(x){
  return 'appointment';
 }
 function personalMonthEventHTML(x){
- const cls=personalMonthEventClass(x),tm=[x.start,x.end].filter(Boolean).join('–'),place=x.location||'';
+ const cls=x?.source==='roomprep'?(x.roomPrepKind==='coffee'?'reminder':'task'):personalMonthEventClass(x),tm=[x.start,x.end].filter(Boolean).join('–'),place=x.location||'';
  const body=`<span class="personal-cal-event-time">${esc(tm||'Toute la journée')}</span><strong>${esc(x.title||'Événement')}</strong>${place?`<small>📍 ${esc(place)}</small>`:''}`;
+ if(x?.source==='roomprep')return `<button type="button" class="personal-cal-event ${cls} agenda-action roomprep" data-agenda-source="roomprep" data-agenda-id="${esc(x.id||'')}" title="Ouvrir la préparation salle / café">${body}</button>`;
  if(x.readOnlyRecurring)return `<button type="button" class="personal-cal-event ${cls} recurring" data-agenda-source="meter-reading" data-agenda-id="${esc(x.id||'')}" title="${esc(x.title||'Relevé des compteurs')}">${body}</button>`;
  return `<button type="button" class="personal-cal-event ${cls}" data-edit-type="personal" data-edit-id="${esc(x.id||'')}" title="Modifier : ${esc(x.title||'Événement')}">${body}</button>`;
 }
@@ -5053,7 +5081,8 @@ function renderPersonal(){
  const m=$('#personalMonth').value||monthISO(),t=$('#personalType').value,st=$('#personalStatus').value;
  const regular=(db.personalEvents||[]).filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)&&(!st||x.status===st));
  const recurring=meterReadingItemsForMonth(m).filter(x=>(!t||x.type===t)&&(!st||x.status===st));
- const arr=[...regular,...recurring].sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+ const roomPrep=roomPrepAgendaRowsForMonth(m).filter(x=>(!t||x.type===t)&&(!st||x.status===st));
+ const arr=[...regular,...recurring,...roomPrep].sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
  const personalTable=$('#personalTable');if(personalTable)personalTable.innerHTML=arr.length?arr.map(x=>`<tr>
    <td>${fmtDate(x.date)}</td>
    <td>${esc([x.start,x.end].filter(Boolean).join('–')||'—')}</td>
@@ -5062,13 +5091,13 @@ function renderPersonal(){
    <td>${esc(x.location||'—')}</td>
    <td>${badge(x.priority)}</td>
    <td>${badge(x.status)}</td>
-   <td>${x.readOnlyRecurring?'<span class="meter-reading-chip">Automatique</span>':editButton('personal',x.id)}</td>
+   <td>${x.source==='roomprep'?`<button type="button" class="ghost small agenda-action" data-agenda-source="roomprep" data-agenda-id="${esc(x.id||'')}">Ouvrir</button>`:(x.readOnlyRecurring?'<span class="meter-reading-chip">Automatique</span>':editButton('personal',x.id))}</td>
   </tr>`).join(''):emptyRow(8);
  const personalCards=$('#personalCards');if(personalCards)personalCards.innerHTML=cardList(arr.map(x=>`<article class="list-card">
    <div><strong>${fmtDate(x.date)} ${esc(x.start||'')}</strong>${badge(x.status)}</div>
    <h3>${esc(x.title)}</h3>
    <p>${esc(x.type)} · ${esc(x.location||'Sans lieu')}</p>
-   ${x.readOnlyRecurring?'<span class="meter-reading-chip">Dernier jour ouvré du mois</span>':`<button type="button" data-edit-type="personal" data-edit-id="${x.id}">Modifier</button>`}
+   ${x.source==='roomprep'?`<button type="button" class="agenda-action" data-agenda-source="roomprep" data-agenda-id="${esc(x.id||'')}">Ouvrir la préparation</button>`:(x.readOnlyRecurring?'<span class="meter-reading-chip">Dernier jour ouvré du mois</span>':`<button type="button" data-edit-type="personal" data-edit-id="${x.id}">Modifier</button>`) }
   </article>`));
  renderPersonalMonthCalendar(arr,m);
  renderMeterReadingsAgenda();
@@ -6391,7 +6420,7 @@ function exportCSV(module){
 }
 /* ---------- Initialisation des listes et rendu global ---------- */
 function fillSelect(id,items,keep=true){const e=document.getElementById(id);if(!e)return;const old=keep?e.value:'';const first=e.querySelector('option[value=""]')?.outerHTML||'';e.innerHTML=first+selectOptions(items,old)}
-function hydrateSelects(){fillSelect('personalType',db.lists.personalTypes);fillSelect('personalStatus',db.lists.generalStatuses);for(const id of ['rotationAgent','planningAgent','absenceAgent','issueAgent']){const e=$(`#${id}`);if(e){const old=e.value;e.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','')}}renderActivityAgentFilter();
+function hydrateSelects(){const personalTypes=[...new Set([...(db.lists.personalTypes||[]),'Préparation salle','Café'])];const roomPrepStatuses=roomPrepAgendaItems().map(x=>x.status).filter(Boolean);const personalStatuses=[...new Set([...(db.lists.generalStatuses||[]),...roomPrepStatuses])];fillSelect('personalType',personalTypes);fillSelect('personalStatus',personalStatuses);for(const id of ['rotationAgent','planningAgent','absenceAgent','issueAgent']){const e=$(`#${id}`);if(e){const old=e.value;e.innerHTML='<option value="">Tous les agents</option>'+agentOptions(old).replace('<option value="">Choisir un agent</option>','')}}renderActivityAgentFilter();
 fillSelect('activityTypeFilter',AGENT_ACTIVITY_TYPES);
 fillSelect('planningSignal',['Conforme','Heures supplémentaires','Heures manquantes','Absence']);fillSelect('absenceType',db.lists.dayTypes.filter(isAbsenceType));fillSelect('absenceStatus',['Demandée','Validée','Refusée','Annulée']);fillSelect('issueCategory',db.lists.issueCategories);fillSelect('issueStatus',db.lists.generalStatuses);fillSelect('periodicFamily',db.lists.periodicFamilies);fillSelect('periodicStatus',['Fait','En retard','À jour','À faire','À prévoir','Prévu','Non renseigné','Pas prévu','À planifier','Planifié','Clôturé','En attente','Non applicable']);const pb=$('#periodicBuilding');if(pb){const old=pb.value;pb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}const cb=$('#cleanBuilding');if(cb){const old=cb.value;cb.innerHTML='<option value="">Tous les bâtiments</option>'+buildingOptions(old)}fillSelect('cleanRoomType',db.lists.roomTypes);fillSelect('cleanStatus',db.lists.cleaningStatuses);fillSelect('cleaningGuideType',Object.keys(GUIDE));fillSelect('maintenanceStatus',db.lists.maintenanceStatuses);fillSelect('maintenancePriority',db.lists.priorities);fillSelect('maintenanceFamily',db.lists.maintenanceFamilies);fillSelect('requestStatus',db.lists.generalStatuses);fillSelect('requestType',db.lists.requestTypes);fillSelect('workStatus',db.lists.generalStatuses);fillSelect('workType',db.lists.workTypes);fillSelect('meetingType',db.lists.meetingTypes);fillSelect('noteCategory',db.lists.noteCategories);fillSelect('notePriority',db.lists.priorities);fillSelect('noteStatus',db.lists.generalStatuses);fillSelect('documentCategory',db.lists.documentCategories);const vp=$('#vacationReportPeriod');if(vp){const old=vp.value;vp.innerHTML=selectOptions(db.vacations,old,x=>`${x.name} — ${fmtDate(x.start)}`,x=>x.id)}const csv=$('#csvModule');if(csv){const opts=[['agents','Agents'],['agentDays','Horaires, congés et absences'],['agentActivities','Activité des agents'],['cleaning','Contrôles ménage'],['maintenance','Maintenance'],['requests','Demandes direction'],['works','Chantiers / GPA'],['meetings','Réunions'],['issues','Sécurité / qualité'],['periodic','Contrôles périodiques'],['notes','Notes'],['vacations','Vacances'],['documents','Documents']];const old=csv.value;csv.innerHTML=selectOptions(opts,old,x=>x[1],x=>x[0])}}
 function renderReportPreview(){if(!$('#reportPreview'))return;const r=reportData('daily');$('#reportPreview').innerHTML=`<h3>${esc(r.title)} — ${esc(r.subtitle)}</h3>${r.html}`}
