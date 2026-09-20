@@ -961,3 +961,96 @@ body.rc-pos-open{overflow:hidden!important}
 .periodic-deletion-controls{padding:12px;border:1px solid #d89a9a;border-radius:8px;background:#fff8f8;max-height:290px;overflow:auto}
 .periodic-deletion-controls h4{margin:0 0 10px}.periodic-delete-row{margin:8px 0;padding:6px;border-bottom:1px solid #eadada}
 .periodic-import-conflict{background:#fff3d9}.periodic-import-preserved{background:#f0f5fb}
+
+/* ======================================================================
+   V147.177 — Formulaires "logiciel de service" / saisie tactile
+   Inspiration caisse / poste de service : grosses touches et zones nettes.
+   ====================================================================== */
+#modal.service-dialog{width:min(1120px,98vw);background:#e8eef3;border-radius:16px;overflow:hidden}
+#modal.service-dialog .modal-head{background:linear-gradient(135deg,#123a5b,#1e648c);color:#fff;border:0;padding:15px 18px}
+#modal.service-dialog .modal-head h3{font-size:20px;letter-spacing:.01em}
+#modal.service-dialog .modal-head .icon-btn{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.25)}
+#modal.service-dialog #modalBody{background:#e8eef3;padding:14px 16px 18px;max-height:72vh}
+#modal.service-dialog .modal-actions{background:#dce5ec;border-top:1px solid #c9d5df;padding:12px 16px;gap:10px;position:sticky;bottom:0;z-index:5}
+#modal.service-dialog .modal-actions button{min-height:48px;min-width:138px;font-size:13px;border-radius:9px}
+#modal.service-dialog #modalSave{background:linear-gradient(135deg,#168b5a,#23aa72);box-shadow:0 5px 14px rgba(21,132,86,.25)}
+#modal.service-dialog .form-grid{gap:10px}
+#modal.service-dialog .service-field-card,#modal.service-dialog .form-grid>label{background:#fff;border:1px solid #cbd7e0;border-radius:10px;padding:10px;box-shadow:0 2px 7px rgba(24,55,78,.05);font-size:11px;color:#42596c}
+#modal.service-dialog .form-grid>label>input,#modal.service-dialog .form-grid>label>select,#modal.service-dialog .form-grid>label>textarea{margin-top:2px;min-height:47px;border-radius:7px;border-color:#bdcbd7;background:#fdfefe;font-size:14px}
+#modal.service-dialog textarea{min-height:96px}
+#modal.service-dialog .attachment-box{background:#fff;border:1px solid #cbd7e0;border-radius:10px;padding:12px}
+
+.service-workflow{display:grid;gap:12px}
+.service-workflow-banner{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;background:#fff;border:1px solid #c8d4de;border-left:6px solid #1597c6;border-radius:11px;padding:12px 14px;box-shadow:0 3px 10px rgba(29,67,92,.06)}
+.service-workflow-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:9px;background:#e7f6fb;font-size:27px}
+.service-workflow-banner strong{display:block;font-size:16px;color:#163a54}.service-workflow-banner small{display:block;margin-top:3px;color:#647887;font-weight:600}
+.service-workflow-no{background:#133d5c;color:#fff;border-radius:7px;padding:8px 10px;font-size:11px;font-weight:900;white-space:nowrap}
+.service-form-section{background:#f5f8fa;border:1px solid #cbd7e0;border-radius:11px;padding:11px}
+.service-form-section.accent{background:#eef8fb;border-color:#a9d6e6}
+.service-section-title{display:flex;align-items:center;gap:9px;margin:0 0 10px}
+.service-section-title>span{width:31px;height:31px;display:grid;place-items:center;border-radius:7px;background:#174d72;color:#fff;font-weight:900;font-size:14px;flex:0 0 auto}
+.service-section-title strong{display:block;font-size:13px;color:#173b55}.service-section-title small{display:block;margin-top:2px;color:#70818d;font-size:10px;font-weight:600}
+.maintenance-workflow .service-form-section.accent .form-grid>label:first-child{grid-column:1/-1}
+.maintenance-workflow .attachment-box{grid-column:1/-1}
+
+/* Grosses touches qui remplacent visuellement certains menus déroulants. */
+.service-native-select{position:absolute!important;width:1px!important;height:1px!important;min-height:1px!important;padding:0!important;margin:0!important;opacity:0!important;pointer-events:none!important;clip-path:inset(50%)}
+.service-choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:7px;margin-top:4px;width:100%}
+.service-choice{min-height:54px;border:1px solid #b9c8d4;border-radius:7px;padding:7px 8px;background:#eaf0f4;color:#203b50;display:flex;align-items:center;justify-content:center;gap:6px;text-align:center;font-size:11px;font-weight:800;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:transform .08s ease,box-shadow .12s ease,filter .12s ease,border-color .12s ease}
+.service-choice:hover{filter:brightness(.98);border-color:#7f9bae}.service-choice:active{transform:translateY(1px)}
+.service-choice.active{border-color:#123e5e;box-shadow:0 0 0 3px rgba(17,81,121,.18),inset 0 -3px 0 rgba(0,0,0,.08);font-weight:900}
+.service-choice-icon{font-size:17px;line-height:1}.service-choice strong{font:inherit;line-height:1.15}
+.service-choice[data-tone="cyan"]{background:#d9f4fb}.service-choice[data-tone="blue"]{background:#dfeeff}.service-choice[data-tone="violet"]{background:#eee6ff}.service-choice[data-tone="teal"]{background:#dcf4ef}.service-choice[data-tone="amber"]{background:#fff0c9}.service-choice[data-tone="rose"]{background:#ffe3ed}.service-choice[data-tone="slate"]{background:#e9edf1}.service-choice[data-tone="orange"]{background:#ffe0ba}.service-choice[data-tone="green"]{background:#d8f3df}.service-choice[data-tone="red"]{background:#ffd9dc}
+.service-choice[data-tone="cyan"].active{background:#7bd9ed}.service-choice[data-tone="blue"].active{background:#91bff2}.service-choice[data-tone="violet"].active{background:#baa0ea}.service-choice[data-tone="teal"].active{background:#8fd8c9}.service-choice[data-tone="amber"].active{background:#f2cb6a}.service-choice[data-tone="rose"].active{background:#f1a4c0}.service-choice[data-tone="slate"].active{background:#b9c5cf}.service-choice[data-tone="orange"].active{background:#f1b66f}.service-choice[data-tone="green"].active{background:#86cfa0}.service-choice[data-tone="red"].active{background:#ef9099}
+
+/* Poste de préparation salle / café */
+#room-prep.service-view .section-actions{background:#153f5f;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 7px 20px rgba(13,57,88,.13)}
+#room-prep.service-view .section-actions p{color:#d8e7f1}
+#room-prep.service-view .section-actions .ghost{background:#fff;color:#174767;border-color:#fff}
+#roomPrepEditorPanel.service-workstation{background:#e7edf2;border-color:#c6d2dc;padding:14px;box-shadow:0 9px 26px rgba(20,55,80,.11)}
+#roomPrepEditorPanel .panel-head{background:#fff;border:1px solid #cbd7e0;border-radius:11px;padding:11px 13px;margin-bottom:10px}
+.roomprep-service-banner{display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:center;background:#163f5f;color:#fff;border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.roomprep-service-banner>span{width:46px;height:46px;border-radius:9px;display:grid;place-items:center;background:#fff;color:#173f5e;font-size:25px}.roomprep-service-banner strong{display:block;font-size:15px}.roomprep-service-banner small{display:block;margin-top:3px;color:#d6e7f2;font-size:10px;font-weight:600}
+.roomprep-import-box.service-import{background:#f9fbfc;border-style:solid;border-color:#c6d3dc;margin-bottom:10px}
+.roomprep-service-section-title{display:flex;align-items:center;gap:9px;background:#f7f9fb;border:1px solid #c7d3dc;border-radius:9px;padding:9px 11px;margin:10px 0 8px}
+.roomprep-service-section-title>span{width:31px;height:31px;display:grid;place-items:center;border-radius:7px;background:#174d72;color:#fff;font-weight:900}.roomprep-service-section-title strong{display:block;font-size:12px;color:#173b55}.roomprep-service-section-title small{display:block;font-size:9px;color:#70818d;margin-top:2px}
+.roomprep-grid.service-entry-grid{background:#f1f5f8;border:1px solid #cbd7e0;border-radius:10px;padding:10px}
+.roomprep-grid.service-entry-grid>label,.roomprep-block>label,.service-observations{background:#fff;border:1px solid #c9d5de;border-radius:8px;padding:9px;box-shadow:0 2px 6px rgba(25,55,75,.04)}
+.roomprep-grid.service-entry-grid input,.roomprep-grid.service-entry-grid select,.roomprep-block input,.roomprep-block select,.roomprep-block textarea,.service-observations textarea{min-height:46px;font-size:13px;border-radius:7px}
+.roomprep-columns{gap:11px}
+.roomprep-block{border-radius:10px;border:1px solid #c6d2dc;padding:11px;background:#f3f6f8}
+.roomprep-block h4{margin:0;font-size:16px}.service-block-help{font-size:10px;color:#667b88;margin:4px 0 10px}
+.service-room-block{border-top:5px solid #3ba4ca}.service-coffee-block{border-top:5px solid #c78b2b;background:#f7f3e9}
+.roomprep-block .service-choice-grid{grid-template-columns:repeat(auto-fit,minmax(92px,1fr))}
+.roomprep-block .service-choice{min-height:51px}
+.roomprep-special-options{align-items:start}
+.roomprep-checks{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.roomprep-checks label{min-height:51px;padding:9px!important;border:1px solid #bdcbd6!important;border-radius:7px!important;background:#eef3f6!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;cursor:pointer;transition:.12s;font-size:11px!important}
+.roomprep-checks label:nth-child(4n+1){background:#e4f5fb!important}.roomprep-checks label:nth-child(4n+2){background:#eee8fb!important}.roomprep-checks label:nth-child(4n+3){background:#fff0d6!important}.roomprep-checks label:nth-child(4n+4){background:#e4f4ec!important}
+.roomprep-checks label:has(input:checked){border-color:#174d72!important;box-shadow:0 0 0 3px rgba(23,77,114,.15),inset 0 -3px 0 rgba(0,0,0,.06);filter:saturate(1.25)}
+.roomprep-checks input[type="checkbox"]{width:22px;height:22px;min-height:22px;accent-color:#174d72;flex:0 0 auto}
+.service-stepper{display:grid;grid-template-columns:48px minmax(62px,1fr) 48px;gap:6px;align-items:stretch;margin-top:2px}
+.service-stepper input{text-align:center;font-size:17px!important;font-weight:900;min-width:0}
+.service-stepper-btn{min-height:46px;border-radius:7px;background:#174d72;color:#fff;font-size:20px;padding:0;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}
+.service-stepper-btn:active{transform:translateY(1px);box-shadow:none}
+.service-observations{display:grid!important;margin-top:10px;font-size:11px!important}.service-observations textarea{margin-top:4px}
+#roomPrepEditorPanel .roomprep-save-actions{background:#dfe7ed;border:1px solid #c3d0da;border-radius:10px;bottom:6px;padding:9px}
+#roomPrepEditorPanel #roomPrepSave{background:linear-gradient(135deg,#168b5a,#23aa72);min-height:50px;font-size:13px}
+#roomPrepEditorPanel #roomPrepReset,#roomPrepEditorPanel #roomPrepDeleteCurrent{min-height:50px}
+
+@media(max-width:760px){
+ #modal.service-dialog{width:100vw;max-width:100vw;max-height:100vh;border-radius:0;margin:0}
+ #modal.service-dialog #modalBody{max-height:calc(100vh - 132px);padding:9px}
+ #modal.service-dialog .modal-head{padding:12px 13px}#modal.service-dialog .modal-head h3{font-size:17px}
+ #modal.service-dialog .modal-actions{padding:8px;display:grid;grid-template-columns:1fr 1fr}
+ #modal.service-dialog .modal-actions .danger{grid-column:1/-1;margin:0}#modal.service-dialog .modal-actions button{min-width:0;width:100%}
+ .service-workflow-banner{grid-template-columns:auto 1fr}.service-workflow-no{grid-column:1/-1;justify-self:start}.service-workflow-banner small{font-size:9px}
+ .service-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.service-choice{min-height:57px;padding:8px 6px}
+ .roomprep-service-banner{grid-template-columns:auto 1fr}.roomprep-grid.service-entry-grid{padding:8px}
+ .roomprep-checks{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:430px){
+ .service-choice-grid,.roomprep-block .service-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .roomprep-checks{grid-template-columns:1fr 1fr!important}.service-stepper{grid-template-columns:50px 1fr 50px}
+ .roomprep-service-banner>span{width:40px;height:40px}.roomprep-service-banner small{font-size:9px}
+}

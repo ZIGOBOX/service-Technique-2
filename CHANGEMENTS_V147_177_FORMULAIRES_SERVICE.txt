@@ -1,0 +1,37 @@
+V147.177 — 20/09/2026 — FORMULAIRES TYPE « LOGICIEL DE SERVICE »
+
+OBJECTIF
+- Transformer les formulaires en interfaces plus tactiles et plus proches d'un logiciel de service / caisse.
+- Priorité donnée à la demande d'intervention, à la préparation de salle et au café.
+
+MODIFICATIONS
+1. Tous les formulaires ouverts dans la fenêtre principale
+- En-tête de formulaire plus lisible.
+- Champs présentés comme des cartes.
+- Boutons d'enregistrement plus grands.
+- Choix Type / Catégorie / Domaine / Priorité / Statut transformés en grosses touches colorées lorsque la liste est adaptée.
+- Affichage responsive téléphone / tablette / PC.
+
+2. Demande d'intervention
+- Nouveau titre « Demande d'intervention / maintenance ».
+- Formulaire découpé en 5 étapes : demande, domaine/priorité/statut, lieu, organisation, diagnostic/réalisation.
+- Domaines de maintenance sous forme de grosses touches avec pictogrammes.
+- Priorités et statuts sous forme de touches colorées.
+- Numéro d'intervention visible dans l'en-tête du formulaire.
+- Conservation de la logique d'enregistrement et de synchronisation existante.
+
+3. Préparation de salle & café
+- Présentation « poste de préparation ».
+- Disposition de salle sous forme de grosses touches.
+- Oui / Non pour café, cloison et autre préparation sous forme de touches.
+- Statut sous forme de touches.
+- Compteurs + / - pour nombre de personnes, tables, chaises et café.
+- Équipements de salle transformés visuellement en touches activables.
+- Bloc café clairement séparé du bloc préparation de salle.
+- Conservation des données, de l'agenda, de l'impression et de la synchronisation existants.
+
+FICHIERS MODIFIÉS
+- index.html
+- app.js
+- room-prep.js
+- styles.css

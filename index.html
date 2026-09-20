@@ -7,9 +7,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#075ca8">
-  <title>Pilotage Service Technique V147.176</title>
+  <title>Pilotage Service Technique V147.177</title>
   <link rel="icon" href="./assets/logo-service-technique.png">
-  <link rel="stylesheet" href="./styles.css?v=147.171-20260907-entretien-loge">
+  <link rel="stylesheet" href="./styles.css?v=147.177-20260920-formulaires-service">
 
 <style id="v14713-fixes">
 /* Barres horizontales locales aux plannings : elles ne repartent plus avec la page. */
@@ -881,7 +881,7 @@
     <form class="auth-card" id="authForm" novalidate>
       <img src="./assets/logo-service-technique.png" alt="Service technique" class="auth-logo" data-app-logo="1">
       <h1>Pilotage Service Technique</h1>
-      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.176 — 18/09/2026</p>
+      <p>Base synchronisée entre téléphone et ordinateur.</p><p id="authVersion" class="app-version">Version 147.177 — 20/09/2026</p>
       <label>Adresse e-mail<input id="authEmail" type="email" autocomplete="username" placeholder="prenom.nom@exemple.fr"></label>
       <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password"></label>
       <button class="primary" id="authLogin" type="submit">Se connecter</button>
@@ -955,7 +955,7 @@
         </div>
       </details>
     </nav>
-    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.176 — 18/09/2026</small></div>
+    <div class="sidebar-footer"><button id="logoutBtn" class="ghost small hidden">Déconnexion</button><span id="saveState">Données Supabase uniquement</span><small id="sidebarVersion" class="app-version">Version 147.177 — 20/09/2026</small></div>
   </aside>
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
@@ -1275,7 +1275,7 @@
       </article>
 
     </section>
-<section class="view" id="room-prep">
+<section class="view service-view" id="room-prep">
       <div class="section-actions">
         <div>
           <h3>Préparation de salle & café</h3>
@@ -1286,17 +1286,19 @@
         </div>
       </div>
 
-      <article class="panel" id="roomPrepEditorPanel">
+      <article class="panel service-workstation" id="roomPrepEditorPanel">
         <div class="panel-head">
           <div><h3 id="roomPrepEditorTitle">Nouvelle préparation</h3><p class="muted">La préparation apparaîtra aussi dans Agenda personnel.</p></div>
         </div>
-        <div class="roomprep-import-box">
+        <div class="roomprep-service-banner"><span>☕</span><div><strong>Poste de préparation</strong><small>Une saisie tactile type logiciel de service : grosses touches, choix rapides et quantités faciles à ajuster.</small></div></div>
+        <div class="roomprep-import-box service-import">
           <strong>Importer une demande PDF / photo</strong>
           <p class="muted">Le document est analysé localement quand le texte est accessible. Vérifiez toujours les informations proposées avant enregistrement.</p>
           <input type="file" id="rpImportFile" accept=".pdf,image/*">
           <div id="rpImportStatus" class="hint"></div>
         </div>
-        <div class="roomprep-grid">
+        <div class="roomprep-service-section-title"><span>1</span><div><strong>Date, lieu et demandeur</strong><small>Renseignez les informations générales.</small></div></div>
+        <div class="roomprep-grid service-entry-grid">
           <label>Date<input type="date" id="rpDate"></label>
           <label>Heure<input type="time" id="rpTime"></label>
           <label>Bâtiment<select id="rpBuilding"></select></label>
@@ -1312,8 +1314,8 @@
         </div>
 
         <div class="roomprep-columns">
-          <div class="roomprep-block">
-            <h4>🪑 Préparation de salle</h4>
+          <div class="roomprep-block service-room-block">
+            <h4>🪑 Préparation de salle</h4><p class="service-block-help">Choisissez la disposition puis appuyez sur les équipements à prévoir.</p>
             <label>Disposition<select id="rpLayout"><option>Réunion</option><option>Classe</option><option>U</option><option>Conférence</option><option>Cocktail</option><option>Autre</option></select></label>
             <div class="roomprep-small-grid">
               <label>Tables<input type="number" min="0" id="rpTables" value="0"></label>
@@ -1336,8 +1338,8 @@
             </div>
           </div>
 
-          <div class="roomprep-block">
-            <h4>☕ Mise en place café</h4>
+          <div class="roomprep-block service-coffee-block">
+            <h4>☕ Mise en place café</h4><p class="service-block-help">Activez le café puis indiquez le nombre de personnes et l’heure.</p>
             <label>Café à prévoir<select id="rpCoffee"><option value="Non">Non</option><option value="Oui">Oui</option></select></label>
             <label>Nombre de personnes pour le café<input type="number" min="0" id="rpCoffeePeople" value="0"></label>
             <label>Heure de mise en place café<input type="time" id="rpCoffeeTime"></label>
@@ -1345,7 +1347,7 @@
           </div>
         </div>
 
-        <label>Observations<textarea id="rpNotes" rows="3" placeholder="Consignes particulières"></textarea></label>
+        <label class="service-observations">Observations / consignes<textarea id="rpNotes" rows="3" placeholder="Consignes particulières"></textarea></label>
         <div class="roomprep-save-actions">
           <button type="button" class="danger-lite hidden" id="roomPrepDeleteCurrent">Supprimer cette préparation</button>
           <button type="button" class="ghost" id="roomPrepReset">Réinitialiser</button>
@@ -1361,7 +1363,7 @@
     </section>
 
 <section class="view" id="maintenance">
-      <div class="section-actions"><div><h3>Interventions de maintenance</h3><p>Demandes, diagnostic, affectation, suivi et clôture.</p></div><button class="primary" id="newMaintenance">＋ Intervention</button></div>
+      <div class="section-actions"><div><h3>Demandes d’intervention / maintenance</h3><p>Saisie rapide type logiciel de service : demande, domaine, lieu, affectation, suivi et clôture.</p></div><button class="primary" id="newMaintenance">＋ Demande d’intervention</button></div>
       <div class="filters"><select id="maintenanceStatus"><option value="">Tous les statuts</option></select><select id="maintenancePriority"><option value="">Toutes les priorités</option></select><select id="maintenanceFamily"><option value="">Tous les domaines</option></select><button class="ghost" data-print="maintenance">Imprimer</button></div>
       <div class="table-wrap"><table><thead><tr><th>N°</th><th>Date</th><th>Lieu</th><th>Domaine</th><th>Problème</th><th>Priorité</th><th>Affecté à</th><th>Échéance</th><th>Statut</th><th></th></tr></thead><tbody id="maintenanceTable"></tbody></table></div>
     </section>
@@ -1670,7 +1672,7 @@
       <article class="panel"><div class="panel-head"><h3>Autres listes déroulantes</h3><p class="muted">Ajoutez ou supprimez des choix sans modifier le code.</p></div><div id="listSettings" class="list-settings"></div></article>
       <article class="panel"><h3>Notifications ménage</h3><label class="toggle-row"><input id="cleaningNotificationsEnabled" type="checkbox"><span><strong>Activer les notifications ménage</strong><small>Vous gardez la maîtrise de la cloche.</small></span></label><div class="toggle-grid compact"><label><input id="cleaningNotifyNever" type="checkbox"> Locaux jamais contrôlés</label><label><input id="cleaningNotifyOverdue" type="checkbox"> Locaux non contrôlés depuis trop longtemps</label><label><input id="cleaningNotifyPlanned" type="checkbox"> Contrôles prévus mais non réalisés</label></div><div class="form-grid"><label>Délai local ménage non contrôlé (jours)<input id="cleaningAlertDays" type="number" min="1" value="30"></label><label>Proximité rendez-vous (jours)<input id="meetingAlertDays" type="number" min="1" value="3"></label></div><p class="hint">Dans la cloche, une alerte ménage peut être marquée traitée, masquée 24 h, rappelée demain, dans 7 jours ou 30 jours, ou supprimée. Une alerte supprimée ne revient que si la situation change.</p></article><article class="panel"><h3>Archivage automatique</h3><p class="hint">Une archive de la semaine précédente est créée automatiquement à l’ouverture. Le 31 août, les compteurs annuels de congés, RTT, récupérations et heures supplémentaires sont clôturés avant l’ouverture de la nouvelle année scolaire.</p></article>
       <article class="panel backup-panel"><h3>Sauvegarde des données</h3><p>La base est enregistrée dans le navigateur. Faites régulièrement une sauvegarde JSON.</p><div><button class="primary" id="exportBackup">Sauvegarde JSON</button><label class="ghost file-label">Restaurer<input type="file" id="importBackup" accept="application/json"></label><button class="ghost" id="restoreReferenceData">Restaurer les données fournies</button><button class="ghost" id="runDiagnostic">Vérifier l’application</button><button class="danger" id="resetData">Réinitialiser</button></div></article>
-      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.176 — 18/09/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
+      <article class="panel"><h3>À propos</h3><p id="aboutVersion" class="app-version">Version 147.177 — 20/09/2026</p></article><article class="panel sources-panel"><h3>Base réglementaire du catalogue</h3><p>ERP type R, règlement de sécurité incendie (EL 19, DF 10, CH 58, GC 21-22, MS 38, MS 73, R 33), ascenseurs, portes automatiques, appareils de levage, légionelles, radon et équipements sportifs. Validez toujours les contrôles avec le registre de sécurité et les prestataires compétents.</p></article>
     </section>
   </main>
 
@@ -1740,7 +1742,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
   <script src="./entretien-planning.js?v=147.171-20260907"></script>
-  <script src="./app.js?v=147.176-20260918-agenda-salle-cafe"></script>
+  <script src="./app.js?v=147.177-20260920-formulaires-service"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./jszip.min.js?v=3.10.1"></script>
@@ -1753,7 +1755,7 @@
   <script src="./weather-waste.js?v=147.83-20260821-audit"></script>
 
   <script src="./room-cleaning.js?v=147.155-20260828-tactile-frequencies"></script>
-  <script src="./room-prep.js?v=147.83-20260821-audit"></script>
+  <script src="./room-prep.js?v=147.177-20260920-formulaires-service"></script>
 
   <!-- V147 correctif : ne plus afficher le bandeau permanent de synchronisation calendrier. -->
   <script>

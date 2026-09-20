@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.176';
+const APP_VERSION='147.177';
 const APP_BUILD='18/09/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -2460,7 +2460,49 @@ const BUILTIN_GUIDES=[
 ];
 async function openGuide(path){await openStoragePath(path)}
 /* ---------- Fenêtres ---------- */
-function openModal(title,html,onSave,opts={}){modalHandler=onSave;modalDeleteHandler=opts.onDelete||null;modalAuditTitle=title;modalAuditContext=opts.audit||null;$('#modalTitle').textContent=title;$('#modalBody').innerHTML=html;const saveBtn=$('#modalSave');saveBtn.textContent=opts.saveLabel||'Enregistrer';saveBtn.disabled=false;saveBtn.dataset.directSave=opts.directSave?'1':'';saveBtn.dataset.directSaving='';$('#modalDelete').classList.toggle('hidden',!modalDeleteHandler);const d=$('#modal');if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','');setTimeout(()=>{const f=$('#modalForm');modalAuditInitial={};if(f)for(const e of [...f.elements])if(e.name&&e.type!=='file'&&e.type!=='button'&&e.type!=='submit')modalAuditInitial[e.name]=e.type==='checkbox'?e.checked:e.value;$('#modalBody input:not([type="hidden"]),#modalBody select,#modalBody textarea')?.focus()},60)}
+function serviceChoiceTone(value,index=0){
+ const v=normalizeText(value);
+ if(/urgent|bloqu|non conforme|refus/.test(v))return 'red';
+ if(/haute|attente|a reprendre|planifi/.test(v))return 'orange';
+ if(/termine|clotur|conforme|realise|pret/.test(v))return 'green';
+ if(/basse|non applicable/.test(v))return 'slate';
+ return ['cyan','blue','violet','teal','amber','rose'][index%6];
+}
+function serviceChoiceIcon(name,value){
+ const v=normalizeText(value),n=String(name||'');
+ if(n==='family'){
+  if(v.includes('electric'))return '⚡';if(v.includes('plomb'))return '💧';if(v.includes('chauff')||v.includes('cvc'))return '♨️';
+  if(v.includes('serrur'))return '🔑';if(v.includes('menuiser'))return '🪵';if(v.includes('peinture'))return '🎨';if(v.includes('maconn'))return '🧱';
+  if(v.includes('toiture'))return '🏠';if(v.includes('ascenseur'))return '↕️';if(v.includes('incend'))return '🧯';if(v.includes('cuisine'))return '🍽️';
+  if(v.includes('informat'))return '🖥️';if(v.includes('exterieur'))return '🌳';if(v.includes('mobilier'))return '🪑';return '🔧';
+ }
+ if(n==='priority'){if(v.includes('urgent'))return '🚨';if(v.includes('haute'))return '⬆️';if(v.includes('basse'))return '⬇️';return '●'}
+ if(n==='status'){if(v.includes('termine')||v.includes('clotur'))return '✓';if(v.includes('attente'))return '⏳';if(v.includes('cours'))return '▶';if(v.includes('bloqu'))return '⛔';return '•'}
+ return '';
+}
+function enhanceServiceSelect(select){
+ if(!select||select.dataset.serviceEnhanced==='1')return;
+ const options=[...select.options].filter(o=>!o.disabled&&String(o.value)!=='');
+ if(options.length<2||options.length>18)return;
+ const grid=document.createElement('div');grid.className='service-choice-grid';grid.dataset.for=select.name||select.id||'';
+ const buttons=options.map((o,i)=>{const b=document.createElement('button');b.type='button';b.className='service-choice';b.dataset.value=o.value;b.dataset.tone=serviceChoiceTone(o.textContent,i);const icon=serviceChoiceIcon(select.name,o.textContent);if(icon){const sp=document.createElement('span');sp.className='service-choice-icon';sp.textContent=icon;b.append(sp)}const tx=document.createElement('strong');tx.textContent=o.textContent;b.append(tx);b.addEventListener('click',()=>{select.value=o.value;select.dispatchEvent(new Event('change',{bubbles:true}));sync()});grid.append(b);return b});
+ const sync=()=>buttons.forEach(b=>{const active=String(b.dataset.value)===String(select.value);b.classList.toggle('active',active);b.setAttribute('aria-pressed',active?'true':'false')});
+ select.classList.add('service-native-select');select.insertAdjacentElement('afterend',grid);select.addEventListener('change',sync);sync();
+}
+function decorateServiceForm(root,title=''){
+ const d=$('#modal');if(!d||!root)return;d.classList.add('service-dialog');
+ const nt=normalizeText(title);d.dataset.serviceKind=nt.includes('intervention')?'maintenance':nt.includes('demande')?'request':'generic';
+ root.classList.add('service-form-surface');
+ root.querySelectorAll('.form-grid > label').forEach(l=>l.classList.add('service-field-card'));
+ root.querySelectorAll('select[name="family"],select[name="priority"],select[name="status"],select[name="type"],select[name="category"]').forEach(enhanceServiceSelect);
+}
+function openModal(title,html,onSave,opts={}){
+ modalHandler=onSave;modalDeleteHandler=opts.onDelete||null;modalAuditTitle=title;modalAuditContext=opts.audit||null;
+ $('#modalTitle').textContent=title;$('#modalBody').innerHTML=html;decorateServiceForm($('#modalBody'),title);
+ const saveBtn=$('#modalSave');saveBtn.textContent=opts.saveLabel||'✓ Enregistrer';saveBtn.disabled=false;saveBtn.dataset.directSave=opts.directSave?'1':'';saveBtn.dataset.directSaving='';
+ $('#modalDelete').classList.toggle('hidden',!modalDeleteHandler);const d=$('#modal');if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','');
+ setTimeout(()=>{const f=$('#modalForm');modalAuditInitial={};if(f)for(const e of [...f.elements])if(e.name&&e.type!=='file'&&e.type!=='button'&&e.type!=='submit')modalAuditInitial[e.name]=e.type==='checkbox'?e.checked:e.value;const focusable=$('#modalBody input:not([type="hidden"]),#modalBody textarea,#modalBody select:not(.service-native-select),#modalBody .service-choice.active,#modalBody .service-choice');focusable?.focus()},60)
+}
 function closeModal(){const d=$('#modal');if(d.open)d.close();else d.removeAttribute('open');const b=$('#modalSave');if(b){b.disabled=false;b.dataset.directSave='';b.dataset.directSaving='';b.textContent='Enregistrer'}modalHandler=null;modalDeleteHandler=null;modalAuditInitial=null;modalAuditTitle='';modalAuditContext=null}
 function openDetail(title,html){$('#detailTitle').textContent=title;$('#detailBody').innerHTML=html;const d=$('#detailModal');if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','')}
 function field(label,name,value='',type='text',extra=''){return `<label>${esc(label)}<input name="${esc(name)}" type="${esc(type)}" value="${esc(value)}" ${extra}></label>`}
@@ -3994,7 +4036,14 @@ function openCleaning(id){
  $$('[data-bulk-clean]').forEach(btn=>btn.onclick=()=>$$('[name="taskStatus"]',$('#cleanTaskEditor')).forEach(s=>s.value=btn.dataset.bulkClean))
 }
 
-function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),time:'',title:'',family:'Électricité',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier l’intervention':'Nouvelle intervention',`<div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Heure prévue','time',x.time,'time')}${field('Objet','title',x.title,'text','required')}<label>Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label>${centralLocationFields(x,'maintLoc')}${field('Demandeur','requester',x.requester)}${field('Assigné à / prestataire','assigned',x.assigned)}${field('Échéance','dueDate',x.dueDate,'date')}${textareaField('Description / diagnostic','description',x.description)}${textareaField('Action réalisée / suite','action',x.action)}${attachmentField(x.attachments)}</div>`,async form=>{
+function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),time:'',title:'',family:'Électricité',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier la demande d’intervention':'Nouvelle demande d’intervention',`<div class="service-workflow maintenance-workflow">
+ <div class="service-workflow-banner"><span class="service-workflow-icon">🔧</span><div><strong>${old?'Modifier':'Créer'} une demande d’intervention</strong><small>Grandes touches, saisie rapide et suivi de la demande jusqu’à sa clôture.</small></div><span class="service-workflow-no">${esc(x.no)}</span></div>
+ <section class="service-form-section"><div class="service-section-title"><span>1</span><div><strong>La demande</strong><small>Quand, quoi et qui demande ?</small></div></div><div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Heure prévue','time',x.time,'time')}${field('Objet de l’intervention','title',x.title,'text','required')}${field('Demandeur','requester',x.requester)}</div></section>
+ <section class="service-form-section accent"><div class="service-section-title"><span>2</span><div><strong>Domaine, priorité et statut</strong><small>Appuyez directement sur les grosses touches.</small></div></div><div class="form-grid"><label class="span2">Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label></div></section>
+ <section class="service-form-section"><div class="service-section-title"><span>3</span><div><strong>Lieu de l’intervention</strong><small>Bâtiment, étage, secteur et local.</small></div></div><div class="form-grid">${centralLocationFields(x,'maintLoc')}</div></section>
+ <section class="service-form-section"><div class="service-section-title"><span>4</span><div><strong>Organisation</strong><small>Affectation et échéance.</small></div></div><div class="form-grid">${field('Assigné à / prestataire','assigned',x.assigned)}${field('Échéance','dueDate',x.dueDate,'date')}</div></section>
+ <section class="service-form-section"><div class="service-section-title"><span>5</span><div><strong>Diagnostic et réalisation</strong><small>Décrire le problème puis ce qui a été fait.</small></div></div><div class="form-grid">${textareaField('Description / diagnostic','description',x.description)}${textareaField('Action réalisée / suite','action',x.action)}${attachmentField(x.attachments)}</div></section>
+ </div>`,async form=>{
  const wasExisting=!!old;
  Object.assign(x,formDataObj(form));
  if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;
