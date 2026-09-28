@@ -871,9 +871,9 @@ function refreshDashboardSyncIndicator(){
 async function confirmSupabaseReachable(){
  if(!navigator.onLine||!supabaseClient||!currentUser)return false;
  try{
-   // fetchRemote peut renvoyer null si aucune ligne n'existe encore.
-   // Ce n'est pas une panne Supabase : l'absence de ligne est une réponse serveur valide.
-   await fetchRemote();
+   // Test léger : on ne récupère que `updated_at`, pas tout app_state.data.
+   // L'absence de ligne reste une réponse serveur valide.
+   await fetchRemoteStamp();
    lastCloudError='';
    lastConfirmedSupabaseAt=Date.now();
    return true;
@@ -1048,6 +1048,12 @@ function scheduleCloudRetry(delay=12000){clearTimeout(cloudRetryTimer);cloudRetr
 function useLocalMode(reason='Connexion momentanément indisponible'){cloudReady=false;console.warn(reason);if(!loadOfflinePendingIntoMemory()&&!loadMirrorIntoMemory())setSaveState('Hors ligne — les nouvelles modifications seront gardées sur cet appareil','local');else setSaveState('Hors ligne — données locales disponibles','local');scheduleCloudRetry()}
 async function fetchRemote(){
  const result=await withTimeout(supabaseClient.from('app_state').select('data,updated_at').eq('user_id',currentUser.id).maybeSingle());
+ const {data,error}=result||{};if(error)throw error;return data||null;
+}
+// Lecture légère utilisée par le polling : ne télécharge jamais le gros JSON `data`.
+// Le contenu complet n'est récupéré que lorsqu'une nouvelle révision est détectée.
+async function fetchRemoteStamp(){
+ const result=await withTimeout(supabaseClient.from('app_state').select('updated_at').eq('user_id',currentUser.id).maybeSingle());
  const {data,error}=result||{};if(error)throw error;return data||null;
 }
 async function syncOfflinePending(){
@@ -1685,11 +1691,17 @@ setTimeout(()=>{
 async function pollCloudChanges(){
  if(!supabaseClient||!currentUser||!navigator.onLine||cloudBusy||localDirty)return;
  try{
-   const data=await fetchRemote();
+   // IMPORTANT EGRESS : le contrôle périodique ne lit que le timestamp.
+   const stampRow=await fetchRemoteStamp();
    lastConfirmedSupabaseAt=Date.now();lastCloudError='';
-   if(!data?.data){refreshDashboardSyncIndicator();return}
-   const remoteStamp=data.updated_at||'';
+   const remoteStamp=stampRow?.updated_at||'';
+   if(!remoteStamp){refreshDashboardSyncIndicator();return}
    if(remoteStamp&&remoteStamp!==lastCloudUpdatedAt){
+     // Une modification existe réellement : seulement maintenant on télécharge le JSON complet.
+     const data=await fetchRemote();
+     if(!data?.data){refreshDashboardSyncIndicator();return}
+     // La ligne peut avoir changé entre les deux lectures : on utilise la révision du contenu reçu.
+     const loadedStamp=data.updated_at||remoteStamp;
      clearTheoreticalScheduleCache();
      const localHistorySnapshot=deepClone(db.changeHistory||[]);
      const localAgentDaysSnapshot=deepClone(db.agentDays||[]);
@@ -1706,7 +1718,7 @@ async function pollCloudChanges(){
      enforceMaintenanceStable('poll Supabase');
      for(const c of STABLE_FORM_COLLECTIONS)enforceStableCollection(c,'poll Supabase');
      enforceAllDeletedRecords('poll Supabase');
-     lastCloudData=deepClone(db);lastCloudUpdatedAt=remoteStamp;writeMirror();safeRenderAll();
+     lastCloudData=deepClone(db);lastCloudUpdatedAt=loadedStamp;writeMirror();safeRenderAll();
      try{window.dispatchEvent(new Event('pst:data-loaded'))}catch(_){ }
      setSaveState(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`,'cloud')
    }
