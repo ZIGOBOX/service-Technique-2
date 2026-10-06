@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.177';
-const APP_BUILD='18/09/2026';
+const APP_VERSION='147.178';
+const APP_BUILD='06/10/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -2706,7 +2706,32 @@ document.addEventListener('pst:view-changed',e=>{
 function applyLayout(mode=db.settings.defaultLayout||'auto'){document.body.dataset.layout=mode;$('#layoutMode').value=mode}
 
 /* ---------- Calcul du roulement et du jour agent ---------- */
-function activeRotation(agentId,date){return db.rotations.filter(r=>r.agentId===agentId&&r.effectiveFrom<=date&&(!r.effectiveTo||r.effectiveTo>=date)).sort((a,b)=>b.effectiveFrom.localeCompare(a.effectiveFrom))[0]||null}
+// V147.179 — résolution générique des roulements pour TOUS les agents.
+// 1) Un roulement explicitement actif reste toujours prioritaire.
+// 2) Si ses dates sont accidentellement tronquées mais que les profils Matin ET Soir
+//    couvrent encore la date demandée, on prolonge uniquement ce roulement à l'intérieur
+//    de la période commune des deux profils. Aucun horaire n'est inventé.
+function activeRotation(agentId,date){
+ const rotations=(db.rotations||[]).filter(r=>String(r.agentId)===String(agentId));
+ const explicit=rotations.filter(r=>r.effectiveFrom<=date&&(!r.effectiveTo||r.effectiveTo>=date)).sort((a,b)=>b.effectiveFrom.localeCompare(a.effectiveFrom))[0];
+ if(explicit)return explicit;
+ normalizeWeeklyPlans();
+ const plans=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(agentId)&&['Matin','Soir'].includes(p.shift));
+ const morning=plans.filter(p=>p.shift==='Matin'&&(!p.effectiveFrom||p.effectiveFrom<=date)&&(!p.effectiveTo||p.effectiveTo>=date)).sort((a,b)=>(b.effectiveFrom||'').localeCompare(a.effectiveFrom||''))[0];
+ const evening=plans.filter(p=>p.shift==='Soir'&&(!p.effectiveFrom||p.effectiveFrom<=date)&&(!p.effectiveTo||p.effectiveTo>=date)).sort((a,b)=>(b.effectiveFrom||'').localeCompare(a.effectiveFrom||''))[0];
+ if(!morning||!evening||!rotations.length)return null;
+ const commonFrom=[morning.effectiveFrom,evening.effectiveFrom].filter(Boolean).sort().at(-1)||'';
+ const commonTo=[morning.effectiveTo,evening.effectiveTo].filter(Boolean).sort()[0]||'';
+ if((commonFrom&&date<commonFrom)||(commonTo&&date>commonTo))return null;
+ // Le roulement le plus proche sert de définition du cycle (2/2, départ Matin/Soir, jours).
+ const nearest=rotations.slice().sort((a,b)=>{
+   const da=Math.abs(parseDate(date)-parseDate(a.effectiveFrom||date));
+   const dbb=Math.abs(parseDate(date)-parseDate(b.effectiveFrom||date));
+   return da-dbb;
+ })[0];
+ if(!nearest)return null;
+ return {...nearest,effectiveFrom:commonFrom||nearest.effectiveFrom,effectiveTo:commonTo||nearest.effectiveTo,source:'rotation-profile-coverage'};
+}
 function rotationException(agentId,date){return db.rotationExceptions.filter(x=>x.agentId===agentId&&inRange(date,x.dateFrom,x.dateTo)).sort((a,b)=>b.dateFrom.localeCompare(a.dateFrom))[0]||null}
 
 function normalizeWeeklyPlans(){
@@ -2837,7 +2862,8 @@ function scheduledFor(agentId,date){
  const wd=parseDate(date).getDay();
  // Le calendrier personnel de l'agent est prioritaire : samedi/dimanche sont en repos par défaut.
  if(!agentWorkdays(agentId).includes(wd))return {shift:'Repos',start:'',end:'',pause:0,missions:''};
- const r=activeRotation(agentId,date);
+ let r=activeRotation(agentId,date);
+ // V147.179 — activeRotation() gère désormais les périodes tronquées de façon générique pour tous les agents.
  if(!r){
    const p=standardScheduleForAgent(agentId,date);
    if(p?.source==='standard-plan-rest')return {shift:'Repos',start:'',end:'',pause:0,missions:'',source:'standard-plan'};
