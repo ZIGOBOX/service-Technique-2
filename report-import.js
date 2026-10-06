@@ -61,6 +61,11 @@
     });
     db.settings.chronoDayRules=Object.assign({},DEFAULT_DAY_RULES,db.settings.chronoDayRules||{});
     db.settings.chronoDayDisplay=Object.assign({},DEFAULT_DAY_DISPLAY,db.settings.chronoDayDisplay||{});
+    // V147.182 — chaque motif Chronotime possède ses propres objets règle/affichage.
+    // On clone toutes les entrées afin qu'une modification de couleur, pastille ou comptabilisation
+    // d'un motif ne puisse jamais modifier un autre motif par référence partagée.
+    db.settings.chronoDayRules=Object.fromEntries(Object.entries(db.settings.chronoDayRules).map(([k,v])=>[k,Object.assign({},v)]));
+    db.settings.chronoDayDisplay=Object.fromEntries(Object.entries(db.settings.chronoDayDisplay).map(([k,v])=>[k,Object.assign({},v)]));
     // Migration d'affichage : le temps partiel s'affiche toujours RTP par défaut.
     db.settings.chronoDayDisplay['Absence temps partiel']=Object.assign({},db.settings.chronoDayDisplay['Absence temps partiel']||{},{abbr:(db.settings.chronoDayDisplay['Absence temps partiel']?.abbr==='ATP'?'RTP':(db.settings.chronoDayDisplay['Absence temps partiel']?.abbr||'RTP'))});
     db.settings.chronoAgentHints=db.settings.chronoAgentHints||{};
@@ -284,7 +289,7 @@
     </div>`;
   }
   function bindChronoReference(box){
-    box.querySelectorAll('[data-chrono-correspondence]').forEach(sel=>sel.addEventListener('change',()=>{const row=sel.closest('[data-chrono-code-row]'),code=row?.dataset.chronoCodeRow||'',old=row?.dataset.chronoRuleType||'',type=sel.value;if(code)db.settings.chronoCodeMap[code]=type;if(!db.settings.chronoDayRules[type])db.settings.chronoDayRules[type]=db.settings.chronoDayRules[old]||{mode:'planned',hours:null};if(!db.settings.chronoDayDisplay[type])db.settings.chronoDayDisplay[type]=db.settings.chronoDayDisplay[old]||DEFAULT_DAY_DISPLAY[type]||{abbr:type.slice(0,3).toUpperCase(),color:'#e5e7eb'};if(!db.lists.dayTypes.includes(type))db.lists.dayTypes.push(type);save();renderCodeMap()}));
+    box.querySelectorAll('[data-chrono-correspondence]').forEach(sel=>sel.addEventListener('change',()=>{const row=sel.closest('[data-chrono-code-row]'),code=row?.dataset.chronoCodeRow||'',old=row?.dataset.chronoRuleType||'',type=sel.value;if(code)db.settings.chronoCodeMap[code]=type;if(!db.settings.chronoDayRules[type])db.settings.chronoDayRules[type]=Object.assign({},db.settings.chronoDayRules[old]||{mode:'planned',hours:null});if(!db.settings.chronoDayDisplay[type])db.settings.chronoDayDisplay[type]=Object.assign({},db.settings.chronoDayDisplay[old]||DEFAULT_DAY_DISPLAY[type]||{abbr:type.slice(0,3).toUpperCase(),color:'#e5e7eb'});if(!db.lists.dayTypes.includes(type))db.lists.dayTypes.push(type);save();renderCodeMap()}));
     box.querySelectorAll('[data-chrono-abbr]').forEach(inp=>inp.addEventListener('change',()=>{const row=inp.closest('[data-chrono-rule-type]'),type=row?.dataset.chronoRuleType||'';if(!type)return;db.settings.chronoDayDisplay[type]=db.settings.chronoDayDisplay[type]||{};let abbr=String(inp.value||'').trim().toUpperCase().slice(0,6)||type.slice(0,3).toUpperCase();if(type==='Absence temps partiel'&&abbr==='ATP')abbr='RTP';db.settings.chronoDayDisplay[type].abbr=abbr;save();renderCodeMap()}));
     box.querySelectorAll('[data-chrono-color]').forEach(inp=>inp.addEventListener('change',()=>{const row=inp.closest('[data-chrono-rule-type]'),type=row?.dataset.chronoRuleType||'';if(!type)return;db.settings.chronoDayDisplay[type]=db.settings.chronoDayDisplay[type]||{};db.settings.chronoDayDisplay[type].color=inp.value;save();renderCodeMap()}));
     box.querySelectorAll('[data-chrono-rule-mode]').forEach(sel=>sel.addEventListener('change',()=>{const row=sel.closest('[data-chrono-rule-type]'),type=row?.dataset.chronoRuleType||'';if(!type)return;db.settings.chronoDayRules[type]=db.settings.chronoDayRules[type]||{};db.settings.chronoDayRules[type].mode=sel.value;if(sel.value==='fixed'&&db.settings.chronoDayRules[type].hours==null)db.settings.chronoDayRules[type].hours=type==='Maladie'?7:7;row.querySelector('.chrono-fixed-hours')?.classList.toggle('hidden',sel.value!=='fixed');save();renderCodeMap()}));
