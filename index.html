@@ -7,9 +7,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#075ca8">
-  <title>Pilotage Service Technique V147.184</title>
+  <title>Pilotage Service Technique V147.185</title>
   <link rel="icon" href="./assets/logo-service-technique.png">
-  <link rel="stylesheet" href="./styles.css?v=147.184-20261006-horaires-agents">
+  <link rel="stylesheet" href="./styles.css?v=147.185-20261006-permanence-pastille">
 
 <style id="v14713-fixes">
 /* Barres horizontales locales aux plannings : elles ne repartent plus avec la page. */
@@ -64,6 +64,7 @@
 <style id="v14719-permanence">
 .rotation-day.permanence,.month-cell.day-state.permanence,.day-state.permanence,
 .badge.permanence,.pastille.permanence{background:#8b5cf6!important;color:#fff!important}
+.rotation-day.permanence small,.rotation-day.permanence .badge,.rotation-day.permanence .pastille{background:#8b5cf6!important;color:#fff!important;border:1px solid #7c3aed!important;border-radius:999px!important;padding:2px 5px!important;opacity:1!important}
 .rotation-legend .legend-permanence{background:#8b5cf6!important;color:#fff!important;border-color:#7c3aed!important}
 .permanence-agent-fields{margin-top:12px;padding:12px;border:1px solid #dbe4ef;border-radius:12px;background:#f8fafc;display:flex;gap:10px;align-items:end;flex-wrap:wrap}
 .permanence-agent-fields strong{width:100%}
@@ -1743,7 +1744,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
   <script src="./entretien-planning.js?v=147.171-20260907"></script>
-  <script src="./app.js?v=147.184-20261006-horaires-agents"></script>
+  <script src="./app.js?v=147.185-20261006-permanence-pastille"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./jszip.min.js?v=3.10.1"></script>
@@ -1756,7 +1757,7 @@
   <script src="./weather-waste.js?v=147.83-20260821-audit"></script>
 
   <script src="./room-cleaning.js?v=147.155-20260828-tactile-frequencies"></script>
-  <script src="./room-prep.js?v=147.184-20261006-horaires-agents"></script>
+  <script src="./room-prep.js?v=147.185-20261006-permanence-pastille"></script>
 
   <!-- V147 correctif : ne plus afficher le bandeau permanent de synchronisation calendrier. -->
   <script>
