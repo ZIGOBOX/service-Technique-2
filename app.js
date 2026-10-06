@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.178';
+const APP_VERSION='147.180';
 const APP_BUILD='06/10/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -2706,7 +2706,7 @@ document.addEventListener('pst:view-changed',e=>{
 function applyLayout(mode=db.settings.defaultLayout||'auto'){document.body.dataset.layout=mode;$('#layoutMode').value=mode}
 
 /* ---------- Calcul du roulement et du jour agent ---------- */
-// V147.179 — résolution générique des roulements pour TOUS les agents.
+// V147.180 — résolution générique des roulements pour TOUS les agents.
 // 1) Un roulement explicitement actif reste toujours prioritaire.
 // 2) Si ses dates sont accidentellement tronquées mais que les profils Matin ET Soir
 //    couvrent encore la date demandée, on prolonge uniquement ce roulement à l'intérieur
@@ -2863,7 +2863,7 @@ function scheduledFor(agentId,date){
  // Le calendrier personnel de l'agent est prioritaire : samedi/dimanche sont en repos par défaut.
  if(!agentWorkdays(agentId).includes(wd))return {shift:'Repos',start:'',end:'',pause:0,missions:''};
  let r=activeRotation(agentId,date);
- // V147.179 — activeRotation() gère désormais les périodes tronquées de façon générique pour tous les agents.
+ // V147.180 — activeRotation() gère désormais les périodes tronquées de façon générique pour tous les agents.
  if(!r){
    const p=standardScheduleForAgent(agentId,date);
    if(p?.source==='standard-plan-rest')return {shift:'Repos',start:'',end:'',pause:0,missions:'',source:'standard-plan'};
@@ -4402,15 +4402,16 @@ function weeklyPlanRangeOverlap(aFrom,aTo,bFrom,bTo){
  const bf=String(bFrom||'0000-01-01'),bt=String(bTo||'9999-12-31');
  return af<=bt&&bf<=at;
 }
-function weeklyPlanConflicts(agentId,from,to,excludeId=''){
+function weeklyPlanConflicts(agentId,from,to,excludeId='',shift='Standard'){
  return (db.weeklyPlans||[]).filter(q=>
    String(q.agentId)===String(agentId) &&
+   String(q.shift||'Standard')===String(shift||'Standard') &&
    (!excludeId||String(q.id)!==String(excludeId)) &&
    weeklyPlanRangeOverlap(from,to,q.effectiveFrom,q.effectiveTo)
  );
 }
-function weeklyPlanConflictText(agentId,from,to,excludeId=''){
- const rows=weeklyPlanConflicts(agentId,from,to,excludeId);
+function weeklyPlanConflictText(agentId,from,to,excludeId='',shift='Standard'){
+ const rows=weeklyPlanConflicts(agentId,from,to,excludeId,shift);
  if(!rows.length)return '';
  const agent=agentName(agentById(agentId))||'cet agent';
  const details=rows
@@ -4428,11 +4429,12 @@ function cloneWeeklyPlanForRange(plan,from,to){
  c.historySourcePlanId=plan.id||'';
  return c;
 }
-function removeWeeklyPlanOverlap(agentId,from,to,excludeId=''){
+function removeWeeklyPlanOverlap(agentId,from,to,excludeId='',shift='Standard'){
  const source=Array.isArray(db.weeklyPlans)?db.weeklyPlans:[];
  const out=[];
  for(const q of source){
    if(String(q.agentId)!==String(agentId) ||
+      String(q.shift||'Standard')!==String(shift||'Standard') ||
       (excludeId&&String(q.id)===String(excludeId)) ||
       !weeklyPlanRangeOverlap(from,to,q.effectiveFrom,q.effectiveTo)){
      out.push(q);continue;
@@ -4483,7 +4485,7 @@ function cleanupExistingWeeklyPlanOverlaps(){
 
  const byAgent=new Map();
  for(const p of source){
-   const key=String(p.agentId||'');
+   const key=`${String(p.agentId||'')}|${String(p.shift||'Standard')}`;
    if(!byAgent.has(key))byAgent.set(key,[]);
    byAgent.get(key).push(p);
  }
@@ -4556,8 +4558,9 @@ function cleanupExistingWeeklyPlanOverlaps(){
  db.weeklyPlans=clean;
 
  // Vérification de sécurité : aucune paire agent/date ne doit se chevaucher.
- for(const [agentId] of byAgent){
-   const rows=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(agentId));
+ for(const [groupKey] of byAgent){
+   const [agentId,shift]=String(groupKey).split('|');
+   const rows=(db.weeklyPlans||[]).filter(p=>String(p.agentId)===String(agentId)&&String(p.shift||'Standard')===String(shift||'Standard'));
    for(let i=0;i<rows.length;i++){
      for(let j=i+1;j<rows.length;j++){
        if(weeklyPlanRangeOverlap(rows[i].effectiveFrom,rows[i].effectiveTo,rows[j].effectiveFrom,rows[j].effectiveTo)){
@@ -4688,7 +4691,7 @@ function openWeeklyPlan(i=null,agentId=''){
 
    const conflicts=weeklyPlanConflicts(draft.agentId,draft.effectiveFrom,draft.effectiveTo,old?.id||'');
    if(conflicts.length){
-     const msg=weeklyPlanConflictText(draft.agentId,draft.effectiveFrom,draft.effectiveTo,old?.id||'');
+     const msg=weeklyPlanConflictText(draft.agentId,draft.effectiveFrom,draft.effectiveTo,old?.id||'',draft.shift);
      if(!confirm(msg)){
        toast('Aucun changement effectué');
        return {ok:false};
@@ -4697,7 +4700,7 @@ function openWeeklyPlan(i=null,agentId=''){
 
    // Autorisation obtenue : retirer uniquement les parties chevauchées.
    if(conflicts.length){
-     removeWeeklyPlanOverlap(draft.agentId,draft.effectiveFrom,draft.effectiveTo,old?.id||'');
+     removeWeeklyPlanOverlap(draft.agentId,draft.effectiveFrom,draft.effectiveTo,old?.id||'',draft.shift);
    }
 
    if(old){

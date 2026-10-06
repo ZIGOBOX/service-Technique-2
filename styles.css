@@ -963,7 +963,7 @@ body.rc-pos-open{overflow:hidden!important}
 .periodic-import-conflict{background:#fff3d9}.periodic-import-preserved{background:#f0f5fb}
 
 /* ======================================================================
-   V147.177 — Formulaires "logiciel de service" / saisie tactile
+   V147.179 — Formulaires "logiciel de service" / saisie tactile
    Inspiration caisse / poste de service : grosses touches et zones nettes.
    ====================================================================== */
 #modal.service-dialog{width:min(1120px,98vw);background:#e8eef3;border-radius:16px;overflow:hidden}
