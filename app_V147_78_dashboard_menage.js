@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.78';
+const APP_VERSION='147.183';
 const APP_BUILD='21/08/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -1489,15 +1489,23 @@ function dateIsSchoolVacation(date){
   const active=activeAcademicYear();
   const range=academicYearRange(active);
   if(date<range.start||date>range.end)return false;
+  // V147.183 — Le calendrier scolaire intégré fait foi directement.
+  // Aucun chargement manuel dans le module Vacances n'est nécessaire.
+  const rawZone=String(db.settings?.schoolZone||$('#vacationZone')?.value||'A').trim().toUpperCase();
+  const zone=(rawZone.match(/[ABC]/)||['A'])[0];
+  const official=(SCHOOL_CALENDAR[active]?.[zone]||[]).some(([,start,end])=>date>=start&&date<=end);
+  if(official)return true;
+  // Les périodes ajoutées manuellement restent prises en compte en complément.
   return (db.vacations||[]).some(v=>{
     if(!v?.start||!v?.end)return false;
-    const zoneOk=!v.zone||v.zone==='Toutes'||v.zone===(db.settings?.vacationZone||$('#vacationZone')?.value||'Zone A');
+    const vz=String(v.zone||'Toutes').trim().toUpperCase();
+    const zoneOk=vz==='TOUTES'||vz===zone||vz===`ZONE ${zone}`;
     return zoneOk&&date>=v.start&&date<=v.end;
   });
 }
 function upsertChronotimePermanence(c){
   if(!c?.agentId||!c?.date||!dateIsSchoolVacation(c.date))return 0;
-  if(c.durationMinutes===null||c.durationMinutes===undefined)return 0;
+  if(c.durationMinutes===null||c.durationMinutes===undefined||Number(c.durationMinutes)<=0)return 0;
   db.agentDays=Array.isArray(db.agentDays)?db.agentDays:[];
   const sched=permanenceScheduleForAgent(c.agentId);
   const rows=db.agentDays.filter(x=>String(x.agentId)===String(c.agentId)&&String(x.date)===String(c.date));
@@ -1552,7 +1560,7 @@ function syncStoredChronotimePastilles(){
     if(!c?.agentId||!c?.date)continue;
     // Une durée pendant les vacances scolaires = journée de permanence.
     // Hors vacances, elle reste une présence normale et ne crée pas de pastille spéciale.
-    if(c.durationMinutes!==null && c.durationMinutes!==undefined){
+    if(c.durationMinutes!==null && c.durationMinutes!==undefined && Number(c.durationMinutes)>0){
       changed+=upsertChronotimePermanence(c);
       continue;
     }
