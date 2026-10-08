@@ -617,6 +617,31 @@ function mergeBundledControlReports(d){
  });
 }
 
+// Consolidation prudente : même clé source ou même libellé ET même implantation.
+// Les historiques, pièces jointes et dates ne sont jamais effacés.
+function pstDeduplicatePeriodic(records){
+ if(!Array.isArray(records))return [];
+ const normalize=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+ const keys=new Map(),out=[];
+ for(const item of records){
+  if(!item||typeof item!=='object')continue;
+  const source=normalize(item.excelPeriodicKey||item.contractControlKey||'');
+  const name=normalize(item.name||'');
+  const place=normalize([item.building||'Tous bâtiments',item.floor,item.sector,item.room].join('|'));
+  // Même identifiant contractuel, ou nom + localisation strictement identiques.
+  const key=source?'source:'+source+'|'+place:'name:'+name+'|'+place;
+  if(!name&&!source){out.push(item);continue;}
+  if(!keys.has(key)){keys.set(key,item);out.push(item);continue;}
+  const keep=keys.get(key);
+  const unique=(arr)=>[...new Map(arr.map(v=>[JSON.stringify(v),v])).values()];
+  keep.history=unique([...(Array.isArray(keep.history)?keep.history:[]),...(Array.isArray(item.history)?item.history:[])]);
+  keep.attachments=unique([...(Array.isArray(keep.attachments)?keep.attachments:[]),...(Array.isArray(item.attachments)?item.attachments:[])]);
+  for(const field of ['lastDate','nextDate'])if(String(item[field]||'')>String(keep[field]||''))keep[field]=item[field];
+  for(const field of ['provider','requirement','register','notes','oneDriveUrl','periodicityText'])if(!keep[field]&&item[field])keep[field]=item[field];
+  if(item.id&&item.id!==keep.id){keep.mergedPeriodicIds=unique([...(keep.mergedPeriodicIds||[]),item.id]);}
+ }
+ return out;
+}
 function migrate(raw){
  const base=defaultData();
  if(!raw||typeof raw!=='object'){mergeContractControls14723(base);migratePeriodicExcel2026V147161(base);migratePeriodicExcelHistoryV147162(base);migratePeriodicExcelFullV147163(base);migratePeriodicFixesV147164(base);ensureCanonicalFacilitySpaces(base);mergeBundledControlReports(base);return base;}
@@ -640,6 +665,7 @@ function migrate(raw){
  ensureCanonicalFacilitySpaces(d);
  d.agentDays=normalizeAgentDaysStable(d.agentDays);
  d.maintenance=normalizeMaintenanceStable(d.maintenance);
+ d.periodic=pstDeduplicatePeriodic(d.periodic);
  ensureDeletedRecordsStore(d);
  for(const c of STABLE_FORM_COLLECTIONS){
    d[c]=applyDeletedRecordsToCollection(c,normalizeStableCollection(d[c]),d);
@@ -4807,6 +4833,7 @@ function renderVacations(){
  ).sort((a,b)=>a.start.localeCompare(b.start));$('#vacationCards').innerHTML=cardList(arr.map(x=>{const done=(x.tasks||[]).filter(t=>t.done).length,total=(x.tasks||[]).length,pct=total?Math.round(done/total*100):0;return `<article class="vacation-card"><div class="panel-head"><div><h3>${esc(x.name)}</h3><p>${fmtDate(x.start)} → ${fmtDate(x.end)} · Zone ${esc(x.zone)}</p></div>${badge(x.status)}</div><div class="progress"><span style="width:${pct}%"></span></div><p>${done}/${total} actions terminées (${pct} %)</p><ul>${(x.tasks||[]).slice(0,6).map(t=>`<li class="${t.done?'done':''}">${t.done?'✓':'○'} ${esc(t.text)}</li>`).join('')}</ul><div class="card-actions"><button type="button" data-edit-type="vacation" data-edit-id="${x.id}">Ouvrir la checklist</button></div></article>`}),'Aucune période chargée.')}
 function renderIssues(){const m=$('#issueMonth').value,agent=$('#issueAgent').value,cat=$('#issueCategory').value,status=$('#issueStatus').value;let arr=db.issues.filter(x=>dateMonthMatch(x.date,m)&&(!agent||x.agentId===agent)&&(!cat||x.category===cat)&&(!status||x.status===status)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));if(window.__dashboardUrgentOnly)arr=arr.filter(x=>!isClosedStatus(x.status)&&isUrgentPriority(x.priority));$('#issuesTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.category)}</td><td>${esc(agentName(agentById(x.agentId)))}</td><td>${badge(x.priority)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small>${(()=>{const n=(db.agentActivities||[]).filter(a=>String(a.maintenanceId||'')===String(x.id)).length;return n?`<small>✓ ${n} activité${n>1?'s':''} agent tracée${n>1?'s':''}</small>`:''})()}</td><td>${esc(x.action||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('issue',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderPeriodic(){
+ db.periodic=pstDeduplicatePeriodic(db.periodic);
  const fam=$('#periodicFamily')?.value||'',status=$('#periodicStatus')?.value||'',bld=$('#periodicBuilding')?.value||'',year=activeAcademicYear();
  const yr=$('#periodicAcademicYearLabelV165');if(yr)yr.textContent=`Année scolaire affichée : ${year}`;
  let rows=periodicAcademicYearRowsV165(year).filter(({x,info})=>(!fam||x.family===fam)&&(!status||info.state===status||x.status===status)&&(!bld||x.building===bld||x.building==='Tous bâtiments'));
@@ -5128,7 +5155,7 @@ function printAgentActivityRegister(){
  printView('agent-activity');
 }
 
-function renderMaintenance(){const st=$('#maintenanceStatus').value,p=$('#maintenancePriority').value,f=$('#maintenanceFamily').value;const arr=db.maintenance.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!st||x.status===st)&&(!p||x.priority===p)&&(!f||x.family===f)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#maintenanceTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.family)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${badge(x.priority)}</td><td>${esc(x.assigned||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('maintenance',x.id)}</td></tr>`).join(''):emptyRow(10)}
+function renderMaintenance(){const st=$('#maintenanceStatus').value,p=$('#maintenancePriority').value,f=$('#maintenanceFamily').value;const arr=db.maintenance.filter(x=>(!st||x.status===st)&&(!p||x.priority===p)&&(!f||x.family===f)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#maintenanceTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.family)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${badge(x.priority)}</td><td>${esc(x.assigned||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('maintenance',x.id)}</td></tr>`).join(''):emptyRow(10)}
 function renderRequests(){const st=$('#requestStatus').value,t=$('#requestType').value;const arr=db.requests.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#requestsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc(x.requester)}</td><td>${esc(x.type)}</td><td>${esc([x.building,x.room].filter(Boolean).join(' · '))}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('request',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderWorks(){const st=$('#workStatus').value,t=$('#workType').value;const arr=db.works.filter(x=>recordInAcademicYear(x,['date','dueDate','gpaEnd'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderMeetings(){const m=$('#meetingMonth').value,t=$('#meetingType').value;const arr=db.meetings.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));$('#meetingsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.time||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${esc(x.participants||'—')}</td><td>${badge(x.status)}</td><td>${editButton('meeting',x.id)}</td></tr>`).join(''):emptyRow(8)}
@@ -5971,6 +5998,7 @@ function renderDashboardWeekV149(){
  el.innerHTML=days.map(d=>{const date=parseDate(d),events=eventsForDate(d).filter(e=>e.source!=='agent-real-schedule').slice(0,3);return `<section class="dashboard-week-day-v149 ${d===today?'today':''}"><header class="dashboard-week-head-v149"><strong>${esc(date.toLocaleDateString('fr-FR',{weekday:'long'}))} ${date.getDate()}</strong><small>${events.length} élément${events.length>1?'s':''}</small></header><div class="dashboard-week-events-v149">${events.length?events.map(e=>`<button class="dashboard-week-event-v149 agenda-action" data-agenda-source="${esc(e.source||'personal')}" data-agenda-id="${esc(e.id||'')}"><time>${esc(agendaTime(e)||'—')}</time><span title="${esc(e.title||'Événement')}">${esc(e.title||'Événement')}</span></button>`).join(''):'<div class="dashboard-week-empty-v149">Rien de prévu</div>'}</div></section>`}).join('');
 }
 function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnections();
+ renderMaintenanceOverviewPST();
  renderGlobalAcademicYear();
  const today=todayISO(),activeRange=academicYearRange(activeAcademicYear()),todayInActive=academicYearContains(activeAcademicYear(),today),refDate=todayInActive?today:activeRange.start,soon7=addDays(refDate,7);
  const activeAgents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif');
@@ -5978,7 +6006,7 @@ function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnectio
  const absent=todayInActive?activeAgents.filter(a=>isAbsenceType(dayInfo(a.id,today).dayType)).length:0;
  const meetingsToday=(db.meetings||[]).filter(x=>normalizeDateValue(x.date)===today&&!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule').length;
  const urgentActions=collectUrgentDashboardActions();const lateActions=collectLateDashboardActions(today);const urgentToday=urgentActions.filter(x=>!x.due||x.due<=today).length;
- const allMaint=(db.maintenance||[]).filter(x=>recordInAcademicYear(x,['date','dueDate']));const closedMaint=allMaint.filter(x=>isClosedStatus(x.status));const openMaint=allMaint.filter(x=>!isClosedStatus(x.status));const todoMaint=allMaint.filter(x=>normalizeText(x.status)==='a faire');
+ const allMaint=(db.maintenance||[]);const closedMaint=allMaint.filter(x=>isClosedStatus(x.status));const openMaint=allMaint.filter(x=>!isClosedStatus(x.status));const todoMaint=allMaint.filter(x=>normalizeText(x.status)==='a faire');
  const maintCounts={total:allMaint.length,todo:todoMaint.length,open:openMaint.length,closed:closedMaint.length,byStatus:allMaint.reduce((acc,x)=>{const k=String(x.status||'Sans statut').trim()||'Sans statut';acc[k]=(acc[k]||0)+1;return acc},{})};window.PSTMaintenanceCounts=maintCounts;
  const recentClean=(db.cleaning||[]).filter(x=>recordInAcademicYear(x,['date']));const comp=recentClean.length?Math.round(recentClean.filter(x=>normalizeText(x.overallStatus)==='conforme').length/recentClean.length*100):null;const weak=recentClean.reduce((sum,x)=>sum+(x.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).length,0);
  const periodicYearRows=periodicAcademicYearRowsV165(activeAcademicYear()),pLate=periodicYearRows.filter(r=>['En retard','À faire'].includes(r.info.state)).map(r=>r.x),pSoon=periodicYearRows.filter(r=>r.info.due&&activeAcademicYear()===academicYearFor(todayISO())&&r.info.due<=addDays(todayISO(),60)).map(r=>r.x);
@@ -6122,12 +6150,32 @@ function renderDashboardPeriodicNextV160(){
  n.textContent=pending.length;
  d.textContent=pending.length?`prochain : ${fmtDate(pending[0].info.due)} · ${pending[0].x.name||'contrôle'}`:'aucun contrôle restant calculé dans l’année';
 }
+function renderMaintenanceOverviewPST(){
+ const host=document.getElementById('dashboard');if(!host)return;
+ let panel=document.getElementById('pstMaintenanceOverview');
+ if(!panel){panel=document.createElement('section');panel.id='pstMaintenanceOverview';panel.className='pst-maintenance-overview';const h=document.createElement('h2');h.textContent='Maintenance · suivi toutes années';panel.appendChild(h);const body=document.createElement('div');body.id='pstMaintenanceOverviewBody';panel.appendChild(body);host.appendChild(panel);}
+ const rows=Array.isArray(db.maintenance)?db.maintenance:[],today=todayISO();
+ const open=rows.filter(x=>!isClosedStatus(x.status));
+ const overdue=open.filter(x=>x.dueDate&&x.dueDate<today);
+ const urgent=open.filter(x=>['urgente','urgent','critique','haute'].includes(normalizeText(x.priority)));
+ const planned=open.filter(x=>['planifiee','planifie','en cours'].includes(normalizeText(x.status)));
+ const metrics=[['Total',rows.length],['À traiter',open.length],['Urgentes',urgent.length],['En retard',overdue.length],['Planifiées / en cours',planned.length],['Terminées',rows.length-open.length]];
+ const body=document.getElementById('pstMaintenanceOverviewBody');if(!body)return;
+ body.replaceChildren();const grid=document.createElement('div');grid.className='pst-maintenance-metrics';
+ for(const [label,count] of metrics){const el=document.createElement('div');el.className='pst-maintenance-metric';const n=document.createElement('strong');n.textContent=String(count);const t=document.createElement('span');t.textContent=label;el.append(n,t);grid.appendChild(el);}body.appendChild(grid);
+ const title=document.createElement('h3');title.textContent='Interventions prioritaires';body.appendChild(title);
+ const list=document.createElement('div');list.className='pst-maintenance-items';
+ const selected=[...open].sort((a,b)=>Number(overdue.includes(b))-Number(overdue.includes(a))||Number(urgent.includes(b))-Number(urgent.includes(a))||String(a.dueDate||'9999').localeCompare(String(b.dueDate||'9999'))).slice(0,6);
+ for(const x of selected){const item=document.createElement('button');item.type='button';item.className='pst-maintenance-item';const title=document.createElement('strong');title.textContent=x.title||'Intervention';const info=document.createElement('small');info.textContent=[x.building,x.room,x.priority,x.status,x.dueDate?'Échéance '+fmtDate(x.dueDate):''].filter(Boolean).join(' · ');item.append(title,info);item.addEventListener('click',()=>openMaintenance(x.id));list.appendChild(item);}
+ if(!selected.length){const empty=document.createElement('p');empty.textContent='Aucune intervention en attente.';list.appendChild(empty);}body.appendChild(list);
+}
 function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnections();renderGlobalAcademicYear();
+ renderMaintenanceOverviewPST();
  const range=dashboardPeriodRangeV159(),activeAgents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif'),dates=range.dates;
  let present=0,absent=0;for(const d of dates){for(const a of activeAgents){const info=dayInfo(a.id,d),norm=normalizeText(info.dayType);if(isAbsenceType(info.dayType))absent++;else if(norm!=='repos')present++;}}
  const meetingsPeriod=(db.meetings||[]).filter(x=>dashboardDateInRangeV159(x.date,range)&&!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule').length;
  const urgentActions=collectUrgentDashboardActions(),lateActions=collectLateDashboardActions(range.start),urgentPeriod=urgentActions.filter(x=>!x.due||x.due<=range.end).length;
- const allMaint=(db.maintenance||[]).filter(x=>recordInAcademicYear(x,['date','dueDate'])),closedMaint=allMaint.filter(x=>isClosedStatus(x.status)),openMaint=allMaint.filter(x=>!isClosedStatus(x.status)),todoMaint=allMaint.filter(x=>normalizeText(x.status)==='a faire'),maintCounts={total:allMaint.length,todo:todoMaint.length,open:openMaint.length,closed:closedMaint.length,byStatus:allMaint.reduce((acc,x)=>{const k=String(x.status||'Sans statut').trim()||'Sans statut';acc[k]=(acc[k]||0)+1;return acc},{})};window.PSTMaintenanceCounts=maintCounts;
+ const allMaint=(db.maintenance||[]),closedMaint=allMaint.filter(x=>isClosedStatus(x.status)),openMaint=allMaint.filter(x=>!isClosedStatus(x.status)),todoMaint=allMaint.filter(x=>normalizeText(x.status)==='a faire'),maintCounts={total:allMaint.length,todo:todoMaint.length,open:openMaint.length,closed:closedMaint.length,byStatus:allMaint.reduce((acc,x)=>{const k=String(x.status||'Sans statut').trim()||'Sans statut';acc[k]=(acc[k]||0)+1;return acc},{})};window.PSTMaintenanceCounts=maintCounts;
  const recentClean=(db.cleaning||[]).filter(x=>recordInAcademicYear(x,['date'])),comp=recentClean.length?Math.round(recentClean.filter(x=>normalizeText(x.overallStatus)==='conforme').length/recentClean.length*100):null,weak=recentClean.reduce((sum,x)=>sum+(x.tasks||[]).filter(t=>['a reprendre','non conforme'].includes(normalizeText(t.status))).length,0);
  const periodicYearRows=periodicAcademicYearRowsV165(activeAcademicYear()),pLate=periodicYearRows.filter(r=>['En retard','À faire'].includes(r.info.state)).map(r=>r.x),pSoon=periodicYearRows.filter(r=>r.info.due&&activeAcademicYear()===academicYearFor(todayISO())&&r.info.due<=addDays(todayISO(),60)).map(r=>r.x),notes=(db.notes||[]).filter(x=>recordInAcademicYear(x,['date','dueDate'])&&!isClosedStatus(x.status)),notesDue=notes.filter(x=>{const due=recordDueDate(x);return due&&due<=addDays(todayISO(),7)}).length;
  const eventCount=dates.reduce((sum,d)=>sum+dashboardEventsForDateV159(d).length,0),hero=$('#dailyHeroDate'),heroSummary=$('#dailyHeroSummary'),kicker=document.querySelector('#dashboard .daily-hero-kicker-v149');

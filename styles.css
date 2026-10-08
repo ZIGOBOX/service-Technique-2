@@ -1054,3 +1054,10 @@ body.rc-pos-open{overflow:hidden!important}
  .roomprep-checks{grid-template-columns:1fr 1fr!important}.service-stepper{grid-template-columns:50px 1fr 50px}
  .roomprep-service-banner>span{width:40px;height:40px}.roomprep-service-banner small{font-size:9px}
 }
+
+/* Vue maintenance adaptative PC / mobile */
+.pst-maintenance-overview{margin:18px 0;padding:18px;border:1px solid var(--border,#d9e1e8);border-radius:16px;background:var(--surface,#fff);min-width:0}
+.pst-maintenance-overview h2{margin:0 0 14px;font-size:1.15rem}.pst-maintenance-overview h3{margin:18px 0 10px;font-size:1rem}
+.pst-maintenance-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.pst-maintenance-metric{padding:14px;border-radius:12px;background:rgba(115,132,154,.09);display:flex;flex-direction:column;gap:4px;min-width:0}.pst-maintenance-metric strong{font-size:1.7rem;line-height:1.1}.pst-maintenance-metric span{font-size:.83rem;overflow-wrap:anywhere}
+.pst-maintenance-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pst-maintenance-item{text-align:left;display:flex;flex-direction:column;gap:5px;padding:12px;border:1px solid var(--border,#d9e1e8);border-radius:10px;background:transparent;cursor:pointer;min-width:0}.pst-maintenance-item strong,.pst-maintenance-item small{overflow-wrap:anywhere}.pst-maintenance-item small{opacity:.75}
+@media(max-width:700px){.pst-maintenance-overview{padding:12px}.pst-maintenance-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.pst-maintenance-items{grid-template-columns:1fr}.pst-maintenance-metric{padding:11px}}
