@@ -37,10 +37,11 @@
     const grid = document.createElement('div');
     grid.className = 'pst-mobile-tiles-grid';
 
-    for (const item of items) {
+    for (const [tileIndex, item] of items.entries()) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'pst-mobile-tile pst-mobile-tile--' + item.tone;
+      button.style.setProperty('--pst-tile-index', String(tileIndex));
       button.dataset.pstTileKind = item.kind;
       button.dataset.pstTileTarget = item.target;
       button.setAttribute('aria-label',item.name + ' : ' + item.description);
@@ -111,11 +112,28 @@
       topOfPage();
     }
 
+    let openingTile = false;
     grid.addEventListener('click',function(event) {
       const button = event.target.closest('[data-pst-tile-kind]');
-      if (!button || !grid.contains(button)) return;
-      if (button.dataset.pstTileKind === 'panel') openPanel(button.dataset.pstTileTarget,button.querySelector('strong')?.textContent||'Détail');
-      else openView(button.dataset.pstTileTarget);
+      if (!button || !grid.contains(button) || openingTile || !isPhone()) return;
+      const kind = button.dataset.pstTileKind;
+      const target = button.dataset.pstTileTarget;
+      const name = button.querySelector('strong')?.textContent || 'Détail';
+      const navigate = function() {
+        button.classList.remove('pst-mobile-tile--spinning');
+        openingTile = false;
+        if (kind === 'panel') openPanel(target,name);
+        else openView(target);
+      };
+      // Animation seulement sur mobile et si l'utilisateur accepte les mouvements.
+      // La navigation ne dépend pas de la fin d'un événement d'animation.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        navigate();
+        return;
+      }
+      openingTile = true;
+      button.classList.add('pst-mobile-tile--spinning');
+      window.setTimeout(navigate,460);
     });
     document.getElementById('pstMobileDashboardBack').addEventListener('click',closePanel);
     document.getElementById('pstMobileDashboardExternalBackButton').addEventListener('click',returnHome);

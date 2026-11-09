@@ -1,0 +1,9 @@
+PILOTAGE SERVICE TECHNIQUE - ROTATION DES CASES SUR TELEPHONE
+Version 9 novembre 2026
+
+- Les 12 cases du tableau de bord pivotent légèrement à tour de rôle.
+- Un appui sur une case provoque une rotation 3D avant ouverture de la rubrique.
+- Le retour au tableau de bord fonctionne comme dans la version précédente.
+- Aucun changement sur ordinateur ni sur les agents, horaires, plannings et données.
+- Animation désactivée si le téléphone demande une réduction des mouvements.
+- Pour mettre à jour sur GitHub : remplacer les fichiers du dépôt par ceux du ZIP.
