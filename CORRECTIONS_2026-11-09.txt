@@ -1,0 +1,7 @@
+Correctifs appliques le 09/11/2026
+- Suppression du bouton « Integrer les consignes validees du 8 octobre » et de sa fenetre de confirmation.
+- Conservation des corrections d affichage mobile de la version precedente.
+- Suppression des anciens fichiers textes historiques de changements pour rester sous 100 fichiers.
+- Correction du chemin du logo dans le dossier assets.
+- Les donnees existantes ne sont ni modifiees ni supprimees.
+Deployer le contenu du dossier service-Technique-2-main sur GitHub Pages.

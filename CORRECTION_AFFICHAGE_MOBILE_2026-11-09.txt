@@ -1,0 +1,10 @@
+Correction affichage mobile V147.186 — 9 novembre 2026
+
+1. La liste « Priorités du jour » n'écrase plus ses cartes : flex-shrink désactivé, hauteur automatique et grille à 3 colonnes (icône, texte, flèche).
+2. Les titres et descriptions longs reviennent à la ligne sans se superposer. Sur mobile, l'ensemble de la liste reste visible via le défilement normal de la page.
+3. Les boutons « Voir agenda » et « Voir toutes » deviennent compacts à côté de leurs titres.
+4. Les horaires et états des agents tiennent sur deux lignes sur téléphone.
+5. Le bouton « Intégrer les consignes validées du 8 octobre » n'est plus fixe en bas : il est placé en bas du tableau de bord, sans cacher l'écran ni les commandes du téléphone.
+
+Fichiers modifiés : index.html, consignes-octobre-2026.js.
+Aucune donnée métier et aucun paramètre de synchronisation Supabase n'ont été modifiés.

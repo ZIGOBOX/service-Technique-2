@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#075ca8">
   <title>Pilotage Service Technique V147.185</title>
   <link rel="icon" href="./assets/logo-service-technique.png">
-  <link rel="stylesheet" href="./styles.css?v=147.185-20261006-permanence-pastille">
+  <link rel="stylesheet" href="./styles.css?v=147.186-20261109-mobile-display">
 
 <style id="v14713-fixes">
 /* Barres horizontales locales aux plannings : elles ne repartent plus avec la page. */
@@ -876,6 +876,164 @@
 
 <style id="periodicImportEditorStyle">
 .periodic-import-editor{width:min(920px,96vw);max-height:90vh;border:1px solid #cbd5e1;border-radius:12px;padding:22px;background:#fff;color:#172033;box-shadow:0 24px 80px #0004;overflow:auto}.periodic-import-editor::backdrop{background:#0f172a88}.periodic-editor-head,.periodic-editor-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}.periodic-editor-head h3{margin:0 0 12px}.periodic-editor-actions{margin-top:18px;justify-content:flex-end}.periodic-import-editor .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.periodic-import-editor label{display:flex;flex-direction:column;gap:5px;min-width:0}.periodic-import-editor input,.periodic-import-editor select,.periodic-import-editor textarea{width:100%;box-sizing:border-box}.periodic-import-editor .span2{grid-column:1/-1}.periodic-editor-state{padding:12px;border-radius:8px;background:#edf7f0;font-weight:700}.periodic-import-editor .hint{line-height:1.45}@media(max-width:640px){.periodic-import-editor{padding:14px}.periodic-import-editor .form-grid{grid-template-columns:1fr}.periodic-editor-actions{flex-wrap:wrap}}
+</style>
+
+<style id="v147186-fix-mobile-priorities">
+/* V147.186 — Empêche l'écrasement des cartes de priorités sur mobile.
+   Les boutons de la liste sont de vrais blocs à hauteur intrinsèque,
+   avec texte multiligne; le défilement se fait sur le conteneur, pas
+   en compressant les items flex. */
+#dashboard .daily-priority-list-v149 {
+  min-width:0;
+  overflow-x:hidden;
+  overscroll-behavior-y:contain;
+  align-content:start;
+  gap:9px;
+  padding:2px 3px 8px 1px;
+  margin-top:0;
+}
+#dashboard .daily-priority-list-v149 > .preview-item {
+  display:grid!important;
+  grid-template-columns:28px minmax(0,1fr) 18px;
+  align-items:center;
+  column-gap:10px;
+  flex:0 0 auto!important;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  min-height:70px;
+  height:auto!important;
+  margin:0;
+  padding:11px 10px!important;
+  text-align:left;
+  white-space:normal!important;
+  overflow:visible;
+  border:1px solid #e1e9f2;
+  border-radius:13px;
+  background:#f8fafc;
+  color:#183650;
+  line-height:1.35;
+  cursor:pointer;
+}
+#dashboard .daily-priority-list-v149 > .preview-item:hover,
+#dashboard .daily-priority-list-v149 > .preview-item:focus-visible {
+  background:#edf6ff;
+  border-color:#a4cbea;
+}
+#dashboard .daily-priority-list-v149 > .preview-item > span:first-child {
+  display:block;
+  text-align:center;
+  font-size:1.25rem;
+  line-height:1.2;
+}
+#dashboard .daily-priority-list-v149 > .preview-item > div {
+  min-width:0;
+  max-width:100%;
+}
+#dashboard .daily-priority-list-v149 > .preview-item strong {
+  display:block;
+  min-width:0;
+  font-size:.84rem!important;
+  line-height:1.35!important;
+  font-weight:800;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  white-space:normal!important;
+}
+#dashboard .daily-priority-list-v149 > .preview-item small {
+  display:block;
+  margin-top:5px;
+  font-size:.72rem!important;
+  line-height:1.4;
+  color:#526b7e;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+}
+#dashboard .daily-priority-list-v149 > .preview-item .badge {
+  font-size:.66rem!important;
+  vertical-align:baseline;
+  max-width:100%;
+}
+#dashboard .daily-priority-list-v149 > .preview-item > b {
+  justify-self:center;
+  font-size:1.3rem;
+  line-height:1;
+  color:#6a8095;
+}
+@media(max-width:700px){
+  /* Une seule zone de défilement : la page mobile. */
+  #dashboard .daily-priority-panel-v149 {
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  #dashboard .daily-priority-list-v149 {
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  /* Actions des encadrés : plus de grands boutons sur toute la largeur. */
+  #dashboard .daily-agenda-panel-v149 .panel-head,
+  #dashboard .daily-priority-panel-v149 .panel-head {
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  #dashboard .daily-agenda-panel-v149 .panel-head > div,
+  #dashboard .daily-priority-panel-v149 .panel-head > div {
+    flex:1 1 160px;
+    min-width:0;
+  }
+  #dashboard .daily-agenda-panel-v149 .panel-head > button,
+  #dashboard .daily-priority-panel-v149 .panel-head > button {
+    flex:0 0 auto!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:100%;
+    min-height:36px;
+    margin:0;
+    padding:7px 11px!important;
+    white-space:nowrap;
+  }
+  /* Les horaires des agents passent sous leur nom, et ne sont plus coupés. */
+  #dashboard .dashboard-team-row-v149,
+  #dashboard .dashboard-team-row-v149.week-summary-v159 {
+    grid-template-columns:36px minmax(0,1fr) auto!important;
+    grid-template-rows:auto auto;
+    gap:3px 8px;
+    min-height:56px;
+  }
+  #dashboard .dashboard-team-row-v149 > .dashboard-team-avatar-v149 {
+    grid-column:1;
+    grid-row:1/3;
+    align-self:center;
+  }
+  #dashboard .dashboard-team-row-v149 > strong {
+    grid-column:2;
+    grid-row:1;
+    min-width:0;
+    overflow-wrap:anywhere;
+  }
+  #dashboard .dashboard-team-row-v149 > small,
+  #dashboard .dashboard-team-row-v149.week-summary-v159 > small {
+    grid-column:2;
+    grid-row:2;
+    max-width:none;
+    min-width:0;
+    overflow:visible;
+    text-overflow:clip;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  #dashboard .dashboard-team-row-v149 > .dashboard-team-status-v149 {
+    grid-column:3;
+    grid-row:1/3;
+    justify-self:end;
+    align-self:center;
+  }
+}
 </style>
 </head>
 <body data-layout="auto">
@@ -1783,6 +1941,6 @@
     }
   })();
   </script>
-<script src="consignes-octobre-2026.js"></script>
+
 </body>
 </html>
