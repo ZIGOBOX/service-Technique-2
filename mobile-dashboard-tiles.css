@@ -1,0 +1,129 @@
+/* Mode borne de service : tuiles de navigation uniquement sur téléphone. */
+#pstMobileDashboardTiles,
+#pstMobileDashboardDetailBar,
+#pstMobileDashboardExternalBack{display:none!important}
+
+@media screen and (max-width:700px) {
+  #dashboard.pst-mobile-tiles-ready > .pst-mobile-dashboard-tiles {
+    display:block!important;
+    width:100%;min-width:0;max-width:100%;
+    padding:14px 12px 12px;margin:0 0 13px!important;
+    background:#fff;border:1px solid #e1e9f0;border-radius:21px;
+    box-shadow:0 4px 18px rgba(21,51,82,.045)
+  }
+  #dashboard .pst-mobile-tiles-heading {
+    display:flex;align-items:baseline;justify-content:space-between;
+    flex-wrap:wrap;gap:5px 10px;margin:1px 2px 12px;color:#183953
+  }
+  #dashboard .pst-mobile-tiles-heading strong {font-size:1.09rem;font-weight:900}
+  #dashboard .pst-mobile-tiles-heading small {font-size:.72rem;color:#718496;font-weight:700}
+  #dashboard .pst-mobile-tiles-grid {
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;min-width:0
+  }
+  #dashboard .pst-mobile-tile {
+    min-width:0;min-height:115px;max-width:100%;height:auto;
+    border:0;border-radius:13px;padding:11px 12px;
+    display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;
+    gap:12px;text-align:left;cursor:pointer;
+    color:#fff;background:var(--pst-tile-color,#447fb6);
+    box-shadow:inset 0 -3px rgba(0,0,0,.09),0 2px 6px rgba(27,48,70,.08);
+    white-space:normal;overflow-wrap:anywhere;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent
+  }
+  #dashboard .pst-mobile-tile:active {transform:scale(.98);filter:brightness(.95)}
+  #dashboard .pst-mobile-tile:focus-visible {outline:3px solid #093f75;outline-offset:3px}
+  #dashboard .pst-mobile-tile-icon {font-size:1.65rem;line-height:1.05}
+  #dashboard .pst-mobile-tile-body {display:flex;flex-direction:column;gap:4px;max-width:100%;min-width:0}
+  #dashboard .pst-mobile-tile-body strong {display:block;font-size:.91rem;font-weight:900;line-height:1.16}
+  #dashboard .pst-mobile-tile-body small {display:block;font-size:.68rem;line-height:1.18;opacity:.92;font-weight:650}
+  #dashboard .pst-mobile-tile--sky {--pst-tile-color:#28a4d5}
+  #dashboard .pst-mobile-tile--coral {--pst-tile-color:#e85b61}
+  #dashboard .pst-mobile-tile--purple {--pst-tile-color:#9270b4}
+  #dashboard .pst-mobile-tile--blue {--pst-tile-color:#497dc7}
+  #dashboard .pst-mobile-tile--teal {--pst-tile-color:#27979b}
+  #dashboard .pst-mobile-tile--orange {--pst-tile-color:#e48c4d}
+  #dashboard .pst-mobile-tile--mint {--pst-tile-color:#319a75}
+  #dashboard .pst-mobile-tile--indigo {--pst-tile-color:#556ca8}
+  #dashboard .pst-mobile-tile--sand {--pst-tile-color:#a98454}
+  #dashboard .pst-mobile-tile--rose {--pst-tile-color:#c45f87}
+  #dashboard .pst-mobile-tile--slate {--pst-tile-color:#5e7e96}
+  #dashboard .pst-mobile-tile--navy {--pst-tile-color:#215a82}
+
+  /* Page d'accueil : conserver exactement les agents/plannings et les KPIs ;
+     remplacer UNIQUEMENT les rubriques sous l'équipe par les cases. */
+  #dashboard.pst-mobile-tiles-ready:not([data-pst-mobile-panel]) > .daily-agenda-panel-v149,
+  #dashboard.pst-mobile-tiles-ready:not([data-pst-mobile-panel]) > .daily-priority-panel-v149,
+  #dashboard.pst-mobile-tiles-ready:not([data-pst-mobile-panel]) > .daily-reminders-panel-v149,
+  #dashboard.pst-mobile-tiles-ready:not([data-pst-mobile-panel]) > .daily-week-panel-v149,
+  #dashboard.pst-mobile-tiles-ready:not([data-pst-mobile-panel]) > .daily-watch-panel-v149,
+  #dashboard.pst-mobile-tiles-ready:not([data-pst-mobile-panel]) > #pstMaintenanceOverview {display:none!important}
+
+  /* Ouverture d'une rubrique : une seule carte, retour visible en tête.
+     Tous les contenus de la carte continuent d'être générés par le logiciel original. */
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .daily-hero-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .dashboard-period-toolbar-v159,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .today-kpis-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .daily-team-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .pst-mobile-dashboard-tiles,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .daily-agenda-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .daily-priority-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .daily-reminders-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .daily-week-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .daily-watch-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > #pstMaintenanceOverview {display:none!important}
+
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel="agenda"] > .daily-agenda-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel="priorities"] > .daily-priority-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel="reminders"] > .daily-reminders-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel="week"] > .daily-week-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel="watch"] > .daily-watch-panel-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel="maintenance"] > #pstMaintenanceOverview {
+    display:block!important;width:100%!important;max-width:none!important;
+    min-height:0;height:auto!important;max-height:none!important;overflow:visible!important;
+    margin:0 0 16px!important
+  }
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] > .pst-mobile-dashboard-detailbar {
+    display:flex!important;align-items:center;gap:8px;justify-content:space-between;
+    flex-wrap:wrap;margin:0 0 12px!important;padding:9px 10px;
+    background:#f5f9ff;border:1px solid #d5e7f5;border-radius:13px;
+    position:sticky;top:70px;z-index:16
+  }
+  #dashboard .pst-mobile-dashboard-detailbar strong {
+    font-size:.82rem;color:#17456d;min-width:0
+  }
+  .pst-mobile-return-button {
+    display:inline-flex!important;justify-content:center;align-items:center;
+    min-height:44px;min-width:0;padding:8px 13px!important;
+    color:#fff!important;background:#175785!important;border:0!important;
+    border-radius:10px!important;font-size:.83rem!important;font-weight:850!important;
+    text-align:center;cursor:pointer;white-space:normal;touch-action:manipulation
+  }
+  .pst-mobile-return-button:focus-visible {outline:3px solid #feaa32;outline-offset:2px}
+  body.pst-mobile-external-from-tiles:has(.view.active:not(#dashboard)) #pstMobileDashboardExternalBack {
+    display:flex!important;justify-content:flex-start;
+    position:sticky;top:70px;z-index:18;
+    margin:8px 12px 0;padding:7px;
+    background:#eef6ff;border:1px solid #d9e8f3;border-radius:13px
+  }
+  /* Pas de liste comprimée ni de chevauchement lorsque l'on ouvre une case. */
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] .dashboard-today-agenda,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] .daily-priority-list-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] .dashboard-reminders-v149,
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel] .dashboard-week-strip-v149 {
+    max-height:none!important;height:auto!important;overflow:visible!important;
+  }
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel="watch"] .dashboard-watch-grid-v149 {
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;
+  }
+  #dashboard.pst-mobile-tiles-ready[data-pst-mobile-panel="watch"] .dashboard-watch-v149 {min-width:0!important;overflow-wrap:anywhere}
+}
+@media screen and (max-width:360px) {
+  #dashboard .pst-mobile-tile{min-height:105px;padding:10px;gap:8px}
+  #dashboard .pst-mobile-tile-body strong{font-size:.82rem}
+  #dashboard .pst-mobile-tile-body small{font-size:.62rem}
+  #dashboard .pst-mobile-tiles-grid{gap:7px}
+}
+@media print {
+  #pstMobileDashboardTiles,#pstMobileDashboardDetailBar,#pstMobileDashboardExternalBack{display:none!important}
+}

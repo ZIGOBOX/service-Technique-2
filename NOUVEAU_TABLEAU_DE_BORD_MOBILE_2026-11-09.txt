@@ -1,0 +1,22 @@
+TABLEAU DE BORD MOBILE EN CASES — 09/11/2026
+
+Affichage réservé aux téléphones (écran de largeur 700 px maximum).
+- Les agents, leurs horaires, leurs plannings, et les indicateurs restent sur l'accueil.
+- Sous l'équipe, les grandes sections sont remplacées par 12 cases colorées.
+- Appuyer sur une case pour accéder à son contenu ou au module correspondant.
+- Un bouton « Retour au tableau de bord » permet de revenir à l'accueil.
+- Sur ordinateur, le tableau de bord reste strictement identique à la version précédente.
+- Les fonctions, fichiers métier, données et paramètres Supabase sont conservés.
+- Le bouton supprimé des consignes du 8 octobre n'est pas réintroduit.
+
+Rubriques disponibles : Ma journée, Priorités du jour, Mes rappels, Ma semaine,
+À surveiller, Contrôles, Contrôle ménage, Interventions, Bilan maintenance,
+Rendez-vous, Bloc-notes et Chronotime.
+
+Fichiers ajoutés : mobile-dashboard-tiles.css, mobile-dashboard-tiles.js.
+Fichier modifié : index.html (chargement des deux fichiers ajoutés).
+
+INSTALLATION GITHUB PAGES : remplacer les fichiers du dépôt par le contenu du
+répertoire service-Technique-2-main, sans mettre ce répertoire comme sous-dossier.
+Le fichier index.html doit rester à la racine du dépôt.
+Après la mise à jour, recharger la page sur téléphone (si nécessaire vider le cache).
