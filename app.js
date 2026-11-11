@@ -3125,6 +3125,120 @@ function frenchPublicHolidayName(date){
  const easter=easterSundayISO(y),movable={};movable[addDays(easter,1)]='Lundi de Pâques';movable[addDays(easter,39)]='Ascension';movable[addDays(easter,50)]='Lundi de Pentecôte';
  return movable[d]||'';
 }
+/* Rappels programmation ATS8500 : calculés à l'ouverture à partir du calendrier
+   scolaire de la zone choisie, des fermetures saisies et des jours fériés français.
+   Aucune programmation réelle de centrale d'alarme n'est effectuée ici. */
+const ALARM_PROGRAMMING_REMINDER_LEAD_DAYS=7;
+function alarmProgrammingReminderCandidates(referenceDate=todayISO()){
+ const today=normalizeDateValue(referenceDate)||todayISO(),until=addDays(today,ALARM_PROGRAMMING_REMINDER_LEAD_DAYS);
+ const zone=String(db.settings?.schoolZone||'A'),periods=[],seen=new Set();
+ const manual=(db.vacations||[]).filter(x=>x&&x.start&&normalizeText(x.status)!=='terminee'&&(x.zone===zone||x.zone==='Toutes'||!x.zone));
+ for(const p of manual){
+  const date=normalizeDateValue(p.start);if(!date||date<today||date>until)continue;
+  const name=String(p.name||'Fermeture / permanence').trim();
+  periods.push({key:`vacation:${date}`,date,kind:'vacation',name,source:'saisie'});seen.add(date);
+ }
+ for(const year of new Set([academicYearFor(today),academicYearFor(until)])){
+  for(const [name,start] of (SCHOOL_CALENDAR[year]?.[zone]||[])){
+   // Une période saisie manuellement à un ou deux jours du début officiel
+   // remplace le rappel automatique, sans doublon.
+   if(start<today||start>until||manual.some(p=>{const delta=daysBetweenDates(p.start,start);return delta!==null&&Math.abs(delta)<=2;}))continue;
+   if(!seen.has(start)){periods.push({key:`vacation:${start}`,date:start,kind:'vacation',name:`Vacances de ${name}`,source:'calendrier scolaire'});seen.add(start)}
+  }
+ }
+ for(let date=today;date<=until;date=addDays(date,1)){
+  const name=frenchPublicHolidayName(date);if(name)periods.push({key:`holiday:${date}`,date,kind:'holiday',name,source:'calendrier national'});
+ }
+ const done=db.settings?.alarmProgrammingDone||{};
+ return periods.filter(x=>!done[x.key]).map(x=>({...x,remaining:daysBetweenDates(today,x.date)}))
+  .sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==='holiday'?-1:1));
+}
+/* Entrées automatiques de l'agenda : un rappel sur un jour ouvré au moins
+   sept jours avant la fermeture / les permanences / le jour férié. */
+function alarmProgrammingOccasionsBetween(from,to){
+ const start=normalizeDateValue(from),end=normalizeDateValue(to);
+ if(!start||!end||end<start)return [];
+ const zone=String(db.settings?.schoolZone||'A'),periods=[],seen=new Set();
+ const manual=(db.vacations||[]).filter(x=>x&&x.start&&normalizeText(x.status)!=='terminee'&&(x.zone===zone||x.zone==='Toutes'||!x.zone));
+ for(const p of manual){
+  const date=normalizeDateValue(p.start);if(!date||date<start||date>end||seen.has(date))continue;
+  const name=String(p.name||'Fermeture / permanence').trim();
+  periods.push({key:`vacation:${date}`,date,kind:'vacation',name});seen.add(date);
+ }
+ const academicYears=new Set();
+ for(let date=start;date<=end;date=addDays(date,28))academicYears.add(academicYearFor(date));
+ academicYears.add(academicYearFor(end));
+ for(const year of academicYears){
+  for(const [name,date] of (SCHOOL_CALENDAR[year]?.[zone]||[])){
+   if(date<start||date>end||seen.has(date)||manual.some(p=>{const delta=daysBetweenDates(p.start,date);return delta!==null&&Math.abs(delta)<=2;}))continue;
+   periods.push({key:`vacation:${date}`,date,kind:'vacation',name:`Vacances de ${name}`});seen.add(date);
+  }
+ }
+ for(let date=start;date<=end;date=addDays(date,1)){
+  const name=frenchPublicHolidayName(date);
+  if(name)periods.push({key:`holiday:${date}`,date,kind:'holiday',name});
+ }
+ return periods.sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==='holiday'?-1:1));
+}
+function alarmProgrammingAgendaReminderDate(targetDate){
+ let date=addDays(targetDate,-ALARM_PROGRAMMING_REMINDER_LEAD_DAYS);
+ // Pour ne pas demander une action le dimanche ou un jour férié.
+ for(let i=0;i<12;i++){
+  if(![0,6].includes(parseDate(date).getDay())&&!frenchPublicHolidayName(date))break;
+  date=addDays(date,-1);
+ }
+ return date;
+}
+function alarmProgrammingAgendaItemsForRange(from,to){
+ const start=normalizeDateValue(from),end=normalizeDateValue(to);
+ if(!start||!end||start>end)return [];
+ const done=db.settings?.alarmProgrammingDone||{};
+ return alarmProgrammingOccasionsBetween(start,addDays(end,21)).map(item=>{
+  const date=alarmProgrammingAgendaReminderDate(item.date);
+  if(date<start||date>end)return null;
+  const complete=!!done[item.key];
+  return {id:item.key,key:item.key,date,alarmDate:item.date,start:'',end:'',time:'',
+   title:`🔐 Programmer les alarmes — ${item.name}`,type:'Rappel',
+   status:complete?'Terminé':'À faire',priority:'Haute',
+   location:'Cuisine · Gymnase · Bâtiments A+B',
+   meta:`Pour le ${fmtDate(item.date)} · ATS8500`,
+   source:'alarm-programming',alarmKind:item.kind,readOnlyRecurring:true};
+ }).filter(Boolean);
+}
+function alarmProgrammingAgendaItemsForDate(date){return alarmProgrammingAgendaItemsForRange(date,date)}
+function alarmProgrammingAgendaItemsForMonth(month){
+ const ym=String(month||'').slice(0,7);
+ if(!/^\d{4}-\d{2}$/.test(ym))return [];
+ const [y,m]=ym.split('-').map(Number);
+ return alarmProgrammingAgendaItemsForRange(`${ym}-01`,`${ym}-${pad(new Date(y,m,0).getDate())}`);
+}
+function openAlarmProgrammingReminder(key){
+ const match=/^(holiday|vacation):(\d{4}-\d{2}-\d{2})$/.exec(String(key||''));if(!match)return;
+ const target=match[2],item=alarmProgrammingOccasionsBetween(target,target).find(x=>x.key===key);
+ const name=item?.name||frenchPublicHolidayName(target)||(match[1]==='holiday'?'Jour férié':'Fermeture / permanence');
+ const done=db.settings?.alarmProgrammingDone?.[key];
+ const date=alarmProgrammingAgendaReminderDate(target);
+ openDetail('🔐 Programmation des alarmes',`<div class="pst-alarm-agenda-detail">
+  <p><strong>${esc(name)}</strong></p>
+  <p>Rappel prévu le <strong>${fmtDateLong(date)}</strong>, pour la date du <strong>${fmtDateLong(target)}</strong>.</p>
+  <p>Vérifier et programmer les horaires de fermeture, de permanence et de réouverture des alarmes ATS8500 : <strong>Cuisine, Gymnase et Bâtiments A+B.</strong></p>
+  ${done?`<p class="pst-alarm-done-message">✓ Alarmes programmées — confirmé le ${fmtDate(done)}.</p>`:`<button type="button" class="pst-alarm-done" data-alarm-done="${esc(key)}">✓ Alarmes programmées</button>`}
+  <p class="muted">Ce rappel n'agit pas sur les centrales d'alarme : il sert uniquement de suivi dans le logiciel.</p>
+ </div>`);
+}
+function markAlarmProgrammingDone(key){
+ if(!key||!/^((holiday|vacation):\d{4}-\d{2}-\d{2})$/.test(key))return;
+ if(!db.settings.alarmProgrammingDone||typeof db.settings.alarmProgrammingDone!=='object')db.settings.alarmProgrammingDone={};
+ db.settings.alarmProgrammingDone[key]=todayISO();
+ save(false);renderDashboard();renderPersonal();renderPersonalCalendar();window.PSTNotificationCenter?.render?.();
+ const dialog=$('#detailModal');if(dialog?.open&&typeof dialog.close==='function')dialog.close();
+ toast('✓ Programmation des alarmes confirmée pour cette date.');
+}
+function alarmProgrammingCardHTML(item){
+ const label=item.kind==='vacation'?'Permanences / fermeture':'Jour férié';
+ const when=item.remaining===0?'Aujourd’hui':item.remaining===1?'Demain':`Dans ${item.remaining} jours`;
+ return `<div class="dashboard-reminder-v149 pst-alarm-reminder" role="group" aria-label="Programmation des alarmes"><span class="icon">🔐</span><div class="pst-alarm-reminder-main"><strong>Programmer les alarmes — ${esc(item.name)}</strong><small>${esc(label)} · ${fmtDate(item.date)} · ${when}</small><small>ATS8500 : Cuisine, Gymnase, Bâtiments A+B. Vérifier les horaires de fermeture, de permanence et de réouverture.</small><button type="button" class="pst-alarm-done" data-alarm-done="${esc(item.key)}">✓ Alarmes programmées</button></div></div>`;
+}
 function replacementNotificationAllowed(rec,date){
  const d=normalizeDateValue(date);if(!d)return false;const wd=parseDate(d).getDay();
  if(wd===0||wd===6)return false;
@@ -4318,7 +4432,8 @@ function eventsForDate(d){
   ...periodicEventsForDateV165(d),
   ...roomPrepAgendaRowsForDate(d),
   ...(db.vacations||[]).filter(x=>sameDay(x.start)&&normalizeText(x.status)!=='cloturee').map(x=>({...x,date:d,start:'',source:'vacation',title:`Vacances / fermeture · ${x.name||'Période'}`})),
-  ...([meterReadingItemForDate(d)].filter(Boolean))
+  ...([meterReadingItemForDate(d)].filter(Boolean)),
+  ...alarmProgrammingAgendaItemsForDate(d)
  ];
  // V147.148 — Personnel > Mon calendrier : n'afficher l'horaire réel que s'il diffère du théorique.
  for(const r of (db.agentDays||[]).filter(x=>String(x.date||'')===d && x.actualStart && x.actualEnd)){
@@ -5170,6 +5285,7 @@ function personalMonthEventClass(x){
 function personalMonthEventHTML(x){
  const cls=x?.source==='roomprep'?(x.roomPrepKind==='coffee'?'reminder':'task'):personalMonthEventClass(x),tm=[x.start,x.end].filter(Boolean).join('–'),place=x.location||'';
  const body=`<span class="personal-cal-event-time">${esc(tm||'Toute la journée')}</span><strong>${esc(x.title||'Événement')}</strong>${place?`<small>📍 ${esc(place)}</small>`:''}`;
+ if(x?.source==='alarm-programming')return `<button type="button" class="personal-cal-event reminder pst-alarm-calendar-event agenda-action ${x.status==='Terminé'?'done':''}" data-agenda-source="alarm-programming" data-agenda-id="${esc(x.id)}" title="Programmation des alarmes — ${fmtDate(x.alarmDate)}">${body}<small>${x.status==='Terminé'?'✓ Fait':'À programmer'}</small></button>`;
  if(x?.source==='roomprep')return `<button type="button" class="personal-cal-event ${cls} agenda-action roomprep" data-agenda-source="roomprep" data-agenda-id="${esc(x.id||'')}" title="Ouvrir la préparation salle / café">${body}</button>`;
  if(x.readOnlyRecurring)return `<button type="button" class="personal-cal-event ${cls} recurring" data-agenda-source="meter-reading" data-agenda-id="${esc(x.id||'')}" title="${esc(x.title||'Relevé des compteurs')}">${body}</button>`;
  return `<button type="button" class="personal-cal-event ${cls}" data-edit-type="personal" data-edit-id="${esc(x.id||'')}" title="Modifier : ${esc(x.title||'Événement')}">${body}</button>`;
@@ -5199,7 +5315,8 @@ function renderPersonal(){
  const regular=(db.personalEvents||[]).filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)&&(!st||x.status===st));
  const recurring=meterReadingItemsForMonth(m).filter(x=>(!t||x.type===t)&&(!st||x.status===st));
  const roomPrep=roomPrepAgendaRowsForMonth(m).filter(x=>(!t||x.type===t)&&(!st||x.status===st));
- const arr=[...regular,...recurring,...roomPrep].sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+ const alarmReminders=alarmProgrammingAgendaItemsForMonth(m).filter(x=>(!t||x.type===t)&&(!st||x.status===st));
+ const arr=[...regular,...recurring,...roomPrep,...alarmReminders].sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
  const personalTable=$('#personalTable');if(personalTable)personalTable.innerHTML=arr.length?arr.map(x=>`<tr>
    <td>${fmtDate(x.date)}</td>
    <td>${esc([x.start,x.end].filter(Boolean).join('–')||'—')}</td>
@@ -5208,13 +5325,13 @@ function renderPersonal(){
    <td>${esc(x.location||'—')}</td>
    <td>${badge(x.priority)}</td>
    <td>${badge(x.status)}</td>
-   <td>${x.source==='roomprep'?`<button type="button" class="ghost small agenda-action" data-agenda-source="roomprep" data-agenda-id="${esc(x.id||'')}">Ouvrir</button>`:(x.readOnlyRecurring?'<span class="meter-reading-chip">Automatique</span>':editButton('personal',x.id))}</td>
+   <td>${x.source==='alarm-programming'?`<button type="button" class="ghost small agenda-action" data-agenda-source="alarm-programming" data-agenda-id="${esc(x.id||'')}">Voir rappel</button>`:x.source==='roomprep'?`<button type="button" class="ghost small agenda-action" data-agenda-source="roomprep" data-agenda-id="${esc(x.id||'')}">Ouvrir</button>`:(x.readOnlyRecurring?'<span class="meter-reading-chip">Automatique</span>':editButton('personal',x.id))}</td>
   </tr>`).join(''):emptyRow(8);
  const personalCards=$('#personalCards');if(personalCards)personalCards.innerHTML=cardList(arr.map(x=>`<article class="list-card">
    <div><strong>${fmtDate(x.date)} ${esc(x.start||'')}</strong>${badge(x.status)}</div>
    <h3>${esc(x.title)}</h3>
    <p>${esc(x.type)} · ${esc(x.location||'Sans lieu')}</p>
-   ${x.source==='roomprep'?`<button type="button" class="agenda-action" data-agenda-source="roomprep" data-agenda-id="${esc(x.id||'')}">Ouvrir la préparation</button>`:(x.readOnlyRecurring?'<span class="meter-reading-chip">Dernier jour ouvré du mois</span>':`<button type="button" data-edit-type="personal" data-edit-id="${x.id}">Modifier</button>`) }
+   ${x.source==='alarm-programming'?`<button type="button" class="agenda-action pst-alarm-done" data-agenda-source="alarm-programming" data-agenda-id="${esc(x.id)}">Voir le rappel</button>`:x.source==='roomprep'?`<button type="button" class="agenda-action" data-agenda-source="roomprep" data-agenda-id="${esc(x.id||'')}">Ouvrir la préparation</button>`:(x.readOnlyRecurring?'<span class="meter-reading-chip">Dernier jour ouvré du mois</span>':`<button type="button" data-edit-type="personal" data-edit-id="${x.id}">Modifier</button>`) }
   </article>`));
  renderPersonalMonthCalendar(arr,m);
  renderMeterReadingsAgenda();
@@ -5306,7 +5423,7 @@ function recordsInRange(arr,start,end,dateFields=['date']){return (arr||[]).filt
 function createWeeklyArchive(force=false){const end=addDays(startOfWeek(todayISO()),-1),start=addDays(end,-6),key=isoWeekKey(start);if(!force&&db.archives.some(a=>a.kind==='weekly'&&a.key===key))return false;const absent=recordsInRange(db.agentDays,start,end).filter(x=>isAbsenceType(x.dayType));const snapshot={id:uid(),kind:'weekly',key,year:start.slice(0,4),academicYear:academicYearFor(start),start,end,createdAt:new Date().toISOString(),summary:{agents:db.agents.filter(a=>a.status==='Actif').length,absences:absent.length,maintenance:recordsInRange(db.maintenance,start,end,['date','dueDate']).length,cleaning:recordsInRange(db.cleaning,start,end).length,meetings:recordsInRange(db.meetings,start,end).length,notes:recordsInRange(db.notes,start,end,['date','dueDate']).length},data:{agentDays:recordsInRange(db.agentDays,start,end),maintenance:recordsInRange(db.maintenance,start,end,['date','dueDate']),cleaning:recordsInRange(db.cleaning,start,end),meetings:recordsInRange(db.meetings,start,end),personalEvents:recordsInRange(db.personalEvents,start,end),notes:recordsInRange(db.notes,start,end,['date','dueDate']),issues:recordsInRange(db.issues,start,end,['date','dueDate']),requests:recordsInRange(db.requests,start,end,['date','dueDate']),works:recordsInRange(db.works,start,end,['date','dueDate'])}};db.archives.push(snapshot);db.settings.lastWeeklyArchiveKey=key;return true}
 function runAnnualReset(){const t=parseDate(todayISO()),y=t.getFullYear(),isCloseDay=t.getMonth()===7&&t.getDate()===31,isAfterClose=t.getMonth()>=8;if(!isCloseDay&&!isAfterClose)return false;const closeYear=y;if(db.settings.lastAnnualResetYear>=closeYear)return false;const prevStart=closeYear-1,from=`${prevStart}-09-01`,to=`${closeYear}-08-31`,key=`${prevStart}-${closeYear}`;if(!db.archives.some(a=>a.kind==='annual'&&a.key===key)){db.archives.push({id:uid(),kind:'annual',key,year:String(closeYear),academicYear:key,start:from,end:to,createdAt:new Date().toISOString(),summary:{leaveDays:db.agentDays.filter(x=>x.date>=from&&x.date<=to&&isAbsenceType(x.dayType)).length,overtime:db.agentDays.filter(x=>x.date>=from&&x.date<=to).reduce((n,x)=>n+Number(x.overtime||0),0)},data:{agentDays:recordsInRange(db.agentDays,from,to),rotations:clone(db.rotations),weeklyPlans:clone(db.weeklyPlans)}})}db.settings.lastAnnualResetYear=closeYear;db.settings.leaveBalances={};db.settings.overtimeBalances={};return true}
 function runAutomaticHousekeeping(){let changed=false;try{changed=createWeeklyArchive(false)||changed;changed=runAnnualReset()||changed}catch(e){console.error('Archivage automatique',e)}return changed}
-function notificationTarget(n){setView(n.view||'dashboard');if(n.type==='agentDay'&&n.id){const r=db.agentDays.find(x=>x.id===n.id);if(r)setTimeout(()=>openAgentDay(r.agentId,r.date),50);return}if(n.type&&n.id)setTimeout(()=>dispatchEdit(n.type,n.id),50)}
+function notificationTarget(n){setView(n.view||'dashboard');if(n.type==='alarm-programming'){window.PSTMobileDashboardTiles?.openPanel?.('reminders','Mes rappels');return}if(n.type==='agentDay'&&n.id){const r=db.agentDays.find(x=>x.id===n.id);if(r)setTimeout(()=>openAgentDay(r.agentId,r.date),50);return}if(n.type&&n.id)setTimeout(()=>dispatchEdit(n.type,n.id),50)}
 function wasteCollectionShiftInfo(referenceDate=todayISO()){
  const ref=normalizeDateValue(referenceDate)||todayISO(),d=parseDate(ref),day=d.getDay();
  // Semaine lundi -> dimanche contenant la date de référence.
@@ -5321,6 +5438,14 @@ function wasteCollectionShiftInfo(referenceDate=todayISO()){
 function computeNotifications(){
  const out=[],today=todayISO(),replacementUntil=addMonths(today,1),active=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif'),days=[0,1,2,3,4,5,6].map(i=>addDays(today,i));
  const push=n=>{if(n&&n.title)out.push(n)};
+ // Les deux types d'alertes se déclenchent 7 jours avant, sans action
+ // sur le système d'intrusion. La confirmation utilisateur les clôture.
+ for(const r of alarmProgrammingReminderCandidates(today)){
+  push({level:r.remaining<=2?'red':'orange',icon:'🔐',title:`Programmer les alarmes — ${r.name}`,
+   text:`${fmtDate(r.date)} · ${r.kind==='holiday'?'jour férié':'vacances / permanences'} · Vérifier les horaires ATS8500 (Cuisine, Gymnase, Bâtiments A+B)`,
+   view:'dashboard',type:'alarm-programming',id:r.key,date:r.date});
+ }
+
  // Poubelles : le jeudi, avertir si un jour férié de la semaine décale la collecte du vendredi au samedi.
  try{
   const shift=wasteCollectionShiftInfo(today),wd=parseDate(today).getDay();
@@ -6127,7 +6252,8 @@ function renderDashboardRemindersV149(notes,pSoon){
  if(dueNote)cards.push(`<button class="dashboard-reminder-v149" data-edit-type="note" data-edit-id="${dueNote.id}"><span class="icon">✎</span><div><strong>${esc(dueNote.title||'Note à traiter')}</strong><small>Échéance ${fmtDate(recordDueDate(dueNote))} · ${esc(dueNote.category||'Bloc-notes')}</small></div></button>`);else cards.push(`<button class="dashboard-reminder-v149" data-go="notes"><span class="icon">✎</span><div><strong>Notes</strong><small>Aucune échéance de note sur la période.</small></div></button>`);
  const meter=range.dates.map(meterReadingItemForDate).find(Boolean)||meterReadingItemForDate(after);if(meter)cards.push(`<button class="dashboard-reminder-v149 agenda-action" data-agenda-source="meter-reading" data-agenda-id="${meter.id}"><span class="icon">📊</span><div><strong>Relevé des compteurs</strong><small>${fmtDate(meter.date)} · logements</small></div></button>`);else if(pSoon[0])cards.push(`<button class="dashboard-reminder-v149" data-edit-type="periodic" data-edit-id="${pSoon[0].id}"><span class="icon">📋</span><div><strong>${esc(pSoon[0].name||pSoon[0].title||'Contrôle périodique')}</strong><small>Contrôle à surveiller prochainement</small></div></button>`);else cards.push(`<button class="dashboard-reminder-v149" data-go="periodic"><span class="icon">📋</span><div><strong>Contrôles périodiques</strong><small>Aucune alerte proche.</small></div></button>`);
  const waste=range.dates.map(wasteAgendaItemForDate).find(Boolean)||wasteAgendaItemForDate(after);if(waste)cards.push(`<button class="dashboard-reminder-v149" data-go="waste"><span class="icon">🗑️</span><div><strong>${esc(waste.title||'Collecte des déchets')}</strong><small>${fmtDate(waste.date)} · ${esc(waste.meta||'')}</small></div></button>`);else cards.push(`<button class="dashboard-reminder-v149" data-go="waste"><span class="icon">🗑️</span><div><strong>Déchets / bacs</strong><small>Voir la prochaine collecte programmée.</small></div></button>`);
- el.innerHTML=cards.slice(0,4).join('');renderDashboardWeatherV149();
+ const alarms=alarmProgrammingReminderCandidates();
+ el.innerHTML=[...alarms.map(alarmProgrammingCardHTML),...cards].slice(0,Math.max(4,alarms.length)).join('');renderDashboardWeatherV149();
 }
 function renderDashboardWeekV149(){
  const el=$('#dashboardWeekStrip');if(!el)return;const range=dashboardPeriodRangeV159(),monday=startOfWeek(range.start),days=Array.from({length:5},(_,i)=>addDays(monday,i)),today=todayISO();
@@ -7246,9 +7372,10 @@ const dsn=$('#dashboardSyncNow');if(dsn)dsn.onclick=dashboardSyncNow;
  document.addEventListener('click',e=>{const mode=e.target.closest('[data-dashboard-period]');if(mode){dashboardPeriodModeV159=mode.dataset.dashboardPeriod==='week'?'week':'day';renderDashboard();return}const nav=e.target.closest('[data-dashboard-period-nav]');if(nav){const step=Number(nav.dataset.dashboardPeriodNav||0);dashboardPeriodDateV159=addDays(dashboardPeriodDateV159||todayISO(),step*(dashboardPeriodModeV159==='week'?7:1));renderDashboard();return}const today=e.target.closest('[data-dashboard-period-today]');if(today){dashboardPeriodDateV159=todayISO();const cy=academicYearFor(dashboardPeriodDateV159);if(activeAcademicYear()!==cy){setActiveAcademicYear(cy);return}renderDashboard();return}});
  document.addEventListener('change',e=>{if(e.target?.id==='dashboardPeriodDateV159'&&e.target.value){dashboardPeriodDateV159=e.target.value;renderDashboard();}});
  document.addEventListener('click',e=>{const open=e.target.closest('[data-agent-week-open]');if(open){openDashboardAgentWeekV150(0);return}const nav=e.target.closest('[data-agent-week-nav]');if(nav){const step=Number(nav.dataset.agentWeekNav||0);openDashboardAgentWeekV150(step===0?0:dashboardAgentWeekOffsetV150+step);return}});
-document.addEventListener('click',async e=>{const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){if(go.closest('#dashboard'))dashboardShortcut(go.dataset.go);else setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ae=e.target.closest('[data-agenda-source]');if(ae){
+document.addEventListener('click',async e=>{const alarmDone=e.target.closest('[data-alarm-done]');if(alarmDone){e.preventDefault();e.stopPropagation();markAlarmProgrammingDone(alarmDone.dataset.alarmDone);return}const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){if(go.closest('#dashboard'))dashboardShortcut(go.dataset.go);else setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ae=e.target.closest('[data-agenda-source]');if(ae){
  const source=ae.dataset.agendaSource,id=ae.dataset.agendaId;
- if(source==='personal')openPersonalEvent(id);
+ if(source==='alarm-programming')openAlarmProgrammingReminder(id);
+ else if(source==='personal')openPersonalEvent(id);
  else if(source==='meeting')openMeeting(id);
  else if(source==='note')openNote(id);
  else if(source==='maintenance')openMaintenance(id);

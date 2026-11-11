@@ -101,6 +101,7 @@
       document.getElementById('pstMobileDashboardDetailTitle').textContent = name;
       topOfPage();
     }
+    window.PSTMobileDashboardTiles = {openPanel};
     function openView(target) {
       if (!isPhone()) return;
       document.body.classList.add('pst-mobile-external-from-tiles');

@@ -1,0 +1,25 @@
+PILOTAGE SERVICE TECHNIQUE — RAPPELS DE PROGRAMMATION DES ALARMES
+Mise à jour du 11 novembre 2026
+
+- Ajout de rappels automatiques de programmation ATS8500 avant les jours fériés en France
+  et avant les vacances / fermetures / permanences enregistrées dans le logiciel.
+- Notification dans « Mes rappels » et dans la cloche à partir de 7 jours avant la date à préparer.
+- Ajout d'une entrée « Programmer les alarmes » dans l'Agenda personnel :
+  calendrier mensuel, calendrier hebdomadaire, vue « Ma journée ».
+- L'entrée d'agenda est fixée au moins 7 jours avant l'échéance, au dernier jour ouvré
+  précédent si la date théorique tombe un samedi, dimanche ou jour férié.
+- Un clic ouvre le détail et le bouton « Alarmes programmées ».
+- Après validation, l'alerte disparaît des notifications mais reste dans l'agenda
+  avec le statut « Terminé ».
+- Périmètre : Cuisine, Gymnase, Bâtiments A+B.
+- Le logiciel ne commande PAS la centrale d'alarme ; c'est un rappel administratif.
+
+IMPORTANT : le calendrier scolaire intégré couvre 2026-2027 (zones A, B, C).
+Les vacances/permanences saisies manuellement permettent de préciser les vraies périodes.
+
+Les cases tournantes du téléphone, l'équipe et les plannings agents sont conservés.
+Sur ordinateur, l'interface du tableau de bord reste identique ; seuls les rappels
+sont ajoutés à l'Agenda et à la cloche.
+
+Installation : décompresser le ZIP et remplacer les fichiers de votre dépôt GitHub.
+Ne pas supprimer les données Supabase.
