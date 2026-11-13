@@ -1,0 +1,51 @@
+PILOTAGE SERVICE TECHNIQUE — DICTÉE VOCALE DES PANNES
+13 novembre 2026
+
+NOUVEAUTÉ (UNIQUEMENT SUR TÉLÉPHONE, écran <= 700 pixels)
+- Dans Maintenance, bouton « 🎙️ Déclarer à la voix ».
+- Dans la fiche nouvelle demande ou modification d'intervention, bouton « 🎙️ Dicter le problème ».
+- Exemples :
+  « Bâtiment B, salle 244, fuite d'eau au plafond, urgent. »
+  « Salle 102, la lumière ne fonctionne plus. »
+  « Au deuxième étage du bâtiment B, salle 244, le radiateur ne chauffe pas. »
+- Le navigateur transforme la voix en texte, puis le logiciel préremplit :
+  objet, description, domaine, priorité (si explicitement prononcée),
+  bâtiment / étage / secteur / salle si le lieu est identifié sans ambiguïté.
+- Le texte entendu est modifiable et le bouton « Remplir les champs avec ce texte »
+  permet de relancer l'analyse sans reparler.
+- Si la salle n'est pas identifiée de manière sûre, le lieu est signalé « À préciser ».
+- Rien n'est enregistré sans appuyer sur le bouton existant « Enregistrer ».
+
+IMPORTANT : COMPATIBILITÉ / CONFIDENTIALITÉ
+- La reconnaissance vocale dépend du navigateur et de ses autorisations microphone.
+- À essayer dans Chrome Android en HTTPS (GitHub Pages).
+- Selon le navigateur, la voix peut être transmise à son service de reconnaissance.
+- Si la dictée web n'est pas disponible, utiliser le micro du clavier Android dans le champ « Texte entendu ».
+- La mise en forme est faite par des règles locales simples ; il ne s'agit pas d'une IA capable de comprendre toutes les pannes.
+- Toujours vérifier les champs avant l'enregistrement, en particulier la salle et la priorité.
+
+CONSERVÉ
+- Agents et leurs plannings inchangés ; affichage PC inchangé.
+- Cases colorées tournantes sur téléphone inchangées.
+- Recherche générale mobile et historique inchangés.
+- Agenda et rappels d'alarmes inchangés.
+- Aucune modification des tables Supabase ou des données sauvegardées.
+
+FICHIERS MODIFIÉS / AJOUTÉS
+- app.js : ajout du point d'insertion et activation du module vocal.
+- index.html : chargement des deux nouveaux fichiers.
+- maintenance-voice.js : dictée, analyse, remplissage contrôlé du formulaire.
+- maintenance-voice.css : styles de la dictée réservés au mobile.
+
+TESTS
+- Vérification syntaxique des fichiers JavaScript.
+- Test navigateur simulé d'une dictée : Bâtiment B / salle 244 / fuite d'eau / urgente.
+- Vérification que les champs se remplissent et que l'interface ordinateur reste inchangée.
+- La dictée réelle du microphone sur votre Android et la sauvegarde Supabase ne sont pas
+  testables ici et doivent être vérifiées une fois le logiciel mis en ligne.
+
+MISE EN LIGNE
+- Décompresser le ZIP.
+- Transférer tous les fichiers du dossier service-Technique-2-main sur GitHub,
+  en remplaçant les fichiers correspondants.
+- Sur le téléphone, actualiser la page pour récupérer les nouveaux scripts.

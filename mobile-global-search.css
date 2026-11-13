@@ -1,0 +1,57 @@
+/* Recherche générale : interface entièrement masquée sur ordinateur. */
+#pstMobileGlobalSearch{display:none!important}
+@media screen and (max-width:700px){
+  #dashboard > #pstMobileGlobalSearch{
+    display:block!important;width:100%;max-width:100%;min-width:0;
+    box-sizing:border-box;position:relative;
+    margin:0 0 14px;padding:14px 12px;
+    background:#fff;border:1px solid #dce7f0;border-radius:17px;
+    box-shadow:0 4px 16px rgba(24,62,91,.055);
+    scroll-margin-top:84px;
+  }
+  #dashboard[data-pst-mobile-panel] > #pstMobileGlobalSearch{display:none!important}
+  .pst-search-label{display:block;font-size:.99rem;font-weight:900;color:#194765;margin:0 0 9px}
+  .pst-search-field{display:flex;align-items:center;min-width:0;gap:6px}
+  #pstGlobalSearchInput{
+    display:block;flex:1;min-width:0;width:100%;height:46px;
+    margin:0!important;border:1px solid #bdd1e2;border-radius:11px;
+    background:#f5f9fd;font-size:16px!important;color:#173851;
+    padding:10px 12px;outline-offset:2px;box-sizing:border-box;
+    -webkit-appearance:none;appearance:none;
+  }
+  #pstGlobalSearchInput:focus{border-color:#2672af;outline:2px solid #a8cee8}
+  #pstMobileGlobalSearch .pst-search-clear{
+    color:#225c88!important;background:#e9f3fc!important;
+    border:0!important;padding:0 10px!important;min-height:44px!important;
+    border-radius:10px;font-size:.75rem;font-weight:800;
+  }
+  #pstMobileGlobalSearch .pst-search-clear[hidden],
+  #pstMobileGlobalSearch .pst-search-results[hidden]{display:none!important}
+  .pst-search-results{margin-top:12px;padding-top:7px;border-top:1px solid #e8eff5;min-width:0}
+  .pst-search-count{margin:0 0 8px;color:#5b6d7d;font-size:.77rem;font-weight:650;line-height:1.3}
+  .pst-search-content{max-height:min(62vh,540px);overflow-y:auto;overscroll-behavior:contain;padding:0 2px 3px;}
+  .pst-search-hint{font-size:.76rem;color:#657d8e;margin:7px 0}
+  .pst-search-result-group{padding:6px 0 7px;border-bottom:1px solid #e8eff5}
+  .pst-search-result-group:last-of-type{border-bottom:0}
+  .pst-search-group-name{font-size:.74rem;color:#466e8b;text-transform:uppercase;letter-spacing:.03em;font-weight:850;margin:4px 0 7px}
+  #dashboard .pst-search-hit{
+    width:100%;min-height:54px;border:0!important;background:transparent!important;
+    display:flex;align-items:center;gap:9px;text-align:left;cursor:pointer;
+    padding:8px 5px!important;margin:0!important;border-radius:10px;
+    color:#173a56!important;box-shadow:none!important;white-space:normal;
+    touch-action:manipulation;
+  }
+  #dashboard .pst-search-hit:not(:last-child){border-bottom:1px solid #f1f4f7!important;border-radius:0}
+  #dashboard .pst-search-hit:focus-visible,#dashboard .pst-search-hit:active{background:#e8f4ff!important;outline:2px solid #8abde6;outline-offset:-2px}
+  .pst-search-hit-icon{flex:0 0 35px;text-align:center;font-size:1.24rem}
+  .pst-search-hit-text{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+  .pst-search-hit-text strong{display:block;font-size:.86rem;line-height:1.2;font-weight:850;overflow-wrap:anywhere}
+  .pst-search-hit-text small{display:block;font-size:.7rem;font-weight:500;color:#61778a;line-height:1.35;overflow-wrap:anywhere}
+  .pst-search-hit-arrow{font-size:1.45rem;line-height:1;color:#47799f}
+  .pst-search-recent-header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:.8rem}
+  #dashboard .pst-search-recent-erase{border:0!important;color:#296995!important;background:transparent!important;font-size:.72rem;padding:6px!important}
+  .pst-search-recent-list{display:flex;flex-wrap:wrap;gap:7px}
+  #dashboard .pst-search-recent-chip{background:#eef5fc!important;color:#245b81!important;border:1px solid #dce7f1!important;border-radius:999px;padding:8px 12px!important;font-size:.78rem;font-weight:700;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+  #dashboard .pst-search-more{width:100%;min-height:44px;border:1px solid #c4dbef!important;border-radius:10px;color:#1c628f!important;background:#f4faff!important;font-weight:850;font-size:.78rem;padding:7px!important;margin:9px 0 0!important}
+}
+@media print{#pstMobileGlobalSearch{display:none!important}}

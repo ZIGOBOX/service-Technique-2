@@ -1,0 +1,42 @@
+PILOTAGE SERVICE TECHNIQUE — RECHERCHE GÉNÉRALE MOBILE
+Version préparée le 11 novembre 2026
+
+MODIFICATION
+- Barre « Recherche générale » ajoutée au tableau de bord uniquement sur les écrans <= 700 px.
+- Recherche en temps réel et sans distinction entre majuscules / minuscules / accents.
+- Résultats issus de la base de données déjà chargée dans le logiciel :
+  agents, salles et locaux, interventions, contrôles périodiques, contrôles ménage,
+  rendez-vous, bloc-notes, sécurité, demandes, chantiers, événements d'agenda,
+  documents, vacances et fermetures.
+- Accès direct aux formulaires existants des fiches sélectionnées.
+- Raccourcis vers les rubriques « Planning agents », « Chronotime », etc.
+- Bouton « Retour aux résultats » après navigation vers une fiche.
+- Les 5 dernières recherches sont conservées dans le stockage local du navigateur
+  du téléphone uniquement, pas dans Supabase. Effacement possible depuis la recherche.
+
+CONSERVÉ
+- Équipe et plannings agents : contenu et données inchangés.
+- Cases colorées tournantes et navigation mobile : inchangées.
+- Affichage ordinateur : barre de recherche invisible ; aucun changement de mise en page.
+- Rappels alarmes / calendrier déjà intégrés dans la version du 11 novembre.
+- Supabase : aucune migration de table, pas d'écriture par la recherche.
+
+MISE EN LIGNE
+- Décompresser l'archive.
+- Remplacer sur GitHub Pages les anciens fichiers par l'ensemble des fichiers
+  présents dans le dossier « service-Technique-2-main ».
+- Vérifier sur un téléphone connecté avec son compte habituel.
+- Si un ancien affichage reste visible : actualiser la page dans le navigateur.
+
+TECHNIQUE
+- Nouveau fichier mobile-global-search.js
+- Nouveau fichier mobile-global-search.css
+- index.html : référencement de ces deux fichiers
+- app.js : ajout d'une API minimale pour ouvrir une fiche existante depuis la recherche
+
+TESTS
+- Syntaxe JavaScript vérifiée (app.js, mobile-global-search.js).
+- Vérifications fonctionnelles en navigateur simulé : requête « 244 », agent,
+  note, ouverture de fiche, retour, historique local, visibilité mobile/PC.
+- La connexion réelle au serveur et les formulaires en production restent à tester
+  avec un compte utilisateur lors du déploiement.

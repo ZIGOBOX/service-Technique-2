@@ -1,0 +1,21 @@
+/* Dictée des interventions réservée à l'interface téléphone. Aucun impact ordinateur. */
+.pst-voice-maintenance-shortcut, #pstMaintenanceVoiceMount{display:none!important}
+@media(max-width:700px){
+  .pst-voice-maintenance-shortcut{display:inline-flex!important;justify-content:center;align-items:center;min-height:48px;padding:10px 15px;border-radius:11px;background:#075c86;color:#fff;font-size:14px;font-weight:800;border:0;cursor:pointer;width:100%;margin-top:8px}
+  #pstMaintenanceVoiceMount{display:block!important;grid-column:1/-1}
+  .pst-voice-card{padding:14px;background:linear-gradient(135deg,#e4f5fc,#f5fbfe);border:2px solid #91cbdc;border-radius:13px;display:grid;gap:10px;color:#163e56}
+  .pst-voice-title{display:flex;align-items:center;gap:7px;font-size:16px}
+  .pst-voice-card p{margin:0;font-size:12px;line-height:1.5}
+  .pst-voice-start{background:#096d91;color:#fff;border:0;border-radius:11px;min-height:56px;padding:10px 12px;font-size:16px;font-weight:900;cursor:pointer}
+  .pst-voice-start.pst-voice-listening{background:#b6243b;animation:pstVoicePulse 1.25s infinite ease-in-out}
+  .pst-voice-start:disabled{background:#8a9baa;cursor:not-allowed}
+  @keyframes pstVoicePulse{50%{box-shadow:0 0 0 6px #e584973b}}
+  .pst-voice-status{font-size:12px!important;font-weight:700;color:#17617e}
+  .pst-voice-status.pst-voice-error{color:#a52433}
+  .pst-voice-card label{display:block;background:transparent!important;border:0!important;box-shadow:none!important;margin:0!important;padding:0!important;font-size:12px!important;font-weight:800}
+  .pst-voice-card textarea{width:100%;box-sizing:border-box;min-height:100px;padding:11px;font-size:16px;line-height:1.4;border:1px solid #9db9c8;border-radius:9px;background:#fff;resize:vertical}
+  .pst-voice-apply{background:#fff;color:#155477;border:2px solid #8aacc4;border-radius:9px;min-height:44px;padding:9px;font-size:13px;font-weight:800;cursor:pointer}
+  .pst-voice-summary{background:#e6f5e9;border:1px solid #8dc9a0;border-radius:10px;padding:12px;color:#155e34;font-weight:700;font-size:12px;line-height:1.5}
+  .pst-voice-card small{font-size:11px;line-height:1.5;color:#476477}
+  @media(prefers-reduced-motion:reduce){.pst-voice-start.pst-voice-listening{animation:none}}
+}
