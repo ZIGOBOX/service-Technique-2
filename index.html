@@ -29,6 +29,14 @@
 .rotation-day.rtt,.month-cell.day-state.rtt{background:#168ff0 !important;color:#062f5c !important;}
 .rotation-day.off,.month-cell.day-state.off{background:#e5e7eb !important;color:#4b5563 !important;}
 .rotation-day.holiday,.month-cell.day-state.holiday{background:#20e5ae !important;color:#064e3b !important;}
+
+/* V147.188 — noms toujours lisibles pendant le défilement horizontal du planning hebdomadaire (mobile uniquement). */
+@media (max-width:700px){
+ .agent-week-table-v150 th:first-child{position:sticky;left:0;z-index:5;background:#eaf4ff;box-shadow:2px 0 5px rgba(20,60,100,.08)}
+ .agent-week-table-v150 td:first-child{position:sticky;left:0;z-index:3;background:#fbfdff;box-shadow:2px 0 5px rgba(20,60,100,.08)}
+ .agent-week-table-v150 .agent-week-agent-v150{gap:5px}
+ .agent-week-table-v150 .agent-week-agent-v150 strong{white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+}
 </style>
 
 
@@ -1921,7 +1929,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
   <script src="./entretien-planning.js?v=147.171-20260907"></script>
-  <script src="./app.js?v=20261116-ergonomie-maintenance"></script>
+  <script src="./app.js?v=20261116-presences-formation-greve"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./jszip.min.js?v=3.10.1"></script>

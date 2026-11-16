@@ -1,0 +1,15 @@
+Pilotage Service Technique — Mise à jour affichage présences au lycée
+16 novembre 2026
+
+Équipe du jour : affichage uniquement des agents dont le type de journée est Présence ou Permanence.
+Formation, Grève, congés, RTT, récupérations, maladie, accident du travail, enfant malade, autorisations d’absence, événements familiaux, repos, jours fériés, temps partiel, et autres motifs : non affichés comme disponibles au lycée.
+
+Équipe de la semaine (tableau de bord) : seuls les agents ayant au moins une journée prévue sur site sur la semaine sont listés.
+
+« Horaires semaine » : tous les agents sont toujours affichés avec les motifs saisis dans les cases (Formation et Grève inclus). Sur mobile, la colonne agent reste visible pendant le défilement du tableau.
+
+Les décomptes administratifs d’heures, les imports Chronotime, les données des agents et le planning ne sont pas modifiés. Les heures d'une formation peuvent rester comptabilisées comme du temps de travail. Le statut de présence reflète les journées déclarées ; il ne prouve pas l'arrivée physique de l'agent.
+
+Les écrans PC sont conservés, hormis la logique d'affichage de l'équipe du tableau de bord, qui utilise désormais les mêmes règles de disponibilité que sur mobile.
+
+Pour mettre à jour GitHub Pages : remplacer les fichiers du dépôt par le contenu du dossier service-Technique-2-main, puis recharger la page.

@@ -3101,6 +3101,16 @@ function dayInfo(agentId,date){
  return {...sched,...rec,plannedStart:sched.start||rec.plannedStart||'',plannedEnd:sched.end||rec.plannedEnd||'',pause:Number(sched.pause??rec.pause??0),theoreticalSource:sched.source||sched.shift||''};
 }
 function isAbsenceType(t){return t&&t!=='Présence'&&t!=='Formation'}
+// Pilotage terrain : une journée comptabilisée administrativement comme travaillée
+// (ex. Formation) n'est pas forcément une présence dans l'établissement.
+// Ces prédicats ne modifient pas le décompte des heures / congés / Chronotime.
+function isOffSiteDayType(type){
+ const name=normalizeText(type);
+ return Boolean(name&&name!=='presence'&&name!=='permanence');
+}
+function isOffSiteAbsenceForDashboard(type){
+ return isOffSiteDayType(type)&&normalizeText(type)!=='repos';
+}
 function dayCountingRule(dayType){
  const rules=db.settings?.chronoDayRules||{};
  if(dayType==='Maladie')return {mode:'fixed',hours:7};
@@ -6147,10 +6157,10 @@ function dashboardAgentWeekCellV150(agent,date){
  const hasReal=!!(info.actualStart&&info.actualEnd),start=String(hasReal?info.actualStart:info.plannedStart||''),end=String(hasReal?info.actualEnd:info.plannedEnd||'');
  let cls='',main='—',sub='Horaire non défini';
  if(norm==='repos'){cls='rest';main='Repos';sub='';}
- else if(isAbsenceType(type)){cls='absent';main=type;sub='';}
+ else if(isOffSiteDayType(type)){cls='absent';main=type;sub='';}
  else if(start&&end){main=`${start}–${end}`;sub=hasReal?'Horaire réel':(info.shift&&normalizeText(info.shift)!=='standard'?String(info.shift):'');}
  const h=dayHours(info),displayHours=hasReal?Number(h.actual||0):Number(h.planned||0);
- return {html:`<button type="button" class="agent-week-cell-v150 ${cls} ${hasReal?'real-schedule-v167':''} ${date===todayISO()?'today':''}" data-agent-day="${agent.id}" data-date="${date}" title="${esc(agentName(agent))} — ${fmtDate(date)}${hasReal?' — horaire réel':''}"><span>${esc(main)}</span>${sub?`<small>${esc(sub)}</small>`:''}</button>`,hours:norm==='repos'||isAbsenceType(type)?0:displayHours};
+ return {html:`<button type="button" class="agent-week-cell-v150 ${cls} ${hasReal&&!isOffSiteDayType(type)?'real-schedule-v167':''} ${date===todayISO()?'today':''}" data-agent-day="${agent.id}" data-date="${date}" title="${esc(agentName(agent))} — ${fmtDate(date)}${hasReal?' — horaire réel':''}"><span>${esc(main)}</span>${sub?`<small>${esc(sub)}</small>`:''}</button>`,hours:isOffSiteDayType(type)&&norm!=='formation'?0:displayHours};
 }
 function openDashboardAgentWeekV150(offset=0){
  dashboardAgentWeekOffsetV150=Number(offset||0);const days=dashboardAgentWeekDatesV150(dashboardAgentWeekOffsetV150),agents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif').slice().sort((a,b)=>agentName(a).localeCompare(agentName(b),'fr'));
@@ -6158,7 +6168,7 @@ function openDashboardAgentWeekV150(offset=0){
  $('#detailTitle').textContent=`Horaires des agents — ${isCurrent?'semaine en cours':'semaine'}`;
  const head=days.map(d=>{const dt=parseDate(d),label=dt.toLocaleDateString('fr-FR',{weekday:'short'}).replace('.','');return `<th>${esc(label.charAt(0).toUpperCase()+label.slice(1))}<br><small>${esc(dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}))}</small></th>`}).join('');
  const rows=agents.map(a=>{let total=0;const cells=days.map(d=>{const c=dashboardAgentWeekCellV150(a,d);total+=c.hours;return `<td>${c.html}</td>`}).join('');return `<tr><td><div class="agent-week-agent-v150"><span class="agent-week-avatar-v150">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong></div></td>${cells}<td class="agent-week-total-v150">${esc(fmtHours(total))}</td></tr>`}).join('');
- $('#detailBody').innerHTML=`<div class="agent-week-toolbar-v150"><div><strong>Du ${fmtDate(first)} au ${fmtDate(last)}</strong><div class="muted">Horaires théoriques réellement applicables, absences et repos inclus.</div></div><div class="agent-week-toolbar-actions-v150"><button type="button" class="ghost small" data-agent-week-nav="-1">‹ Semaine précédente</button>${!isCurrent?'<button type="button" class="ghost small" data-agent-week-nav="0">Cette semaine</button>':''}<button type="button" class="ghost small" data-agent-week-nav="1">Semaine suivante ›</button></div></div><div class="agent-week-table-wrap-v150"><table class="agent-week-table-v150"><thead><tr><th>Agent</th>${head}<th>Total</th></tr></thead><tbody>${rows||'<tr><td colspan="7">Aucun agent actif.</td></tr>'}</tbody></table></div><p class="agent-week-legend-v150">Clique sur une case pour ouvrir le détail de la journée de l’agent. Les horaires affichés tiennent compte des roulements et des saisies de journée.</p>`;
+ $('#detailBody').innerHTML=`<div class="agent-week-toolbar-v150"><div><strong>Du ${fmtDate(first)} au ${fmtDate(last)}</strong><div class="muted">Horaires théoriques réellement applicables, absences et repos inclus.</div></div><div class="agent-week-toolbar-actions-v150"><button type="button" class="ghost small" data-agent-week-nav="-1">‹ Semaine précédente</button>${!isCurrent?'<button type="button" class="ghost small" data-agent-week-nav="0">Cette semaine</button>':''}<button type="button" class="ghost small" data-agent-week-nav="1">Semaine suivante ›</button></div></div><div class="agent-week-table-wrap-v150"><table class="agent-week-table-v150"><thead><tr><th>Agent</th>${head}<th>Total</th></tr></thead><tbody>${rows||'<tr><td colspan="7">Aucun agent actif.</td></tr>'}</tbody></table></div><p class="agent-week-legend-v150">Clique sur une case pour ouvrir le détail de la journée de l’agent. Les absences, formations et grèves sont indiquées par leur motif, même lorsqu'une journée compte comme travaillée dans Chronotime. Les heures comptabilisées ne signifient pas forcément une présence au lycée.</p>`;
  $('#detailModal').showModal();
 }
 function dashboardSourceEditTypeV149(source){return ({note:'note',maintenance:'maintenance',request:'request',work:'work',issue:'issue',periodic:'periodic',meeting:'meeting',personal:'personal'})[source]||''}
@@ -6271,17 +6281,21 @@ function dashboardEventsForDateV159(d){
  return rows.filter(e=>{const k=`${e.source||''}:${e.id||''}:${e.title||''}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>`${agendaTime(a)||'99:99'}${a.title||''}`.localeCompare(`${agendaTime(b)||'99:99'}${b.title||''}`));
 }
 function renderDashboardTeamTodayV149(){
- const el=$('#dashboardTeamToday');if(!el)return;const range=dashboardPeriodRangeV159(),agents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif');
+ const el=$('#dashboardTeamToday');if(!el)return;const range=dashboardPeriodRangeV159(),allAgents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif');
+ // La liste d'accueil ne recense que les agents prévus sur site.
+ // Les agents absents restent consultables dans « Horaires semaine ».
  if(dashboardPeriodModeV159==='week'){
+  const agents=allAgents.filter(a=>range.dates.some(d=>!isOffSiteDayType(dayInfo(a.id,d).dayType)));
   el.innerHTML=agents.length?agents.map(a=>{
    let presence=0,absence=0,total=0;const reasons=[];
-   for(const d of range.dates){const info=dayInfo(a.id,d),type=String(info.dayType||'Présence'),norm=normalizeText(type);if(norm==='repos')continue;if(isAbsenceType(type)){absence++;reasons.push(type)}else{presence++;const h=dayHours(info);total+=info.actualStart&&info.actualEnd?Number(h.actual||0):Number(h.planned||0)}}
+   for(const d of range.dates){const info=dayInfo(a.id,d),type=String(info.dayType||'Présence'),norm=normalizeText(type);if(norm==='repos')continue;if(isOffSiteDayType(type)){absence++;reasons.push(type)}else{presence++;const h=dayHours(info);total+=info.actualStart&&info.actualEnd?Number(h.actual||0):Number(h.planned||0)}}
    const detail=absence?`${absence} absence${absence>1?'s':''} · ${[...new Set(reasons)].slice(0,2).join(', ')}`:`${presence} jour${presence>1?'s':''} planifié${presence>1?'s':''}`;
    return `<button class="dashboard-team-row-v149 week-summary-v159" data-agent-week-open="1"><span class="dashboard-team-avatar-v149">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong><small>${esc(detail)}</small><span class="dashboard-team-status-v149 ${absence?'absent':''}">${esc(fmtHours(total))}</span></button>`;
-  }).join(''):'<div class="empty-card">Aucun agent actif.</div>';return;
+  }).join(''):'<div class="empty-card">Aucun agent prévu au lycée cette semaine.</div>';return;
  }
  const d=range.start,nowTime=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),isToday=d===todayISO();
- el.innerHTML=agents.length?agents.map(a=>{const info=dayInfo(a.id,d),type=String(info.dayType||'Présence'),norm=normalizeText(type),hasReal=!!(info.actualStart&&info.actualEnd),start=String(hasReal?info.actualStart:info.plannedStart||''),end=String(hasReal?info.actualEnd:info.plannedEnd||'');let status=hasReal?'Horaire réel':'Présent',cls=hasReal?'real-schedule-v167':'',schedule=start&&end?`${hasReal?'Réel · ':''}${start} – ${end}`:'Horaire non défini';if(norm==='repos'){status='Repos';cls='rest';schedule='Journée';}else if(isAbsenceType(type)){status=type;cls='absent';schedule='Journée';}else if(isToday&&start&&start>nowTime){status='À venir';cls=hasReal?'real-schedule-v167 future':'future';schedule=`${hasReal?'Réel · ':''}Prend à ${start}`;}return `<button class="dashboard-team-row-v149 ${hasReal?'real-schedule-row-v167':''}" data-agent-day="${a.id}" data-date="${d}"><span class="dashboard-team-avatar-v149">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong><small>${esc(schedule)}</small><span class="dashboard-team-status-v149 ${cls}">${esc(status)}</span></button>`}).join(''):'<div class="empty-card">Aucun agent actif.</div>';
+ const agents=allAgents.filter(a=>!isOffSiteDayType(dayInfo(a.id,d).dayType));
+ el.innerHTML=agents.length?agents.map(a=>{const info=dayInfo(a.id,d),hasReal=!!(info.actualStart&&info.actualEnd),start=String(hasReal?info.actualStart:info.plannedStart||''),end=String(hasReal?info.actualEnd:info.plannedEnd||'');let status=hasReal?'Horaire réel':'Présent',cls=hasReal?'real-schedule-v167':'',schedule=start&&end?`${hasReal?'Réel · ':''}${start} – ${end}`:'Horaire non défini';if(isToday&&start&&start>nowTime){status='À venir';cls=hasReal?'real-schedule-v167 future':'future';schedule=`${hasReal?'Réel · ':''}Prend à ${start}`;}return `<button class="dashboard-team-row-v149 ${hasReal?'real-schedule-row-v167':''}" data-agent-day="${a.id}" data-date="${d}"><span class="dashboard-team-avatar-v149">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong><small>${esc(schedule)}</small><span class="dashboard-team-status-v149 ${cls}">${esc(status)}</span></button>`}).join(''):'<div class="empty-card">Aucun agent prévu au lycée ce jour. Les absences restent visibles dans « Horaires semaine ».</div>';
 }
 function renderDashboardTodayAgenda(){
  const el=$('#dashboardTodayAgenda');if(!el)return;const range=dashboardPeriodRangeV159();
@@ -6298,7 +6312,7 @@ function openDashboardAgentWeekV150(offset=0){
  $('#detailTitle').textContent=`Horaires des agents — ${isSelected?'semaine sélectionnée':'semaine'}`;
  const head=days.map(d=>{const dt=parseDate(d),label=dt.toLocaleDateString('fr-FR',{weekday:'short'}).replace('.','');return `<th>${esc(label.charAt(0).toUpperCase()+label.slice(1))}<br><small>${esc(dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}))}</small></th>`}).join('');
  const rows=agents.map(a=>{let total=0;const cells=days.map(d=>{const c=dashboardAgentWeekCellV150(a,d);total+=c.hours;return `<td>${c.html}</td>`}).join('');return `<tr><td><div class="agent-week-agent-v150"><span class="agent-week-avatar-v150">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong></div></td>${cells}<td class="agent-week-total-v150">${esc(fmtHours(total))}</td></tr>`}).join('');
- $('#detailBody').innerHTML=`<div class="agent-week-toolbar-v150"><div><strong>Du ${fmtDate(first)} au ${fmtDate(last)}</strong><div class="muted">Horaires théoriques réellement applicables, absences et repos inclus.</div></div><div class="agent-week-toolbar-actions-v150"><button type="button" class="ghost small" data-agent-week-nav="-1">‹ Semaine précédente</button>${!isSelected?'<button type="button" class="ghost small" data-agent-week-nav="0">Semaine sélectionnée</button>':''}<button type="button" class="ghost small" data-agent-week-nav="1">Semaine suivante ›</button></div></div><div class="agent-week-table-wrap-v150"><table class="agent-week-table-v150"><thead><tr><th>Agent</th>${head}<th>Total</th></tr></thead><tbody>${rows||'<tr><td colspan="7">Aucun agent actif.</td></tr>'}</tbody></table></div><p class="agent-week-legend-v150">Clique sur une case pour ouvrir le détail de la journée de l’agent. Les horaires affichés tiennent compte des roulements et des saisies de journée.</p>`;
+ $('#detailBody').innerHTML=`<div class="agent-week-toolbar-v150"><div><strong>Du ${fmtDate(first)} au ${fmtDate(last)}</strong><div class="muted">Horaires théoriques réellement applicables, absences et repos inclus.</div></div><div class="agent-week-toolbar-actions-v150"><button type="button" class="ghost small" data-agent-week-nav="-1">‹ Semaine précédente</button>${!isSelected?'<button type="button" class="ghost small" data-agent-week-nav="0">Semaine sélectionnée</button>':''}<button type="button" class="ghost small" data-agent-week-nav="1">Semaine suivante ›</button></div></div><div class="agent-week-table-wrap-v150"><table class="agent-week-table-v150"><thead><tr><th>Agent</th>${head}<th>Total</th></tr></thead><tbody>${rows||'<tr><td colspan="7">Aucun agent actif.</td></tr>'}</tbody></table></div><p class="agent-week-legend-v150">Clique sur une case pour ouvrir le détail de la journée de l’agent. Les absences, formations et grèves sont indiquées par leur motif, même lorsqu'une journée compte comme travaillée dans Chronotime. Les heures comptabilisées ne signifient pas forcément une présence au lycée.</p>`;
  $('#detailModal').showModal();
 }
 function dashboardSourceEditTypeV149(source){return ({note:'note',maintenance:'maintenance',request:'request',work:'work',issue:'issue',periodic:'periodic',meeting:'meeting',personal:'personal',contract:'contract'})[source]||''}
@@ -6365,7 +6379,7 @@ function renderMaintenanceOverviewPST(){
 function renderDashboard(){updateLiveConnectionLocalStates();renderLiveConnections();renderGlobalAcademicYear();
  renderMaintenanceOverviewPST();
  const range=dashboardPeriodRangeV159(),activeAgents=(db.agents||[]).filter(a=>normalizeText(a.status)==='actif'),dates=range.dates;
- let present=0,absent=0;for(const d of dates){for(const a of activeAgents){const info=dayInfo(a.id,d),norm=normalizeText(info.dayType);if(isAbsenceType(info.dayType))absent++;else if(norm!=='repos')present++;}}
+ let present=0,absent=0;for(const d of dates){for(const a of activeAgents){const info=dayInfo(a.id,d),norm=normalizeText(info.dayType);if(isOffSiteAbsenceForDashboard(info.dayType))absent++;else if(!isOffSiteDayType(info.dayType))present++;}}
  const meetingsPeriod=(db.meetings||[]).filter(x=>dashboardDateInRangeV159(x.date,range)&&!isClosedStatus(x.status)&&normalizeText(x.status)!=='annule').length;
  const urgentActions=collectUrgentDashboardActions(),lateActions=collectLateDashboardActions(range.start),urgentPeriod=urgentActions.filter(x=>!x.due||x.due<=range.end).length;
  const allMaint=(db.maintenance||[]),closedMaint=allMaint.filter(x=>isClosedStatus(x.status)),openMaint=allMaint.filter(x=>!isClosedStatus(x.status)),todoMaint=allMaint.filter(x=>normalizeText(x.status)==='a faire'),maintCounts={total:allMaint.length,todo:todoMaint.length,open:openMaint.length,closed:closedMaint.length,byStatus:allMaint.reduce((acc,x)=>{const k=String(x.status||'Sans statut').trim()||'Sans statut';acc[k]=(acc[k]||0)+1;return acc},{})};window.PSTMaintenanceCounts=maintCounts;
