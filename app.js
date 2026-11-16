@@ -5349,7 +5349,68 @@ function renderMaintenance(){
 }
 
 function renderRequests(){const st=$('#requestStatus').value,t=$('#requestType').value;const arr=db.requests.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#requestsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc(x.requester)}</td><td>${esc(x.type)}</td><td>${esc([x.building,x.room].filter(Boolean).join(' · '))}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('request',x.id)}</td></tr>`).join(''):emptyRow(9)}
-function renderWorks(){const st=$('#workStatus').value,t=$('#workType').value;const arr=db.works.filter(x=>recordInAcademicYear(x,['date','dueDate','gpaEnd'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9)}
+// Chantiers & GPA : tableau d'origine sur ordinateur, liste compacte sur téléphone.
+// Une ancienne fiche sans createdAt n'est jamais présentée comme créée à sa date de suivi.
+let pstWorkMobileTab='open';
+function pstWorkCreatedLabel(x){
+ const raw=String(x.createdAt||'').trim();
+ if(/^\d{4}-\d{2}-\d{2}/.test(raw))return `Créée le ${fmtDate(raw.slice(0,10))}`;
+ return x.date?`Suivi daté du ${fmtDate(x.date)}`:'Date non renseignée';
+}
+function pstWorkSort(a,b){
+ const rank=x=>{
+  if(isClosedStatus(x.status))return 4;
+  if(/urgent|critique/i.test(x.priority||''))return 0;
+  if(x.dueDate&&x.dueDate<todayISO())return 1;
+  if(pstMaintStatusGroup(x)==='progress')return 2;
+  return 3;
+ };
+ const delta=rank(a)-rank(b);if(delta)return delta;
+ const due=String(a.dueDate||'9999').localeCompare(String(b.dueDate||'9999'));
+ if(due)return due;
+ return String(b.createdAt||b.date||'').localeCompare(String(a.createdAt||a.date||''));
+}
+function renderWorks(){
+ const st=$('#workStatus').value,t=$('#workType').value;
+ const relevant=(db.works||[]).filter(x=>recordInAcademicYear(x,['date','dueDate','gpaEnd']));
+ const arr=relevant.filter(x=>(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
+ // Le tableau PC conserve ses neuf colonnes et ses filtres d'origine.
+ $('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9);
+ const mobile=$('#pstWorkMobileList');if(!mobile)return;
+ // Sur téléphone, les onglets remplacent uniquement le filtre Statut ; le filtre Type reste actif.
+ // Une GPA ouverte reste visible sur mobile même si son dossier date d'une année scolaire passée.
+ const all=(db.works||[]).filter(x=>(!isClosedStatus(x.status)||recordInAcademicYear(x,['date','dueDate','gpaEnd']))&&(!t||x.type===t));
+ const opened=all.filter(x=>!isClosedStatus(x.status));
+ const urgent=opened.filter(x=>/urgent|critique/i.test(x.priority||''));
+ const overdue=opened.filter(x=>x.dueDate&&x.dueDate<todayISO());
+ $('#pstWorkMobileCounts').innerHTML=`<span><strong>${opened.length}</strong> ouverts</span><span class="danger"><strong>${urgent.length}</strong> urgents</span><span class="warning"><strong>${overdue.length}</strong> en retard</span>`;
+ $$('#pstWorkMobileTabs [data-pst-work-tab]').forEach(b=>{
+  const active=b.dataset.pstWorkTab===pstWorkMobileTab;
+  b.classList.toggle('active',active);
+  b.setAttribute('aria-pressed',active?'true':'false');
+ });
+ const chosen=all.filter(x=>{
+  const group=pstMaintStatusGroup(x);
+  return pstWorkMobileTab==='all'||(pstWorkMobileTab==='open'&&!isClosedStatus(x.status))||pstWorkMobileTab===group;
+ }).sort(pstWorkSort);
+ mobile.innerHTML=chosen.length?chosen.map(x=>{
+  const group=pstMaintStatusGroup(x);
+  const place=[x.building,x.floor,x.room].filter(Boolean).join(' · ')||'Lieu non indiqué';
+  const priority=normalizeText(x.priority);
+  const alert=!isClosedStatus(x.status)&&(priority.includes('urgent')||priority.includes('critique'));
+  const late=!isClosedStatus(x.status)&&x.dueDate&&x.dueDate<todayISO();
+  const band=alert?'urgent':late?'late':group==='done'?'done':group==='progress'?'progress':group==='waiting'?'waiting':'open';
+  return `<button type="button" class="pst-work-row pst-work-row--${band}" data-edit-type="work" data-edit-id="${esc(x.id)}" aria-label="Ouvrir ${esc(x.type||'le dossier')} ${esc(x.no||'')} : ${esc(x.title||'Sans objet')}">
+   <span class="pst-work-row-head"><span class="pst-work-row-place">📍 ${esc(place)}</span><span class="pst-work-row-status">${esc(x.status||'À qualifier')}</span></span>
+   <strong class="pst-work-row-title">${esc(x.title||'Suivi sans titre')}</strong>
+   <span class="pst-work-row-info"><span>📅 ${esc(pstWorkCreatedLabel(x))}</span><span class="pst-work-row-priority${alert?' urgent':''}">${esc(x.priority||'Normale')}</span></span>
+   <span class="pst-work-row-type">${esc(x.type||'Chantier / GPA')}${x.company?` · 🏢 ${esc(x.company)}`:''}</span>
+   ${x.dueDate?`<span class="pst-work-row-deadline${late?' is-late':''}">⏰ Échéance : ${fmtDate(x.dueDate)}${late?' · En retard':''}</span>`:''}
+   ${x.gpaEnd?`<span class="pst-work-row-gpa">🛡️ Fin GPA : ${fmtDate(x.gpaEnd)}</span>`:''}
+   <span class="pst-work-row-foot">${esc(x.no||'Dossier')} <span aria-hidden="true">›</span></span>
+  </button>`;
+ }).join(''):'<p class="pst-work-mobile-empty">Aucun chantier ou dossier GPA dans cette catégorie.</p>';
+}
 function renderMeetings(){const m=$('#meetingMonth').value,t=$('#meetingType').value;const arr=db.meetings.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));$('#meetingsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.time||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${esc(x.participants||'—')}</td><td>${badge(x.status)}</td><td>${editButton('meeting',x.id)}</td></tr>`).join(''):emptyRow(8)}
 function personalMonthEventClass(x){
  const type=normalizeText(x?.type||''),title=normalizeText(x?.title||''),status=normalizeText(x?.status||'');
@@ -7514,6 +7575,8 @@ function openAutoReportWizard(){autoReportWizardStep=0;renderAutoReportWizard();
 function saveWizardStep(){if(autoReportWizardStep===1&&autoReportWizardData.provider==='microsoft'){autoReportWizardData.tenantId=document.getElementById('wizTenant')?.value.trim()||'';autoReportWizardData.clientId=document.getElementById('wizClient')?.value.trim()||'';autoReportWizardData.senderEmail=document.getElementById('wizSender')?.value.trim()||''}}
 
 document.addEventListener('click',e=>{const tab=e.target.closest('[data-pst-maint-tab]');if(!tab)return;pstMaintenanceMobileTab=tab.dataset.pstMaintTab;renderMaintenance();});
+// Filtres rapides du suivi Chantiers & GPA sur téléphone.
+document.addEventListener('click',e=>{const tab=e.target.closest('[data-pst-work-tab]');if(!tab)return;pstWorkMobileTab=tab.dataset.pstWorkTab;renderWorks();});
 document.addEventListener('change',e=>{const s=e.target.closest?.('[data-nc-status]');if(!s)return;const n=(db.reportNonconformities||[]).find(x=>String(x.id)===String(s.dataset.ncStatus));if(!n)return;const before=n.status;n.status=s.value;n.updatedAt=new Date().toISOString();n.statusHistory=n.statusHistory||[];n.statusHistory.push({at:n.updatedAt,from:before,to:n.status});const closed=['FAIT','Levée'].includes(n.status);for(const x of (db.issues||[]).filter(x=>String(x.sourceNonconformityId||'')===String(n.id))){x.status=closed?'Clôturé':'À faire';x.updatedAt=n.updatedAt;}for(const x of (db.maintenance||[]).filter(x=>String(x.sourceNonconformityId||'')===String(n.id))){x.status=closed?'Clôturé':'À faire';x.updatedAt=n.updatedAt;}save();renderPeriodic();renderIssues();renderMaintenance();toast(`Observation ${n.observationNo||''} : ${n.status} — plan d’action ${closed?'clôturé':'rouvert'}`)});
 function init(){secureAppLogos();
  // V147.80 — à chaque ouverture, le contexte temporel repart de la date du jour.

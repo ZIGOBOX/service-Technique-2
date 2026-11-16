@@ -1,0 +1,55 @@
+/* Chantiers & GPA : consultation compacte UNIQUEMENT sur téléphone. */
+.pst-work-mobile-head,.pst-work-mobile-list{display:none}
+
+@media(max-width:700px){
+ #works .pst-work-desktop-table{display:none!important}
+ #works .section-actions{gap:10px;align-items:stretch;flex-direction:column}
+ #works .section-actions h3{font-size:19px}
+ #works .section-actions p{font-size:12px;line-height:1.4}
+ #works .section-actions #newWork{width:100%;min-height:48px}
+ #works .pst-work-mobile-head{display:block;margin:14px 0 10px}
+ #works .pst-work-mobile-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:11px}
+ #works .pst-work-mobile-counts>span{display:grid;gap:1px;border:1px solid #dce5ee;background:#fff;border-radius:12px;padding:9px 5px;text-align:center;font-size:11px;font-weight:700;color:#526a80}
+ #works .pst-work-mobile-counts strong{font-size:23px;color:#183e62;line-height:1.1}
+ #works .pst-work-mobile-counts .danger strong{color:#b91c1c}
+ #works .pst-work-mobile-counts .warning strong{color:#a15b08}
+ #works .pst-work-mobile-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;padding:3px 0 7px}
+ #works .pst-work-mobile-tabs button{grid-column:span 2;min-width:0;min-height:40px;padding:8px 5px;border:1px solid #ccdae6;background:#fff;color:#36546d;font-weight:800;border-radius:999px;font-size:12px;white-space:normal}
+ #works .pst-work-mobile-tabs button:nth-child(n+4){grid-column:span 3}
+ #works .pst-work-mobile-tabs button.active{background:#155a91;color:#fff;border-color:#155a91}
+ #works .filters{display:grid;grid-template-columns:1fr;gap:6px;padding:8px;margin-bottom:12px}
+ #works .filters select{min-width:0;width:100%;padding:9px 6px;font-size:12px}
+ #works .filters select#workStatus{display:none}
+ #works .filters button[data-print]{display:none}
+ #works .pst-work-mobile-list{display:grid;gap:8px;min-width:0}
+ #works .pst-work-row{display:grid;gap:6px;text-align:left;width:100%;min-width:0;padding:12px 13px;border:1px solid #dce5ec;border-left:5px solid #7894a6;border-radius:13px;background:#fff;box-shadow:0 2px 8px rgba(20,55,81,.035);color:#183047;overflow-wrap:anywhere}
+ #works .pst-work-row--urgent{border-left-color:#d33c46;background:#fffafa}
+ #works .pst-work-row--late{border-left-color:#db840f}
+ #works .pst-work-row--progress{border-left-color:#246eae}
+ #works .pst-work-row--waiting{border-left-color:#cc9017}
+ #works .pst-work-row--done{border-left-color:#198754}
+ #works .pst-work-row-head,#works .pst-work-row-info,#works .pst-work-row-foot{display:flex;align-items:center;gap:7px;justify-content:space-between;min-width:0}
+ #works .pst-work-row-place{font-size:12px;font-weight:750;min-width:0}
+ #works .pst-work-row-status{border-radius:999px;background:#eaf3f8;color:#244e67;padding:4px 7px;font-size:10px;font-weight:800;flex-shrink:0;max-width:46%;text-align:center;line-height:1.3}
+ #works .pst-work-row--urgent .pst-work-row-status{background:#fee8eb;color:#98222e}
+ #works .pst-work-row--done .pst-work-row-status{background:#dbf2e7;color:#17633d}
+ #works .pst-work-row-title{font-size:14px;line-height:1.35;white-space:normal}
+ #works .pst-work-row-info{font-size:11px;color:#50667c;align-items:flex-start}
+ #works .pst-work-row-priority{background:#eef3f8;padding:3px 7px;border-radius:8px;font-weight:800;flex-shrink:0}
+ #works .pst-work-row-priority.urgent{background:#fde1e5;color:#a12131}
+ #works .pst-work-row-deadline{font-size:11px;color:#546a7e}
+ #works .pst-work-row-deadline.is-late{color:#a33216;font-weight:850}
+ #works .pst-work-row-foot{font-size:10px;color:#63778a;padding-top:6px;border-top:1px solid #e8edf2}
+ #works .pst-work-row-foot>span{font-size:20px;font-weight:700;line-height:1;color:#235a80}
+ #works .pst-work-row:active{transform:scale(.992)}
+ #works .pst-work-row:focus-visible{outline:3px solid #398ac7;outline-offset:2px}
+ #works .pst-work-mobile-empty{margin:0;padding:18px 10px;background:#fff;border-radius:12px;text-align:center;color:#5c6d7c}
+
+}
+
+@media(max-width:700px){
+ #works .pst-work-row-type{font-size:11px;font-weight:600;color:#536c82;line-height:1.4}
+ #works .pst-work-row-gpa{font-size:11px;color:#536c82}
+ #works .pst-work-row{min-height:94px;cursor:pointer}
+ #works .pst-work-row-title{min-width:0;overflow-wrap:anywhere}
+}

@@ -1047,6 +1047,7 @@
   <link rel="stylesheet" href="./mobile-global-search.css?v=20261111-01">
   <link rel="stylesheet" href="./maintenance-voice.css?v=20261113-01">
   <link rel="stylesheet" href="./maintenance-mobile-list.css?v=20261116-01">
+  <link rel="stylesheet" href="./works-mobile-list.css?v=20261116-01">
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -1606,8 +1607,19 @@
 
     <section class="view" id="works">
       <div class="section-actions"><div><h3>Chantiers, réserves & GPA</h3><p>Réunions de chantier, réserves, entreprises, architecte et garantie de parfait achèvement.</p></div><button class="primary" id="newWork">＋ Suivi</button></div>
+      <div class="pst-work-mobile-head" aria-label="Synthèse des chantiers et GPA sur téléphone">
+        <div class="pst-work-mobile-counts" id="pstWorkMobileCounts" aria-live="polite"></div>
+        <div class="pst-work-mobile-tabs" id="pstWorkMobileTabs" role="group" aria-label="Filtrer les dossiers de chantier">
+          <button type="button" data-pst-work-tab="open" class="active" aria-pressed="true">Ouverts</button>
+          <button type="button" data-pst-work-tab="progress" aria-pressed="false">En cours</button>
+          <button type="button" data-pst-work-tab="waiting" aria-pressed="false">En attente</button>
+          <button type="button" data-pst-work-tab="done" aria-pressed="false">Terminés</button>
+          <button type="button" data-pst-work-tab="all" aria-pressed="false">Tous</button>
+        </div>
+      </div>
       <div class="filters"><select id="workStatus"><option value="">Tous les statuts</option></select><select id="workType"><option value="">Tous les types</option></select><button class="ghost" data-print="works">Imprimer</button></div>
-      <div class="table-wrap"><table><thead><tr><th>N°</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Entreprise</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="worksTable"></tbody></table></div>
+      <div class="pst-work-mobile-list" id="pstWorkMobileList" aria-label="Liste compacte des chantiers, réserves et GPA"></div>
+      <div class="table-wrap pst-work-desktop-table"><table><thead><tr><th>N°</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Entreprise</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="worksTable"></tbody></table></div>
     </section>
 
     <section class="view" id="meetings">

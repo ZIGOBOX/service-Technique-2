@@ -1,0 +1,13 @@
+MISE A JOUR — CHANTIERS & GPA, AFFICHAGE MOBILE
+
+- Sur téléphone (écran jusqu’à 700 px) : suivi compact semblable au module Maintenance.
+- Filtres rapides : Ouverts, En cours, En attente, Terminés et Tous.
+- Compteurs : ouverts, urgents, en retard.
+- Chaque dossier montre immédiatement le lieu, le titre, le type, l’entreprise, la date de création (ou date du suivi si aucune création n’est connue), la priorité, le statut, l’échéance et la fin de GPA quand elle existe.
+- Toucher une ligne ouvre le formulaire existant pour consulter / modifier le dossier.
+- Les chantiers urgents et en retard remontent en tête de liste mobile. Les dossiers encore ouverts restent accessibles sur téléphone même si leur origine remonte à une année scolaire précédente.
+- Sur ordinateur : tableau de suivi inchangé.
+- Aucune modification des tables Supabase, des données, des agents, des plannings et de la maintenance.
+
+Mise en ligne : remplacer les fichiers de GitHub par ceux présents dans ce ZIP.
+Si l’ancienne interface reste visible, actualiser la page (cache navigateur).
