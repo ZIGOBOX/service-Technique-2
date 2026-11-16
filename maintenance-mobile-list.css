@@ -1,0 +1,47 @@
+/* Maintenance : consultation compacte UNIQUEMENT sur téléphone. */
+.pst-maint-mobile-head,.pst-maint-mobile-list,.pst-maint-created-note{display:none}
+.pst-maint-created-note{font-size:12px;color:#355773;padding:10px 13px;border-radius:12px;background:#eff7ff;border:1px solid #cde2f2;margin:10px 0}
+@media(max-width:700px){
+ #maintenance .pst-maint-desktop-table{display:none!important}
+ #maintenance .section-actions{gap:10px;align-items:stretch}
+ #maintenance .section-actions h3{font-size:19px}
+ #maintenance .section-actions p{font-size:12px;line-height:1.4}
+ #maintenance .section-actions #newMaintenance{width:100%;min-height:48px}
+ #maintenance .pst-maint-mobile-head{display:block;margin:14px 0 10px}
+ #maintenance .pst-maint-mobile-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:11px}
+ #maintenance .pst-maint-mobile-counts>span{display:grid;gap:1px;border:1px solid #dce5ee;background:#fff;border-radius:12px;padding:9px 5px;text-align:center;font-size:11px;font-weight:700;color:#526a80}
+ #maintenance .pst-maint-mobile-counts strong{font-size:23px;color:#183e62;line-height:1.1}
+ #maintenance .pst-maint-mobile-counts .danger strong{color:#b91c1c}
+ #maintenance .pst-maint-mobile-counts .warning strong{color:#a15b08}
+ #maintenance .pst-maint-mobile-tabs{display:flex;gap:6px;overflow-x:auto;padding:3px 0 7px;scrollbar-width:thin}
+ #maintenance .pst-maint-mobile-tabs button{flex:0 0 auto;min-height:40px;padding:8px 11px;border:1px solid #ccdae6;background:#fff;color:#36546d;font-weight:800;border-radius:999px;font-size:12px}
+ #maintenance .pst-maint-mobile-tabs button.active{background:#155a91;color:#fff;border-color:#155a91}
+ #maintenance .filters{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px;margin-bottom:12px}
+ #maintenance .filters select{min-width:0;width:100%;padding:9px 6px;font-size:12px}
+ #maintenance .filters select#maintenanceStatus{display:none}
+ #maintenance .filters button[data-print]{display:none}
+ #maintenance .pst-maint-mobile-list{display:grid;gap:8px;min-width:0}
+ #maintenance .pst-maint-row{display:grid;gap:6px;text-align:left;width:100%;min-width:0;padding:12px 13px;border:1px solid #dce5ec;border-left:5px solid #7894a6;border-radius:13px;background:#fff;box-shadow:0 2px 8px rgba(20,55,81,.035);color:#183047;overflow-wrap:anywhere}
+ #maintenance .pst-maint-row--urgent{border-left-color:#d33c46;background:#fffafa}
+ #maintenance .pst-maint-row--late{border-left-color:#db840f}
+ #maintenance .pst-maint-row--progress{border-left-color:#246eae}
+ #maintenance .pst-maint-row--waiting{border-left-color:#cc9017}
+ #maintenance .pst-maint-row--done{border-left-color:#198754}
+ #maintenance .pst-maint-row-head,#maintenance .pst-maint-row-info,#maintenance .pst-maint-row-foot{display:flex;align-items:center;gap:7px;justify-content:space-between;min-width:0}
+ #maintenance .pst-maint-row-place{font-size:12px;font-weight:750;min-width:0}
+ #maintenance .pst-maint-row-status{border-radius:999px;background:#eaf3f8;color:#244e67;padding:4px 7px;font-size:10px;font-weight:800;flex-shrink:0;max-width:46%;text-align:center;line-height:1.3}
+ #maintenance .pst-maint-row--urgent .pst-maint-row-status{background:#fee8eb;color:#98222e}
+ #maintenance .pst-maint-row--done .pst-maint-row-status{background:#dbf2e7;color:#17633d}
+ #maintenance .pst-maint-row-title{font-size:14px;line-height:1.35;white-space:normal}
+ #maintenance .pst-maint-row-info{font-size:11px;color:#50667c;align-items:flex-start}
+ #maintenance .pst-maint-row-priority{background:#eef3f8;padding:3px 7px;border-radius:8px;font-weight:800;flex-shrink:0}
+ #maintenance .pst-maint-row-priority.urgent{background:#fde1e5;color:#a12131}
+ #maintenance .pst-maint-row-deadline{font-size:11px;color:#546a7e}
+ #maintenance .pst-maint-row-deadline.is-late{color:#a33216;font-weight:850}
+ #maintenance .pst-maint-row-foot{font-size:10px;color:#63778a;padding-top:6px;border-top:1px solid #e8edf2}
+ #maintenance .pst-maint-row-foot>span{font-size:20px;font-weight:700;line-height:1;color:#235a80}
+ #maintenance .pst-maint-row:active{transform:scale(.992)}
+ #maintenance .pst-maint-row:focus-visible{outline:3px solid #398ac7;outline-offset:2px}
+ #maintenance .pst-maint-mobile-empty{margin:0;padding:18px 10px;background:#fff;border-radius:12px;text-align:center;color:#5c6d7c}
+ .pst-maint-created-note{display:block}
+}

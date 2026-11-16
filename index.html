@@ -1038,6 +1038,7 @@
   <link rel="stylesheet" href="./mobile-dashboard-tiles.css?v=20261109-rotation-02">
   <link rel="stylesheet" href="./mobile-global-search.css?v=20261111-01">
   <link rel="stylesheet" href="./maintenance-voice.css?v=20261113-01">
+  <link rel="stylesheet" href="./maintenance-mobile-list.css?v=20261116-01">
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -1058,59 +1059,64 @@
       <button class="icon-btn mobile-only" id="closeMenu" aria-label="Fermer le menu">×</button>
     </div>
     <nav id="nav" aria-label="Menu principal">
-      <details class="nav-domain" data-nav-domain="pilotage" open>
-        <summary><span class="nav-domain-icon">🧭</span><span>Pilotage & équipe</span></summary>
+      <details class="nav-domain" data-nav-domain="accueil" open>
+        <summary><span class="nav-domain-icon">⌂</span><span>Accueil</span></summary>
         <div class="nav-domain-items">
           <button class="nav-btn active" data-view="dashboard"><span>⌂</span>Tableau de bord</button>
-          <button class="nav-btn" data-view="personal"><span>📅</span>Agenda personnel</button>
-          <button class="nav-btn" data-view="agents"><span>👥</span>Agents & recrutements</button>
-          <button class="nav-btn" data-view="agent-activity"><span>✓</span>Activité des agents</button>
-          <button class="nav-btn" data-view="meetings"><span>◫</span>Réunions & rendez-vous</button>
-          <button class="nav-btn" data-view="notes"><span>✎</span>Bloc-notes</button>
         </div>
       </details>
-
-      <details class="nav-domain" data-nav-domain="horaires">
-        <summary><span class="nav-domain-icon">◷</span><span>Horaires & absences</span></summary>
+      <details class="nav-domain" data-nav-domain="personnel">
+        <summary><span class="nav-domain-icon">👥</span><span>Personnel & horaires</span></summary>
         <div class="nav-domain-items">
-          <button class="nav-btn" data-view="rotations"><span>↻</span>Roulements annuels</button>
+          <button class="nav-btn" data-view="agents"><span>👥</span>Agents & recrutements</button>
+          <button class="nav-btn" data-view="agent-activity"><span>✓</span>Activité des agents</button>
           <button class="nav-btn" data-view="planning"><span>◷</span>Pilotage des horaires</button>
-          <button class="nav-btn" data-view="schedule-import"><span>⇄</span>Import / export horaires</button>
+          <button class="nav-btn" data-view="rotations"><span>↻</span>Roulements annuels</button>
           <button class="nav-btn" data-view="pdfimports"><span>📥</span>Chronotime</button>
           <button class="nav-btn" data-view="absences"><span>☀</span>Congés, RTT & absences</button>
+          <button class="nav-btn" data-view="schedule-import"><span>⇄</span>Import / export horaires</button>
           <button class="nav-btn" data-view="vacations"><span>🏫</span>Vacances & fermetures</button>
         </div>
       </details>
-
-      <details class="nav-domain" data-nav-domain="batiments">
-        <summary><span class="nav-domain-icon">🏢</span><span>Bâtiments & interventions</span></summary>
+      <details class="nav-domain" data-nav-domain="maintenance">
+        <summary><span class="nav-domain-icon">🔧</span><span>Maintenance & travaux</span></summary>
+        <div class="nav-domain-items">
+          <button class="nav-btn" data-view="maintenance"><span>⚙</span>Maintenance</button>
+          <button class="nav-btn" data-view="works"><span>▦</span>Chantiers & GPA</button>
+          <button class="nav-btn" data-view="contracts"><span>📄</span>Suivi des contrats</button>
+        </div>
+      </details>
+      <details class="nav-domain" data-nav-domain="controles">
+        <summary><span class="nav-domain-icon">🛡</span><span>Contrôles & entretien</span></summary>
         <div class="nav-domain-items">
           <button class="nav-btn" data-view="periodic"><span>🛡</span>Contrôles périodiques</button>
           <button class="nav-btn" data-view="cleaning"><span>✓</span>Contrôle ménage</button>
           <button class="nav-btn" data-view="cleaning-duty-plans"><span>🧹</span>Planning entretien & loge</button>
           <button class="nav-btn" data-view="room-prep"><span>☕</span>Préparation salle & café</button>
-          <button class="nav-btn" data-view="maintenance"><span>⚙</span>Maintenance</button>
-          <button class="nav-btn" data-view="requests"><span>↗</span>Demandes direction</button>
-          <button class="nav-btn" data-view="works"><span>▦</span>Chantiers & GPA</button>
-          <button class="nav-btn" data-view="waste"><span>🗑️</span>Poubelles</button>
+          <button class="nav-btn" data-view="waste"><span>🗑</span>Poubelles</button>
         </div>
       </details>
-
+      <details class="nav-domain" data-nav-domain="agenda">
+        <summary><span class="nav-domain-icon">📅</span><span>Agenda & organisation</span></summary>
+        <div class="nav-domain-items">
+          <button class="nav-btn" data-view="personal"><span>📅</span>Agenda personnel</button>
+          <button class="nav-btn" data-view="meetings"><span>◫</span>Réunions & rendez-vous</button>
+          <button class="nav-btn" data-view="notes"><span>✎</span>Bloc-notes</button>
+        </div>
+      </details>
       <details class="nav-domain" data-nav-domain="documents">
-        <summary><span class="nav-domain-icon">📚</span><span>Documents & services</span></summary>
+        <summary><span class="nav-domain-icon">📚</span><span>Documents & rapports</span></summary>
         <div class="nav-domain-items">
           <button class="nav-btn" data-view="documents"><span>📚</span>Documentation</button>
-          <button class="nav-btn" data-view="outlook"><span>✉</span>Outlook professionnel</button>
           <button class="nav-btn" data-view="archives"><span>🗃</span>Archivage</button>
-          <button class="nav-btn" data-view="weather"><span>☁️</span>Météo</button>
+          <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
         </div>
       </details>
-
-      <details class="nav-domain" data-nav-domain="systeme">
-        <summary><span class="nav-domain-icon">⚙</span><span>Rapports & système</span></summary>
+      <details class="nav-domain" data-nav-domain="outils">
+        <summary><span class="nav-domain-icon">⚙</span><span>Outils & paramètres</span></summary>
         <div class="nav-domain-items">
-          <button class="nav-btn" data-view="contracts"><span>⇄</span>Fichier contrats (Excel)</button>
-          <button class="nav-btn" data-view="reports"><span>▥</span>Rapports & impressions</button>
+          <button class="nav-btn" data-view="outlook"><span>✉</span>Outlook professionnel</button>
+          <button class="nav-btn" data-view="weather"><span>☁</span>Météo</button>
           <button class="nav-btn" data-view="connections"><span>●</span>Connexions</button>
           <button class="nav-btn" data-view="help"><span>?</span>FAQ / Aide</button>
           <button class="nav-btn" data-view="settings"><span>⚙</span>Paramètres</button>
@@ -1526,8 +1532,19 @@
 
 <section class="view" id="maintenance">
       <div class="section-actions"><div><h3>Demandes d’intervention / maintenance</h3><p>Saisie rapide type logiciel de service : demande, domaine, lieu, affectation, suivi et clôture.</p></div><button class="primary" id="newMaintenance">＋ Demande d’intervention</button></div>
+      <div class="pst-maint-mobile-head" aria-label="Synthèse de maintenance sur téléphone">
+        <div class="pst-maint-mobile-counts" id="pstMaintMobileCounts" aria-live="polite"></div>
+        <div class="pst-maint-mobile-tabs" id="pstMaintMobileTabs" role="group" aria-label="Afficher les interventions">
+          <button type="button" data-pst-maint-tab="open" class="active" aria-pressed="true">Ouvertes</button>
+          <button type="button" data-pst-maint-tab="progress" aria-pressed="false">En cours</button>
+          <button type="button" data-pst-maint-tab="waiting" aria-pressed="false">En attente</button>
+          <button type="button" data-pst-maint-tab="done" aria-pressed="false">Terminées</button>
+          <button type="button" data-pst-maint-tab="all" aria-pressed="false">Toutes</button>
+        </div>
+      </div>
       <div class="filters"><select id="maintenanceStatus"><option value="">Tous les statuts</option></select><select id="maintenancePriority"><option value="">Toutes les priorités</option></select><select id="maintenanceFamily"><option value="">Tous les domaines</option></select><button class="ghost" data-print="maintenance">Imprimer</button></div>
-      <div class="table-wrap"><table><thead><tr><th>N°</th><th>Date</th><th>Lieu</th><th>Domaine</th><th>Problème</th><th>Priorité</th><th>Affecté à</th><th>Échéance</th><th>Statut</th><th></th></tr></thead><tbody id="maintenanceTable"></tbody></table></div>
+      <div class="pst-maint-mobile-list" id="pstMaintMobileList" aria-label="Interventions de maintenance"></div>
+      <div class="table-wrap pst-maint-desktop-table"><table><thead><tr><th>N°</th><th>Date création / demande</th><th>Lieu</th><th>Domaine</th><th>Problème</th><th>Priorité</th><th>Affecté à</th><th>Échéance</th><th>Statut</th><th></th></tr></thead><tbody id="maintenanceTable"></tbody></table></div>
     </section>
 
 
@@ -1904,7 +1921,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
   <script src="./entretien-planning.js?v=147.171-20260907"></script>
-  <script src="./app.js?v=147.187-20261111-alarm-agenda"></script>
+  <script src="./app.js?v=20261116-ergonomie-maintenance"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./jszip.min.js?v=3.10.1"></script>

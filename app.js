@@ -4216,6 +4216,7 @@ function openCleaning(id){
 
 function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=old||{id:uid(),no:nextNo('maintenance','MAI'),date:todayISO(),time:'',title:'',family:'Électricité',priority:'Normale',status:'À faire',building:'',floor:'',sector:'',room:'',requester:'',assigned:'',dueDate:'',description:'',action:'',cost:'',attachments:[]};openModal(old?'Modifier la demande d’intervention':'Nouvelle demande d’intervention',`<div class="service-workflow maintenance-workflow">
  <div class="service-workflow-banner"><span class="service-workflow-icon">🔧</span><div><strong>${old?'Modifier':'Créer'} une demande d’intervention</strong><small>Grandes touches, saisie rapide et suivi de la demande jusqu’à sa clôture.</small></div><span class="service-workflow-no">${esc(x.no)}</span></div>
+ <div class="pst-maint-created-note">📅 ${old?esc(pstMaintCreatedLabel(x)):'Création de la fiche : à l’enregistrement'}${old&&x.updatedAt?` · Modifiée le ${new Date(x.updatedAt).toLocaleDateString('fr-FR')}`:''}</div>
  <div id="pstMaintenanceVoiceMount"></div>
  <section class="service-form-section"><div class="service-section-title"><span>1</span><div><strong>La demande</strong><small>Quand, quoi et qui demande ?</small></div></div><div class="form-grid">${field('Date de demande','date',x.date,'date','required')}${field('Heure prévue','time',x.time,'time')}${field('Objet de l’intervention','title',x.title,'text','required')}${field('Demandeur','requester',x.requester)}</div></section>
  <section class="service-form-section accent"><div class="service-section-title"><span>2</span><div><strong>Domaine, priorité et statut</strong><small>Appuyez directement sur les grosses touches.</small></div></div><div class="form-grid"><label class="span2">Famille<select name="family">${selectOptions(db.lists.maintenanceFamilies,x.family)}</select></label><label>Priorité<select name="priority">${selectOptions(db.lists.priorities,x.priority)}</select></label><label>Statut<select name="status">${selectOptions(db.lists.maintenanceStatuses,x.status)}</select></label></div></section>
@@ -4227,7 +4228,8 @@ function openMaintenance(id){const old=id?byId('maintenance',id):null;const x=ol
  Object.assign(x,formDataObj(form));
  if(x.room==='Autre lieu'&&x.otherLocation)x.room=x.otherLocation;
  const nowIso=new Date().toISOString();
- if(!x.createdAt)x.createdAt=old?.createdAt||nowIso;
+ // Un ancien dossier sans createdAt ne doit pas recevoir la date de sa modification comme date de création.
+ if(!wasExisting && !x.createdAt)x.createdAt=nowIso;
  x.updatedAt=nowIso;
  x.source='manual';
 
@@ -5271,7 +5273,71 @@ function printAgentActivityRegister(){
  printView('agent-activity');
 }
 
-function renderMaintenance(){const st=$('#maintenanceStatus').value,p=$('#maintenancePriority').value,f=$('#maintenanceFamily').value;const arr=db.maintenance.filter(x=>(!st||x.status===st)&&(!p||x.priority===p)&&(!f||x.family===f)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#maintenanceTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.family)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${badge(x.priority)}</td><td>${esc(x.assigned||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('maintenance',x.id)}</td></tr>`).join(''):emptyRow(10)}
+// Vue maintenance : tableau intact sur PC, liste compacte sur téléphone.
+// Les dates de création réelles viennent de createdAt ; les anciennes fiches
+// sans horodatage conservent une mention distincte « Demande du ».
+let pstMaintenanceMobileTab='open';
+function pstMaintCreatedLabel(x){
+ const raw=String(x.createdAt||'').trim();
+ if(/^\d{4}-\d{2}-\d{2}/.test(raw))return `Créée le ${fmtDate(raw.slice(0,10))}`;
+ return x.date?`Demande du ${fmtDate(x.date)}`:'Date non renseignée';
+}
+function pstMaintStatusGroup(x){
+ const status=normalizeText(x.status||'');
+ if(isClosedStatus(status))return 'done';
+ if(status.includes('attente')||status.includes('bloqu'))return 'waiting';
+ if(status.includes('cours')||status.includes('planifi'))return 'progress';
+ return 'other';
+}
+function pstMaintSort(a,b){
+ const rank=x=>{
+  if(isClosedStatus(x.status))return 4;
+  if(/urgent|critique/i.test(x.priority||''))return 0;
+  if(x.dueDate && x.dueDate<todayISO())return 1;
+  if(pstMaintStatusGroup(x)==='progress')return 2;
+  return 3;
+ };
+ const delta=rank(a)-rank(b);if(delta)return delta;
+ const due=(a.dueDate||'9999').localeCompare(b.dueDate||'9999');
+ if(due)return due;
+ return String(b.createdAt||b.date||'').localeCompare(String(a.createdAt||a.date||''));
+}
+function renderMaintenance(){
+ const st=$('#maintenanceStatus').value,p=$('#maintenancePriority').value,f=$('#maintenanceFamily').value;
+ const arr=(db.maintenance||[]).filter(x=>(!st||x.status===st)&&(!p||x.priority===p)&&(!f||x.family===f)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
+ $('#maintenanceTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td><strong>${esc(pstMaintCreatedLabel(x))}</strong></td><td>${esc([x.building,x.floor,x.room].filter(Boolean).join(' · '))}</td><td>${esc(x.family)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${badge(x.priority)}</td><td>${esc(x.assigned||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.status)}</td><td>${editButton('maintenance',x.id)}</td></tr>`).join(''):emptyRow(10);
+ const all=(db.maintenance||[]).filter(x=>(!p||x.priority===p)&&(!f||x.family===f));
+ const mobile=$('#pstMaintMobileList');if(!mobile)return;
+ const open=all.filter(x=>!isClosedStatus(x.status));
+ const urgent=open.filter(x=>/urgent|critique/i.test(x.priority||''));
+ const overdue=open.filter(x=>x.dueDate&&x.dueDate<todayISO());
+ $('#pstMaintMobileCounts').innerHTML=`<span><strong>${open.length}</strong> ouvertes</span><span class="danger"><strong>${urgent.length}</strong> urgentes</span><span class="warning"><strong>${overdue.length}</strong> en retard</span>`;
+ $$('#pstMaintMobileTabs [data-pst-maint-tab]').forEach(b=>{
+  const active=b.dataset.pstMaintTab===pstMaintenanceMobileTab;
+  b.classList.toggle('active',active);b.setAttribute('aria-pressed',active?'true':'false');
+ });
+ const chosen=all.filter(x=>{
+  const group=pstMaintStatusGroup(x);
+  return pstMaintenanceMobileTab==='all'||
+   (pstMaintenanceMobileTab==='open'&&!isClosedStatus(x.status))||
+   pstMaintenanceMobileTab===group;
+ }).sort(pstMaintSort);
+ mobile.innerHTML=chosen.length?chosen.map(x=>{
+  const group=pstMaintStatusGroup(x),place=[x.building,x.floor,x.room].filter(Boolean).join(' · ')||'Lieu non indiqué';
+  const priority=normalizeText(x.priority);
+  const alert=!isClosedStatus(x.status)&&(priority.includes('urgent')||priority.includes('critique'));
+  const late=!isClosedStatus(x.status)&&x.dueDate&&x.dueDate<todayISO();
+  const band=alert?'urgent':late?'late':group==='done'?'done':group==='progress'?'progress':group==='waiting'?'waiting':'open';
+  return `<button type="button" class="pst-maint-row pst-maint-row--${band}" data-edit-type="maintenance" data-edit-id="${esc(x.id)}" aria-label="Ouvrir la fiche ${esc(x.no||'')} : ${esc(x.title||'Intervention')}">
+   <span class="pst-maint-row-head"><span class="pst-maint-row-place">📍 ${esc(place)}</span><span class="pst-maint-row-status">${esc(x.status||'À qualifier')}</span></span>
+   <strong class="pst-maint-row-title">${esc(x.title||'Intervention sans titre')}</strong>
+   <span class="pst-maint-row-info"><span>📅 ${esc(pstMaintCreatedLabel(x))}</span><span class="pst-maint-row-priority${alert?' urgent':''}">${esc(x.priority||'Normale')}</span></span>
+   ${x.dueDate?`<span class="pst-maint-row-deadline${late?' is-late':''}">⏰ Échéance : ${fmtDate(x.dueDate)}${late?' · En retard':''}</span>`:''}
+   <span class="pst-maint-row-foot">${esc(x.no||'')} · ${esc(x.family||'Autre domaine')}${x.assigned?` · ${esc(x.assigned)}`:''}<span aria-hidden="true">›</span></span>
+  </button>`;
+ }).join(''):'<p class="pst-maint-mobile-empty">Aucune intervention dans cette catégorie.</p>';
+}
+
 function renderRequests(){const st=$('#requestStatus').value,t=$('#requestType').value;const arr=db.requests.filter(x=>recordInAcademicYear(x,['date','dueDate'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#requestsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${esc(x.requester)}</td><td>${esc(x.type)}</td><td>${esc([x.building,x.room].filter(Boolean).join(' · '))}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('request',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderWorks(){const st=$('#workStatus').value,t=$('#workType').value;const arr=db.works.filter(x=>recordInAcademicYear(x,['date','dueDate','gpaEnd'])&&(!st||x.status===st)&&(!t||x.type===t)).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));$('#worksTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${esc(x.no)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong>${x.sourceNonconformityId?`<small>📋 Plan d’action issu d’un rapport de contrôle${x.sourceReportDate?` · rapport du ${fmtDate(x.sourceReportDate)}`:''}</small>`:''}<small>${esc(x.description||'')}</small></td><td>${esc(x.building)}</td><td>${esc(x.company||'—')}</td><td>${fmtDate(x.dueDate)||'—'}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${editButton('work',x.id)}</td></tr>`).join(''):emptyRow(9)}
 function renderMeetings(){const m=$('#meetingMonth').value,t=$('#meetingType').value;const arr=db.meetings.filter(x=>dateMonthMatch(x.date,m)&&(!t||x.type===t)).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));$('#meetingsTable').innerHTML=arr.length?arr.map(x=>`<tr><td>${fmtDate(x.date)}</td><td>${esc(x.time||'—')}</td><td>${esc(x.type)}</td><td>${esc(x.title)}</td><td>${esc(x.location||'—')}</td><td>${esc(x.participants||'—')}</td><td>${badge(x.status)}</td><td>${editButton('meeting',x.id)}</td></tr>`).join(''):emptyRow(8)}
@@ -7433,6 +7499,7 @@ function renderAutoReportWizard(){
 function openAutoReportWizard(){autoReportWizardStep=0;renderAutoReportWizard();const d=wizardEl();if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','')}
 function saveWizardStep(){if(autoReportWizardStep===1&&autoReportWizardData.provider==='microsoft'){autoReportWizardData.tenantId=document.getElementById('wizTenant')?.value.trim()||'';autoReportWizardData.clientId=document.getElementById('wizClient')?.value.trim()||'';autoReportWizardData.senderEmail=document.getElementById('wizSender')?.value.trim()||''}}
 
+document.addEventListener('click',e=>{const tab=e.target.closest('[data-pst-maint-tab]');if(!tab)return;pstMaintenanceMobileTab=tab.dataset.pstMaintTab;renderMaintenance();});
 document.addEventListener('change',e=>{const s=e.target.closest?.('[data-nc-status]');if(!s)return;const n=(db.reportNonconformities||[]).find(x=>String(x.id)===String(s.dataset.ncStatus));if(!n)return;const before=n.status;n.status=s.value;n.updatedAt=new Date().toISOString();n.statusHistory=n.statusHistory||[];n.statusHistory.push({at:n.updatedAt,from:before,to:n.status});const closed=['FAIT','Levée'].includes(n.status);for(const x of (db.issues||[]).filter(x=>String(x.sourceNonconformityId||'')===String(n.id))){x.status=closed?'Clôturé':'À faire';x.updatedAt=n.updatedAt;}for(const x of (db.maintenance||[]).filter(x=>String(x.sourceNonconformityId||'')===String(n.id))){x.status=closed?'Clôturé':'À faire';x.updatedAt=n.updatedAt;}save();renderPeriodic();renderIssues();renderMaintenance();toast(`Observation ${n.observationNo||''} : ${n.status} — plan d’action ${closed?'clôturé':'rouvert'}`)});
 function init(){secureAppLogos();
  // V147.80 — à chaque ouverture, le contexte temporel repart de la date du jour.

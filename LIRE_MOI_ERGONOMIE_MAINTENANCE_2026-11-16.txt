@@ -1,0 +1,36 @@
+PILOTAGE SERVICE TECHNIQUE - ERGONOMIE + MAINTENANCE (16/11/2026)
+
+Modifications :
+1. Le menu principal a été regroupé en 7 rubriques déroulantes.
+2. L'onglet « Demandes direction » a été retiré du menu sans effacer
+   les anciennes données de ce module ni modifier ses données Supabase.
+3. Sur smartphone (largeur 700 px ou moins), la maintenance utilise
+   une liste compacte à la place du tableau à 10 colonnes :
+   - emplacement, problème, priorité, statut, date, échéance
+   - compteur des interventions ouvertes, urgentes et en retard
+   - filtres « Ouvertes », « En cours », « En attente »,
+     « Terminées », « Toutes »
+   - priorité aux urgences et aux retards dans l'affichage
+   - toucher une intervention pour ouvrir sa fiche existante
+4. La date de création est montrée dans la liste et dans le formulaire :
+   - fiches possédant createdAt : vraie date de création (« Créée le »)
+   - anciennes fiches sans createdAt : date de demande (« Demande du »)
+   Ce dernier cas n'est PAS présenté comme un horodatage de création.
+5. Les nouvelles fiches enregistrent leur horodatage de création.
+   L'édition d'une ancienne fiche ne fabrique pas une date de création.
+6. Sur ordinateur, le tableau de maintenance classique reste en place.
+   Aucun autre module, agent ou planning n'a été supprimé ou changé.
+
+INSTALLATION
+Extraire ce ZIP, puis mettre à jour les fichiers sur l'hébergement
+GitHub Pages (ne pas oublier le NOUVEAU fichier maintenance-mobile-list.css).
+Recharger la page sans cache si l'ancienne mise en page reste visible.
+La configuration Supabase et les données de production ne sont pas
+modifiées par la mise à jour des fichiers du site.
+
+CONTRÔLES
+- Vérification syntaxique JS : OK
+- Liste et filtres mobiles, dates et priorités (données d'essai) : OK
+- Tableau PC en largeur desktop (données d'essai) : OK
+- 7 groupes, 0 lien menu « Demandes direction » : OK
+- Test avec la vraie base Supabase et sur appareil réel : à effectuer.

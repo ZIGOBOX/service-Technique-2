@@ -8,10 +8,6 @@
   function syncNavDomains(){
     const domains=qa('.nav-domain');
     if(!domains.length)return;
-    if(window.innerWidth>900){
-      domains.forEach(d=>d.open=true);
-      return;
-    }
     const active=activeDomain();
     domains.forEach(d=>d.open=(d===active));
   }
@@ -62,7 +58,7 @@
     if(nav){
       nav.addEventListener('toggle',e=>{
         const domain=e.target;
-        if(!(domain instanceof HTMLDetailsElement)||!domain.classList.contains('nav-domain')||!domain.open||window.innerWidth>900)return;
+        if(!(domain instanceof HTMLDetailsElement)||!domain.classList.contains('nav-domain')||!domain.open)return;
         qa('.nav-domain',nav).forEach(d=>{if(d!==domain)d.open=false});
       },true);
       nav.addEventListener('click',e=>{
