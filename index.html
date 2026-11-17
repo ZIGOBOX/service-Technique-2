@@ -1047,7 +1047,9 @@
   <link rel="stylesheet" href="./mobile-global-search.css?v=20261111-01">
   <link rel="stylesheet" href="./maintenance-voice.css?v=20261113-01">
   <link rel="stylesheet" href="./maintenance-mobile-list.css?v=20261116-01">
+  <link rel="stylesheet" href="./google-drive-cloud.css?v=20261116-01">
   <link rel="stylesheet" href="./works-mobile-list.css?v=20261116-01">
+  <link rel="stylesheet" href="./gpa-import.css?v=20261117-01">
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -1607,6 +1609,11 @@
 
     <section class="view" id="works">
       <div class="section-actions"><div><h3>Chantiers, réserves & GPA</h3><p>Réunions de chantier, réserves, entreprises, architecte et garantie de parfait achèvement.</p></div><button class="primary" id="newWork">＋ Suivi</button></div>
+      <div id="pstGPAImportBox" aria-label="Importer les 31 fiches GPA d'origine">
+        <div class="pst-gpa-head"><div><div class="pst-gpa-title">📥 Fiches GPA Excel — 31 dossiers</div><p>Sélectionner ton fichier privé d’import, sans remplacer tes suivis actuels.</p></div><div class="pst-gpa-btns"><input id="pstGPAImportFile" type="file" accept=".json,application/json" hidden><button id="pstGPAImportStart" type="button" class="ghost">Choisir le fichier privé GPA (.json)</button></div></div>
+        <div id="pstGPAImportStatus" aria-live="polite">Chargement du suivi GPA…</div>
+        <div id="pstGPAImportPreview" hidden></div>
+      </div>
       <div class="pst-work-mobile-head" aria-label="Synthèse des chantiers et GPA sur téléphone">
         <div class="pst-work-mobile-counts" id="pstWorkMobileCounts" aria-live="polite"></div>
         <div class="pst-work-mobile-tabs" id="pstWorkMobileTabs" role="group" aria-label="Filtrer les dossiers de chantier">
@@ -1984,5 +1991,8 @@
   <script src="./mobile-dashboard-tiles.js?v=20261111-alarm-reminders-rotation-02"></script>
   <script src="./mobile-global-search.js?v=20261111-01"></script>
   <script src="./maintenance-voice.js?v=20261113-01"></script>
+  <script id="pstGoogleIdentityScript" src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="./google-drive-cloud.js?v=20261116-01"></script>
+  <script src="./gpa-import.js?v=20261117-01"></script>
 </body>
 </html>

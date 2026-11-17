@@ -1,0 +1,20 @@
+/* Import historique GPA : présentation non intrusive, PC et téléphone */
+#pstGPAImportBox{border:1px solid #c8d8e8;border-left:4px solid #1565a6;background:#f7fbff;border-radius:12px;padding:13px;margin:12px 0 16px;box-sizing:border-box}
+#pstGPAImportBox .pst-gpa-head{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+#pstGPAImportBox .pst-gpa-title{font-size:15px;font-weight:800;color:#163f63}
+#pstGPAImportBox p{font-size:12px;margin:4px 0 0;line-height:1.5;color:#4b6074}
+#pstGPAImportBox .pst-gpa-btns{display:flex;flex-wrap:wrap;gap:7px}
+#pstGPAImportBox button{min-height:38px;font-size:12px;padding:8px 11px;border-radius:9px}
+#pstGPAImportBox button:disabled{opacity:.5;cursor:wait}
+#pstGPAImportStatus{color:#385873;font-size:12px;margin-top:9px;line-height:1.45}
+#pstGPAImportStatus[data-error="true"]{color:#a22323}
+#pstGPAImportPreview[hidden]{display:none!important}
+#pstGPAImportPreview{margin-top:12px;padding:12px;background:white;border:1px solid #d5e4f1;border-radius:10px}
+#pstGPAImportPreview .pst-gpa-preview-list{max-height:220px;overflow-y:auto;font-size:12px;line-height:1.65;margin:10px 0;padding-left:20px}
+#pstGPAImportPreview .pst-gpa-warning{color:#8f5300;font-weight:700}
+#pstGPAImportPreview .pst-gpa-import-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.pst-gpa-source-block{padding:12px;border:1px solid #cbdbea;background:#f7fbff;border-radius:10px;display:grid;gap:6px;grid-column:1/-1;font-size:13px}
+.pst-gpa-source-block a{color:#0e588a;font-weight:750;text-decoration:underline}
+.pst-gpa-source-block small{color:#52697f;line-height:1.4}
+.pst-gpa-source-block .pst-gpa-warning{color:#9e4e09}
+@media(max-width:700px){#pstGPAImportBox{margin:10px 0;padding:12px}#pstGPAImportBox .pst-gpa-head{align-items:stretch;flex-direction:column}#pstGPAImportBox .pst-gpa-btns{display:grid;grid-template-columns:1fr}#pstGPAImportBox button{width:100%;min-height:45px}}

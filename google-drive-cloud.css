@@ -1,0 +1,21 @@
+/* Google Drive : option indépendante, sans changement des écrans existants */
+.pst-drive-panel{border:1px solid #d8e8fa}
+.pst-drive-panel label{display:block;margin:10px 0}
+.pst-drive-panel input{width:100%;min-width:0}
+.pst-drive-buttons{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.pst-drive-connection{font-weight:700;color:#64748b;margin:10px 0}
+.pst-drive-connection.is-connected{color:#147d43}
+#pstDriveStatus[data-error="true"]{color:#b91c1c;font-weight:600}
+.pst-drive-upload{border:1px solid #b7cfe6;background:#f1f7ff;border-radius:12px;padding:12px;margin:10px 0;max-width:100%}
+.pst-drive-upload label{font-weight:650;display:block}
+.pst-drive-upload input[type=file]{display:block;font-weight:400;max-width:100%;margin-top:8px}
+.pst-drive-file-list{display:grid;gap:8px;margin-top:12px}
+.pst-drive-file-row{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:#f5f8fc;min-width:0}
+.pst-drive-file-row>div{min-width:0;flex:1}
+.pst-drive-file-row strong{display:block;overflow-wrap:anywhere}
+.pst-drive-file-row small{display:block;color:#64748b;overflow-wrap:anywhere}
+.pst-drive-file-icon{font-size:20px}
+.pst-drive-file-row button{flex-shrink:0}
+.pst-drive-attachment{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pst-drive-attachment button{max-width:100%;overflow-wrap:anywhere}
+@media(max-width:720px){.pst-drive-buttons>*{flex:1 1 100%}.pst-drive-file-row{flex-wrap:wrap}.pst-drive-file-row button{margin-left:auto}}

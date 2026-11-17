@@ -1,0 +1,26 @@
+PILOTAGE SERVICE TECHNIQUE - ZIP COMPLET POUR GITHUB (17/11/2026)
+
+Ce ZIP contient l'ensemble du logiciel et ses modules, directement a la racine.
+Il comprend le module d'import de 31 fiches GPA, mais PAS les donnees privees GPA.
+
+INSTALLATION
+1. Decompresser le ZIP sur votre ordinateur (ne pas envoyer le ZIP tel quel sur GitHub).
+2. Ouvrir le depot GitHub qui heberge le site.
+3. Remplacer/televerser les FICHIERS DECOMPRESSES a la RACINE du depot,
+   en conservant le sous-dossier assets/ et les noms de fichiers.
+4. Attendre le deploiement GitHub Pages, puis actualiser le site.
+
+IMPORT GPA (APRES DEPLOIEMENT)
+- Se connecter au logiciel puis ouvrir Maintenance & travaux > Chantiers & GPA.
+- Choisir le fichier personnel IMPORT_PRIVE_GPA_31_FICHES_2026-11-17.json.
+- Controler l'apercu et valider pour ajouter les dossiers manquants.
+- NE PAS envoyer le fichier prive GPA sur le depot GitHub.
+
+SECURITE
+Si le depot est public, tout fichier place dedans est accessible sur Internet.
+Le ZIP conserve des fichiers .xlsx deja presents dans la version precedente.
+Verifier leur contenu avant de publier, notamment les informations du personnel
+et le suivi de contrats. Les donnees GPA .json et .xls ne sont pas dans ce ZIP.
+
+Tests automatises : fichiers ZIP et syntaxe JavaScript verifies.
+La synchronisation reelle avec votre compte Supabase reste a tester.
