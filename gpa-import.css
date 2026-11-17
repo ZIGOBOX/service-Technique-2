@@ -18,3 +18,11 @@
 .pst-gpa-source-block small{color:#52697f;line-height:1.4}
 .pst-gpa-source-block .pst-gpa-warning{color:#9e4e09}
 @media(max-width:700px){#pstGPAImportBox{margin:10px 0;padding:12px}#pstGPAImportBox .pst-gpa-head{align-items:stretch;flex-direction:column}#pstGPAImportBox .pst-gpa-btns{display:grid;grid-template-columns:1fr}#pstGPAImportBox button{width:100%;min-height:45px}}
+
+/* Clé d’activation privée : lisible et facile à saisir sur téléphone */
+#pstGPAImportUnlockRow[hidden],#pstGPAImportBox[hidden]{display:none!important}
+#pstGPAImportUnlockRow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:9px;margin:12px 0;padding:12px;border:1px solid #d5e4f1;border-radius:10px;background:#fff}
+#pstGPAImportUnlockRow label{display:grid;gap:6px;font-size:12px;font-weight:700;color:#284d70}
+#pstGPAImportUnlockRow input{box-sizing:border-box;min-width:0;width:100%;padding:11px;border:1px solid #c5d4e2;border-radius:8px;font-size:15px}
+#pstGPAImportUnlockRow small{grid-column:1/-1;font-size:11px;color:#506277}
+@media(max-width:700px){#pstGPAImportUnlockRow{grid-template-columns:1fr}#pstGPAImportUnlockRow small{grid-column:1}#pstGPAImportUnlockRow button{min-height:44px}}

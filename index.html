@@ -1049,7 +1049,7 @@
   <link rel="stylesheet" href="./maintenance-mobile-list.css?v=20261116-01">
   <link rel="stylesheet" href="./google-drive-cloud.css?v=20261116-01">
   <link rel="stylesheet" href="./works-mobile-list.css?v=20261116-01">
-  <link rel="stylesheet" href="./gpa-import.css?v=20261117-01">
+  <link rel="stylesheet" href="./gpa-import.css?v=20261117-data-embedded-02">
 </head>
 <body data-layout="auto">
   <section class="auth-screen" id="authScreen" aria-label="Connexion">
@@ -1609,8 +1609,9 @@
 
     <section class="view" id="works">
       <div class="section-actions"><div><h3>Chantiers, réserves & GPA</h3><p>Réunions de chantier, réserves, entreprises, architecte et garantie de parfait achèvement.</p></div><button class="primary" id="newWork">＋ Suivi</button></div>
-      <div id="pstGPAImportBox" aria-label="Importer les 31 fiches GPA d'origine">
-        <div class="pst-gpa-head"><div><div class="pst-gpa-title">📥 Fiches GPA Excel — 31 dossiers</div><p>Sélectionner ton fichier privé d’import, sans remplacer tes suivis actuels.</p></div><div class="pst-gpa-btns"><input id="pstGPAImportFile" type="file" accept=".json,application/json" hidden><button id="pstGPAImportStart" type="button" class="ghost">Choisir le fichier privé GPA (.json)</button></div></div>
+      <div id="pstGPAImportBox" aria-label="Activer les 31 dossiers GPA dans le logiciel">
+        <div class="pst-gpa-head"><div><div class="pst-gpa-title">📋 Historique GPA — 31 dossiers</div><p>Ajout des informations directement dans Chantiers & GPA. Aucun fichier Excel ou JSON à sélectionner.</p></div><div class="pst-gpa-btns"><button id="pstGPAImportStart" type="button" class="ghost">Activer mes 31 dossiers GPA</button></div></div>
+        <div id="pstGPAImportUnlockRow" hidden><label for="pstGPAImportKey">Clé privée d’activation <input id="pstGPAImportKey" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Clé donnée dans notre conversation"></label><button id="pstGPAImportUnlock" type="button" class="primary">Afficher les dossiers à ajouter</button><small>La clé n’est pas enregistrée et ne doit pas être mise sur GitHub.</small></div>
         <div id="pstGPAImportStatus" aria-live="polite">Chargement du suivi GPA…</div>
         <div id="pstGPAImportPreview" hidden></div>
       </div>
@@ -1993,6 +1994,6 @@
   <script src="./maintenance-voice.js?v=20261113-01"></script>
   <script id="pstGoogleIdentityScript" src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="./google-drive-cloud.js?v=20261116-01"></script>
-  <script src="./gpa-import.js?v=20261117-01"></script>
+  <script src="./gpa-import.js?v=20261117-data-embedded-02"></script>
 </body>
 </html>

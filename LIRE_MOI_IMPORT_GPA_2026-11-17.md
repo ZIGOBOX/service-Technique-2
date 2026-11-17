@@ -1,42 +1,21 @@
-# Import sécurisé des 31 fiches GPA — Lycée Jean Puy
+# GPA — 31 dossiers prêts à être ajoutés (17 novembre 2026)
 
-## Deux téléchargements séparés
+La version GitHub complète contient les **données métiers chiffrées** des 31 dossiers GPA (AES-256-GCM/PBKDF2) ; elle ne contient ni les fichiers Excel ni leur texte en clair.
 
-1. **Pilotage_Service_Technique_GITHUB_COMPLET_31_GPA_2026-11-17.zip** : contient le logiciel modifié (sans documents du lycée).
-2. **IMPORT_PRIVE_GPA_31_FICHES_2026-11-17.json** : contient le contenu des 31 fiches GPA ; ne pas mettre ce fichier sur GitHub.
+Après installation sur GitHub Pages :
+1. Se connecter normalement au logiciel (Supabase).
+2. Ouvrir **Maintenance & travaux → Chantiers & GPA**.
+3. Cliquer **Activer mes 31 dossiers GPA**.
+4. Saisir la **clé privée fournie dans la conversation ChatGPT** (elle ne doit pas être publiée).
+5. Vérifier les dossiers proposés et cliquer pour les enregistrer. Une sauvegarde JSON de l’état actuel se téléchargera avant l’écriture.
+6. Attendre une confirmation explicite de Supabase. Si l’écriture est en attente, vérifier la synchronisation et ne pas recommencer sans contrôle.
 
-## Installation (une seule fois)
+Après import, les dossiers sont de simples enregistrements dans Supabase, éditables sur téléphone et ordinateur. Le module d’activation disparaît une fois les 31 références reconnues. Un nouveau téléchargement ou une nouvelle saisie de la clé n’est pas nécessaire sur les appareils supplémentaires connectés au même compte.
 
-1. Installer sur GitHub Pages **uniquement** les fichiers du ZIP du logiciel, en conservant l’arborescence des fichiers et du dossier `assets`.
-2. Garder le fichier JSON **sur son ordinateur / téléphone** et ne jamais le téléverser dans les fichiers du site.
-3. Se connecter au logiciel avec son compte habituel Supabase.
-4. Aller dans **Maintenance & travaux → Chantiers & GPA**.
-5. Cliquer sur **Choisir le fichier privé GPA (.json)** et sélectionner le JSON local.
-6. Une liste de contrôle affiche les fiches nouvelles et celles déjà enregistrées, puis demande confirmation.
-7. En confirmant, le logiciel télécharge automatiquement une sauvegarde JSON de l’état actuel puis ajoute les fiches manquantes.
-8. Attendre le message **« confirmées dans Supabase »** avant de fermer la page. En cas de réseau indisponible, ne pas effacer les données locales et vérifier la synchronisation.
-9. Rechercher les numéros `GPA-09`, `GPA-18`, ... dans « Chantiers & GPA » et compléter les statuts, priorités et échéances à partir des informations de suivi réelles.
+Le logiciel conserve les numéros, dates **d’envoi**, localisations, constats et informations historiques disponibles. Statut, priorité et échéances non indiqués ne sont pas inventés.
 
-## Fidélité des fiches d’origine
+**GPA-38** : le fichier d’origine était nommé n° 38 mais indiquait n° 35 à l’intérieur ; les deux références sont conservées.
 
-- Les dates utilisées sont les **dates d’envoi** du champ « Date d’envoi », pas des dates supposées de création.
-- Les descriptions reprennent le champ « Nature de la malfaçon/désordre/dysfonctionnement et/ou observation », texte intégral.
-- Localisations, dates de signature disponibles et numéro intérieur sont conservés dans chaque dossier.
-- Les « observations complémentaires » vides restent vides. « Entreprise : XX » est un modèle, pas une société attribuée ; aucune entreprise n’est attribuée à tort.
-- Les statuts, priorités, échéances, dates de levée de réserve et fin de GPA non indiqués restent **non renseignés / à qualifier**.
-- Les copies des fichiers `.xls` d’origine ne sont PAS publiées. Conserver les originaux localement ou dans un stockage professionnel privé autorisé. Les fichiers Excel ne sont pas joints automatiquement à Supabase ni à Google Drive.
+Le ZIP complet de GitHub ne contient pas de clé de déchiffrement. Ne publiez pas la clé sur GitHub, dans un fichier de configuration ou dans les paramètres du site. Cela ne remplace pas une vérification des autorisations et de la confidentialité du traitement des données du lycée.
 
-## Anomalie non corrigée arbitrairement
-
-- Le fichier **GPA 38 (salle 245)** porte le numéro **35 à l’intérieur de la fiche** ; on importe `GPA-38` d’après le nom fourni, avec conservation du numéro intérieur `35` et avertissement lors de la consultation.
-
-## Doublons
-
-- 36 fichiers pour 31 numéros. Les doublons 51, 55, 56, 57 et 58 sont strictement identiques.
-- L’import ne supprime ni ne remplace de dossier existant ; il ignore automatiquement les fiches reconnues au même numéro ou ayant les mêmes champs source.
-
-## Confidentialité
-
-- Le JSON est réservé au responsable autorisé. Ne pas le publier sur GitHub Pages, ni l’envoyer à un service de stockage non approuvé par l’établissement.
-- Les fiches privées sont chargées localement dans le navigateur lors de la sélection, puis enregistrées dans le compte Supabase connecté après confirmation.
-- Les données du JSON ne sont pas incorporées au code public du logiciel.
+Il faut être connecté à Internet et à Supabase. Aucune modification n’est effectuée directement dans le compte réel au moment de la génération de ce ZIP.
