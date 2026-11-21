@@ -1,0 +1,35 @@
+PILOTAGE SERVICE TECHNIQUE — DESIGN PREMIUM — 21 NOVEMBRE 2026
+================================================================
+
+Cette version améliore l'apparence de votre logiciel EXISTANT ; ce n'est pas une nouvelle application.
+
+AMELIORATIONS :
+- Menu latéral bleu nuit : catégories mieux séparées, boutons actifs plus visibles.
+- Tableau de bord : grand bandeau moderne, raccourcis clairs, indicateurs plus lisibles.
+- Cartes Équipe / Agenda / Priorités / Rappels / Semaine réharmonisées.
+- Maintenance, plannings, contrôles, agents et autres rubriques : mêmes styles pour
+  les panneaux, boutons, tableaux et formulaires.
+- Affichage adaptatif pour ordinateur, tablette et téléphone.
+- Connexion remise au goût du jour.
+- Correction du dossier assets/logo-service-technique.png manquant à l'archive source.
+
+IMPORTANT :
+- Aucun changement au code JavaScript métier, aux données ou à la connexion Supabase.
+- Aucun script SQL supplémentaire n'est nécessaire.
+- Les données dans Supabase ne sont pas supprimées ni réinitialisées.
+- Le nouveau design est isolé dans design-premium.css ; supprimez sa balise <link>
+  dans index.html pour revenir au thème d'origine sans toucher aux données.
+
+PUBLIER SUR GITHUB PAGES :
+1) Téléchargez et décompressez ce ZIP sur votre ordinateur.
+2) Ouvrez le dossier Pilotage-Service-Technique-Design-Premium.
+3) Dans votre dépôt GitHub existant, remplacez/ajoutez les fichiers à la RACINE
+   du dépôt (index.html, scripts, CSS et dossier assets).
+4) Laissez la configuration Supabase du dépôt inchangée si vous l'avez personnalisée.
+5) Attendez la publication GitHub Pages et actualisez votre page (cache vidé si besoin).
+6) Connectez-vous comme auparavant, puis vérifiez le tableau de bord et une intervention.
+
+CONTROLE :
+- Stylesheet CSS verifiée syntaxiquement et intégrée en dernier dans index.html.
+- Fichiers JavaScript existants conservés. Aucune connexion en direct à votre Supabase
+  ni vérification fonctionnelle complète en production n'a été effectuée.
