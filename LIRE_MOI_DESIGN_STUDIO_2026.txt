@@ -1,0 +1,42 @@
+PILOTAGE SERVICE TECHNIQUE — ÉDITION STUDIO 2026
+================================================
+
+Cette édition est une véritable refonte visuelle de la version fournie :
+
+- Sidebar anthracite / violet, navigation avec icônes homogènes.
+- Accès directs fixes vers Accueil, Tickets et Équipe.
+- Tableau de bord avec bandeau violet, raccourcis et cartes d'indicateurs.
+- Maintenance avec en-tête distinct et quatre compteurs calculés sur les
+  interventions actuellement affichées dans la liste (respectent les filtres).
+- Recherche de rubrique : icône loupe ou Ctrl+K (Cmd+K sur Mac).
+- Formulaires, filtres, tableaux et fenêtres redessinés.
+- Sur téléphone : menu tiroir et bouton « ... » pour les outils de la barre du haut.
+- Connexion : visuel différent, authentification Supabase inchangée.
+
+FICHIERS DE LA REFONTE
+----------------------
+index.html : insertion des nouvelles zones visuelles + liens aux nouveaux fichiers.
+atelier-2026.css : nouvelle charte et réglages pour PC / mobile.
+atelier-2026.js : icônes, raccourcis, recherche des rubriques et indicateurs maintenance.
+
+Les autres fonctions et fichiers du logiciel initial sont conservés,
+notamment app.js, supabase-config.js et les modules de maintenance.
+
+INSTALLATION GITHUB PAGES
+-------------------------
+1. Décompresser le ZIP.
+2. Ouvrir le dossier Pilotage-Service-Technique-Studio-2026.
+3. Envoyer SON CONTENU à la racine du dépôt GitHub existant (et non le dossier
+   entier à l'intérieur du dépôt).
+4. Accepter le remplacement d'index.html et des fichiers de même nom.
+5. Vérifier que atelier-2026.css et atelier-2026.js sont au même niveau
+   qu'index.html, puis publier/valider les modifications.
+6. Recharger la page dans Chrome ; si l'ancien design demeure affiché,
+   forcer l'actualisation, ou ouvrir en navigation privée pour écarter le cache.
+
+IMPORTANT
+---------
+Ce ZIP n'inclut aucune nouvelle base de données. Ne réinitialisez pas Supabase.
+La mise en page a été vérifiée hors ligne sur desktop et téléphone ;
+l'authentification, les écritures réelles et la synchro Supabase doivent être
+validées sur votre instance active, avec vos identifiants.

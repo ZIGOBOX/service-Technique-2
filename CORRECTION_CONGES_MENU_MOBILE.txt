@@ -1,0 +1,20 @@
+CORRECTION 22 NOVEMBRE 2026 — MENU CONGÉS
+========================================
+
+Problème : sur téléphone, la section Personnel & horaires pouvait être
+compressée par la navigation en colonne. Ses derniers boutons (dont Congés,
+RTT & absences) étaient coupés, alors que la fonctionnalité existait bien.
+
+Corrections :
+- La navigation conserve toute la hauteur de chaque rubrique ouverte ;
+  on peut faire défiler le menu verticalement, sans perdre les derniers liens.
+- « Congés, RTT & absences » se trouve désormais juste sous « Agents ».
+- Un 4e accès direct « Congés » est visible en haut du menu.
+- La fonctionnalité et les tables de données Supabase n'ont pas été modifiées.
+- Les versions des fichiers CSS et JS ont été actualisées pour limiter les
+  problèmes de cache lors de l'installation.
+
+IMPORTANT : la capture montrant un menu BLEU et une ancienne version 147.180
+semble venir de l'ancienne interface. La version Studio installée utilise
+un menu anthracite / violet. Si elle n'apparaît pas, vérifier le déploiement
+à la racine du site GitHub Pages et vider le cache du navigateur.
