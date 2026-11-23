@@ -1,0 +1,14 @@
+PILOTAGE SERVICE TECHNIQUE — V147.190 — VISITE MÉDICALE DANS SAISIE PLANNING
+
+Depuis Pilotage des horaires ou Congés / RTT / absences : ouvrez la journée d’un agent.
+Dans la fenêtre « Agent — saisie planning » :
+• Nouveau bouton violet « 🩺 Visite médicale (heures) » près des boutons Congé, RTT, Maladie et Présence.
+• Encadré « Visites médicales du [date] » qui affiche les créneaux déjà enregistrés pour l’agent et la journée choisis.
+• Un bouton « Ouvrir / modifier » sur chaque rendez-vous existant ; un bouton « Ajouter des heures » pour un nouveau.
+• Les listes sont réactualisées lorsque vous changez l’agent ou la date.
+• La sélection « Visite médicale » dans « Type de journée » ouvre la saisie horaire ; elle ne sauvegarde pas de journée d’absence.
+• Sur la grille mensuelle des absences, un pictogramme 🩺 indique les journées avec une visite active (demandée ou validée).
+
+Les visites sont toujours enregistrées dans medicalVisits (Supabase), pas dans agentDays ; le calcul horaire et les notifications existants restent inchangés. Les anciennes absences à la journée ne sont pas supprimées automatiquement.
+
+Tests locaux : vérification syntaxique des scripts et inspection des points d’intégration. À valider sur GitHub Pages avec Supabase et les données réelles.

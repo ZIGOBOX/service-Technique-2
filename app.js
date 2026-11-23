@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.189';
+const APP_VERSION='147.190';
 const APP_BUILD='23/11/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -3155,6 +3155,23 @@ function dayCountingLabel(dayType){
 // une deuxième fois. La part hors planning ne s'ajoute que sur choix explicite.
 function medicalVisitIsActive(v){return !['refusee','annulee'].includes(normalizeText(v?.status||''))}
 function medicalVisitIsCredited(v){return normalizeText(v?.status||'')==='validee'}
+function medicalVisitsForAgentDate(agentId,date){
+ if(!agentId||!date)return [];
+ return (db.medicalVisits||[])
+  .filter(v=>String(v.agentId)===String(agentId)&&String(v.date)===String(date))
+  .sort((a,b)=>String(a.start||'').localeCompare(String(b.start||'')));
+}
+// La fiche journalière indique les visites enregistrées, sans remplacer la journée.
+function agentDayMedicalOverview(agentId,date){
+ const visits=medicalVisitsForAgentDate(agentId,date);
+ const title=date?`Visites médicales du ${fmtDate(date)}`:'Visites médicales';
+ const cards=visits.map(v=>{
+  const b=medicalVisitBreakdown(v);
+  return `<article class="day-medical-item"><div class="day-medical-item-main"><strong>${esc(v.start||'—')} – ${esc(v.end||'—')}</strong><span>${badge(v.status||'Demandée')}</span><small>${esc(fmtMedicalDuration(b.total))} · ${medicalVisitIsCredited(v)?'Comptabilisation validée':'Sans comptabilisation validée'}</small></div><button type="button" class="ghost small" data-edit-day-medical="${esc(v.id)}">Ouvrir / modifier</button></article>`;
+ }).join('');
+ return `<section class="day-medical-overview"><div class="day-medical-heading"><div><strong>🩺 ${esc(title)}</strong><small>Rendez-vous à l’heure, sans absence à la journée</small></div><button type="button" class="ghost small" data-open-day-medical>＋ Ajouter des heures</button></div>${cards||'<p class="day-medical-empty">Aucune visite médicale enregistrée pour cet agent à cette date.</p>'}</section>`;
+}
+
 function medicalVisitSchedule(agentId,date){
  const x=resolvedTheoreticalSchedule(agentId,date,'Présence');
  return {start:String(x?.start||''),end:String(x?.end||''),pause:Number(x?.pause||0)};
@@ -3647,7 +3664,14 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  const dateFrom=periodRows.length?periodRows.map(r=>r.date).sort()[0]:x.date;
  const dateTo=periodRows.length?periodRows.map(r=>r.date).sort().at(-1):x.date;
  const agentDayAuditBefore=agentDayAuditBaseline(x,dateFrom,dateTo);
- openModal(`${agentName(agentById(x.agentId))} — saisie planning`,`<div id="annualTheoreticalSummary">${agentAnnualScheduleSummary(x.agentId,initialDate)}</div><div class="day-shortcuts"><button type="button" data-set-day="Congé annuel">Congé</button><button type="button" data-set-day="RTT">RTT</button><button type="button" data-set-day="Maladie">Maladie</button><button type="button" data-set-day="Présence">Présence</button></div><div class="theoretical-schedule" id="theoreticalSchedule"></div><div class="form-grid"><label>Agent<select name="agentId">${agentOptions(x.agentId)}</select></label><label>Type de journée<select name="dayType">${dayTypeOptions(x.dayType)}</select></label>${field('Du','dateFrom',dateFrom,'date','required')}${field('Au','dateTo',dateTo,'date','required')}<label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],x.status||'Validée')}</select></label>${field('Horaire théorique — arrivée','plannedStart',x.plannedStart,'time')}${field('Horaire théorique — départ','plannedEnd',x.plannedEnd,'time')}${field('Horaire réel — arrivée','actualStart',x.actualStart,'time')}${field('Horaire réel — départ','actualEnd',x.actualEnd,'time')}<div class="full-width"><button type="button" class="ghost" id="resetRealSchedule">↩ Réinitialiser l’horaire réel</button><p class="hint">Efface uniquement l’horaire réel et remet l’affichage sur l’horaire théorique de cette journée.</p></div>${field('Pause (minutes)','pause',x.pause,'number','min="0" step="5"')}${field('Heures supplémentaires (+) / retirées (-)','overtime',x.overtime,'number','step="0.25"')}<label class="full-width replacement-choice"><span>Gestion du remplacement</span><span class="checkbox-row"><input type="checkbox" name="noReplacementNeeded" ${x.noReplacementNeeded?'checked':''}> Aucun remplacement nécessaire pendant cette période</span></label>${field('Remplacement / relais','replacement',x.replacement||'')}<div class="full-width manual-info-box"><strong>ⓘ Informations / Motif</strong><p class="hint">Informations facultatives pour préciser une modification manuelle : RTT, congé, maladie, ajout/retrait d’heures ou changement d’horaire.</p>${textareaField('Informations / Motif','note',x.note)}</div></div><p class="hint">Aucune notification de remplacement n’est créée le samedi, le dimanche ou un jour férié. Si la case « Aucun remplacement nécessaire » est cochée, aucune notification de remplacement ne sera créée pour toute la période.</p><div class="calculation-preview" id="dayCalc"></div>`,async form=>{const o=formDataObj(form);
+ openModal(`${agentName(agentById(x.agentId))} — saisie planning`,`<div id="annualTheoreticalSummary">${agentAnnualScheduleSummary(x.agentId,initialDate)}</div><div class="day-shortcuts"><button type="button" data-set-day="Congé annuel">Congé</button><button type="button" data-set-day="RTT">RTT</button><button type="button" data-set-day="Maladie">Maladie</button><button type="button" data-set-day="Présence">Présence</button><button type="button" class="day-medical-shortcut" id="dayMedicalQuick">🩺 Visite médicale (heures)</button></div><div class="theoretical-schedule" id="theoreticalSchedule"></div><div id="agentDayMedicalOverview" aria-live="polite"></div><div class="form-grid"><label>Agent<select name="agentId">${agentOptions(x.agentId)}</select></label><label>Type de journée<select name="dayType">${dayTypeOptions(x.dayType)}</select></label>${field('Du','dateFrom',dateFrom,'date','required')}${field('Au','dateTo',dateTo,'date','required')}<label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],x.status||'Validée')}</select></label>${field('Horaire théorique — arrivée','plannedStart',x.plannedStart,'time')}${field('Horaire théorique — départ','plannedEnd',x.plannedEnd,'time')}${field('Horaire réel — arrivée','actualStart',x.actualStart,'time')}${field('Horaire réel — départ','actualEnd',x.actualEnd,'time')}<div class="full-width"><button type="button" class="ghost" id="resetRealSchedule">↩ Réinitialiser l’horaire réel</button><p class="hint">Efface uniquement l’horaire réel et remet l’affichage sur l’horaire théorique de cette journée.</p></div>${field('Pause (minutes)','pause',x.pause,'number','min="0" step="5"')}${field('Heures supplémentaires (+) / retirées (-)','overtime',x.overtime,'number','step="0.25"')}<label class="full-width replacement-choice"><span>Gestion du remplacement</span><span class="checkbox-row"><input type="checkbox" name="noReplacementNeeded" ${x.noReplacementNeeded?'checked':''}> Aucun remplacement nécessaire pendant cette période</span></label>${field('Remplacement / relais','replacement',x.replacement||'')}<div class="full-width manual-info-box"><strong>ⓘ Informations / Motif</strong><p class="hint">Informations facultatives pour préciser une modification manuelle : RTT, congé, maladie, ajout/retrait d’heures ou changement d’horaire.</p>${textareaField('Informations / Motif','note',x.note)}</div></div><p class="hint">Aucune notification de remplacement n’est créée le samedi, le dimanche ou un jour férié. Si la case « Aucun remplacement nécessaire » est cochée, aucune notification de remplacement ne sera créée pour toute la période.</p><div class="calculation-preview" id="dayCalc"></div>`,async form=>{const o=formDataObj(form);
+ // Une visite ne peut JAMAIS être sauvée comme un jour entier dans agentDays.
+ if(normalizeText(o.dayType)==='visite medicale'){
+  const aid=o.agentId,day=o.dateFrom;
+  closeModal();openMedicalVisit('',aid,day);
+  toast('Renseignez les heures du rendez-vous : la journée reste inchangée.');
+  return {ok:false};
+ }
  const from=o.dateFrom, to=o.dateTo;
  if(!o.agentId){toast('Choisissez un agent');return}
  if(!from||!to){toast('Renseignez les dates du et au');return}
@@ -3810,6 +3834,7 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
    const aid=f.elements.agentId.value, d=f.elements.dateFrom.value||todayISO(), currentType=f.elements.dayType.value||'Présence', sc=resolvedTheoreticalSchedule(aid,d,currentType);
    const box=$('#theoreticalSchedule');
    const annualBox=$('#annualTheoreticalSummary');if(annualBox)annualBox.innerHTML=agentAnnualScheduleSummary(aid,d);
+ const medicalBox=$('#agentDayMedicalOverview');if(medicalBox)medicalBox.innerHTML=agentDayMedicalOverview(aid,d);
    const rule=dayCountingRule(currentType);
    if(box){
      if(currentType!=='Présence')box.innerHTML=`<strong>Pastille du calendrier — ${fmtDate(d)}</strong><b>${esc(currentType)}</b><small>Comptabilisation : ${esc(dayCountingLabel(currentType))}</small>${rule.mode==='planned'&&sc.start&&sc.end?`<small>Horaire prévu : ${esc(sc.start)} – ${esc(sc.end)}</small>`:''}`;
@@ -3827,6 +3852,19 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  }
  $$('[data-set-day]',$('#modalBody')).forEach(b=>b.onclick=()=>{$('#modalBody [name="dayType"]').value=b.dataset.setDay;refreshTheoretical(false)});
  const f=$('#modalForm');
+ const openMedicalFromDay=(visitId='')=>{
+  const aid=f?.elements.agentId?.value||initialAgentId;
+  const d=f?.elements.dateFrom?.value||initialDate;
+  closeModal();openMedicalVisit(visitId,aid,d);
+ };
+ const medicalQuick=$('#dayMedicalQuick');if(medicalQuick)medicalQuick.onclick=()=>openMedicalFromDay();
+ const medicalOverview=$('#agentDayMedicalOverview');
+ if(medicalOverview)medicalOverview.addEventListener('click',event=>{
+  const edit=event.target.closest('[data-edit-day-medical]');
+  if(edit){event.preventDefault();openMedicalFromDay(edit.dataset.editDayMedical);return;}
+  const create=event.target.closest('[data-open-day-medical]');
+  if(create){event.preventDefault();openMedicalFromDay();}
+ });
  const resetReal=$('#resetRealSchedule');
  if(resetReal)resetReal.onclick=()=>{
    if(f.elements.actualStart)f.elements.actualStart.value='';
@@ -3843,9 +3881,8 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  f.elements.agentId.addEventListener('change',()=>refreshTheoretical(true));
  f.elements.dateFrom.addEventListener('change',()=>{if(!old)f.elements.dateTo.value=f.elements.dateFrom.value;refreshTheoretical(true)});
  f.elements.dayType.addEventListener('change',()=>{
-  if(normalizeText(f.elements.dayType.value)==='visite medicale'&&initialType!=='Visite médicale'){
-    const aid=f.elements.agentId.value,day=f.elements.dateFrom.value;
-    closeModal();openMedicalVisit('',aid,day);return;
+  if(normalizeText(f.elements.dayType.value)==='visite medicale'){
+    openMedicalFromDay();return;
   }
   refreshTheoretical(false);
  });
@@ -4774,7 +4811,29 @@ function calendarDayVisual(info){
  if(day!=='presence'&&disp.color)v.color=disp.color;
  return v;
 }
-function renderAbsenceBoard(){const month=$('#absenceMonth').value||monthISO(),[y,m]=month.split('-').map(Number),count=new Date(y,m,0).getDate(),agents=db.agents.filter(a=>a.status==='Actif'),gridWidth=150+(count*42);let html=`<div class="month-grid" style="grid-template-columns:150px repeat(${count},42px);min-width:${gridWidth}px"><div class="month-corner">Agent</div>`+Array.from({length:count},(_,i)=>{const d=`${month}-${pad(i+1)}`;return `<div class="month-day-head ${[0,6].includes(parseDate(d).getDay())?'weekend':''}">${i+1}</div>`}).join('');for(const a of agents){html+=`<div class="month-agent">${esc(agentName(a))}</div>`;for(let i=1;i<=count;i++){const d=`${month}-${pad(i)}`,info=dayInfo(a.id,d),v=calendarDayVisual(info),hours=info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:'';html+=`<button class="month-cell day-state ${v.cls}" ${v.color?`style="background:${esc(v.color)}!important"`:``} data-agent-day="${a.id}" data-date="${d}" data-day-type="${esc(info.dayType||'Présence')}" title="${fmtDate(d)} — ${esc(v.label)}${esc(hours)}"><span>${v.code}</span></button>`}}html+='</div>';$('#absenceMonthBoard').innerHTML=html}
+function renderAbsenceBoard(){
+ const month=$('#absenceMonth').value||monthISO(),[y,m]=month.split('-').map(Number);
+ const count=new Date(y,m,0).getDate(),agents=db.agents.filter(a=>a.status==='Actif');
+ const gridWidth=150+(count*42),medicalDays=new Map();
+ for(const visit of db.medicalVisits||[]){
+  if(!medicalVisitIsActive(visit)||!dateMonthMatch(visit.date,month))continue;
+  const key=`${visit.agentId}|${visit.date}`,list=medicalDays.get(key)||[];
+  list.push(visit);medicalDays.set(key,list);
+ }
+ let html=`<div class="month-grid" style="grid-template-columns:150px repeat(${count},42px);min-width:${gridWidth}px"><div class="month-corner">Agent</div>`+
+  Array.from({length:count},(_,i)=>{const d=`${month}-${pad(i+1)}`;return `<div class="month-day-head ${[0,6].includes(parseDate(d).getDay())?'weekend':''}">${i+1}</div>`}).join('');
+ for(const a of agents){
+  html+=`<div class="month-agent">${esc(agentName(a))}</div>`;
+  for(let i=1;i<=count;i++){
+   const d=`${month}-${pad(i)}`,info=dayInfo(a.id,d),v=calendarDayVisual(info);
+   const hours=info.plannedStart&&info.plannedEnd?` ${info.plannedStart}–${info.plannedEnd}`:'';
+   const visits=medicalDays.get(`${a.id}|${d}`)||[];
+   const medicalTitle=visits.length?` — 🩺 ${visits.map(x=>`${x.start}–${x.end}`).join(', ')}`:'';
+   html+=`<button class="month-cell day-state ${v.cls} ${visits.length?'has-medical-visit':''}" ${v.color?`style="background:${esc(v.color)}!important"`:``} data-agent-day="${esc(a.id)}" data-date="${d}" data-day-type="${esc(info.dayType||'Présence')}" title="${fmtDate(d)} — ${esc(v.label)}${esc(hours)}${esc(medicalTitle)}"><span>${esc(v.code)}</span>${visits.length?'<small class="medical-day-indicator" aria-hidden="true">🩺</small>':''}</button>`;
+  }
+ }
+ html+='</div>';$('#absenceMonthBoard').innerHTML=html;
+}
 
 /* ---------- Rendu : modules ---------- */
 function renderAgents(){const q=($('#agentSearch').value||'').toLowerCase(),status=$('#agentStatus').value;const arr=db.agents.filter(a=>(!status||a.status===status)&&(!q||agentName(a).toLowerCase().includes(q)||String(a.assignment).toLowerCase().includes(q)));$('#agentCards').innerHTML=cardList(arr.map(a=>{const state=agentState(a),month=$('#planningMonth').value||monthISO(),rows=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)),absence=rows.filter(x=>isAbsenceType(x.dayType)).length,ot=rows.reduce((s,x)=>s+Number(x.overtime||0),0);return `<article class="agent-card"><div class="agent-avatar">${esc((a.firstName||'?')[0])}</div><div class="agent-main"><div class="panel-head"><h3>${esc(agentName(a))}</h3>${badge(a.status)}</div><p>${esc(a.role)} · ${esc(a.assignment||'Sans affectation')}</p><div class="agent-stats"><span>${badge(state.label)}</span><span>${fmtHours(a.weeklyHours)} / semaine</span>${(()=>{const p=permanenceScheduleForAgent(a.id);return p.start&&p.end?`<span class="perm-summary">🟠 Permanence ${esc(p.start)}–${esc(p.end)}</span>`:''})()}${(()=>{if(activeRotation(a.id,todayISO()))return '';const s=standardScheduleForAgent(a.id,todayISO());return s.start&&s.end?`<span class="std-summary">🔵 Standard ${esc(s.start)}–${esc(s.end)}</span>`:''})()}<span>${absence} absence(s) ce mois</span><span>${fmtSignedHours(ot)} supp.</span></div><div class="card-actions"><button type="button" data-edit-type="agent" data-edit-id="${a.id}">Modifier</button><button data-new-weekly-agent="${a.id}">Horaires annuels</button><button data-permanence-agent="${a.id}" class="permanence-button">Permanence</button><button data-new-rotation-agent="${a.id}">Roulement</button><button data-agent-day="${a.id}" data-date="${todayISO()}">Signaler un écart</button></div></div></article>`}),'Aucun agent trouvé.')}

@@ -1140,3 +1140,22 @@ body.rc-pos-open{overflow:hidden!important}
 .medical-visit-intro{border-radius:13px;background:#f0ecff;border:1px solid #dcd2ff;padding:12px 14px;margin-bottom:12px;color:#3d3270}
 .medical-visit-intro p{margin:5px 0 0;font-size:13px}
 @media(max-width:640px){#absences .medical-visit-actions{width:100%}#absences .medical-visit-actions button{flex:1 1 100%;min-height:46px}#absences .medical-visits-list{grid-template-columns:1fr}}
+
+/* V147.190 — Visite médicale visible directement dans la saisie planning et le calendrier */
+#modalBody .day-medical-shortcut{background:#ede9fe;border:1px solid #c4b5fd;color:#4c1d95;font-weight:800}
+#modalBody .day-medical-shortcut:hover{background:#ddd6fe}
+#modalBody .day-medical-overview{border:1px solid #c4b5fd;background:linear-gradient(135deg,#f6f3ff,#fff);border-radius:14px;padding:14px 16px;margin:0 0 16px;box-shadow:0 4px 16px rgba(91,33,182,.06);color:#28203d}
+#modalBody .day-medical-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+#modalBody .day-medical-heading>div{display:grid;gap:4px;min-width:0}
+#modalBody .day-medical-heading strong{font-size:15px;color:#4c1d95}
+#modalBody .day-medical-heading small{font-size:12px;color:#71638d}
+#modalBody .day-medical-heading button{min-height:40px;border:1px solid #c4b5fd;background:#fff;color:#5b21b6;font-weight:800}
+#modalBody .day-medical-empty{font-size:13px;color:#6b5c7b;margin:12px 0 0}
+#modalBody .day-medical-item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #e4dcfa;border-radius:12px;margin-top:10px;padding:10px 12px}
+#modalBody .day-medical-item-main{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}
+#modalBody .day-medical-item-main strong{color:#3e2470;font-size:15px;font-variant-numeric:tabular-nums}
+#modalBody .day-medical-item-main small{flex-basis:100%;color:#64748b;font-size:12px}
+#modalBody .day-medical-item button{flex-shrink:0;min-height:36px}
+.month-cell.day-state.has-medical-visit{position:relative;flex-direction:column;gap:1px;outline:2px solid #8b5cf6;outline-offset:-2px}
+.month-cell.day-state .medical-day-indicator{display:block;font-size:13px;line-height:1;pointer-events:none}
+@media(max-width:650px){#modalBody .day-medical-overview{padding:12px}#modalBody .day-medical-heading button{width:100%}#modalBody .day-medical-item{align-items:flex-start;flex-direction:column}#modalBody .day-medical-item button{width:100%}}
