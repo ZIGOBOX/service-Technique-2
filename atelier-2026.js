@@ -30,8 +30,8 @@
    grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'
   };
   const svg=key=>'<svg class="pst-nav-svg" aria-hidden="true" viewBox="0 0 24 24">'+(iconPaths[key]||iconPaths.grid)+'</svg>';
-  const domainIcons={accueil:'home',personnel:'users',maintenance:'tool',controles:'shield',agenda:'calendar',documents:'folder',outils:'settings'};
-  const viewIcons={dashboard:'home',agents:'users','agent-activity':'check',planning:'clock',rotations:'arrows',pdfimports:'download',absences:'sun','schedule-import':'arrows',vacations:'calendar',maintenance:'tool',works:'building',contracts:'file',periodic:'shield',cleaning:'check','cleaning-duty-plans':'task','room-prep':'calendar',waste:'folder',personal:'calendar',meetings:'users',notes:'pencil',documents:'folder',archives:'folder',reports:'chart',outlook:'mail',weather:'cloud',connections:'settings',help:'help',settings:'settings'};
+  const domainIcons={accueil:'home',personnel:'users',maintenance:'tool',securite:'alert',controles:'shield',agenda:'calendar',documents:'folder',outils:'settings'};
+  const viewIcons={dashboard:'home',agents:'users','agent-activity':'check',planning:'clock',rotations:'arrows',pdfimports:'download',absences:'sun','schedule-import':'arrows',vacations:'calendar',maintenance:'tool',requests:'task',issues:'alert',works:'building',contracts:'file',periodic:'shield',cleaning:'check','cleaning-duty-plans':'task','room-prep':'calendar',waste:'folder',personal:'calendar',meetings:'users',notes:'pencil',documents:'folder',archives:'folder',reports:'chart',outlook:'mail',weather:'cloud',connections:'settings',help:'help',settings:'settings'};
   const normalize=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr').trim();
   function installIcons(){
     $$('.nav-domain[data-nav-domain]').forEach(el=>{
@@ -117,6 +117,20 @@
     const observer=new MutationObserver(()=>{if(!scheduled){scheduled=true;requestAnimationFrame(update)}});
     observer.observe(tb,{childList:true,subtree:true,characterData:true});update();
   }
+  function installDashboardCardRouting(){
+    const dashboard=$('#dashboard');if(!dashboard)return;
+    dashboard.addEventListener('click',event=>{
+      const card=event.target.closest('[data-edit-type][data-edit-id], [data-agenda-source][data-agenda-id]');
+      if(!card||!dashboard.contains(card)||typeof window.PSTDashboardOpenRecord!=='function')return;
+      const kind=card.dataset.editType||card.dataset.agendaSource;
+      const id=card.dataset.editId||card.dataset.agendaId;
+      // Alarmes, horaires et tâches spéciales gardent leurs actions spécifiques.
+      if(!['periodic','issue','maintenance','request','work','note','meeting','personal','cleaning','contract','vacation','document'].includes(kind)||!id)return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.PSTDashboardOpenRecord(kind,id);
+    },true);
+  }
   function installTopTools(){
     const toggle=$('#pstToolsToggle');if(!toggle)return;
     toggle.addEventListener('click',()=>{
@@ -125,6 +139,6 @@
       toggle.setAttribute('aria-label',active?'Masquer les outils et filtres':'Afficher les outils et filtres');
     });
   }
-  function init(){installIcons();installFavorites();installCommand();installTopTools();installMaintenanceInsights();}
+  function init(){installIcons();installFavorites();installCommand();installTopTools();installMaintenanceInsights();installDashboardCardRouting();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

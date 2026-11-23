@@ -1,0 +1,42 @@
+PILOTAGE SERVICE TECHNIQUE — CORRECTIF DU 23 NOVEMBRE 2026
+Version 147.185 — Interface Studio
+==========================================================
+
+CORRECTIONS
+1. Hamburger : la rubrique « Sécurité, qualité & problématiques » a été
+   rétablie, dans une section « Sécurité & qualité ».
+2. Hamburger : l'écran « Demandes de la direction » a été rétabli dans
+   « Maintenance & travaux ». Les 30 écrans de l'application sont maintenant
+   présents dans le menu.
+3. Tableau de bord : les fiches de contrôle périodique (dont APAVE) sont
+   orientées vers « Contrôles périodiques », puis ouvertes dans leur fiche,
+   au lieu de revenir à une autre rubrique telle que Chronotime.
+4. La navigation des cartes d'actions, d'agenda et de maintenance est
+   centralisée dans un seul gestionnaire. Correction du double traitement
+   des clics lors de l'ouverture des fiches.
+5. Si une fiche a été supprimée entre-temps, le logiciel ouvre la rubrique
+   correspondante et avertit au lieu de créer une fiche vide.
+6. Mise à jour des numéros de versions et paramètres anti-cache.
+
+CONTROLE DES FICHIERS
+- 30 pages sur 30 reliées à une entrée du menu hamburger.
+- 12 types de fiches couverts par le routage des cartes du tableau de bord.
+- Vérification syntaxique de tous les fichiers JavaScript.
+- Aucun changement des identifiants de connexion ou des tables Supabase.
+
+LIMITES DES TESTS
+Les tests du routage ont été exécutés sur le code. Le test d'une connexion
+réelle, de la synchronisation Supabase et des clics sur votre téléphone reste
+nécessaire après publication sur votre site.
+
+INSTALLATION (GITHUB PAGES)
+1. Décompresser le ZIP sur l'ordinateur.
+2. Ouvrir le dossier Pilotage-Service-Technique-Studio-2026.
+3. Envoyer son contenu à la RACINE de votre dépôt GitHub, en remplaçant les
+   fichiers de même nom. Conserver le dossier assets.
+4. Patienter jusqu'à la publication GitHub Pages. Ouvrir Chrome et rafraîchir
+   complètement le site (navigation privée si nécessaire pour contourner
+   d'anciens fichiers en cache).
+5. Tester : hamburger > Sécurité & qualité ; Demandes de la direction ;
+   tableau de bord > carte APAVE > Contrôles périodiques.
+6. Ne pas supprimer ni réinitialiser les données de Supabase.

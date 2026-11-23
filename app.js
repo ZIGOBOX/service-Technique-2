@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.180';
-const APP_BUILD='06/10/2026';
+const APP_VERSION='147.185';
+const APP_BUILD='23/11/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -7110,6 +7110,21 @@ function dashboardShortcut(target){
 }
 function dispatchEdit(type,id){({agent:()=>openAgent(id),rotation:()=>openRotation(id),personal:()=>openPersonalEvent(id),issue:()=>openIssue(id),periodic:()=>openPeriodic(id),cleaning:()=>openCleaning(id),maintenance:()=>openMaintenance(id),agentActivity:()=>openAgentActivity(id),request:()=>openRequest(id),work:()=>openWork(id),meeting:()=>openMeeting(id),note:()=>openNote(id),vacation:()=>openVacation(id),document:()=>openDocument(id),space:()=>openSpace(id),reportNonconformity:()=>setView('pdfimports'),contract:()=>window.PSTContracts?.open?.(id)}[type]||(()=>{}))()}
 
+// Ouverture des fiches depuis le tableau de bord : jamais de renvoi vers Chronotime.
+// Le module est déterminé par la source de la carte, pas par la dernière page visitée.
+window.PSTDashboardOpenRecord=function(kind,id){
+ const routes={periodic:['periodic','periodic'],issue:['issues','issues'],maintenance:['maintenance','maintenance'],request:['requests','requests'],work:['works','works'],note:['notes','notes'],meeting:['meetings','meetings'],personal:['personal','personalEvents'],cleaning:['cleaning','cleaning'],contract:['contracts','contracts'],vacation:['vacations','vacations'],document:['documents','documents']};
+ const route=routes[kind];
+ if(!route||!id)return false;
+ const [view,collection]=route;
+ // Ne jamais créer une fiche vide lorsqu'une carte pointe vers une ancienne donnée.
+ const record=(db[collection]||[]).find(x=>String(x.id)===String(id));
+ setView(view);
+ if(!record){toast('Fiche introuvable : consultez la liste après synchronisation.');return false}
+ dispatchEdit(kind,id);
+ return true;
+};
+
 // Recherche générale sur téléphone : ouverture sécurisée d'une fiche existante.
 // Aucune écriture n'est effectuée par la recherche ; les formulaires restent ceux du logiciel.
 window.PSTSearchOpenRecord=function(type,id){
@@ -7317,12 +7332,8 @@ function bindReliableDynamicActions(){
  if(window.__pstDynamicActionsBound)return;
  window.__pstDynamicActionsBound=true;
  document.addEventListener('click',e=>{
-   const edit=e.target.closest?.('[data-edit-type]');
-   if(edit){
-     const type=edit.dataset.editType,id=edit.dataset.editId;
-     if(edit.classList.contains('note-edit-button')&&Number(edit.dataset.lastOpen||0)+500>Date.now())return;
-     if(type&&id){dispatchEdit(type,id)}
-   }
+   // Les fiches [data-edit-type] sont déjà traitées par le gestionnaire central
+   // dans bindEvents(). Ne pas les ouvrir deux fois (problème de navigation mobile).
    const rpCard=e.target.closest?.('[data-roomprep-edit]');
    if(rpCard&&window.PSTRoomPrep?.edit){
      window.PSTRoomPrep.edit(rpCard.dataset.roomprepEdit);
