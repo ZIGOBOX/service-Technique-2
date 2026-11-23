@@ -1,0 +1,36 @@
+PILOTAGE SERVICE TECHNIQUE — VERSION 147.191
+IMPORT DIRECT DE FICHES GPA (.XLS / .XLSX)
+
+1. Décompresser cette archive. Copier son CONTENU à la racine du dépôt GitHub existant.
+2. Ne pas changer la configuration Supabase (ni les identifiants privés).
+3. Dans le menu « Chantiers & GPA », ouvrir « Importer des fiches GPA Excel ».
+4. Choisir un ou plusieurs fichiers Excel .xls/.xlsx, ou les déposer dans la zone prévue.
+5. Vérifier les numéros, la date d'envoi, la localisation, le désordre, la maîtrise d’œuvre,
+   et le statut clôturée / non clôturée proposé avant de confirmer.
+6. Les doublons sont ignorés par défaut ; l'option « Enrichir » permet de rattacher
+   un nouveau fichier à une fiche déjà existante, sans écraser le suivi enregistré.
+7. Cliquer sur « Confirmer et enregistrer » ; le fichier Excel original est envoyé
+   dans Supabase et joint au dossier. Vérifier la confirmation de synchronisation.
+8. Dans le tableau PC, la colonne « Clôture GPA » indique son état. Le filtre GPA
+   et les compteurs sont aussi disponibles ; sur mobile, le statut figure sur chaque carte.
+9. La fiche reste modifiable (notamment les éléments justifiant la clôture).
+
+EXEMPLE GPA 75
+- Numéro : 75
+- Date d'envoi : 18/11/2026
+- Localisation : entrée du lycée - tourniquets
+- Observation : les éclairages des tourniquets restent en permanence éclairés
+- Maître d'œuvre : HIATUS
+- Entreprise, intervention, clôture : non documentées dans le fichier testé
+- État proposé : Non clôturée — à vérifier
+
+IMPORTANT : la clôture n'est jamais déduite d'une date d'intervention seule.
+Une preuve explicite ou une validation manuelle est requise.
+Fichiers pris en charge : Excel .xls/.xlsx avec libellés similaires à la fiche type.
+Les feuilles sans informations exploitables ne sont pas importées. Les Excel
+structurés différemment nécessiteront éventuellement une adaptation du lecteur.
+Le chargement du lecteur Excel existant dépend de la connexion au CDN SheetJS.
+
+VALIDATION EFFECTUÉE : syntaxe JS et tests de l'extraction réelle GPA n°75,
+cas de numérotation discordante, mention explicite de clôture et fichier non GPA.
+Les écritures en Supabase restent à tester sur ton compte après publication.

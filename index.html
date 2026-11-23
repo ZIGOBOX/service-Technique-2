@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#171326">
   <title>Pilotage Service Technique V147.187</title>
   <link rel="icon" href="./assets/logo-service-technique.png">
-  <link rel="stylesheet" href="./styles.css?v=147.190-20261123-medical-planning">
+  <link rel="stylesheet" href="./styles.css?v=147.191-20261123-gpa-files">
 
 <style id="v14713-fixes">
 /* Barres horizontales locales aux plannings : elles ne repartent plus avec la page. */
@@ -1657,6 +1657,13 @@
 
     <section class="view" id="works">
       <div class="section-actions"><div><h3>Chantiers, réserves & GPA</h3><p>Réunions de chantier, réserves, entreprises, architecte et garantie de parfait achèvement.</p></div><button class="primary" id="newWork">＋ Suivi</button></div>
+      <article class="pst-gpa-reader" id="pstGPAReader" aria-labelledby="pstGPAReaderTitle">
+        <div class="pst-gpa-reader-head"><div><h3 id="pstGPAReaderTitle">📥 Importer des fiches GPA Excel</h3><p>Dépose tes fiches <strong>.xls</strong> ou <strong>.xlsx</strong>. Le logiciel lit le numéro, la date, le désordre, la localisation et vérifie les éléments de clôture <strong>avant</strong> de les ajouter.</p></div><label class="primary pst-gpa-file-picker">＋ Importer des fiches<input id="pstGPAFiles" type="file" accept=".xls,.xlsx" multiple hidden></label></div>
+        <div id="pstGPADropZone" class="pst-gpa-drop-zone" role="button" tabindex="0">📂 Glisser les fichiers Excel ici, ou cliquer pour les sélectionner. Plusieurs fiches à la fois.</div>
+        <p class="hint">Une date d'intervention ne prouve pas, à elle seule, la clôture. Le document source reste joint à la fiche GPA dans Supabase.</p>
+        <div id="pstGPAReaderStatus" class="pst-gpa-reader-status" aria-live="polite"></div>
+        <div id="pstGPAReaderPreview" class="pst-gpa-reader-preview" hidden></div>
+      </article>
       <div id="pstGPAImportBox" aria-label="Activer les 31 dossiers GPA dans le logiciel">
         <div class="pst-gpa-head"><div><div class="pst-gpa-title">📋 Historique GPA — 31 dossiers</div><p>Ajout des informations directement dans Chantiers & GPA. Aucun fichier Excel ou JSON à sélectionner.</p></div><div class="pst-gpa-btns"><button id="pstGPAImportStart" type="button" class="ghost">Activer mes 31 dossiers GPA</button></div></div>
         <div id="pstGPAImportUnlockRow" hidden><label for="pstGPAImportKey">Clé privée d’activation <input id="pstGPAImportKey" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Clé donnée dans notre conversation"></label><button id="pstGPAImportUnlock" type="button" class="primary">Afficher les dossiers à ajouter</button><small>La clé n’est pas enregistrée et ne doit pas être mise sur GitHub.</small></div>
@@ -1673,9 +1680,10 @@
           <button type="button" data-pst-work-tab="all" aria-pressed="false">Tous</button>
         </div>
       </div>
-      <div class="filters"><select id="workStatus"><option value="">Tous les statuts</option></select><select id="workType"><option value="">Tous les types</option></select><button class="ghost" data-print="works">Imprimer</button></div>
+      <div id="pstGPAClosureSummary" class="pst-gpa-closure-summary" aria-live="polite"></div>
+      <div class="filters"><select id="workStatus"><option value="">Tous les statuts</option></select><select id="workType"><option value="">Tous les types</option></select><select id="pstGPAClosureFilter" aria-label="Filtrer selon la clôture GPA"><option value="">Toutes les clôtures GPA</option><option value="open">GPA non clôturées</option><option value="closed">GPA clôturées</option><option value="unknown">GPA à vérifier</option></select><button class="ghost" data-print="works">Imprimer</button></div>
       <div class="pst-work-mobile-list" id="pstWorkMobileList" aria-label="Liste compacte des chantiers, réserves et GPA"></div>
-      <div class="table-wrap pst-work-desktop-table"><table><thead><tr><th>N°</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Entreprise</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th></th></tr></thead><tbody id="worksTable"></tbody></table></div>
+      <div class="table-wrap pst-work-desktop-table"><table><thead><tr><th>N°</th><th>Type</th><th>Objet</th><th>Lieu</th><th>Entreprise</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th>Clôture GPA</th><th></th></tr></thead><tbody id="worksTable"></tbody></table></div>
     </section>
 
     <section class="view" id="meetings">
@@ -1997,7 +2005,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
   <script src="./entretien-planning.js?v=147.171-20260907"></script>
-  <script src="./app.js?v=20261123-visite-medicale-planning-147190"></script>
+  <script src="./app.js?v=20261123-gpa-files-147191"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./jszip.min.js?v=3.10.1"></script>
@@ -2043,6 +2051,7 @@
   <script id="pstGoogleIdentityScript" src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="./google-drive-cloud.js?v=20261116-01"></script>
   <script src="./gpa-import.js?v=20261117-data-embedded-02"></script>
+  <script src="./gpa-file-import.js?v=20261123-147191"></script>
   <script src="./atelier-2026.js?v=atelier-20261123-navigation-cards"></script>
 </body>
 </html>

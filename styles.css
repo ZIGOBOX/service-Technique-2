@@ -1159,3 +1159,30 @@ body.rc-pos-open{overflow:hidden!important}
 .month-cell.day-state.has-medical-visit{position:relative;flex-direction:column;gap:1px;outline:2px solid #8b5cf6;outline-offset:-2px}
 .month-cell.day-state .medical-day-indicator{display:block;font-size:13px;line-height:1;pointer-events:none}
 @media(max-width:650px){#modalBody .day-medical-overview{padding:12px}#modalBody .day-medical-heading button{width:100%}#modalBody .day-medical-item{align-items:flex-start;flex-direction:column}#modalBody .day-medical-item button{width:100%}}
+
+/* GPA Excel — lecture contrôlée des fiches et visibilité de la clôture. */
+.pst-gpa-reader{margin:16px 0;padding:20px;border-radius:20px;border:1px solid #cbd9e9;background:linear-gradient(135deg,#f7fbff,#f4f2ff);box-shadow:0 10px 28px rgba(22,35,63,.06)}
+.pst-gpa-reader-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.pst-gpa-reader-head h3{margin:0 0 6px;font-size:19px;color:#182a45}.pst-gpa-reader-head p{margin:0;color:#526783;max-width:800px;line-height:1.55;font-size:14px}
+.pst-gpa-file-picker{white-space:nowrap;cursor:pointer}
+.pst-gpa-drop-zone{margin:16px 0 10px;padding:20px;text-align:center;border:2px dashed #a6b6d5;background:rgba(255,255,255,.7);border-radius:16px;color:#415a7b;cursor:pointer;outline-offset:3px}
+.pst-gpa-drop-zone.is-drag{border-color:#6d5dec;background:#eae5ff}
+.pst-gpa-reader-status{font-size:13px;color:#334155;min-height:18px;margin:10px 0 0}
+.pst-gpa-reader-status.is-error{color:#a01e29;font-weight:600}
+.pst-gpa-reader-preview{display:grid;gap:13px;margin-top:16px}
+.pst-gpa-preview-card{border:1px solid #d4dfec;border-radius:16px;padding:16px;background:white;display:grid;gap:12px}
+.pst-gpa-preview-card h4{font-size:16px;margin:0}.pst-gpa-preview-card p{margin:0;font-size:13px;line-height:1.5;color:#334155}
+.pst-gpa-preview-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.pst-gpa-preview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pst-gpa-preview-grid>div{display:grid;gap:4px;border-radius:11px;background:#f3f7fc;padding:10px}
+.pst-gpa-preview-grid small{color:#64748b}.pst-gpa-preview-grid strong{font-size:13px;overflow-wrap:anywhere}
+.pst-gpa-preview-actions{display:flex;align-items:end;flex-wrap:wrap;gap:12px}
+.pst-gpa-preview-actions label{display:grid;gap:5px;font-size:12px;color:#64748b;font-weight:700;min-width:190px}
+.pst-gpa-preview-actions select{width:100%;padding:9px 10px;border:1px solid #cdd9e7;border-radius:9px;background:#fff;color:#182a45}
+.pst-gpa-reader-footer{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 0}
+.pst-gpa-closure-summary{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}
+.pst-gpa-closure-summary>div{min-width:125px;flex:1;border:1px solid #d4deea;border-radius:14px;background:#fff;padding:11px 15px;display:grid;gap:4px;box-shadow:0 4px 16px rgba(15,23,42,.04)}
+.pst-gpa-closure-summary strong{font-size:22px;color:#142b47}.pst-gpa-closure-summary span{font-size:12px;color:#64748b}
+.pst-gpa-table-closure{min-width:136px;font-weight:650;font-size:13px}
+@media(max-width:820px){.pst-gpa-reader{padding:14px}.pst-gpa-file-picker{width:100%;text-align:center}.pst-gpa-preview-grid{grid-template-columns:1fr 1fr}.pst-gpa-reader-footer>button{width:100%}}
+@media(max-width:520px){.pst-gpa-preview-grid{grid-template-columns:1fr}.pst-gpa-reader-head h3{font-size:17px}}
