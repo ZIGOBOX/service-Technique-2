@@ -1421,7 +1421,7 @@
       <p class="muted" id="dutySourceInfo"></p><p class="hint" id="dutyBindingStatus" hidden></p>
       <div class="filters"><label>Agent<select id="dutyAgent"><option value="">Tous les agents</option></select></label><label>Jour<select id="dutyDay"><option value="">Toute la semaine</option><option value="1">Lundi</option><option value="2">Mardi</option><option value="3">Mercredi</option><option value="4">Jeudi</option><option value="5">Vendredi</option></select></label><label>Mission<select id="dutyKind"><option value="">Tous les types</option><option>Entretien</option><option>Loge</option><option>Lingerie</option><option>Repas</option><option>Repos</option><option>Autre</option></select></label></div>
       <div class="summary-grid duty-summary" id="dutySummary"></div>
-      <div class="table-wrap"><table id="dutyTableGrid"><thead><tr><th>Jour</th><th>Créneau</th><th>Agent</th><th>Type</th><th>Mission / secteur</th><th>Actions</th></tr></thead><tbody id="dutyTable"></tbody></table></div>
+      <div id="dutyWeekAgenda" class="duty-week-agenda" aria-live="polite"></div>
       <dialog id="dutyEditor" class="modal duty-dialog"><div class="modal-head"><div><h3 id="dutyEditorTitle">Modifier un créneau</h3><p class="muted">Répartition des missions, sans changement des horaires de travail.</p></div><button type="button" class="icon-btn" onclick="document.getElementById('dutyEditor').close()">×</button></div><form id="dutyEditorForm"><div class="duty-editor-body"></div><p class="hint" id="dutyEditorStatus" aria-live="polite"></p><div class="modal-actions"><button type="button" class="ghost" id="dutyEditorCancel">Annuler</button><button type="submit" class="primary">Enregistrer le créneau</button></div></form></dialog>
     </section>
 

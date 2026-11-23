@@ -70,14 +70,25 @@ function nameOptions(selected=''){
 function agentOptions(selected=''){
  const d=state();return '<option value="">Agent non attribué</option>'+(d.agents||[]).filter(a=>a.status!=='Inactif'||String(a.id)===String(selected)).map(a=>`<option value="${esc(a.id)}" ${String(a.id)===String(selected)?'selected':''}>${esc(fullName(a))}</option>`).join('');
 }
+function durationMinutes(start,end){const a=minutes(start),b=minutes(end);if(a==null||b==null)return 0;return Math.max(0,b-a)}
+function formatDuration(total){const minutesTotal=Math.max(0,Number(total)||0),hours=Math.floor(minutesTotal/60),minutesLeft=minutesTotal%60;return `${hours} h${minutesLeft?` ${String(minutesLeft).padStart(2,'0')}`:''}`}
+function renderAgenda(list){
+ const agenda=$('dutyWeekAgenda');if(!agenda)return;
+ const selectedDay=Number($('dutyDay')?.value||0),dayList=selectedDay?[selectedDay]:[1,2,3,4,5];
+ agenda.innerHTML=dayList.map(day=>{
+  const items=list.filter(r=>Number(r.day)===Number(day));
+  const total=items.reduce((sum,r)=>sum+durationMinutes(r.start,r.end),0);
+  const body=items.length?items.map(r=>`<article class="duty-slot duty-kind-${esc(r.kind)}"><div class="duty-slot-top"><div><div class="duty-time">${esc(r.start)}–${esc(r.end)}</div><small class="duty-duration">${esc(formatDuration(durationMinutes(r.start,r.end)))}</small></div><span class="duty-tag">${esc(r.kind)}</span></div><div><p class="duty-task"><strong>${esc(r.task)}</strong></p><p class="duty-agent ${!r.agentId?'missing':''}">${esc(label(r))}${!r.agentId?' · Agent à associer':''}</p>${r.notes?`<p class="duty-notes">${esc(r.notes)}</p>`:''}</div><div class="duty-slot-actions"><button type="button" class="ghost small" data-duty-edit="${esc(r.id)}">Modifier</button><button type="button" class="ghost small" data-duty-delete="${esc(r.id)}">Supprimer</button></div></article>`).join(''):`<div class="duty-empty">Aucun créneau prévu.</div>`;
+  return `<section class="duty-day-column ${items.length?'':'is-empty'}"><header class="duty-day-head"><div><h4>${esc(DAYS[day]||'')}</h4><small>${items.length?`${items.length} créneau${items.length>1?'x':''} planifié${items.length>1?'s':''}`:'Aucune mission'}</small></div><span class="duty-day-total">${esc(formatDuration(total))}</span></header><div class="duty-day-list">${body}</div></section>`;
+ }).join('');
+}
 function render(){
- const table=$('dutyTable');if(!table)return;
+ const agenda=$('dutyWeekAgenda');if(!agenda)return;
  const af=$('dutyAgent');if(af){const v=af.value;af.innerHTML=nameOptions(v);af.value=v}
  const list=filterRows(),days=new Set(list.map(r=>r.day)),agents=new Set(list.map(r=>r.agentKey||r.agentId));
  if($('dutySummary'))$('dutySummary').innerHTML=`<div><strong>${list.length}</strong><span>Créneaux affichés</span></div><div><strong>${agents.size}</strong><span>Agents concernés</span></div><div><strong>${days.size}</strong><span>Jours représentés</span></div><div><strong>${rows().length}</strong><span>Créneaux enregistrés</span></div>`;
- const day=$('dutyDay')?.value;
- if($('dutySourceInfo'))$('dutySourceInfo').textContent=`Source : ${SOURCE.sourceFile} — feuille « ${SOURCE.displaySheet} » (nom corrigé). ${SOURCE.records.length} cellules renseignées importées initialement. Les missions sont distinctes des horaires de travail et des contrôles réalisés.`;
- table.innerHTML=list.length?list.map(r=>`<tr class="duty-kind-${esc(r.kind)}"><td>${esc(DAYS[r.day]||'')}</td><td>${esc(r.start)}–${esc(r.end)}</td><td><strong>${esc(label(r))}</strong>${!r.agentId?'<small>Agent à associer</small>':''}</td><td><span class="duty-tag">${esc(r.kind)}</span></td><td>${esc(r.task)}${r.notes?`<small>${esc(r.notes)}</small>`:''}</td><td><button type="button" class="ghost small" data-duty-edit="${esc(r.id)}">Modifier</button> <button type="button" class="ghost small" data-duty-delete="${esc(r.id)}">Supprimer</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">Aucun créneau pour cette sélection.</td></tr>';
+ if($('dutySourceInfo'))$('dutySourceInfo').textContent=`Source : ${SOURCE.sourceFile} — feuille « ${SOURCE.displaySheet} » (nom corrigé). ${SOURCE.records.length} cellules renseignées importées initialement. Vue agenda hebdomadaire des missions prévues, distincte des horaires réels et des contrôles réalisés.`;
+ renderAgenda(list);
  const status=$('dutyBindingStatus');if(status){const missing=[...new Set(rows().filter(r=>!r.agentId).map(r=>r.agentKey))].map(k=>fullName(sourceAgent(k)||{}));status.textContent=missing.length?`Agents à associer : ${missing.join(', ')}. Utilisez Modifier pour choisir la bonne fiche.`:'';status.hidden=!missing.length}
 }
 function inputField(label,name,value='',type='text',extra=''){return `<label>${esc(label)}<input name="${esc(name)}" type="${type}" value="${esc(value)}" ${extra}></label>`}
