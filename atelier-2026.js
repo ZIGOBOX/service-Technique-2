@@ -31,7 +31,7 @@
   };
   const svg=key=>'<svg class="pst-nav-svg" aria-hidden="true" viewBox="0 0 24 24">'+(iconPaths[key]||iconPaths.grid)+'</svg>';
   const domainIcons={accueil:'home',personnel:'users',maintenance:'tool',securite:'alert',controles:'shield',agenda:'calendar',documents:'folder',outils:'settings'};
-  const viewIcons={dashboard:'home',agents:'users','agent-activity':'check',planning:'clock',rotations:'arrows',pdfimports:'download',absences:'sun','schedule-import':'arrows',vacations:'calendar',maintenance:'tool',requests:'task',issues:'alert',works:'building',contracts:'file',periodic:'shield',cleaning:'check','cleaning-duty-plans':'task','room-prep':'calendar',waste:'folder',personal:'calendar',meetings:'users',notes:'pencil',documents:'folder',archives:'folder',reports:'chart',outlook:'mail',weather:'cloud',connections:'settings',help:'help',settings:'settings'};
+  const viewIcons={dashboard:'home',agents:'users','agent-activity':'check',planning:'clock',rotations:'arrows',pdfimports:'download',absences:'sun','schedule-import':'arrows',vacations:'calendar',maintenance:'tool',quotes:'file',requests:'task',issues:'alert',works:'building',contracts:'file',periodic:'shield',cleaning:'check','cleaning-duty-plans':'task','room-prep':'calendar',waste:'folder',personal:'calendar',meetings:'users',notes:'pencil',documents:'folder',archives:'folder',reports:'chart',outlook:'mail',weather:'cloud',connections:'settings',help:'help',settings:'settings'};
   const normalize=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr').trim();
   function installIcons(){
     $$('.nav-domain[data-nav-domain]').forEach(el=>{

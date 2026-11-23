@@ -1,0 +1,15 @@
+Pilotage Service Technique — V147.186 — Module DEVIS & SUIVI
+
+- Ajout de la rubrique « Devis & suivi » dans Maintenance & travaux.
+- Accès sur le tableau de bord avec nombre de devis ouverts et relances.
+- Cartes techniques : prestation, catégorie, entreprise, lieu, description, statut, relance.
+- Montants HT/TTC, date et validité du devis visibles uniquement à l’ouverture de la fiche.
+- Ajouter, modifier, supprimer ; pièces jointes via les mécanismes existants Supabase / Google Drive.
+- Enregistrement dans la collection « quotes » de l’état JSON existant sur Supabase : aucune table SQL supplémentaire nécessaire.
+- Suivi des changements de statut, positionnement, entreprise et relance dans l’historique de la fiche.
+- Filtres par statut et recherche par prestation, bâtiment ou entreprise.
+- Les 57 fichiers d’origine sont conservés (59 fichiers au total), ainsi que les corrections de menu/navigation et l’agenda entretien & loge.
+- Ne jamais supprimer le contenu existant de la base Supabase ; remplacer uniquement les fichiers du site GitHub Pages.
+- Tester la synchronisation sur la session réelle, y compris la pièce jointe PDF et l’ouverture sur mobile.
+- Une fiche devis peut être liée à une intervention de maintenance ; plusieurs devis peuvent renvoyer à la même intervention.
+- Montants saisissables indépendamment : pas de calcul de TVA, pas de budget global.

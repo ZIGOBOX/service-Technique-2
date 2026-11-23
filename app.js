@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.185';
+const APP_VERSION='147.186';
 const APP_BUILD='23/11/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -564,7 +564,7 @@ function clone(x){return structuredClone(x)}
 const BUNDLED_CONTROL_REPORTS=[{"key":"apave-135054046-001-1-rvre","title":"RVRE — Installations électriques et éclairages","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"RVRE ERP — aucune non-conformité identifiée dans le périmètre de la vérification.","observations":0,"subtype":"RVRE ERP","sha256":"fbcc7667636c65c9a134f6421ab4056fd9fcaedb586bd58f9aa34410dd89759a","size":1344942,"path":"reports/2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf","file":"2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf"},{"key":"apave-135054046-001-1-rvp","title":"Vérification périodique des installations électriques","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"Vérification périodique des installations électriques — 23 observations signalées dans le rapport.","observations":23,"subtype":"Vérification périodique","sha256":"cda549f71a666baaf27efddd3fa653b5a7725910497e2c81403eadc7438fcc01","size":3680309,"path":"reports/2025-07-07_APAVE_Verification_Installations_Electriques.pdf","file":"2025-07-07_APAVE_Verification_Installations_Electriques.pdf"},{"key":"apave-135046511-001-1-gaz","title":"Installations thermiques / réseau gaz","org":"APAVE","family":"Gaz","date":"2025-09-05","ref":"135046511-001-1","summary":"Vérification des installations thermiques fluide / réseau gaz — 1 observation.","observations":1,"subtype":"Thermique / Gaz","sha256":"f5ffc7006ae754c35ce9dbd4a82611eeb6d2e64878f6583e31112cf051588906","size":1497083,"path":"reports/2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf","file":"2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf"},{"key":"apave-a513283837-004-1-sport","title":"Vérification périodique des équipements sportifs","org":"APAVE","family":"Équipements sportifs","date":"2025-12-05","ref":"A513283837-004-1","summary":"Vérification visuelle et manuelle des équipements sportifs — 26 observations.","observations":26,"subtype":"Équipements sportifs","sha256":"423aa2fd3840deafbd2daab0dae3df00f449f40a1b9f3f314f1b44bbdc249f9e","size":4445518,"path":"reports/2025-12-05_APAVE_Equipements_Sportifs.pdf","file":"2025-12-05_APAVE_Equipements_Sportifs.pdf"},{"key":"apave-a513283836-004-1-ancrage","title":"Vérification des dispositifs d’ancrage pour EPI","org":"APAVE","family":"Autres contrôles","date":"2026-02-02","ref":"A513283836-004-1","summary":"Vérification générale périodique des dispositifs d’ancrage pour EPI — 5 observations.","observations":5,"subtype":"Ancrages / EPI","sha256":"fcf149dfb1e45c0e1dab938b86dbee07fcf9839d3b8180734abb92155c2f3e50","size":135938,"path":"reports/2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf","file":"2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf"},{"key":"bv-28016576-155-1-1-cta-vmc","title":"Contrôle des CTA et VMC sanitaires","org":"Bureau Veritas","family":"VMC / Ventilation","date":"2026-03-20","ref":"28016576/155.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — CTA et VMC sanitaires — écarts et non-conformités présents dans le rapport.","observations":null,"subtype":"CTA / VMC sanitaires","sha256":"aadb4258da54a155ca98194d8602d3bef1ff46a26236911f82388766f39fdb96","size":5246665,"path":"reports/2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf","file":"2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf"},{"key":"bv-28016576-152-1-1-hottes","title":"Contrôle des hottes de cuisines","org":"Bureau Veritas","family":"Cuisine / Cuisson","date":"2026-03-20","ref":"28016576/152.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — hottes de cuisines — observations présentes dans le rapport.","observations":null,"subtype":"Hottes de cuisines","sha256":"144566b4d982b7a241b3400b91f0ce4396b13f1026dbfeabd91b4aa024c3b912","size":3374751,"path":"reports/2026-03-20_BureauVeritas_Hottes_Cuisines.pdf","file":"2026-03-20_BureauVeritas_Hottes_Cuisines.pdf"}];
 
 function defaultData(){const buildings=clone(initialBuildings);const agents=[['Mme','Tarrio','Agent d’accueil'],['Mme','Delorme','Agent d’accueil / lingerie'],['Complément','accueil','Agent d’accueil'],['Mme','Berthoux','Agent de restauration'],['Mme','Bozio','Agent d’accueil']].map((n,i)=>({id:uid(),no:`AGT-${String(i+1).padStart(3,'0')}`,firstName:n[0],lastName:n[1],role:n[2],weeklyHours:35,email:'',phone:'',assignment:'',status:'Actif',arrivalDate:'',workdays:[1,2,3,4,5],notes:''}));const monday=startOfWeek(todayISO());const maintenance=IMPORTED_INTERVENTIONS.map((x,i)=>({id:uid(),no:`MAI-2026-${String(i+1).padStart(4,'0')}`,date:todayISO(),title:x[0],family:x[1],priority:x[2],status:x[3],building:x[5]||'',floor:'',room:x[5]||'',requester:'Direction',assigned:'',dueDate:'',cost:'',description:x[4]||'',action:'',attachments:[],importBatch:'excel-2026-08'}));const data={version:31,cleaningDutyPlans:[],cleaningDutySourceVersion:0,settings:{initialSeedCompleted:true,seedVersion:31,cleaningAlertDays:30,cleaningNotificationsEnabled:true,cleaningNotifyNever:true,cleaningNotifyOverdue:true,cleaningNotifyPlanned:true,meetingAlertDays:3,
-autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:academicYearFor(todayISO()),defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:[],rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],agentActivities:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contracts:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],cleaningDeletedIds:[],notificationDismissals:{},importOriginalBindings:{}};window.PSTCleaningDuty?.seed?.(data);return data}
+autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:academicYearFor(todayISO()),defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:[],rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],agentActivities:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,quotes:[],requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contracts:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],cleaningDeletedIds:[],notificationDismissals:{},importOriginalBindings:{}};window.PSTCleaningDuty?.seed?.(data);return data}
 function nextSeedNo(rows){return `MAI-2026-${String((rows?.length||0)+1).padStart(4,'0')}`}
 
 function normalizedReportFileKey(name=''){
@@ -648,7 +648,7 @@ function migrate(raw){
  const d={...base,...raw,settings:{...base.settings,...(raw.settings||{}),counters:{...base.settings.counters,...(raw.settings?.counters||{})}},lists:{...base.lists,...(raw.lists||{})}};
  d.cleaningDutySourceVersion=Number(raw.cleaningDutySourceVersion||0);
  if(!Array.isArray(raw.cleaningDutyPlans))d.cleaningDutyPlans=[];
- for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','agentActivities','cleaningDutyPlans','issues','periodic','contracts','cleaning','maintenance','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
+ for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','agentActivities','cleaningDutyPlans','issues','periodic','contracts','cleaning','maintenance','quotes','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
    if(!Array.isArray(d[k]))d[k]=base[k];
  }
  // V147.173 : un registre déjà présent, même vide, est une donnée utilisateur.
@@ -1365,7 +1365,7 @@ async function waitForCloudIdle(maxMs=18000){
  return !cloudBusy;
 }
 
-const STABLE_FORM_COLLECTIONS=['requests','works','meetings','notes','issues','periodic','contracts','cleaning','vacations','personalEvents','agentActivities','cleaningDutyPlans','documents','agents','rotations','weeklyPlans','spaces'];
+const STABLE_FORM_COLLECTIONS=['quotes','requests','works','meetings','notes','issues','periodic','contracts','cleaning','vacations','personalEvents','agentActivities','cleaningDutyPlans','documents','agents','rotations','weeklyPlans','spaces'];
 
 function stableRecordTime(r){
  const t=Date.parse(r?.updatedAt||r?.createdAt||r?.modifiedAt||'');
@@ -1782,6 +1782,7 @@ function safeRenderAll(){
    contracts:['Suivi des contrats',()=>window.PSTContracts?.render?.()],
    cleaning:['Ménage',renderCleaning],
    maintenance:['Maintenance',renderMaintenance],
+   quotes:['Devis & suivi',renderQuotes],
    'agent-activity':['Activité agents',renderAgentActivities],
    'cleaning-duty-plans':['Planning entretien & loge',()=>window.PSTCleaningDuty?.render?.()],
    requests:['Demandes',renderRequests],
@@ -1803,6 +1804,7 @@ function safeRenderAll(){
  for(const [name,fn] of jobs){
    try{fn()}catch(error){console.error(`Erreur d’affichage — ${name}`,error);errors.push(name)}
  }
+ if(active==='dashboard')try{renderQuoteDashboard()}catch(e){console.warn('Synthèse devis',e)}
  if(errors.length)setSaveState(`Enregistré — affichage partiel (${errors.join(', ')})`,'local');
  try{enhanceTableFilters(document.querySelector('.view.active')||document)}catch(error){console.warn('Filtres colonnes',error)}
  restorePlanningScroll();
@@ -1876,7 +1878,7 @@ function pstApplyQueuedMutationsToPayload(payload){
 }
 function pstMergeRemoteWithoutOverwritingLocal(remote,local=db){
   const out=migrate(deepClone(remote||{})),loc=migrate(deepClone(local||{}));
-  const collections=['agentDays','personalEvents','agents','rotations','weeklyPlans','cleaningDutyPlans','vacations','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','documents','oneDriveLinks','contracts','spaces','roomPreps'];
+  const collections=['agentDays','personalEvents','agents','rotations','weeklyPlans','cleaningDutyPlans','vacations','issues','periodic','cleaning','maintenance','quotes','requests','works','meetings','notes','documents','oneDriveLinks','contracts','spaces','roomPreps'];
   for(const c of collections){
     const map=new Map((Array.isArray(out[c])?out[c]:[]).map(r=>[String(r.id),r]));
     for(const lr of (Array.isArray(loc[c])?loc[c]:[])){
@@ -2716,7 +2718,7 @@ function bindHelpCenter(){
 window.PSTHelp={search:searchHelp,render:renderHelp,entries:PST_HELP_ENTRIES};
 
 /* ---------- Navigation ---------- */
-const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',contracts:'Suivi des contrats',cleaning:'Contrôle ménage','cleaning-duty-plans':'Planning entretien & loge','room-prep':'Préparation salle & café',maintenance:'Maintenance','agent-activity':'Activité des agents',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',connections:'Connexions',help:'FAQ / Aide',settings:'Paramètres'};
+const VIEW_TITLES={dashboard:'Tableau de bord',personal:'Agenda personnel',agents:'Agents & recrutements',rotations:'Roulements annuels',planning:'Pilotage des horaires','schedule-import':'Import / export horaires',pdfimports:'Imports PDF & Chronotime',absences:'Congés, RTT & absences',vacations:'Vacances & fermetures',issues:'Sécurité & qualité',periodic:'Contrôles périodiques',contracts:'Suivi des contrats',cleaning:'Contrôle ménage','cleaning-duty-plans':'Planning entretien & loge','room-prep':'Préparation salle & café',maintenance:'Maintenance',quotes:'Devis & suivi','agent-activity':'Activité des agents',requests:'Demandes direction',works:'Chantiers & GPA',meetings:'Réunions & rendez-vous',notes:'Bloc-notes',documents:'Documents & pièces jointes',archives:'Archives hebdomadaires',weather:'Météo',waste:'Poubelles',reports:'Rapports & impressions',connections:'Connexions',help:'FAQ / Aide',settings:'Paramètres'};
 function setView(view){
  if(!document.getElementById(view))return;
  const previous=document.querySelector('.view.active')?.id||currentView||'dashboard';
@@ -3984,7 +3986,7 @@ function upsertDbRecord(collection,record){
 function refreshCollectionView(collection){
  capturePlanningScroll();
  const map={
-   maintenance:renderMaintenance,agentActivities:renderAgentActivities,cleaningDutyPlans:()=>window.PSTCleaningDuty?.render?.(),requests:renderRequests,works:renderWorks,meetings:renderMeetings,
+   maintenance:renderMaintenance,quotes:renderQuotes,agentActivities:renderAgentActivities,cleaningDutyPlans:()=>window.PSTCleaningDuty?.render?.(),requests:renderRequests,works:renderWorks,meetings:renderMeetings,
    notes:renderNotes,issues:renderIssues,periodic:renderPeriodic,contracts:()=>window.PSTContracts?.render?.(),cleaning:renderCleaning,
    vacations:renderVacations,personalEvents:renderPersonal,documents:renderDocuments,
    agents:renderAgents,rotations:renderRotations,weeklyPlans:renderPlanning,
@@ -4040,6 +4042,69 @@ async function commitFormRecordVerified(label,collection,record){
    toast(`⚠️ ${label} non enregistré — réessayez`);
    return {ok:false,offline:false,error:reason};
  }
+}
+
+/* ---------- Suivi technique des devis (V147.186) ---------- */
+const QUOTE_STATUSES=['À demander','Demandé','En attente','À relancer','Reçu','À valider','Accepté','Refusé','Annulé'];
+const QUOTE_POSITIONS=['Non défini','En attente de l’entreprise','En attente de l’intendance','En attente de la direction','En attente de la Région','En attente de financement','Sans attente'];
+const quoteClosed=x=>['Accepté','Refusé','Annulé'].includes(String(x.status||''));
+const quoteRows=()=>Array.isArray(db.quotes)?db.quotes:[];
+function quoteFollowup(q){return !quoteClosed(q)&&(q.status==='À relancer'||(q.followupDate&&q.followupDate<=todayISO()))}
+const quoteCurrency=n=>n===null||n===undefined||n===''?'Non renseigné':`${Number(n).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})} €`;
+function quoteDateLabel(s){return s?fmtDate(s):'Non renseignée'}
+function quoteStatusTag(q){const s=q.status||'À demander';const slug=normalizeText(s).replace(/[^a-z0-9]+/g,'-');return `<span class="quote-status quote-status-${esc(slug)}">${esc(s)}</span>`}
+function renderQuoteDashboard(){
+ const list=quoteRows(),pending=list.filter(q=>!quoteClosed(q)),relances=pending.filter(quoteFollowup);
+ const a=$('#kpiQuotesPending'),b=$('#kpiQuotesFollowup');
+ if(a)a.textContent=String(pending.length);
+ if(b)b.textContent=`${relances.length} relance${relances.length>1?'s':''} à effectuer`;
+}
+function renderQuotes(){
+ const listEl=$('#quoteCards');if(!listEl)return;
+ const all=quoteRows(),status=$('#quoteStatusFilter')?.value||'',term=normalizeText($('#quoteSearch')?.value||'');
+ const toAsk=all.filter(q=>q.status==='À demander').length;
+ const waiting=all.filter(q=>['Demandé','En attente'].includes(q.status)).length;
+ const followups=all.filter(quoteFollowup).length;
+ const received=all.filter(q=>['Reçu','À valider'].includes(q.status)).length;
+ const kpis=$('#quoteKpis');
+ if(kpis)kpis.innerHTML=`<div class="quote-kpi"><span class="quote-kpi-icon">📝</span><strong>${toAsk}</strong><small>À demander</small></div><div class="quote-kpi"><span class="quote-kpi-icon">⏳</span><strong>${waiting}</strong><small>En attente</small></div><div class="quote-kpi quote-kpi-alert"><span class="quote-kpi-icon">🔔</span><strong>${followups}</strong><small>À relancer</small></div><div class="quote-kpi"><span class="quote-kpi-icon">📥</span><strong>${received}</strong><small>Reçus / à valider</small></div>`;
+ const filtered=all.filter(q=>(!status||(status==='__followup'?quoteFollowup(q):q.status===status))&&(!term||normalizeText([q.title,q.provider,q.building,q.room,q.family,q.description,q.reference].join(' ')).includes(term)));
+ const sorted=[...filtered].sort((a,b)=>Number(quoteFollowup(b))-Number(quoteFollowup(a))||String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
+ const count=$('#quoteListCount');if(count)count.textContent=`${sorted.length} devis affiché${sorted.length>1?'s':''}`;
+ listEl.innerHTML=sorted.length?sorted.map(q=>{
+   const alert=quoteFollowup(q),location=[q.building,q.room].filter(Boolean).join(' · ');
+   const desc=(q.description||'').trim();
+   return `<button type="button" class="quote-card" data-quote-open="${esc(q.id)}" aria-label="Ouvrir le devis : ${esc(q.title||'Prestation sans titre')}"><div class="quote-card-head"><span class="quote-card-category">${esc(q.family||'Prestation technique')}</span>${quoteStatusTag(q)}</div><h4>${esc(q.title||'Prestation sans titre')}</h4><div class="quote-card-info"><span>📍 ${esc(location||'Lieu non renseigné')}</span><span>🏢 ${esc(q.provider||'Entreprise à définir')}</span></div>${desc?`<p class="quote-card-description">${esc(desc.length>185?desc.slice(0,185)+'…':desc)}</p>`:''}<div class="quote-card-foot"><span class="${alert?'quote-followup-alert':'quote-followup-normal'}">${alert?'🔔 Relance à effectuer':q.followupDate?'📅 Relance : '+esc(quoteDateLabel(q.followupDate)):'📋 Suivi technique'}</span><span class="quote-open-label">Voir la fiche →</span></div></button>`;
+ }).join(''):`<div class="quote-empty"><span>📋</span><strong>Aucun devis pour cette sélection</strong><p>Ajoutez un devis ou modifiez les filtres pour retrouver vos prestations.</p><button type="button" class="primary" onclick="document.getElementById('newQuote')?.click()">＋ Nouveau devis</button></div>`;
+ renderQuoteDashboard();
+}
+function openQuoteDetail(id){
+ const q=quoteRows().find(x=>String(x.id)===String(id));if(!q)return;
+ const location=[q.building,q.floor,q.room].filter(Boolean).join(' · ');
+ const linked=(db.maintenance||[]).find(m=>String(m.id)===String(q.maintenanceId||''));
+ const history=Array.isArray(q.history)?q.history.slice(-12).reverse():[];
+ const hist=history.length?`<div class="quote-history">${history.map(x=>`<div><strong>${esc(new Date(x.at).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}))}</strong><span>${esc(x.text||'Modification')}</span></div>`).join('')}</div>`:'<p class="muted">Aucune relance ou modification enregistrée.</p>';
+ const body=`<div class="quote-detail"><div class="quote-detail-top">${quoteStatusTag(q)}<span>${esc(q.family||'Technique')}</span></div><p class="quote-detail-lead">${esc(q.title||'Prestation')}</p><dl class="quote-facts"><div><dt>Lieu</dt><dd>${esc(location||'Non renseigné')}</dd></div><div><dt>Entreprise</dt><dd>${esc(q.provider||'À définir')}</dd></div><div><dt>Positionnement</dt><dd>${esc(q.position||'Non défini')}</dd></div><div><dt>Date de demande</dt><dd>${esc(quoteDateLabel(q.requestDate))}</dd></div><div><dt>Date de relance</dt><dd>${esc(quoteDateLabel(q.followupDate))}${quoteFollowup(q)?' · <strong>Relance à effectuer</strong>':''}</dd></div><div><dt>Référence</dt><dd>${esc(q.reference||'Non renseignée')}</dd></div>${linked?`<div><dt>Intervention liée</dt><dd>${esc(linked.title||linked.no||'Intervention')}</dd></div>`:''}</dl><h4>Prestation / travaux demandés</h4><p class="quote-detail-description">${esc(q.description||'Aucune description supplémentaire.')}</p><div class="quote-financial"><h4>Informations du devis</h4><div class="quote-financial-grid"><div><small>Montant HT</small><strong>${esc(quoteCurrency(q.amountHT))}</strong></div><div><small>Montant TTC</small><strong>${esc(quoteCurrency(q.amountTTC))}</strong></div><div><small>Date du devis</small><strong>${esc(quoteDateLabel(q.quoteDate))}</strong></div><div><small>Valable jusqu’au</small><strong>${esc(quoteDateLabel(q.validUntil))}</strong></div></div>${q.validUntil&&q.validUntil<todayISO()?'<p class="quote-expiry">⚠ La date de validité de ce devis est dépassée.</p>':''}</div>${q.notes?`<h4>Observations</h4><p class="quote-detail-description">${esc(q.notes)}</p>`:''}<h4>Pièces jointes</h4>${attachmentButtons(q.attachments||[])||'<p class="muted">Aucun document joint.</p>'}<h4>Historique du suivi</h4>${hist}<div class="quote-detail-actions">${linked?`<button type="button" class="ghost" data-quote-maintenance="${esc(linked.id)}">🔧 Voir l’intervention liée</button>`:''}<button type="button" class="primary" data-quote-edit="${esc(q.id)}">✎ Modifier cette fiche</button></div></div>`;
+ openDetail(q.title||'Détail du devis',body);
+}
+function openQuote(id=''){
+ const old=id?quoteRows().find(x=>String(x.id)===String(id)):null;
+ const q=old?deepClone(old):{id:uid(),title:'',family:'Chauffage / CVC',provider:'',building:'',floor:'',room:'',description:'',status:'À demander',position:'Non défini',requestDate:todayISO(),followupDate:'',reference:'',maintenanceId:'',quoteDate:'',validUntil:'',amountHT:null,amountTTC:null,notes:'',attachments:[],history:[]};
+ const statusOptions=selectOptions(QUOTE_STATUSES,q.status),positionOptions=selectOptions(QUOTE_POSITIONS,q.position);
+ const maintenanceOptions='<option value="">Aucune intervention liée</option>'+(db.maintenance||[]).filter(m=>String(m.id)===String(q.maintenanceId||'')||!['Terminé','Terminée','Clôturé','Clôturée'].includes(m.status)).map(m=>`<option value="${esc(m.id)}" ${String(m.id)===String(q.maintenanceId||'')?'selected':''}>${esc(`${m.no?m.no+' · ':''}${m.title||'Intervention'} · ${m.building||m.room||'Lycée'}`)}</option>`).join('');
+ const body=`<div class="form-grid quote-form">${field('Prestation / objet','title',q.title,'text','required maxlength="180" placeholder="Ex. Remplacement des purgeurs automatiques"')}<label>Catégorie technique<select name="family">${selectOptions(db.lists.maintenanceFamilies||['Autre'],q.family)}</select></label>${field('Entreprise / prestataire','provider',q.provider)}<label class="span2">Intervention de maintenance liée (facultatif)<select name="maintenanceId">${maintenanceOptions}</select></label>${field('Bâtiment / lieu','building',q.building)}${field('Étage','floor',q.floor)}${field('Local / secteur','room',q.room)}<label>Statut du devis<select name="status">${statusOptions}</select></label><label>Positionnement du devis<select name="position">${positionOptions}</select></label>${field('Date de demande','requestDate',q.requestDate,'date')}${field('Prochaine relance','followupDate',q.followupDate,'date')}${textareaField('Description technique de la prestation','description',q.description,4)}<p class="quote-form-subtitle span2">Détails du devis — visibles uniquement lorsque vous ouvrez la fiche</p>${field('Montant HT (€)','amountHT',q.amountHT??'','number','step="0.01" min="0" placeholder="Facultatif"')}${field('Montant TTC (€)','amountTTC',q.amountTTC??'','number','step="0.01" min="0" placeholder="Facultatif"')}${field('Date du devis','quoteDate',q.quoteDate,'date')}${field('Date limite de validité','validUntil',q.validUntil,'date')}${field('Référence du devis','reference',q.reference)}${textareaField('Observations / relances','notes',q.notes,3)}<div class="span2">${attachmentField(q.attachments||[])}</div></div>`;
+ openModal(old?'Modifier le devis':'Nouveau devis',body,async form=>{
+   const v=formDataObj(form);const now=new Date().toISOString();
+   const record={...q,title:String(v.title||'').trim(),family:String(v.family||'').trim(),provider:String(v.provider||'').trim(),building:String(v.building||'').trim(),floor:String(v.floor||'').trim(),room:String(v.room||'').trim(),description:String(v.description||'').trim(),status:String(v.status||'À demander'),position:String(v.position||'Non défini'),requestDate:v.requestDate||'',followupDate:v.followupDate||'',quoteDate:v.quoteDate||'',validUntil:v.validUntil||'',reference:String(v.reference||'').trim(),maintenanceId:String(v.maintenanceId||''),notes:String(v.notes||'').trim(),amountHT:v.amountHT===''?null:Number(v.amountHT),amountTTC:v.amountTTC===''?null:Number(v.amountTTC),updatedAt:now,createdAt:q.createdAt||now};
+   if(!record.title){toast('Renseignez la prestation.');return}
+   if(record.quoteDate&&record.validUntil&&record.validUntil<record.quoteDate){toast('La validité doit être postérieure à la date du devis.');return}
+   if([record.amountHT,record.amountTTC].some(x=>x!==null&&(!Number.isFinite(x)||x<0))){toast('Vérifiez les montants HT et TTC.');return}
+   const changed=[];for(const [key,title] of [['status','Statut'],['position','Positionnement'],['followupDate','Date de relance'],['provider','Entreprise']])if(old&&String(old[key]||'')!==String(record[key]||''))changed.push(`${title} : ${record[key]||'Non renseigné'}`);
+   record.history=[...(q.history||[]),{at:now,text:old?(changed.join(' ; ')||'Fiche mise à jour'):'Fiche créée'}].slice(-100);
+   const attachmentsResult=await processAttachments(form,record,'quotes');if(!attachmentsResult?.ok)return;
+   const saved=await commitFormRecordVerified('Devis','quotes',record);if(!saved?.ok)return;
+   closeModal();renderQuotes();toast(saved.offline?'Devis conservé localement — synchronisation en attente':'✅ Devis enregistré');
+ },{onDelete:old?()=>deleteRecord('quotes',q.id,'devis'):null});
 }
 
 /* ---------- Formulaires métier ---------- */
@@ -6967,7 +7032,7 @@ function auditMaintenanceCounts(){
 window.PSTMaintenanceAudit={run:auditMaintenanceCounts};
 
 function auditFormPersistence(){
- const collections=['personalEvents','agents','rotations','weeklyPlans','cleaningDutyPlans','agentDays','vacations','issues','periodic','cleaning','maintenance','requests','works','meetings','notes','documents'];
+ const collections=['personalEvents','agents','rotations','weeklyPlans','cleaningDutyPlans','agentDays','vacations','issues','periodic','cleaning','maintenance','quotes','requests','works','meetings','notes','documents'];
  const state={};
  for(const c of collections)state[c]=Array.isArray(db?.[c])?db[c].length:0;
  console.table(state);
@@ -7524,7 +7589,7 @@ $('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').oncl
  const naa=$('#newAgentActivity');if(naa)naa.onclick=()=>openAgentActivity();
  const paa=$('#printAgentActivity');if(paa)paa.onclick=printAgentActivityRegister;
  for(const id of ['activityPeriodMode','activityReferenceDate','activityTypeFilter']){const e=$(`#${id}`);if(e)e.onchange=renderAgentActivities}
- $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
+ $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newQuote').onclick=()=>openQuote();$('#quoteStatusFilter').onchange=renderQuotes;$('#quoteSearch').oninput=renderQuotes;$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
  const ppm=$('#personalPrevMonth'),ptm=$('#personalTodayMonth'),pnm=$('#personalNextMonth');if(ppm)ppm.onclick=()=>{const e=$('#personalMonth');e.value=addMonths(`${e.value||monthISO()}-01`,-1).slice(0,7);renderPersonal()};if(ptm)ptm.onclick=()=>{const e=$('#personalMonth');e.value=monthISO();renderPersonal()};if(pnm)pnm.onclick=()=>{const e=$('#personalMonth');e.value=addMonths(`${e.value||monthISO()}-01`,1).slice(0,7);renderPersonal()};
  $('#prevTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,-7);renderTeamCalendar()};$('#nextTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,7);renderTeamCalendar()};$('#prevTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,-1));renderTeamCalendar()};$('#nextTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,1));renderTeamCalendar()};$('#todayTeamWeek').onclick=()=>{teamWeek=startOfWeek(todayISO());renderTeamCalendar()};$('#teamDateJump').onchange=e=>{teamWeek=startOfWeek(e.target.value);renderTeamCalendar()};$('#prevPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,-7);renderPersonalCalendar()};$('#nextPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,7);renderPersonalCalendar()};$('#todayPersonalWeek').onclick=()=>{personalWeek=startOfWeek(todayISO());renderPersonalCalendar()};
  $('#saveSettings').onclick=saveSettings;const wizardOpen=$('#openAutoReportWizard');if(wizardOpen)wizardOpen.onclick=openAutoReportWizard;const wizardClose=$('#autoReportWizardClose');if(wizardClose)wizardClose.onclick=()=>wizardEl().close();const wizardBack=$('#autoReportWizardBack');if(wizardBack)wizardBack.onclick=()=>{saveWizardStep();autoReportWizardStep=Math.max(0,autoReportWizardStep-1);renderAutoReportWizard()};const wizardNext=$('#autoReportWizardNext');if(wizardNext)wizardNext.onclick=()=>{saveWizardStep();if(autoReportWizardStep===3){wizardEl().close();return}autoReportWizardStep=Math.min(3,autoReportWizardStep+1);renderAutoReportWizard()};document.addEventListener('click',e=>{const p=e.target.closest('[data-wizard-provider]');if(p){autoReportWizardData.provider=p.dataset.wizardProvider;renderAutoReportWizard()}});const sart=$('#sendAutomaticReportTest');if(sart)sart.onclick=sendAutomaticReportTest;function openNotificationCenter(){window.PSTNotificationCenter?.open?.()}
@@ -7603,6 +7668,14 @@ function renderAutoReportWizard(){
 function openAutoReportWizard(){autoReportWizardStep=0;renderAutoReportWizard();const d=wizardEl();if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','')}
 function saveWizardStep(){if(autoReportWizardStep===1&&autoReportWizardData.provider==='microsoft'){autoReportWizardData.tenantId=document.getElementById('wizTenant')?.value.trim()||'';autoReportWizardData.clientId=document.getElementById('wizClient')?.value.trim()||'';autoReportWizardData.senderEmail=document.getElementById('wizSender')?.value.trim()||''}}
 
+document.addEventListener('click',e=>{
+ const card=e.target.closest('[data-quote-open]');
+ if(card){e.preventDefault();openQuoteDetail(card.dataset.quoteOpen);return}
+ const intervention=e.target.closest('[data-quote-maintenance]');
+ if(intervention){e.preventDefault();const d=$('#detailModal');if(d?.open)d.close();setView('maintenance');openMaintenance(intervention.dataset.quoteMaintenance);return}
+ const edit=e.target.closest('[data-quote-edit]');
+ if(edit){e.preventDefault();const d=$('#detailModal');if(d?.open)d.close();openQuote(edit.dataset.quoteEdit);return}
+});
 document.addEventListener('click',e=>{const tab=e.target.closest('[data-pst-maint-tab]');if(!tab)return;pstMaintenanceMobileTab=tab.dataset.pstMaintTab;renderMaintenance();});
 // Filtres rapides du suivi Chantiers & GPA sur téléphone.
 document.addEventListener('click',e=>{const tab=e.target.closest('[data-pst-work-tab]');if(!tab)return;pstWorkMobileTab=tab.dataset.pstWorkTab;renderWorks();});
