@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.186';
+const APP_VERSION='147.188';
 const APP_BUILD='23/11/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -83,7 +83,7 @@ const initialBuildings=[
 ].map(x=>({id:uid(),...x}));
 const defaultLists={
  roles:['Agent polyvalent','Agent d’entretien','Agent de maintenance','Agent d’accueil','Responsable d’équipe','Remplaçant'],
- dayTypes:['Présence','Congé annuel','RTT','Récupération','Maladie','Accident du travail','Enfant malade','Décès / deuil','Mariage / PACS','Naissance / adoption','Autorisation d’absence','Formation','Absence temps partiel','Repos','Jour férié','Grève','Autre absence'],
+ dayTypes:['Présence','Congé annuel','RTT','Récupération','Maladie','Accident du travail','Enfant malade','Décès / deuil','Mariage / PACS','Naissance / adoption','Autorisation d’absence','Visite médicale','Formation','Absence temps partiel','Repos','Jour férié','Grève','Autre absence'],
  priorities:['Basse','Normale','Haute','Urgente'],
  generalStatuses:['À faire','Planifié','En cours','En attente','Terminé','Clôturé','Bloqué'],
  issueCategories:['Sécurité','Qualité','Organisation','Matériel','Comportement','Absentéisme','Formation','Coût','Autre'],
@@ -646,6 +646,13 @@ function migrate(raw){
  const base=defaultData();
  if(!raw||typeof raw!=='object'){mergeContractControls14723(base);migratePeriodicExcel2026V147161(base);migratePeriodicExcelHistoryV147162(base);migratePeriodicExcelFullV147163(base);migratePeriodicFixesV147164(base);ensureCanonicalFacilitySpaces(base);mergeBundledControlReports(base);return base;}
  const d={...base,...raw,settings:{...base.settings,...(raw.settings||{}),counters:{...base.settings.counters,...(raw.settings?.counters||{})}},lists:{...base.lists,...(raw.lists||{})}};
+ // V147.188 : ajouter ce nouveau motif également aux registres Supabase existants,
+ // dont la liste personnalisée de motifs écrase normalement la liste par défaut.
+ if(!Array.isArray(d.lists.dayTypes))d.lists.dayTypes=[...base.lists.dayTypes];
+ if(!d.lists.dayTypes.some(type=>normalizeText(type)==='visite medicale')){
+   const index=d.lists.dayTypes.indexOf('Autorisation d’absence');
+   d.lists.dayTypes.splice(index>=0?index+1:d.lists.dayTypes.length,0,'Visite médicale');
+ }
  d.cleaningDutySourceVersion=Number(raw.cleaningDutySourceVersion||0);
  if(!Array.isArray(raw.cleaningDutyPlans))d.cleaningDutyPlans=[];
  for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','agentActivities','cleaningDutyPlans','issues','periodic','contracts','cleaning','maintenance','quotes','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
@@ -4068,11 +4075,11 @@ function renderQuotes(){
  const received=all.filter(q=>['Reçu','À valider'].includes(q.status)).length;
  const kpis=$('#quoteKpis');
  if(kpis)kpis.innerHTML=`<div class="quote-kpi"><span class="quote-kpi-icon">📝</span><strong>${toAsk}</strong><small>À demander</small></div><div class="quote-kpi"><span class="quote-kpi-icon">⏳</span><strong>${waiting}</strong><small>En attente</small></div><div class="quote-kpi quote-kpi-alert"><span class="quote-kpi-icon">🔔</span><strong>${followups}</strong><small>À relancer</small></div><div class="quote-kpi"><span class="quote-kpi-icon">📥</span><strong>${received}</strong><small>Reçus / à valider</small></div>`;
- const filtered=all.filter(q=>(!status||(status==='__followup'?quoteFollowup(q):q.status===status))&&(!term||normalizeText([q.title,q.provider,q.building,q.room,q.family,q.description,q.reference].join(' ')).includes(term)));
+ const filtered=all.filter(q=>(!status||(status==='__followup'?quoteFollowup(q):q.status===status))&&(!term||normalizeText([q.title,q.provider,q.building,q.floor,q.sector,q.room,q.family,q.description,q.reference].join(' ')).includes(term)));
  const sorted=[...filtered].sort((a,b)=>Number(quoteFollowup(b))-Number(quoteFollowup(a))||String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
  const count=$('#quoteListCount');if(count)count.textContent=`${sorted.length} devis affiché${sorted.length>1?'s':''}`;
  listEl.innerHTML=sorted.length?sorted.map(q=>{
-   const alert=quoteFollowup(q),location=[q.building,q.room].filter(Boolean).join(' · ');
+   const alert=quoteFollowup(q),location=[q.building,q.floor,q.sector,q.room].filter(Boolean).join(' · ');
    const desc=(q.description||'').trim();
    return `<button type="button" class="quote-card" data-quote-open="${esc(q.id)}" aria-label="Ouvrir le devis : ${esc(q.title||'Prestation sans titre')}"><div class="quote-card-head"><span class="quote-card-category">${esc(q.family||'Prestation technique')}</span>${quoteStatusTag(q)}</div><h4>${esc(q.title||'Prestation sans titre')}</h4><div class="quote-card-info"><span>📍 ${esc(location||'Lieu non renseigné')}</span><span>🏢 ${esc(q.provider||'Entreprise à définir')}</span></div>${desc?`<p class="quote-card-description">${esc(desc.length>185?desc.slice(0,185)+'…':desc)}</p>`:''}<div class="quote-card-foot"><span class="${alert?'quote-followup-alert':'quote-followup-normal'}">${alert?'🔔 Relance à effectuer':q.followupDate?'📅 Relance : '+esc(quoteDateLabel(q.followupDate)):'📋 Suivi technique'}</span><span class="quote-open-label">Voir la fiche →</span></div></button>`;
  }).join(''):`<div class="quote-empty"><span>📋</span><strong>Aucun devis pour cette sélection</strong><p>Ajoutez un devis ou modifiez les filtres pour retrouver vos prestations.</p><button type="button" class="primary" onclick="document.getElementById('newQuote')?.click()">＋ Nouveau devis</button></div>`;
@@ -4080,22 +4087,82 @@ function renderQuotes(){
 }
 function openQuoteDetail(id){
  const q=quoteRows().find(x=>String(x.id)===String(id));if(!q)return;
- const location=[q.building,q.floor,q.room].filter(Boolean).join(' · ');
+ const location=[q.building,q.floor,q.sector,q.room].filter(Boolean).join(' · ');
  const linked=(db.maintenance||[]).find(m=>String(m.id)===String(q.maintenanceId||''));
  const history=Array.isArray(q.history)?q.history.slice(-12).reverse():[];
  const hist=history.length?`<div class="quote-history">${history.map(x=>`<div><strong>${esc(new Date(x.at).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}))}</strong><span>${esc(x.text||'Modification')}</span></div>`).join('')}</div>`:'<p class="muted">Aucune relance ou modification enregistrée.</p>';
  const body=`<div class="quote-detail"><div class="quote-detail-top">${quoteStatusTag(q)}<span>${esc(q.family||'Technique')}</span></div><p class="quote-detail-lead">${esc(q.title||'Prestation')}</p><dl class="quote-facts"><div><dt>Lieu</dt><dd>${esc(location||'Non renseigné')}</dd></div><div><dt>Entreprise</dt><dd>${esc(q.provider||'À définir')}</dd></div><div><dt>Positionnement</dt><dd>${esc(q.position||'Non défini')}</dd></div><div><dt>Date de demande</dt><dd>${esc(quoteDateLabel(q.requestDate))}</dd></div><div><dt>Date de relance</dt><dd>${esc(quoteDateLabel(q.followupDate))}${quoteFollowup(q)?' · <strong>Relance à effectuer</strong>':''}</dd></div><div><dt>Référence</dt><dd>${esc(q.reference||'Non renseignée')}</dd></div>${linked?`<div><dt>Intervention liée</dt><dd>${esc(linked.title||linked.no||'Intervention')}</dd></div>`:''}</dl><h4>Prestation / travaux demandés</h4><p class="quote-detail-description">${esc(q.description||'Aucune description supplémentaire.')}</p><div class="quote-financial"><h4>Informations du devis</h4><div class="quote-financial-grid"><div><small>Montant HT</small><strong>${esc(quoteCurrency(q.amountHT))}</strong></div><div><small>Montant TTC</small><strong>${esc(quoteCurrency(q.amountTTC))}</strong></div><div><small>Date du devis</small><strong>${esc(quoteDateLabel(q.quoteDate))}</strong></div><div><small>Valable jusqu’au</small><strong>${esc(quoteDateLabel(q.validUntil))}</strong></div></div>${q.validUntil&&q.validUntil<todayISO()?'<p class="quote-expiry">⚠ La date de validité de ce devis est dépassée.</p>':''}</div>${q.notes?`<h4>Observations</h4><p class="quote-detail-description">${esc(q.notes)}</p>`:''}<h4>Pièces jointes</h4>${attachmentButtons(q.attachments||[])||'<p class="muted">Aucun document joint.</p>'}<h4>Historique du suivi</h4>${hist}<div class="quote-detail-actions">${linked?`<button type="button" class="ghost" data-quote-maintenance="${esc(linked.id)}">🔧 Voir l’intervention liée</button>`:''}<button type="button" class="primary" data-quote-edit="${esc(q.id)}">✎ Modifier cette fiche</button></div></div>`;
  openDetail(q.title||'Détail du devis',body);
 }
+/* Localisation des devis : même référentiel que Maintenance / Contrôle ménage. */
+function quoteLocationBuildings(){
+ const central=centralLocationRef();
+ const fromMain=(db.buildings||[]).map(b=>({name:b.name,floors:(b.floors||[]).map(f=>typeof f==='string'?{name:f,sectors:[]}:f)}));
+ const merged=[...central];
+ for(const b of fromMain)if(!merged.some(x=>normalizeText(x.name)===normalizeText(b.name)))merged.push(b);
+ return merged;
+}
+function quoteLocationFields(q){
+ // Choix non obligatoires : le devis peut concerner un bâtiment entier ou un site transversal.
+ return `<div class="quote-location-panel span2"><div class="quote-location-heading"><strong>📍 Localisation de la prestation</strong><small>Choisissez le bâtiment, puis l’étage, le secteur et la salle / le local si nécessaire.</small></div><div class="quote-location-grid"><label>Bâtiment<select name="building" id="quoteLocBuilding"></select></label><label>Étage<select name="floor" id="quoteLocFloor"></select></label><label>Secteur<select name="sector" id="quoteLocSector"></select></label><label>Salle / local<select name="room" id="quoteLocRoom"></select></label><label id="quoteLocOtherWrap" class="quote-location-other hidden">Précisez le lieu<input type="text" name="otherLocation" id="quoteLocOther" placeholder="Ex. Chaufferie, combles, cour..." value="${esc(q.room||'')}"></label></div></div>`;
+}
+function bindQuoteLocation(q={}){
+ const b=document.getElementById('quoteLocBuilding'),f=document.getElementById('quoteLocFloor'),s=document.getElementById('quoteLocSector'),r=document.getElementById('quoteLocRoom'),w=document.getElementById('quoteLocOtherWrap'),other=document.getElementById('quoteLocOther');
+ if(!b||!f||!s||!r)return;
+ const all=quoteLocationBuildings();
+ const option=(value,label)=>`<option value="${esc(value)}">${esc(label)}</option>`;
+ const put=(el,items,blank,selected,allowOld=true)=>{
+  const vals=[...new Set(items.filter(Boolean))];
+  if(allowOld&&selected&&!vals.includes(selected))vals.push(selected);
+  el.innerHTML=option('',blank)+vals.map(v=>option(v,v)).join('');
+  el.value=selected&&vals.includes(selected)?selected:'';
+  el.disabled=el!==b&&!items.length&&!selected;
+ };
+ const buildingRef=()=>all.find(x=>x.name===b.value);
+ const floorRef=()=>buildingRef()?.floors?.find(x=>x.name===f.value);
+ const sectorRef=()=>floorRef()?.sectors?.find(x=>x.name===s.value);
+ const updateRoom=selected=>{
+  const list=(sectorRef()?.rooms||[]).map(centralRoomLabel).filter(Boolean);
+  const values=[...new Set(list)];
+  const known=selected&&values.includes(selected);
+  r.innerHTML=option('','Tout le secteur / sans précision')+values.map(x=>option(x,x)).join('')+option('__custom__','Autre lieu (à préciser)');
+  r.value=selected?(known?selected:'__custom__'):'';
+  if(other)other.value=selected&&!known?selected:'';
+  r.disabled=!b.value;
+  const custom=r.value==='__custom__';w?.classList.toggle('hidden',!custom);
+  if(other)other.required=custom;
+ };
+ const updateSector=(selected='',room='')=>{
+  const sectors=(floorRef()?.sectors||[]).map(x=>x.name).filter(Boolean);
+  put(s,sectors,'Tout l’étage / sans précision',selected);
+  updateRoom(room);
+ };
+ const updateFloor=(selected='',sector='',room='')=>{
+  const floors=(buildingRef()?.floors||[]).map(x=>x.name).filter(Boolean);
+  put(f,floors,'Tout le bâtiment / sans précision',selected);
+  updateSector(sector,room);
+ };
+ const buildings=[...new Set(all.map(x=>x.name).filter(Boolean))];
+ put(b,[...buildings,'Tous bâtiments / site entier'],'Choisir un bâtiment',q.building||'');
+ updateFloor(q.floor||'',q.sector||'',q.room||'');
+ b.addEventListener('change',()=>updateFloor());
+ f.addEventListener('change',()=>updateSector());
+ s.addEventListener('change',()=>updateRoom());
+ r.addEventListener('change',()=>{
+  const custom=r.value==='__custom__';w?.classList.toggle('hidden',!custom);
+  if(other){other.required=custom;if(!custom)other.value='';if(custom)other.focus()}
+ });
+}
 function openQuote(id=''){
  const old=id?quoteRows().find(x=>String(x.id)===String(id)):null;
- const q=old?deepClone(old):{id:uid(),title:'',family:'Chauffage / CVC',provider:'',building:'',floor:'',room:'',description:'',status:'À demander',position:'Non défini',requestDate:todayISO(),followupDate:'',reference:'',maintenanceId:'',quoteDate:'',validUntil:'',amountHT:null,amountTTC:null,notes:'',attachments:[],history:[]};
+ const q=old?deepClone(old):{id:uid(),title:'',family:'Chauffage / CVC',provider:'',building:'',floor:'',sector:'',room:'',description:'',status:'À demander',position:'Non défini',requestDate:todayISO(),followupDate:'',reference:'',maintenanceId:'',quoteDate:'',validUntil:'',amountHT:null,amountTTC:null,notes:'',attachments:[],history:[]};
  const statusOptions=selectOptions(QUOTE_STATUSES,q.status),positionOptions=selectOptions(QUOTE_POSITIONS,q.position);
  const maintenanceOptions='<option value="">Aucune intervention liée</option>'+(db.maintenance||[]).filter(m=>String(m.id)===String(q.maintenanceId||'')||!['Terminé','Terminée','Clôturé','Clôturée'].includes(m.status)).map(m=>`<option value="${esc(m.id)}" ${String(m.id)===String(q.maintenanceId||'')?'selected':''}>${esc(`${m.no?m.no+' · ':''}${m.title||'Intervention'} · ${m.building||m.room||'Lycée'}`)}</option>`).join('');
- const body=`<div class="form-grid quote-form">${field('Prestation / objet','title',q.title,'text','required maxlength="180" placeholder="Ex. Remplacement des purgeurs automatiques"')}<label>Catégorie technique<select name="family">${selectOptions(db.lists.maintenanceFamilies||['Autre'],q.family)}</select></label>${field('Entreprise / prestataire','provider',q.provider)}<label class="span2">Intervention de maintenance liée (facultatif)<select name="maintenanceId">${maintenanceOptions}</select></label>${field('Bâtiment / lieu','building',q.building)}${field('Étage','floor',q.floor)}${field('Local / secteur','room',q.room)}<label>Statut du devis<select name="status">${statusOptions}</select></label><label>Positionnement du devis<select name="position">${positionOptions}</select></label>${field('Date de demande','requestDate',q.requestDate,'date')}${field('Prochaine relance','followupDate',q.followupDate,'date')}${textareaField('Description technique de la prestation','description',q.description,4)}<p class="quote-form-subtitle span2">Détails du devis — visibles uniquement lorsque vous ouvrez la fiche</p>${field('Montant HT (€)','amountHT',q.amountHT??'','number','step="0.01" min="0" placeholder="Facultatif"')}${field('Montant TTC (€)','amountTTC',q.amountTTC??'','number','step="0.01" min="0" placeholder="Facultatif"')}${field('Date du devis','quoteDate',q.quoteDate,'date')}${field('Date limite de validité','validUntil',q.validUntil,'date')}${field('Référence du devis','reference',q.reference)}${textareaField('Observations / relances','notes',q.notes,3)}<div class="span2">${attachmentField(q.attachments||[])}</div></div>`;
+ const body=`<div class="form-grid quote-form">${field('Prestation / objet','title',q.title,'text','required maxlength="180" placeholder="Ex. Remplacement des purgeurs automatiques"')}<label>Catégorie technique<select name="family">${selectOptions(db.lists.maintenanceFamilies||['Autre'],q.family)}</select></label>${field('Entreprise / prestataire','provider',q.provider)}<label class="span2">Intervention de maintenance liée (facultatif)<select name="maintenanceId">${maintenanceOptions}</select></label>${quoteLocationFields(q)}<label>Statut du devis<select name="status">${statusOptions}</select></label><label>Positionnement du devis<select name="position">${positionOptions}</select></label>${field('Date de demande','requestDate',q.requestDate,'date')}${field('Prochaine relance','followupDate',q.followupDate,'date')}${textareaField('Description technique de la prestation','description',q.description,4)}<p class="quote-form-subtitle span2">Détails du devis — visibles uniquement lorsque vous ouvrez la fiche</p>${field('Montant HT (€)','amountHT',q.amountHT??'','number','step="0.01" min="0" placeholder="Facultatif"')}${field('Montant TTC (€)','amountTTC',q.amountTTC??'','number','step="0.01" min="0" placeholder="Facultatif"')}${field('Date du devis','quoteDate',q.quoteDate,'date')}${field('Date limite de validité','validUntil',q.validUntil,'date')}${field('Référence du devis','reference',q.reference)}${textareaField('Observations / relances','notes',q.notes,3)}<div class="span2">${attachmentField(q.attachments||[])}</div></div>`;
  openModal(old?'Modifier le devis':'Nouveau devis',body,async form=>{
    const v=formDataObj(form);const now=new Date().toISOString();
-   const record={...q,title:String(v.title||'').trim(),family:String(v.family||'').trim(),provider:String(v.provider||'').trim(),building:String(v.building||'').trim(),floor:String(v.floor||'').trim(),room:String(v.room||'').trim(),description:String(v.description||'').trim(),status:String(v.status||'À demander'),position:String(v.position||'Non défini'),requestDate:v.requestDate||'',followupDate:v.followupDate||'',quoteDate:v.quoteDate||'',validUntil:v.validUntil||'',reference:String(v.reference||'').trim(),maintenanceId:String(v.maintenanceId||''),notes:String(v.notes||'').trim(),amountHT:v.amountHT===''?null:Number(v.amountHT),amountTTC:v.amountTTC===''?null:Number(v.amountTTC),updatedAt:now,createdAt:q.createdAt||now};
+   const record={...q,title:String(v.title||'').trim(),family:String(v.family||'').trim(),provider:String(v.provider||'').trim(),building:String(v.building||'').trim(),floor:String(v.floor||'').trim(),sector:String(v.sector||'').trim(),room:String(v.room==='__custom__'?v.otherLocation||'':v.room||'').trim(),description:String(v.description||'').trim(),status:String(v.status||'À demander'),position:String(v.position||'Non défini'),requestDate:v.requestDate||'',followupDate:v.followupDate||'',quoteDate:v.quoteDate||'',validUntil:v.validUntil||'',reference:String(v.reference||'').trim(),maintenanceId:String(v.maintenanceId||''),notes:String(v.notes||'').trim(),amountHT:v.amountHT===''?null:Number(v.amountHT),amountTTC:v.amountTTC===''?null:Number(v.amountTTC),updatedAt:now,createdAt:q.createdAt||now};
+   if(v.room==='__custom__'&&!record.room){toast('Précisez le lieu de la prestation.');return}
    if(!record.title){toast('Renseignez la prestation.');return}
    if(record.quoteDate&&record.validUntil&&record.validUntil<record.quoteDate){toast('La validité doit être postérieure à la date du devis.');return}
    if([record.amountHT,record.amountTTC].some(x=>x!==null&&(!Number.isFinite(x)||x<0))){toast('Vérifiez les montants HT et TTC.');return}
@@ -4105,6 +4172,7 @@ function openQuote(id=''){
    const saved=await commitFormRecordVerified('Devis','quotes',record);if(!saved?.ok)return;
    closeModal();renderQuotes();toast(saved.offline?'Devis conservé localement — synchronisation en attente':'✅ Devis enregistré');
  },{onDelete:old?()=>deleteRecord('quotes',q.id,'devis'):null});
+ bindQuoteLocation(q);
 }
 
 /* ---------- Formulaires métier ---------- */

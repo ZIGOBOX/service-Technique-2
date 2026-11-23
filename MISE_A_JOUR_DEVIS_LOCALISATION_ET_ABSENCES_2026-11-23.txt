@@ -1,0 +1,11 @@
+PILOTAGE SERVICE TECHNIQUE — V147.188
+
+Devis & suivi : choix liés bâtiment, étage, secteur, salle / local (ou Autre lieu).
+Absences : ajout du motif « Visite médicale » dans la liste des motifs et dans les données personnalisées existantes, sans écraser les choix précédents.
+Accessible depuis Congés, RTT & absences et les formulaires de journée d’agent.
+
+Les prix HT / TTC restent visibles uniquement dans les détails du devis.
+Le module planning entretien & loge conserve son agenda hebdomadaire.
+Aucune donnée Supabase n’est effacée.
+
+Installation : envoyer les fichiers et dossiers contenus dans l’archive à la racine du dépôt GitHub, puis vider le cache/actualiser l’application.

@@ -1,0 +1,13 @@
+PILOTAGE SERVICE TECHNIQUE — V147.187
+
+Devis & suivi :
+- Choix du bâtiment, puis de l’étage, du secteur et de la salle / du local.
+- Choix issus du référentiel existant Contrôle ménage / Maintenance.
+- Possibilité de choisir un bâtiment entier, le site entier ou un autre lieu libre.
+- Conservation des bâtiments et lieux des devis précédemment créés.
+- Localisation détaillée visible sur la carte et dans la fiche.
+- Montants HT / TTC toujours visibles uniquement dans la fiche.
+- Aucun changement des données Supabase ni des autres modules.
+
+GitHub : envoyer le contenu du dossier à la racine du dépôt, sans modifier les données en base.
+Après déploiement, vérifier la création et la modification d’un devis avec les listes liées.

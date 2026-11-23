@@ -61,3 +61,15 @@
 @media(max-width:850px){#quotes .quote-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){#quotes .quote-head{flex-direction:column;align-items:stretch}#quotes .quote-head>div{width:100%;flex:none}#quotes .quote-cards{grid-template-columns:1fr}#quotes .quote-head{align-items:stretch}#quotes #newQuote{width:100%}#quotes .quote-card{min-height:0}#quotes .quote-list-header small{display:none}.quote-detail .quote-facts{grid-template-columns:1fr}.quote-detail .quote-financial-grid strong{font-size:15px}}
 @media(prefers-reduced-motion:reduce){#quotes .quote-card{transition:none}}
+
+/* V147.187 — Sélection du bâtiment, de l'étage, du secteur et du local. */
+.quote-form .quote-location-panel{padding:16px;border-radius:14px;border:1px solid #d8d4eb;background:linear-gradient(145deg,#f8f6ff,#f0f4fa);margin:4px 0 8px}
+.quote-form .quote-location-heading{display:grid;gap:5px;margin-bottom:15px}
+.quote-form .quote-location-heading strong{font-size:15px;color:#3f3573}
+.quote-form .quote-location-heading small{font-size:12px;line-height:1.45;color:#64748b}
+.quote-form .quote-location-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.quote-form .quote-location-grid label{display:grid;gap:6px;color:#334155;font-size:13px;font-weight:650}
+.quote-form .quote-location-grid select,.quote-form .quote-location-grid input{width:100%;min-width:0;box-sizing:border-box;min-height:44px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#17253b;font:inherit}
+.quote-form .quote-location-grid select:disabled{background:#e9edf4;color:#8a94a6}
+.quote-form .quote-location-other{grid-column:1/-1}
+@media(max-width:620px){.quote-form .quote-location-grid{grid-template-columns:1fr}.quote-form .quote-location-panel{padding:12px}}
