@@ -1,0 +1,19 @@
+PILOTAGE SERVICE TECHNIQUE - VERSION 147.189
+
+Visite médicale horaire :
+- Dans Congés, RTT & absences > + Visite médicale (heures) : choix agent, date, début, fin, statut et commentaire.
+- Une visite médicale ne transforme plus une journée complète en absence.
+- La durée pendant l'horaire théorique est considérée comme couverte par cet horaire, sans double comptage.
+- Si une arrivée / un départ réel a été saisi et réduit le temps réalisé, la visite validée peut compenser la partie comprise dans le planning, dans la limite des heures prévues.
+- Les heures hors planning sont ajoutées seulement lorsque l'option explicite est sélectionnée et que le statut est Validée.
+- Les visites demandées, annulées ou refusées ne modifient pas les heures.
+- Elles apparaissent dans la liste dédiée aux absences, dans l'agenda du tableau de bord, dans les rappels et les notifications.
+- Les données sont enregistrées dans une nouvelle collection medicalVisits de l'état Supabase, sans modification des anciens congés/horaires.
+
+ATTENTION : Le logiciel aide au calcul horaire. La validation d'heures hors planning doit suivre les règles applicables dans le service.
+Si une pause est connue seulement par sa durée sans créneau exact, vérifier manuellement la part de visite pendant cette pause.
+
+Installation : décompresser l'archive, déployer son contenu à la racine du dépôt GitHub Pages, puis forcer l'actualisation du navigateur.
+Garder les fichiers et le dossier assets, sans effacer les données Supabase.
+
+Contrôles effectués : analyse de syntaxe JS et tests unitaires du décompte des heures. Connexion Supabase réelle et navigation sur téléphone non testées avec les données du lycée.

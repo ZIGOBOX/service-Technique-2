@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#171326">
   <title>Pilotage Service Technique V147.187</title>
   <link rel="icon" href="./assets/logo-service-technique.png">
-  <link rel="stylesheet" href="./styles.css?v=147.187-20261111-alarm-agenda">
+  <link rel="stylesheet" href="./styles.css?v=147.189-20261123-medical-hours">
 
 <style id="v14713-fixes">
 /* Barres horizontales locales aux plannings : elles ne repartent plus avec la page. */
@@ -1350,9 +1350,10 @@
     </section>
 
     <section class="view" id="absences">
-      <div class="section-actions"><div><h3>Congés, RTT & absences</h3><p>Saisie rapide depuis le calendrier et récapitulatif mensuel.</p></div><button class="primary" id="newAbsence">＋ Saisir maintenant</button></div>
+      <div class="section-actions"><div><h3>Congés, RTT & absences</h3><p>Saisie des journées complètes et des rendez-vous médicaux à l’heure.</p></div><div class="medical-visit-actions"><button type="button" class="ghost" id="newMedicalVisit">🩺 ＋ Visite médicale (heures)</button><button class="primary" id="newAbsence">＋ Saisir une absence</button></div></div>
       <div class="filters"><input type="month" id="absenceMonth"><select id="absenceAgent"><option value="">Tous les agents</option></select><select id="absenceType"><option value="">Tous les motifs</option></select><select id="absenceStatus"><option value="">Tous les statuts</option></select><button class="ghost" data-print="absences">Imprimer</button></div>
       <article class="panel"><div class="panel-head"><h3>Calendrier mensuel des agents</h3><p class="muted">Touchez une case pour saisir une période du… au… ou modifier une absence existante.</p></div><div id="absenceMonthBoard" class="month-board"></div></article>
+      <article class="panel medical-visit-panel"><div class="panel-head"><div><h3>🩺 Visites médicales — créneaux horaires</h3><p class="muted">Rendez-vous de quelques heures, sans transformer toute la journée en absence. Les heures hors planning ne sont ajoutées que si tu le choisis.</p></div><small id="medicalVisitsCount"></small></div><div id="medicalVisitsList" class="medical-visits-list"></div></article>
       <article class="panel"><div class="panel-head"><h3>Compteurs mensuels par agent</h3><p class="muted">Nombre de jours enregistrés par motif sur le mois sélectionné.</p></div><div id="absenceCounters" class="table-wrap"></div></article>
       <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Du</th><th>Au</th><th>Motif</th><th>Durée</th><th>Statut</th><th>Remplacement</th><th></th></tr></thead><tbody id="absencesTable"></tbody></table></div>
     </section>
@@ -1996,7 +1997,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
   <script src="./entretien-planning.js?v=147.171-20260907"></script>
-  <script src="./app.js?v=20261123-devis-medical-147188"></script>
+  <script src="./app.js?v=20261123-visit-medicale-horaire-147189"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./jszip.min.js?v=3.10.1"></script>

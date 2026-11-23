@@ -14,7 +14,7 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.188';
+const APP_VERSION='147.189';
 const APP_BUILD='23/11/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
@@ -564,7 +564,7 @@ function clone(x){return structuredClone(x)}
 const BUNDLED_CONTROL_REPORTS=[{"key":"apave-135054046-001-1-rvre","title":"RVRE — Installations électriques et éclairages","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"RVRE ERP — aucune non-conformité identifiée dans le périmètre de la vérification.","observations":0,"subtype":"RVRE ERP","sha256":"fbcc7667636c65c9a134f6421ab4056fd9fcaedb586bd58f9aa34410dd89759a","size":1344942,"path":"reports/2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf","file":"2025-07-07_APAVE_RVRE_Electricite_Eclairages.pdf"},{"key":"apave-135054046-001-1-rvp","title":"Vérification périodique des installations électriques","org":"APAVE","family":"Électricité","date":"2025-07-07","ref":"135054046-001-1","summary":"Vérification périodique des installations électriques — 23 observations signalées dans le rapport.","observations":23,"subtype":"Vérification périodique","sha256":"cda549f71a666baaf27efddd3fa653b5a7725910497e2c81403eadc7438fcc01","size":3680309,"path":"reports/2025-07-07_APAVE_Verification_Installations_Electriques.pdf","file":"2025-07-07_APAVE_Verification_Installations_Electriques.pdf"},{"key":"apave-135046511-001-1-gaz","title":"Installations thermiques / réseau gaz","org":"APAVE","family":"Gaz","date":"2025-09-05","ref":"135046511-001-1","summary":"Vérification des installations thermiques fluide / réseau gaz — 1 observation.","observations":1,"subtype":"Thermique / Gaz","sha256":"f5ffc7006ae754c35ce9dbd4a82611eeb6d2e64878f6583e31112cf051588906","size":1497083,"path":"reports/2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf","file":"2025-09-05_APAVE_Installations_Thermiques_Gaz.pdf"},{"key":"apave-a513283837-004-1-sport","title":"Vérification périodique des équipements sportifs","org":"APAVE","family":"Équipements sportifs","date":"2025-12-05","ref":"A513283837-004-1","summary":"Vérification visuelle et manuelle des équipements sportifs — 26 observations.","observations":26,"subtype":"Équipements sportifs","sha256":"423aa2fd3840deafbd2daab0dae3df00f449f40a1b9f3f314f1b44bbdc249f9e","size":4445518,"path":"reports/2025-12-05_APAVE_Equipements_Sportifs.pdf","file":"2025-12-05_APAVE_Equipements_Sportifs.pdf"},{"key":"apave-a513283836-004-1-ancrage","title":"Vérification des dispositifs d’ancrage pour EPI","org":"APAVE","family":"Autres contrôles","date":"2026-02-02","ref":"A513283836-004-1","summary":"Vérification générale périodique des dispositifs d’ancrage pour EPI — 5 observations.","observations":5,"subtype":"Ancrages / EPI","sha256":"fcf149dfb1e45c0e1dab938b86dbee07fcf9839d3b8180734abb92155c2f3e50","size":135938,"path":"reports/2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf","file":"2026-02-02_APAVE_Dispositifs_Ancrage_EPI.pdf"},{"key":"bv-28016576-155-1-1-cta-vmc","title":"Contrôle des CTA et VMC sanitaires","org":"Bureau Veritas","family":"VMC / Ventilation","date":"2026-03-20","ref":"28016576/155.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — CTA et VMC sanitaires — écarts et non-conformités présents dans le rapport.","observations":null,"subtype":"CTA / VMC sanitaires","sha256":"aadb4258da54a155ca98194d8602d3bef1ff46a26236911f82388766f39fdb96","size":5246665,"path":"reports/2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf","file":"2026-03-20_BureauVeritas_CTA_VMC_Sanitaires.pdf"},{"key":"bv-28016576-152-1-1-hottes","title":"Contrôle des hottes de cuisines","org":"Bureau Veritas","family":"Cuisine / Cuisson","date":"2026-03-20","ref":"28016576/152.1.1.RAP","summary":"Contrôle des installations d’aération/assainissement — hottes de cuisines — observations présentes dans le rapport.","observations":null,"subtype":"Hottes de cuisines","sha256":"144566b4d982b7a241b3400b91f0ce4396b13f1026dbfeabd91b4aa024c3b912","size":3374751,"path":"reports/2026-03-20_BureauVeritas_Hottes_Cuisines.pdf","file":"2026-03-20_BureauVeritas_Hottes_Cuisines.pdf"}];
 
 function defaultData(){const buildings=clone(initialBuildings);const agents=[['Mme','Tarrio','Agent d’accueil'],['Mme','Delorme','Agent d’accueil / lingerie'],['Complément','accueil','Agent d’accueil'],['Mme','Berthoux','Agent de restauration'],['Mme','Bozio','Agent d’accueil']].map((n,i)=>({id:uid(),no:`AGT-${String(i+1).padStart(3,'0')}`,firstName:n[0],lastName:n[1],role:n[2],weeklyHours:35,email:'',phone:'',assignment:'',status:'Actif',arrivalDate:'',workdays:[1,2,3,4,5],notes:''}));const monday=startOfWeek(todayISO());const maintenance=IMPORTED_INTERVENTIONS.map((x,i)=>({id:uid(),no:`MAI-2026-${String(i+1).padStart(4,'0')}`,date:todayISO(),title:x[0],family:x[1],priority:x[2],status:x[3],building:x[5]||'',floor:'',room:x[5]||'',requester:'Direction',assigned:'',dueDate:'',cost:'',description:x[4]||'',action:'',attachments:[],importBatch:'excel-2026-08'}));const data={version:31,cleaningDutyPlans:[],cleaningDutySourceVersion:0,settings:{initialSeedCompleted:true,seedVersion:31,cleaningAlertDays:30,cleaningNotificationsEnabled:true,cleaningNotifyNever:true,cleaningNotifyOverdue:true,cleaningNotifyPlanned:true,meetingAlertDays:3,
-autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:academicYearFor(todayISO()),defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:[],rotationExceptions:[],agentDays:[],personalEvents:[],roomPreps:[],agentActivities:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,quotes:[],requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contracts:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],cleaningDeletedIds:[],notificationDismissals:{},importOriginalBindings:{}};window.PSTCleaningDuty?.seed?.(data);return data}
+autoDailyEnabled:true,autoWeeklyEnabled:false,autoReportHour:'07:00',autoReportTimezone:'Europe/Paris',autoReportWeekdays:'1,2,3,4,5',autoReportOnlyIfEvents:false,autoReportIncludeAgents:true,autoReportIncludeMaintenance:true,autoReportIncludeCleaning:true,autoReportIncludePeriodic:true,autoReportIncludeMeetings:true,autoReportSignature:'Rapport généré automatiquement par Pilotage Service Technique.',lastDailyEmailDate:'',lastWeeklyEmailKey:'',lastWeeklyArchiveKey:'',lastAnnualResetYear:0,appName:'Pilotage Service Technique',schoolName:'Lycée Jean Puy',schoolZone:'A',academicYear:academicYearFor(todayISO()),defaultLayout:'auto',printOrientation:'landscape',defaultInspector:'',emailsTo:'',emailsCc:'',emailsBcc:'',emailSubjectPrefix:'Pilotage Service Technique',outlookEmail:'',counters:{}},lists:clone(defaultLists),buildings,spaces:defaultSpaces(buildings),agents,weeklyPlans:clone(IMPORTED_WEEKLY_PLANS),rotations:[],rotationExceptions:[],agentDays:[],medicalVisits:[],personalEvents:[],roomPreps:[],agentActivities:[],issues:[],periodic:makeContractControls14723(),cleaning:[],maintenance,quotes:[],requests:[],works:[],meetings:[],notes:[],vacations:[],documents:[],oneDriveLinks:[],contracts:[],contacts:[],attachments:[],archives:[],importArchives:[],cleaningRoomsConfig:null,cleaningRoomChecks:[],cleaningDeletedIds:[],notificationDismissals:{},importOriginalBindings:{}};window.PSTCleaningDuty?.seed?.(data);return data}
 function nextSeedNo(rows){return `MAI-2026-${String((rows?.length||0)+1).padStart(4,'0')}`}
 
 function normalizedReportFileKey(name=''){
@@ -655,7 +655,7 @@ function migrate(raw){
  }
  d.cleaningDutySourceVersion=Number(raw.cleaningDutySourceVersion||0);
  if(!Array.isArray(raw.cleaningDutyPlans))d.cleaningDutyPlans=[];
- for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','personalEvents','roomPreps','agentActivities','cleaningDutyPlans','issues','periodic','contracts','cleaning','maintenance','quotes','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
+ for(const k of ['buildings','spaces','agents','weeklyPlans','rotations','rotationExceptions','agentDays','medicalVisits','personalEvents','roomPreps','agentActivities','cleaningDutyPlans','issues','periodic','contracts','cleaning','maintenance','quotes','requests','works','meetings','notes','vacations','documents','contacts','attachments','archives','importArchives','pdfImports','chronotimeDaily','chronotimeAnnual','reportNonconformities','oneDriveLinks']){
    if(!Array.isArray(d[k]))d[k]=base[k];
  }
  // V147.173 : un registre déjà présent, même vide, est une donnée utilisateur.
@@ -1372,7 +1372,7 @@ async function waitForCloudIdle(maxMs=18000){
  return !cloudBusy;
 }
 
-const STABLE_FORM_COLLECTIONS=['quotes','requests','works','meetings','notes','issues','periodic','contracts','cleaning','vacations','personalEvents','agentActivities','cleaningDutyPlans','documents','agents','rotations','weeklyPlans','spaces'];
+const STABLE_FORM_COLLECTIONS=['medicalVisits','quotes','requests','works','meetings','notes','issues','periodic','contracts','cleaning','vacations','personalEvents','agentActivities','cleaningDutyPlans','documents','agents','rotations','weeklyPlans','spaces'];
 
 function stableRecordTime(r){
  const t=Date.parse(r?.updatedAt||r?.createdAt||r?.modifiedAt||'');
@@ -1885,7 +1885,7 @@ function pstApplyQueuedMutationsToPayload(payload){
 }
 function pstMergeRemoteWithoutOverwritingLocal(remote,local=db){
   const out=migrate(deepClone(remote||{})),loc=migrate(deepClone(local||{}));
-  const collections=['agentDays','personalEvents','agents','rotations','weeklyPlans','cleaningDutyPlans','vacations','issues','periodic','cleaning','maintenance','quotes','requests','works','meetings','notes','documents','oneDriveLinks','contracts','spaces','roomPreps'];
+  const collections=['agentDays','medicalVisits','personalEvents','agents','rotations','weeklyPlans','cleaningDutyPlans','vacations','issues','periodic','cleaning','maintenance','quotes','requests','works','meetings','notes','documents','oneDriveLinks','contracts','spaces','roomPreps'];
   for(const c of collections){
     const map=new Map((Array.isArray(out[c])?out[c]:[]).map(r=>[String(r.id),r]));
     for(const lr of (Array.isArray(loc[c])?loc[c]:[])){
@@ -3124,8 +3124,8 @@ function syncStoredChronotimePastilles(){
 }
 function dayInfo(agentId,date){
  const rec=dayRecord(agentId,date),type=rec?.dayType||'Présence',sched=resolvedTheoreticalSchedule(agentId,date,type);
- if(!rec)return {...sched,dayType:sched.shift==='Repos'?'Repos':'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',overtime:0,note:'',status:'Prévu'};
- return {...sched,...rec,plannedStart:sched.start||rec.plannedStart||'',plannedEnd:sched.end||rec.plannedEnd||'',pause:Number(sched.pause??rec.pause??0),theoreticalSource:sched.source||sched.shift||''};
+ if(!rec)return {...sched,agentId,date,dayType:sched.shift==='Repos'?'Repos':'Présence',plannedStart:sched.start,plannedEnd:sched.end,actualStart:'',actualEnd:'',overtime:0,note:'',status:'Prévu'};
+ return {...sched,...rec,agentId,date,plannedStart:sched.start||rec.plannedStart||'',plannedEnd:sched.end||rec.plannedEnd||'',pause:Number(sched.pause??rec.pause??0),theoreticalSource:sched.source||sched.shift||''};
 }
 function isAbsenceType(t){return t&&t!=='Présence'&&t!=='Formation'}
 // Pilotage terrain : une journée comptabilisée administrativement comme travaillée
@@ -3149,6 +3149,45 @@ function dayCountingLabel(dayType){
  if(r.mode==='zero')return '0 h';
  return 'Horaires prévus';
 }
+// V147.189 — Visite médicale : événement horaire indépendant des jours de congé.
+// La comptabilisation n'a lieu que pour les visites validées ; jamais pour les demandes,
+// refus ou annulations. Les heures incluses dans l'horaire théorique ne sont pas ajoutées
+// une deuxième fois. La part hors planning ne s'ajoute que sur choix explicite.
+function medicalVisitIsActive(v){return !['refusee','annulee'].includes(normalizeText(v?.status||''))}
+function medicalVisitIsCredited(v){return normalizeText(v?.status||'')==='validee'}
+function medicalVisitSchedule(agentId,date){
+ const x=resolvedTheoreticalSchedule(agentId,date,'Présence');
+ return {start:String(x?.start||''),end:String(x?.end||''),pause:Number(x?.pause||0)};
+}
+function medicalVisitBreakdown(v){
+ const start=minutes(v?.start),end=minutes(v?.end),schedule=medicalVisitSchedule(v.agentId,v.date);
+ const ps=minutes(schedule.start),pe=minutes(schedule.end),total=start!=null&&end!=null&&end>start?end-start:0;
+ const inside=total&&ps!=null&&pe!=null&&pe>ps?Math.max(0,Math.min(end,pe)-Math.max(start,ps)):0;
+ return {total,inside,outside:total-inside,schedule};
+}
+function medicalVisitMergedMinutes(intervals){
+ const sorted=intervals.filter(a=>a&&a[1]>a[0]).sort((a,b)=>a[0]-b[0]),merged=[];
+ for(const [st,en] of sorted){const last=merged[merged.length-1];if(last&&st<=last[1])last[1]=Math.max(last[1],en);else merged.push([st,en]);}
+ return merged.reduce((sum,[st,en])=>sum+en-st,0);
+}
+function medicalVisitHours(agentId,date){
+ const visits=(db.medicalVisits||[]).filter(v=>String(v.agentId)===String(agentId)&&v.date===date&&medicalVisitIsCredited(v));
+ const inside=[],outside=[];
+ for(const v of visits){
+  const start=minutes(v.start),end=minutes(v.end),sc=medicalVisitSchedule(agentId,date),ps=minutes(sc.start),pe=minutes(sc.end);
+  if(start==null||end==null||end<=start)continue;
+  if(ps!=null&&pe!=null&&pe>ps){
+   inside.push([Math.max(start,ps),Math.min(end,pe)]);
+   if(v.outsideCredit==='add'){
+    if(start<ps)outside.push([start,Math.min(end,ps)]);
+    if(end>pe)outside.push([Math.max(start,pe),end]);
+   }
+  }else if(v.outsideCredit==='add')outside.push([start,end]);
+ }
+ return {inside:medicalVisitMergedMinutes(inside)/60,outside:medicalVisitMergedMinutes(outside)/60,visits:visits.length};
+}
+function fmtMedicalDuration(minutesValue){return fmtHours((Number(minutesValue)||0)/60)}
+
 function easterSundayISO(year){
  const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),month=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;
  return `${year}-${pad(month)}-${pad(day)}`;
@@ -3293,11 +3332,18 @@ function dayHours(info){
  else actual=(info.actualStart&&info.actualEnd)?hoursBetween(info.actualStart,info.actualEnd,info.pause):planned;
  // Règle métier : une journée Maladie compte 7 h au total dans « Réalisé ».
  if(info.dayType==='Maladie')actual=7;
- const total=actual+Number(info.overtime||0);
+ // Visite médicale partielle : le chevauchement déjà comptabilisé au planning
+ // ne génère pas d'heures supplémentaires. Si un horaire réel plus court a été
+ // déclaré, la visite validée compense uniquement l'écart, sans dépasser le prévu.
+ const visit=info.agentId&&info.date?medicalVisitHours(info.agentId,info.date):{inside:0,outside:0};
+ const medicalCompensation=info.dayType==='Présence'&&info.actualStart&&info.actualEnd
+  ?Math.min(visit.inside,Math.max(0,planned-actual)):0;
+ const medicalExtra=visit.outside;
+ const total=actual+Number(info.overtime||0)+medicalCompensation+medicalExtra;
  // Une journée à 0 h ne crée pas de débit.
  // Une journée Maladie compte 7 h dans Réalisé mais ne génère AUCUN écart.
  const delta=info.dayType==='Maladie'?0:(Math.abs(total)<0.001?0:total-planned);
- return {planned,actual,total,delta}
+ return {planned,actual,total,delta,medicalInside:visit.inside,medicalCompensation,medicalExtra}
 }
 function agentState(agent,date=todayISO()){const info=dayInfo(agent.id,date);if(isAbsenceType(info.dayType)||info.dayType==='Repos')return {label:info.dayType,kind:'absent',info};if(info.dayType==='Formation')return {label:'Formation',kind:'info',info};if(!info.plannedStart||!info.plannedEnd)return {label:'Non planifié',kind:'info',info};return {label:`${info.plannedStart}–${info.plannedEnd}`,kind:'present',info}}
 
@@ -3796,11 +3842,71 @@ function openAgentDay(agentId,date,id,preferredDayType=''){
  syncReplacementChoice();
  f.elements.agentId.addEventListener('change',()=>refreshTheoretical(true));
  f.elements.dateFrom.addEventListener('change',()=>{if(!old)f.elements.dateTo.value=f.elements.dateFrom.value;refreshTheoretical(true)});
- f.elements.dayType.addEventListener('change',()=>refreshTheoretical(false));
+ f.elements.dayType.addEventListener('change',()=>{
+  if(normalizeText(f.elements.dayType.value)==='visite medicale'&&initialType!=='Visite médicale'){
+    const aid=f.elements.agentId.value,day=f.elements.dateFrom.value;
+    closeModal();openMedicalVisit('',aid,day);return;
+  }
+  refreshTheoretical(false);
+ });
  $$('#modalBody input,#modalBody select').forEach(e=>e.addEventListener('change',updateDayCalc));
  refreshTheoretical(!old);
 }
 
+
+function medicalVisitFilterRows(){
+ const month=$('#absenceMonth')?.value||monthISO(),agent=$('#absenceAgent')?.value||'',type=$('#absenceType')?.value||'',status=$('#absenceStatus')?.value||'';
+ if(type&&normalizeText(type)!=='visite medicale')return [];
+ return (db.medicalVisits||[]).filter(v=>dateMonthMatch(v.date,month)&&(!agent||String(v.agentId)===String(agent))&&(!status||v.status===status)).sort((a,b)=>String(a.date+a.start).localeCompare(String(b.date+b.start)));
+}
+function renderMedicalVisits(){
+ const root=$('#medicalVisitsList');if(!root)return;
+ const rows=medicalVisitFilterRows(),label=$('#medicalVisitsCount');
+ if(label)label.textContent=`${rows.length} visite${rows.length>1?'s':''} sur la sélection`;
+ root.innerHTML=rows.length?rows.map(v=>{
+  const b=medicalVisitBreakdown(v),credit=medicalVisitIsCredited(v);
+  const details=credit?`Dans les horaires : ${fmtMedicalDuration(b.inside)} · Hors horaires ${v.outsideCredit==='add'?'à ajouter':'non ajouté'} : ${fmtMedicalDuration(b.outside)}`:'Heures non comptabilisées (statut non validé)';
+  return `<button type="button" class="medical-visit-card" data-medical-visit="${esc(v.id)}"><span class="medical-visit-date">${fmtDate(v.date)} · ${esc(v.start)}–${esc(v.end)}</span><strong>🩺 ${esc(agentName(agentById(v.agentId))||'Agent')}</strong><span>${badge(v.status||'Validée')} · ${esc(fmtMedicalDuration(b.total))}</span><small>${esc(details)}</small><span class="medical-visit-open">Ouvrir et modifier ›</span></button>`;
+ }).join(''):'<p class="muted medical-visit-empty">Aucune visite médicale horaire enregistrée pour cette sélection.</p>';
+}
+function openMedicalVisit(id='',initialAgentId='',initialDate=''){
+ const old=(db.medicalVisits||[]).find(v=>String(v.id)===String(id));
+ const v=old||{agentId:initialAgentId||$('#absenceAgent')?.value||db.agents[0]?.id||'',date:initialDate||todayISO(),start:'09:00',end:'10:00',status:'Validée',outsideCredit:'ignore',note:''};
+ openModal(old?'Modifier la visite médicale':'Nouvelle visite médicale — créneau horaire',`<div class="medical-visit-intro"><strong>🩺 Visite médicale à l’heure</strong><p>Choisissez l’heure de départ et de retour. Le rendez-vous ne transforme pas toute la journée en absence.</p></div><div class="form-grid">
+ <label>Agent<select name="agentId" required>${agentOptions(v.agentId)}</select></label>
+ ${field('Date du rendez-vous','date',v.date,'date','required')}
+ ${field('De','start',v.start,'time','required')}
+ ${field('À','end',v.end,'time','required')}
+ <label>Statut<select name="status">${selectOptions(['Demandée','Validée','Refusée','Annulée'],v.status||'Validée')}</select></label>
+ <label>En dehors de l’horaire de travail<select name="outsideCredit"><option value="ignore" ${v.outsideCredit!=='add'?'selected':''}>Ne pas ajouter les heures hors planning</option><option value="add" ${v.outsideCredit==='add'?'selected':''}>Ajouter les heures hors planning au compteur</option></select></label>
+ ${textareaField('Observation (facultative)','note',v.note||'',2)}
+ </div><div id="medicalVisitCalc" class="calculation-preview"></div><p class="hint">La partie de visite située pendant l’horaire théorique est déjà comptée dans le temps prévu. Si un horaire réel réduit a été saisi, elle peut compenser le temps manquant sans double comptage. L’ajout hors planning est un choix explicite ; la validation administrative reste à confirmer selon les règles applicables.</p>`,async form=>{
+ const o=formDataObj(form),start=minutes(o.start),end=minutes(o.end);
+ if(!o.agentId||!o.date||start==null||end==null||end<=start){toast('Choisissez un agent, une date et des heures cohérentes.');return {ok:false}}
+ if(!academicYearContains(activeAcademicYear(),o.date)){toast(`Sélectionnez l’année scolaire correspondant au ${fmtDate(o.date)}.`);return {ok:false}}
+ const candidate={...(old||{}),id:old?.id||uid(),agentId:o.agentId,date:o.date,start:o.start,end:o.end,status:o.status,outsideCredit:o.outsideCredit==='add'?'add':'ignore',note:o.note||'',updatedAt:new Date().toISOString(),createdAt:old?.createdAt||new Date().toISOString()};
+ const snapshot=deepClone(db.medicalVisits||[]);
+ db.medicalVisits=(db.medicalVisits||[]).filter(x=>String(x.id)!==String(candidate.id));db.medicalVisits.push(candidate);
+ localDirty=true;try{writeMirror()}catch(_){}try{writeOfflinePending('Visite médicale à synchroniser')}catch(_){}
+ const result=await window.PSTMainState.persistStateDirect({label:'Visite médicale',verify:remote=>(remote.medicalVisits||[]).some(x=>String(x.id)===String(candidate.id)&&x.updatedAt===candidate.updatedAt)});
+ if(!result?.ok){toast(result?.error||'Visite non enregistrée sur le serveur.');db.medicalVisits=snapshot;return {ok:false}}
+ closeModal();renderAbsences();renderPlanning();renderDashboard();window.PSTNotificationCenter?.render?.();toast(result.offline?'Visite enregistrée localement : synchronisation en attente':'Visite médicale enregistrée');return {ok:true};
+ },{directSave:true,onDelete:old?()=>deleteMedicalVisit(old.id):null});
+ const f=$('#modalForm'),calc=$('#medicalVisitCalc');
+ const update=()=>{
+  const o=formDataObj(f);if(!o.agentId||!o.date||!o.start||!o.end||!calc)return;
+  const b=medicalVisitBreakdown(o),valid=normalizeText(o.status||'')==='validee';
+  const sched=b.schedule.start&&b.schedule.end?`${b.schedule.start}–${b.schedule.end}`:'Aucun horaire théorique défini';
+  calc.innerHTML=`<strong>Calcul prévisionnel</strong><span>Horaire de travail : ${esc(sched)}</span><span>Durée du rendez-vous : ${esc(fmtMedicalDuration(b.total))}</span><span>Dans le planning (déjà compté) : ${esc(fmtMedicalDuration(b.inside))}</span><span>Hors planning : ${esc(fmtMedicalDuration(b.outside))}</span><b>Heures supplémentaires issues de cette visite : ${esc(fmtMedicalDuration(valid&&o.outsideCredit==='add'?b.outside:0))}</b>${!valid?'<small>Les heures ne seront prises en compte qu’une fois la visite validée.</small>':''}`;
+ };
+ f.addEventListener('input',update);f.addEventListener('change',update);update();
+}
+async function deleteMedicalVisit(id){
+ if(!id)return;
+ const existing=(db.medicalVisits||[]).find(x=>String(x.id)===String(id));if(!existing)return;
+ await deleteRecord('medicalVisits',id,'visite médicale');
+ closeModal();renderAbsences();renderPlanning();renderDashboard();window.PSTNotificationCenter?.render?.();
+}
 
 function openAbsence(){const agentId=$('#absenceAgent')?.value||db.agents[0]?.id;const date=($('#absenceMonth')?.value||monthISO())+'-01';openAgentDay(agentId,date)}
 
@@ -3998,6 +4104,7 @@ function refreshCollectionView(collection){
    vacations:renderVacations,personalEvents:renderPersonal,documents:renderDocuments,
    agents:renderAgents,rotations:renderRotations,weeklyPlans:renderPlanning,
    agentDays:()=>{renderPlanning();renderAbsences();renderTeamCalendar();renderPersonalCalendar();renderAgents();},
+   medicalVisits:()=>{renderAbsences();renderPlanning();renderDashboard();window.PSTNotificationCenter?.render?.()},
    spaces:renderSettings
  };
  try{map[collection]?.()}catch(error){console.warn('Rafraîchissement collection',collection,error)} restorePlanningScroll();
@@ -4588,6 +4695,7 @@ function eventsForDate(d){
  const rows=[
   ...(db.personalEvents||[]).filter(x=>sameDay(x.date)&&active(x)).map(x=>({...x,source:'personal',start:x.start||''})),
   ...(db.meetings||[]).filter(x=>sameDay(x.date)&&active(x)).map(x=>({...x,source:'meeting',start:x.time||'',title:x.title||'Rendez-vous'})),
+  ...(db.medicalVisits||[]).filter(x=>sameDay(x.date)&&medicalVisitIsActive(x)).map(x=>({...x,source:'medical-visit',start:x.start,time:x.start,title:`🩺 Visite médicale · ${agentName(agentById(x.agentId))||'Agent'} (${x.start}–${x.end})`,location:'',meta:`${x.start}–${x.end}`})),
   ...(db.notes||[]).filter(x=>onDateOrDue(x)&&active(x)).map(x=>({...x,date:d,start:x.time||'',source:'note',title:`Note · ${x.title||'À traiter'}`})),
   ...(db.maintenance||[]).filter(x=>onDateOrDue(x)&&active(x)).map(x=>({...x,date:d,start:x.time||'',source:'maintenance',title:`Maintenance · ${x.title||'Intervention'}`})),
   ...(db.requests||[]).filter(x=>onDateOrDue(x)&&active(x)).map(x=>({...x,date:d,start:x.time||'',source:'request',title:`Direction · ${x.title||x.description||'Demande'}`})),
@@ -5100,8 +5208,8 @@ function updateHoursRangeResult(){
  const r=calculateAgentHoursBetween(agentId,from,to);if(!r){box.innerHTML='<article><span>Résultat</span><strong>Dates à vérifier</strong></article>';return}
  box.innerHTML=`<article><span>Réalisé</span><strong>${fmtHours(r.realized)}</strong></article><article><span>Prévu</span><strong>${fmtHours(r.planned)}</strong></article><article><span>Écart</span><strong>${r.delta>=0?'+':''}${fmtHours(r.delta)}</strong></article><article><span>Jours comptabilisés</span><strong>${r.workedDays}</strong><small>${r.days} jours calendaires analysés</small></article>`;
 }
-function renderPlanning(){renderWeeklyPlans();renderHoursRangeControls();const month=$('#planningMonth').value||monthISO(),agent=$('#planningAgent').value,signal=$('#planningSignal').value;const start=`${month}-01`,end=localISO(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0));const rows=[];for(const a of db.agents.filter(x=>x.status==='Actif'&&(!agent||x.id===agent))){let d=start;while(d<=end){if(![0,6].includes(parseDate(d).getDay())){const info=dayInfo(a.id,d),h=dayHours(info);let sig=isAbsenceType(info.dayType)?'Absence':h.delta>0.01?'Heures supplémentaires':h.delta<-0.01?'Heures manquantes':'Conforme';if(!signal||sig===signal)rows.push({a,d,info,h,sig})}d=addDays(d,1)}}const sums=rows.reduce((s,r)=>{s.p+=r.h.planned;s.a+=r.h.total;s.o+=Number(r.info.overtime||0);s.d+=Number(r.h.delta||0);return s},{p:0,a:0,o:0,d:0});$('#planningSummary').innerHTML=`<article><span>Prévu</span><strong>${fmtHours(sums.p)}</strong></article><article><span>Réalisé</span><strong>${fmtHours(sums.a)}</strong></article><article><span>Écart</span><strong>${sums.d>=0?'+':''}${fmtHours(sums.d)}</strong></article><article><span>Heures ajoutées</span><strong>${fmtHours(sums.o)}</strong></article>`;$('#planningTable').innerHTML=rows.length?rows.map(r=>{const disp=planningDisplayFor(r.a,r.d);return `<tr><td>${fmtDate(r.d)}</td><td>${esc(agentName(r.a))}</td><td>${r.info.dayType==='Présence'?`${r.info.plannedStart||'—'}–${r.info.plannedEnd||'—'} (${fmtHours(r.h.planned)})`:badge(r.info.dayType)}</td><td>${r.info.dayType==='Présence'&&disp.realChanged?`${esc(disp.real)} · <strong>${fmtHours(r.h.total)}</strong>`:r.info.dayType!=='Présence'?`${badge(r.info.dayType)} · <strong>${fmtHours(r.h.total)}</strong>`:`<strong>${fmtHours(r.h.total)}</strong>`}</td><td>${r.h.delta>=0?'+':''}${fmtHours(r.h.delta)}</td><td>${badge(r.sig)}</td><td>${r.info.source==='manual'&&r.info.note?`<button class="icon-btn manual-info-trigger" type="button" data-show-day-info="${r.a.id}" data-date="${r.d}" title="${esc(r.info.note)}">ⓘ</button>`:''}<button class="icon-btn" data-agent-day="${r.a.id}" data-date="${r.d}">✎</button></td></tr>`}).join(''):emptyRow(7)}
-function renderAbsences(){renderAbsenceBoard();const month=$('#absenceMonth').value||monthISO(),agent=$('#absenceAgent').value,type=$('#absenceType').value,status=$('#absenceStatus').value;const rows=db.agentDays.filter(x=>dateMonthMatch(x.date,month)&&isAbsenceType(x.dayType)&&(!agent||x.agentId===agent)&&(!type||x.dayType===type)&&(!status||x.status===status));const groups=new Map();for(const x of rows){const key=x.periodId||x.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)}const arr=[...groups.values()].map(g=>g.sort((a,b)=>a.date.localeCompare(b.date))).sort((a,b)=>a[0].date.localeCompare(b[0].date));$('#absencesTable').innerHTML=arr.length?arr.map(g=>{const x=g[0],from=g[0].date,to=g.at(-1).date;return `<tr><td>${esc(agentName(agentById(x.agentId)))}</td><td>${fmtDate(from)}</td><td>${fmtDate(to)}</td><td>${badge(x.dayType)}</td><td>${g.length} jour${g.length>1?'s':''}</td><td>${badge(x.status||'Validée')}</td><td>${x.noReplacementNeeded?'<span class="badge good">Sans remplacement</span>':esc(x.replacement||'À décider')}</td><td><button class="icon-btn" data-agent-day="${x.agentId}" data-date="${from}">✎</button></td></tr>`}).join(''):emptyRow(8);renderAbsenceCounters(month)}
+function renderPlanning(){renderWeeklyPlans();renderHoursRangeControls();const month=$('#planningMonth').value||monthISO(),agent=$('#planningAgent').value,signal=$('#planningSignal').value;const start=`${month}-01`,end=localISO(new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0));const rows=[];for(const a of db.agents.filter(x=>x.status==='Actif'&&(!agent||x.id===agent))){let d=start;while(d<=end){if(![0,6].includes(parseDate(d).getDay())){const info=dayInfo(a.id,d),h=dayHours(info);let sig=isAbsenceType(info.dayType)?'Absence':h.delta>0.01?'Heures supplémentaires':h.delta<-0.01?'Heures manquantes':'Conforme';if(!signal||sig===signal)rows.push({a,d,info,h,sig})}d=addDays(d,1)}}const sums=rows.reduce((s,r)=>{s.p+=r.h.planned;s.a+=r.h.total;s.o+=Number(r.info.overtime||0)+Number(r.h.medicalExtra||0);s.d+=Number(r.h.delta||0);return s},{p:0,a:0,o:0,d:0});$('#planningSummary').innerHTML=`<article><span>Prévu</span><strong>${fmtHours(sums.p)}</strong></article><article><span>Réalisé</span><strong>${fmtHours(sums.a)}</strong></article><article><span>Écart</span><strong>${sums.d>=0?'+':''}${fmtHours(sums.d)}</strong></article><article><span>Heures ajoutées</span><strong>${fmtHours(sums.o)}</strong></article>`;$('#planningTable').innerHTML=rows.length?rows.map(r=>{const disp=planningDisplayFor(r.a,r.d);return `<tr><td>${fmtDate(r.d)}</td><td>${esc(agentName(r.a))}</td><td>${r.info.dayType==='Présence'?`${r.info.plannedStart||'—'}–${r.info.plannedEnd||'—'} (${fmtHours(r.h.planned)})`:badge(r.info.dayType)}</td><td>${r.info.dayType==='Présence'&&disp.realChanged?`${esc(disp.real)} · <strong>${fmtHours(r.h.total)}</strong>`:r.info.dayType!=='Présence'?`${badge(r.info.dayType)} · <strong>${fmtHours(r.h.total)}</strong>`:`<strong>${fmtHours(r.h.total)}</strong>`}</td><td>${r.h.delta>=0?'+':''}${fmtHours(r.h.delta)}</td><td>${badge(r.sig)}</td><td>${r.info.source==='manual'&&r.info.note?`<button class="icon-btn manual-info-trigger" type="button" data-show-day-info="${r.a.id}" data-date="${r.d}" title="${esc(r.info.note)}">ⓘ</button>`:''}<button class="icon-btn" data-agent-day="${r.a.id}" data-date="${r.d}">✎</button></td></tr>`}).join(''):emptyRow(7)}
+function renderAbsences(){renderAbsenceBoard();renderMedicalVisits();const month=$('#absenceMonth').value||monthISO(),agent=$('#absenceAgent').value,type=$('#absenceType').value,status=$('#absenceStatus').value;const rows=db.agentDays.filter(x=>dateMonthMatch(x.date,month)&&isAbsenceType(x.dayType)&&(!agent||x.agentId===agent)&&(!type||x.dayType===type)&&(!status||x.status===status));const groups=new Map();for(const x of rows){const key=x.periodId||x.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)}const arr=[...groups.values()].map(g=>g.sort((a,b)=>a.date.localeCompare(b.date))).sort((a,b)=>a[0].date.localeCompare(b[0].date));$('#absencesTable').innerHTML=arr.length?arr.map(g=>{const x=g[0],from=g[0].date,to=g.at(-1).date;return `<tr><td>${esc(agentName(agentById(x.agentId)))}</td><td>${fmtDate(from)}</td><td>${fmtDate(to)}</td><td>${badge(x.dayType)}</td><td>${g.length} jour${g.length>1?'s':''}</td><td>${badge(x.status||'Validée')}</td><td>${x.noReplacementNeeded?'<span class="badge good">Sans remplacement</span>':esc(x.replacement||'À décider')}</td><td><button class="icon-btn" data-agent-day="${x.agentId}" data-date="${from}">✎</button></td></tr>`}).join(''):emptyRow(8);renderAbsenceCounters(month)}
 function renderAbsenceCounters(month){const agents=db.agents.filter(a=>a.status==='Actif');const types=db.lists.dayTypes.filter(isAbsenceType);const used=types.filter(t=>db.agentDays.some(x=>dateMonthMatch(x.date,month)&&x.dayType===t));const cols=used.length?used:types.slice(0,5);const head=`<table><thead><tr><th>Agent</th>${cols.map(t=>`<th>${esc(t)}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;const body=agents.map(a=>{const rs=db.agentDays.filter(x=>x.agentId===a.id&&dateMonthMatch(x.date,month)&&isAbsenceType(x.dayType));return `<tr><td><strong>${esc(agentName(a))}</strong></td>${cols.map(t=>`<td>${rs.filter(x=>x.dayType===t).length}</td>`).join('')}<td><strong>${rs.length}</strong></td></tr>`}).join('');$('#absenceCounters').innerHTML=head+body+'</tbody></table>'}
 function renderVacations(){
  const zone=$('#vacationZone').value,status=$('#vacationStatus').value,year=activeAcademicYear(),range=academicYearRange(year);
@@ -5712,7 +5820,7 @@ function recordsInRange(arr,start,end,dateFields=['date']){return (arr||[]).filt
 function createWeeklyArchive(force=false){const end=addDays(startOfWeek(todayISO()),-1),start=addDays(end,-6),key=isoWeekKey(start);if(!force&&db.archives.some(a=>a.kind==='weekly'&&a.key===key))return false;const absent=recordsInRange(db.agentDays,start,end).filter(x=>isAbsenceType(x.dayType));const snapshot={id:uid(),kind:'weekly',key,year:start.slice(0,4),academicYear:academicYearFor(start),start,end,createdAt:new Date().toISOString(),summary:{agents:db.agents.filter(a=>a.status==='Actif').length,absences:absent.length,maintenance:recordsInRange(db.maintenance,start,end,['date','dueDate']).length,cleaning:recordsInRange(db.cleaning,start,end).length,meetings:recordsInRange(db.meetings,start,end).length,notes:recordsInRange(db.notes,start,end,['date','dueDate']).length},data:{agentDays:recordsInRange(db.agentDays,start,end),maintenance:recordsInRange(db.maintenance,start,end,['date','dueDate']),cleaning:recordsInRange(db.cleaning,start,end),meetings:recordsInRange(db.meetings,start,end),personalEvents:recordsInRange(db.personalEvents,start,end),notes:recordsInRange(db.notes,start,end,['date','dueDate']),issues:recordsInRange(db.issues,start,end,['date','dueDate']),requests:recordsInRange(db.requests,start,end,['date','dueDate']),works:recordsInRange(db.works,start,end,['date','dueDate'])}};db.archives.push(snapshot);db.settings.lastWeeklyArchiveKey=key;return true}
 function runAnnualReset(){const t=parseDate(todayISO()),y=t.getFullYear(),isCloseDay=t.getMonth()===7&&t.getDate()===31,isAfterClose=t.getMonth()>=8;if(!isCloseDay&&!isAfterClose)return false;const closeYear=y;if(db.settings.lastAnnualResetYear>=closeYear)return false;const prevStart=closeYear-1,from=`${prevStart}-09-01`,to=`${closeYear}-08-31`,key=`${prevStart}-${closeYear}`;if(!db.archives.some(a=>a.kind==='annual'&&a.key===key)){db.archives.push({id:uid(),kind:'annual',key,year:String(closeYear),academicYear:key,start:from,end:to,createdAt:new Date().toISOString(),summary:{leaveDays:db.agentDays.filter(x=>x.date>=from&&x.date<=to&&isAbsenceType(x.dayType)).length,overtime:db.agentDays.filter(x=>x.date>=from&&x.date<=to).reduce((n,x)=>n+Number(x.overtime||0),0)},data:{agentDays:recordsInRange(db.agentDays,from,to),rotations:clone(db.rotations),weeklyPlans:clone(db.weeklyPlans)}})}db.settings.lastAnnualResetYear=closeYear;db.settings.leaveBalances={};db.settings.overtimeBalances={};return true}
 function runAutomaticHousekeeping(){let changed=false;try{changed=createWeeklyArchive(false)||changed;changed=runAnnualReset()||changed}catch(e){console.error('Archivage automatique',e)}return changed}
-function notificationTarget(n){setView(n.view||'dashboard');if(n.type==='alarm-programming'){window.PSTMobileDashboardTiles?.openPanel?.('reminders','Mes rappels');return}if(n.type==='agentDay'&&n.id){const r=db.agentDays.find(x=>x.id===n.id);if(r)setTimeout(()=>openAgentDay(r.agentId,r.date),50);return}if(n.type&&n.id)setTimeout(()=>dispatchEdit(n.type,n.id),50)}
+function notificationTarget(n){setView(n.view||'dashboard');if(n.type==='medicalVisit'&&n.id){setTimeout(()=>openMedicalVisit(n.id),50);return}if(n.type==='alarm-programming'){window.PSTMobileDashboardTiles?.openPanel?.('reminders','Mes rappels');return}if(n.type==='agentDay'&&n.id){const r=db.agentDays.find(x=>x.id===n.id);if(r)setTimeout(()=>openAgentDay(r.agentId,r.date),50);return}if(n.type&&n.id)setTimeout(()=>dispatchEdit(n.type,n.id),50)}
 function wasteCollectionShiftInfo(referenceDate=todayISO()){
  const ref=normalizeDateValue(referenceDate)||todayISO(),d=parseDate(ref),day=d.getDay();
  // Semaine lundi -> dimanche contenant la date de référence.
@@ -5733,6 +5841,14 @@ function computeNotifications(){
   push({level:r.remaining<=2?'red':'orange',icon:'🔐',title:`Programmer les alarmes — ${r.name}`,
    text:`${fmtDate(r.date)} · ${r.kind==='holiday'?'jour férié':'vacances / permanences'} · Vérifier les horaires ATS8500 (Cuisine, Gymnase, Bâtiments A+B)`,
    view:'dashboard',type:'alarm-programming',id:r.key,date:r.date});
+ }
+
+ // Rendez-vous médicaux : rappel du jour ou des sept jours qui suivent,
+ // sans confondre visite horaire avec absence d'une journée entière.
+ const futureMedical=(db.medicalVisits||[]).filter(x=>medicalVisitIsActive(x)&&x.date>=today).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+ for(const [i,v] of futureMedical.entries()){
+  if(v.date>addDays(today,30)&&i!==0)continue;
+  push({level:v.date===today?'orange':'yellow',icon:'🩺',title:`Visite médicale — ${agentName(agentById(v.agentId))||'Agent'}`,text:`${fmtDate(v.date)} · ${v.start}–${v.end} · ${v.status||'Demandée'}`,view:'absences',type:'medicalVisit',id:v.id,date:v.date});
  }
 
  // Poubelles : le jeudi, avertir si un jour férié de la semaine décale la collecte du vendredi au samedi.
@@ -6500,7 +6616,7 @@ function renderDashboardTeamTodayV149(){
   const agents=allAgents.filter(a=>range.dates.some(d=>!isOffSiteDayType(dayInfo(a.id,d).dayType)));
   el.innerHTML=agents.length?agents.map(a=>{
    let presence=0,absence=0,total=0;const reasons=[];
-   for(const d of range.dates){const info=dayInfo(a.id,d),type=String(info.dayType||'Présence'),norm=normalizeText(type);if(norm==='repos')continue;if(isOffSiteDayType(type)){absence++;reasons.push(type)}else{presence++;const h=dayHours(info);total+=info.actualStart&&info.actualEnd?Number(h.actual||0):Number(h.planned||0)}}
+   for(const d of range.dates){const info=dayInfo(a.id,d),type=String(info.dayType||'Présence'),norm=normalizeText(type);if(norm==='repos')continue;if(isOffSiteDayType(type)){absence++;reasons.push(type)}else{presence++;const h=dayHours(info);total+=Number(h.total||0)}}
    const detail=absence?`${absence} absence${absence>1?'s':''} · ${[...new Set(reasons)].slice(0,2).join(', ')}`:`${presence} jour${presence>1?'s':''} planifié${presence>1?'s':''}`;
    return `<button class="dashboard-team-row-v149 week-summary-v159" data-agent-week-open="1"><span class="dashboard-team-avatar-v149">${esc((a.firstName||a.lastName||'?').charAt(0).toUpperCase())}</span><strong>${esc(agentName(a))}</strong><small>${esc(detail)}</small><span class="dashboard-team-status-v149 ${absence?'absent':''}">${esc(fmtHours(total))}</span></button>`;
   }).join(''):'<div class="empty-card">Aucun agent prévu au lycée cette semaine.</div>';return;
@@ -6541,6 +6657,10 @@ function renderDashboardPrioritiesV149(urgentActions,lateActions){
 function renderDashboardRemindersV149(notes,pSoon){
  const el=$('#dashboardReminders');if(!el)return;const range=dashboardPeriodRangeV159(),after=addDays(range.end,1),cards=[];
  cards.push(`<button class="dashboard-reminder-v149" data-go="weather"><span class="icon">🌦️</span><div><strong id="dashboardWeatherTitle">Météo du jour</strong><small id="dashboardWeatherDetail">Actualisation…</small></div></button>`);
+ const allMedical=(db.medicalVisits||[]).filter(v=>medicalVisitIsActive(v)&&v.date>=todayISO()).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+ const inPeriodMedical=allMedical.filter(v=>v.date>=range.start&&v.date<=after);
+ const medicalNext=inPeriodMedical.length?inPeriodMedical:allMedical.slice(0,1);
+ for(const v of medicalNext.slice(0,2))cards.push(`<button type="button" class="dashboard-reminder-v149" data-medical-visit="${esc(v.id)}"><span class="icon">🩺</span><div><strong>Visite médicale — ${esc(agentName(agentById(v.agentId))||'Agent')}</strong><small>${fmtDate(v.date)} · ${esc(v.start)}–${esc(v.end)} · ${esc(v.status||'Demandée')}</small></div></button>`);
  const dueNote=notes.filter(x=>{const d=recordDueDate(x);return d&&d>=range.start&&d<=after}).sort((a,b)=>String(recordDueDate(a)).localeCompare(String(recordDueDate(b))))[0];
  if(dueNote)cards.push(`<button class="dashboard-reminder-v149" data-edit-type="note" data-edit-id="${dueNote.id}"><span class="icon">✎</span><div><strong>${esc(dueNote.title||'Note à traiter')}</strong><small>Échéance ${fmtDate(recordDueDate(dueNote))} · ${esc(dueNote.category||'Bloc-notes')}</small></div></button>`);else cards.push(`<button class="dashboard-reminder-v149" data-go="notes"><span class="icon">✎</span><div><strong>Notes</strong><small>Aucune échéance de note sur la période.</small></div></button>`);
  const meter=range.dates.map(meterReadingItemForDate).find(Boolean)||meterReadingItemForDate(after);if(meter)cards.push(`<button class="dashboard-reminder-v149 agenda-action" data-agenda-source="meter-reading" data-agenda-id="${meter.id}"><span class="icon">📊</span><div><strong>Relevé des compteurs</strong><small>${fmtDate(meter.date)} · logements</small></div></button>`);else if(pSoon[0])cards.push(`<button class="dashboard-reminder-v149" data-edit-type="periodic" data-edit-id="${pSoon[0].id}"><span class="icon">📋</span><div><strong>${esc(pSoon[0].name||pSoon[0].title||'Contrôle périodique')}</strong><small>Contrôle à surveiller prochainement</small></div></button>`);else cards.push(`<button class="dashboard-reminder-v149" data-go="periodic"><span class="icon">📋</span><div><strong>Contrôles périodiques</strong><small>Aucune alerte proche.</small></div></button>`);
@@ -7657,7 +7777,7 @@ $('#layoutMode').onchange=e=>applyLayout(e.target.value);$('#printCurrent').oncl
  const naa=$('#newAgentActivity');if(naa)naa.onclick=()=>openAgentActivity();
  const paa=$('#printAgentActivity');if(paa)paa.onclick=printAgentActivityRegister;
  for(const id of ['activityPeriodMode','activityReferenceDate','activityTypeFilter']){const e=$(`#${id}`);if(e)e.onchange=renderAgentActivities}
- $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newQuote').onclick=()=>openQuote();$('#quoteStatusFilter').onchange=renderQuotes;$('#quoteSearch').oninput=renderQuotes;$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
+ $('#newAgent').onclick=()=>openAgent();const wr=$('#weekendRestAll');if(wr)wr.onclick=applyWeekendRestToAll;const aw=$('#addWeeklyAgent');if(aw)aw.onclick=()=>openAgent();const nw=$('#newWeeklyPlan');if(nw)nw.onclick=()=>openWeeklyPlan();$('#newRotation').onclick=()=>openRotation();$('#newRotationException').onclick=()=>openRotationException();$('#newShift').onclick=()=>{const a=$('#planningAgent').value||db.agents[0]?.id;openAgentDay(a,`${$('#planningMonth').value||monthISO()}-01`)};$('#newAbsence').onclick=openAbsence;$('#newMedicalVisit').onclick=()=>openMedicalVisit('',$('#absenceAgent')?.value||'',todayISO());$('#newVacation').onclick=()=>openVacation();$('#loadSchoolHolidays').onclick=loadSchoolHolidays;$('#newIssue').onclick=()=>openIssue();$('#newPeriodic').onclick=()=>openPeriodic();$('#newCleaning').onclick=()=>openCleaning();$('#newMaintenance').onclick=()=>openMaintenance();$('#newQuote').onclick=()=>openQuote();$('#quoteStatusFilter').onchange=renderQuotes;$('#quoteSearch').oninput=renderQuotes;$('#newRequest').onclick=()=>openRequest();$('#newWork').onclick=()=>openWork();$('#newMeeting').onclick=()=>openMeeting();$('#newNote').onclick=()=>openNote();$('#newDocument').onclick=()=>openDocument();$('#newPersonalEvent').onclick=$('#newPersonalEventDash').onclick=()=>openPersonalEvent();$('#addBuilding').onclick=addBuilding;$('#addSpace').onclick=()=>openSpace();
  const ppm=$('#personalPrevMonth'),ptm=$('#personalTodayMonth'),pnm=$('#personalNextMonth');if(ppm)ppm.onclick=()=>{const e=$('#personalMonth');e.value=addMonths(`${e.value||monthISO()}-01`,-1).slice(0,7);renderPersonal()};if(ptm)ptm.onclick=()=>{const e=$('#personalMonth');e.value=monthISO();renderPersonal()};if(pnm)pnm.onclick=()=>{const e=$('#personalMonth');e.value=addMonths(`${e.value||monthISO()}-01`,1).slice(0,7);renderPersonal()};
  $('#prevTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,-7);renderTeamCalendar()};$('#nextTeamWeek').onclick=()=>{teamWeek=addDays(teamWeek,7);renderTeamCalendar()};$('#prevTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,-1));renderTeamCalendar()};$('#nextTeamMonth').onclick=()=>{teamWeek=startOfWeek(addMonths(teamWeek,1));renderTeamCalendar()};$('#todayTeamWeek').onclick=()=>{teamWeek=startOfWeek(todayISO());renderTeamCalendar()};$('#teamDateJump').onchange=e=>{teamWeek=startOfWeek(e.target.value);renderTeamCalendar()};$('#prevPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,-7);renderPersonalCalendar()};$('#nextPersonalWeek').onclick=()=>{personalWeek=addDays(personalWeek,7);renderPersonalCalendar()};$('#todayPersonalWeek').onclick=()=>{personalWeek=startOfWeek(todayISO());renderPersonalCalendar()};
  $('#saveSettings').onclick=saveSettings;const wizardOpen=$('#openAutoReportWizard');if(wizardOpen)wizardOpen.onclick=openAutoReportWizard;const wizardClose=$('#autoReportWizardClose');if(wizardClose)wizardClose.onclick=()=>wizardEl().close();const wizardBack=$('#autoReportWizardBack');if(wizardBack)wizardBack.onclick=()=>{saveWizardStep();autoReportWizardStep=Math.max(0,autoReportWizardStep-1);renderAutoReportWizard()};const wizardNext=$('#autoReportWizardNext');if(wizardNext)wizardNext.onclick=()=>{saveWizardStep();if(autoReportWizardStep===3){wizardEl().close();return}autoReportWizardStep=Math.min(3,autoReportWizardStep+1);renderAutoReportWizard()};document.addEventListener('click',e=>{const p=e.target.closest('[data-wizard-provider]');if(p){autoReportWizardData.provider=p.dataset.wizardProvider;renderAutoReportWizard()}});const sart=$('#sendAutomaticReportTest');if(sart)sart.onclick=sendAutomaticReportTest;function openNotificationCenter(){window.PSTNotificationCenter?.open?.()}
@@ -7688,11 +7808,12 @@ const dsn=$('#dashboardSyncNow');if(dsn)dsn.onclick=dashboardSyncNow;
  document.addEventListener('click',e=>{const mode=e.target.closest('[data-dashboard-period]');if(mode){dashboardPeriodModeV159=mode.dataset.dashboardPeriod==='week'?'week':'day';renderDashboard();return}const nav=e.target.closest('[data-dashboard-period-nav]');if(nav){const step=Number(nav.dataset.dashboardPeriodNav||0);dashboardPeriodDateV159=addDays(dashboardPeriodDateV159||todayISO(),step*(dashboardPeriodModeV159==='week'?7:1));renderDashboard();return}const today=e.target.closest('[data-dashboard-period-today]');if(today){dashboardPeriodDateV159=todayISO();const cy=academicYearFor(dashboardPeriodDateV159);if(activeAcademicYear()!==cy){setActiveAcademicYear(cy);return}renderDashboard();return}});
  document.addEventListener('change',e=>{if(e.target?.id==='dashboardPeriodDateV159'&&e.target.value){dashboardPeriodDateV159=e.target.value;renderDashboard();}});
  document.addEventListener('click',e=>{const open=e.target.closest('[data-agent-week-open]');if(open){openDashboardAgentWeekV150(0);return}const nav=e.target.closest('[data-agent-week-nav]');if(nav){const step=Number(nav.dataset.agentWeekNav||0);openDashboardAgentWeekV150(step===0?0:dashboardAgentWeekOffsetV150+step);return}});
-document.addEventListener('click',async e=>{const alarmDone=e.target.closest('[data-alarm-done]');if(alarmDone){e.preventDefault();e.stopPropagation();markAlarmProgrammingDone(alarmDone.dataset.alarmDone);return}const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){if(go.closest('#dashboard'))dashboardShortcut(go.dataset.go);else setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ae=e.target.closest('[data-agenda-source]');if(ae){
+document.addEventListener('click',async e=>{const mv=e.target.closest('[data-medical-visit]');if(mv){e.preventDefault();openMedicalVisit(mv.dataset.medicalVisit);return}const alarmDone=e.target.closest('[data-alarm-done]');if(alarmDone){e.preventDefault();e.stopPropagation();markAlarmProgrammingDone(alarmDone.dataset.alarmDone);return}const ni=e.target.closest('[data-notification-index]');if(ni){const n=(window.__notifications||[])[Number(ni.dataset.notificationIndex)];closeNotificationCenter();if(n)notificationTarget(n);return}const ar=e.target.closest('[data-archive-detail]');if(ar){openArchiveDetail(ar.dataset.archiveDetail);return}const iana=e.target.closest('[data-open-import-analysis]');if(iana){openImportAnalysis(iana.dataset.openImportAnalysis);return}const irec=e.target.closest('[data-open-import-record]');if(irec){const id=irec.dataset.openImportRecord,m=irec.dataset.importModule;({notes:()=>openNote(id),issues:()=>openIssue(id),maintenance:()=>openMaintenance(id),requests:()=>openRequest(id),works:()=>openWork(id),meetings:()=>openMeeting(id),periodic:()=>openPeriodic(id),documents:()=>openDocument(id)}[m]||(()=>setView(m||'archives')))();return}const go=e.target.closest('[data-go]');if(go){if(go.closest('#dashboard'))dashboardShortcut(go.dataset.go);else setView(go.dataset.go);return}const quick=e.target.closest('[data-quick]');if(quick){dispatchQuick(quick.dataset.quick);return}const ae=e.target.closest('[data-agenda-source]');if(ae){
  const source=ae.dataset.agendaSource,id=ae.dataset.agendaId;
  if(source==='alarm-programming')openAlarmProgrammingReminder(id);
  else if(source==='personal')openPersonalEvent(id);
  else if(source==='meeting')openMeeting(id);
+ else if(source==='medical-visit')openMedicalVisit(id);
  else if(source==='note')openNote(id);
  else if(source==='maintenance')openMaintenance(id);
  else if(source==='request')openRequest(id);

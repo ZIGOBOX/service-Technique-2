@@ -1124,3 +1124,19 @@ body.rc-pos-open{overflow:hidden!important}
 
 /* Correction : listes déroulantes non compressibles sur les menus tactiles. */
 .sidebar #nav > .nav-domain{flex-shrink:0 !important}
+
+/* V147.189 — Visites médicales horaires, intégration responsive */
+#absences .medical-visit-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#absences .medical-visit-panel{margin:16px 0;border:1px solid #cbd5e1}
+#absences .medical-visit-panel .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#absences .medical-visits-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr));gap:12px}
+#absences .medical-visit-card{display:grid;gap:8px;min-height:130px;text-align:left;padding:15px;border-radius:15px;border:1px solid #d9e2f0;border-left:5px solid #8b5cf6;background:#fff;color:#18233a;cursor:pointer;box-shadow:0 4px 14px rgba(16,34,60,.05)}
+#absences .medical-visit-card:hover{box-shadow:0 10px 22px rgba(16,34,60,.12);transform:translateY(-1px)}
+#absences .medical-visit-card strong{font-size:15px}
+#absences .medical-visit-card small{color:#64748b;line-height:1.5}
+#absences .medical-visit-date{font-variant-numeric:tabular-nums;color:#6553a7;font-weight:800}
+#absences .medical-visit-open{color:#5746aa;font-weight:800;font-size:12px}
+#absences .medical-visit-empty{padding:12px}
+.medical-visit-intro{border-radius:13px;background:#f0ecff;border:1px solid #dcd2ff;padding:12px 14px;margin-bottom:12px;color:#3d3270}
+.medical-visit-intro p{margin:5px 0 0;font-size:13px}
+@media(max-width:640px){#absences .medical-visit-actions{width:100%}#absences .medical-visit-actions button{flex:1 1 100%;min-height:46px}#absences .medical-visits-list{grid-template-columns:1fr}}
