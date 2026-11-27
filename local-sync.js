@@ -94,15 +94,19 @@ persistAgentPlanningBackground=async()=>localResult('Planning agent');
 startCloudPolling=()=>clearInterval(cloudPollTimer);scheduleCloudRetry=()=>clearTimeout(cloudRetryTimer);autoSyncWhenNetworkReturns=()=>refreshDashboardSyncIndicator();pollCloudChanges=async()=>false;syncOfflinePending=synchronize;cloudLoad=synchronize;
 manualSupabasePing=async()=>{const ok=await synchronize();toast(ok?'Synchronisation réussie':'Synchronisation indisponible');return ok;};
 dashboardSyncNow=async()=>{const btn=$('#dashboardSyncNow');if(syncRunning)return;if(btn)btn.disabled=true;try{await synchronize();}finally{if(btn)btn.disabled=false;}};
-enterApp=async user=>{
+enterApp=async (user,offline=false)=>{
  currentUser=user;ready=false;let existing=null;try{existing=await diskRead();}catch(e){diskError='Stockage IndexedDB indisponible';}
  const old=readJson(OFFLINE_CACHE_KEY),mirror=readJson(OFFLINE_MIRROR_KEY);const own=x=>x?.userId===account();
  if(own(old)&&old.data&&(!existing||Date.parse(old.savedAt)>Date.parse(existing.savedAt||'')))existing={data:old.data,base:old.baseData,stamp:old.baseCloudUpdatedAt,dirty:true,savedAt:old.savedAt};
  if(!existing&&own(mirror)&&mirror.data)existing={data:mirror.data,base:mirror.data,stamp:'',dirty:pstPendingMutationCount()>0};
  if(existing){db=migrate(copy(existing.data));lastCloudData=existing.base?migrate(copy(existing.base)):null;lastCloudUpdatedAt=existing.stamp||'';lastConfirmedSupabaseAt=existing.confirmed||0;localDirty=!!existing.dirty;errorKind=existing.kind||'';lastCloudError=existing.error||'';durable=existing;}
  else {db=defaultData();lastCloudData=null;lastCloudUpdatedAt='';localDirty=false;errorKind='';lastCloudError='';}
+ if(offline&&!existing){currentUser=null;return false;}
  ready=true;$('#authScreen').classList.add('hidden');$('#logoutBtn')?.classList.remove('hidden');safeRenderAll();window.dispatchEvent(new Event('pst:data-loaded'));refreshDashboardSyncIndicator();
- await synchronize();
+ if(offline){errorKind=errorKind==='quota'?'quota':navigator.onLine?'server':'offline';lastCloudError='Accès local — authentification distante indisponible';refreshDashboardSyncIndicator();return true;}
+ const ok=await synchronize();
+ if(!ok&&!existing){ready=false;currentUser=null;$('#authScreen').classList.remove('hidden');$('#logoutBtn')?.classList.add('hidden');return false;}
+ return true;
 };
 // Export a recovery copy, including the baseline needed for a subsequent merge.
 window.addEventListener('DOMContentLoaded',()=>{const syncBtn=$('#dashboardSyncNow');if(syncBtn)syncBtn.onclick=dashboardSyncNow;const pingBtn=$('#supabasePingBtn');if(pingBtn)pingBtn.onclick=manualSupabasePing;const b=document.createElement('button');b.type='button';b.className='ghost';b.textContent='Exporter une sauvegarde locale';b.onclick=()=>{if(!account())return;triggerDownloadBlob('Pilotage_sauvegarde_locale_'+new Date().toISOString().slice(0,10)+'.json',new Blob([JSON.stringify({data:db,base:lastCloudData,stamp:lastCloudUpdatedAt,dirty:localDirty},null,2)],{type:'application/json'}));};$('#dashboardSyncPanel')?.append(b);});

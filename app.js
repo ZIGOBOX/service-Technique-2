@@ -14,8 +14,8 @@ function secureAppLogos(){
   });
 }
 
-const APP_VERSION='147.191';
-const APP_BUILD='23/11/2026';
+const APP_VERSION='147.193';
+const APP_BUILD='27/11/2026';
 
 // V25 : les erreurs techniques sont journalisées sans bloquer l'utilisateur.
 window.addEventListener('error',event=>{
@@ -1955,63 +1955,58 @@ window.PSTSyncEngine={queue:pstQueueMutation,sync:pstSyncQueueNow,pending:pstPen
 
 
 let authInitPromise=null;
+const PST_LOCAL_AUTH_KEY='pst_local_auth_v1';
+const PST_LOCK_KEY='pst_local_locked_v1';
+async function pstPasswordHash(password,salt){
+ const enc=new TextEncoder();const key=await crypto.subtle.importKey('raw',enc.encode(password),'PBKDF2',false,['deriveBits']);
+ const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:Uint8Array.from(salt),iterations:600000,hash:'SHA-256'},key,256);
+ return Array.from(new Uint8Array(bits),x=>x.toString(16).padStart(2,'0')).join('');
+}
+async function pstRememberLocal(user,password){
+ const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)));
+ const hash=await pstPasswordHash(password,salt);
+ localStorage.setItem(PST_LOCAL_AUTH_KEY,JSON.stringify({id:user.id,email:user.email.toLowerCase(),salt,hash}));
+}
+function pstAuthUnavailable(e){return !navigator.onLine||/quota|egress|bandwidth|exceed|payment required|usage limit|délai|timeout|network|fetch|indisponible|chargement|\b402\b/i.test([e?.message,e?.status,e?.code].join(' '))||Number(e?.status)>=500;}
 async function initAuth(){
  if(authInitPromise)return authInitPromise;
  authInitPromise=(async()=>{
-   const loginBtn=$('#authLogin'),errorEl=$('#authError'),emailEl=$('#authEmail'),passwordEl=$('#authPassword');
-   if(!loginBtn||!emailEl||!passwordEl)return;
-   const setBusy=busy=>{loginBtn.disabled=busy;loginBtn.textContent=busy?'Connexion…':'Se connecter'};
-   const loadScript=url=>new Promise((resolve,reject)=>{
-     const existing=[...document.scripts].find(s=>s.src===url);
-     if(existing){if(window.supabase)return resolve();existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}
-     const script=document.createElement('script');script.src=url;script.async=true;script.onload=resolve;script.onerror=()=>reject(new Error(`Chargement impossible : ${url}`));document.head.appendChild(script);
-   });
-   const ensureClient=async()=>{
-     const cfg=window.SUPABASE_CONFIG||{};
-     if(!cfg.url||!cfg.publishableKey)throw new Error('Configuration Supabase absente.');
-     if(!window.supabase){
-       const fallbacks=[
-         'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js',
-         'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'
-       ];
-       let loaded=false;
-       for(const url of fallbacks){try{await loadScript(url);if(window.supabase){loaded=true;break}}catch(error){console.warn(error)}}
-       if(!loaded)throw new Error('Le composant de connexion ne s’est pas chargé. Vérifiez Internet puis rechargez la page.');
-     }
-     if(!supabaseClient)supabaseClient=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
-     return supabaseClient;
-   };
-   const doLogin=async()=>{
-     if(loginBtn.disabled)return;
-     const email=emailEl.value.trim(),password=passwordEl.value;
-     if(!email){errorEl.textContent='Saisissez votre adresse e-mail.';emailEl.focus();return}
-     if(!password){errorEl.textContent='Saisissez votre mot de passe.';passwordEl.focus();return}
-     setBusy(true);errorEl.textContent='';
-     try{
-       const client=await ensureClient();
-       const {data,error}=await client.auth.signInWithPassword({email,password});
-       if(error)throw error;
-       if(!data?.user)throw new Error('Connexion non confirmée.');
-       await enterApp(data.user);
-     }catch(error){
-       console.error('Erreur de connexion',error);
-       errorEl.textContent=error?.message==='Invalid login credentials'?'Adresse ou mot de passe incorrect.':(error?.message||'Connexion impossible.');
-     }finally{setBusy(false)}
-   };
-   // Affectation directe et indépendante des autres modules.
-   loginBtn.onclick=doLogin;
-   passwordEl.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();doLogin()}};
-   try{
-     const client=await ensureClient();
-     const {data:{session}}=await client.auth.getSession();
-     if(session?.user)await enterApp(session.user);
-   }catch(error){
-     console.error('Initialisation Supabase',error);
-     errorEl.textContent=error?.message||'Configuration Supabase indisponible.';
-   }
-   $('#logoutBtn')?.addEventListener('click',async()=>{try{await supabaseClient?.auth.signOut()}finally{location.reload()}});
- })();
- return authInitPromise;
+ const loginBtn=$('#authLogin'),errorEl=$('#authError'),emailEl=$('#authEmail'),passwordEl=$('#authPassword');
+ if(!loginBtn||!emailEl||!passwordEl)return;
+ const busy=b=>{loginBtn.disabled=b;loginBtn.textContent=b?'Connexion…':'Se connecter'};
+ const cfg=window.SUPABASE_CONFIG||{};
+ const local=readJson(PST_LOCAL_AUTH_KEY);if(local?.email)emailEl.value=local.email;
+ function ensureClient(){if(!supabaseClient&&window.supabase&&cfg.url&&cfg.publishableKey)supabaseClient=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{persistSession:true,autoRefreshToken:false,detectSessionInUrl:false}});return supabaseClient;}
+ const explain='Serveur indisponible. Accès local possible avec une session encore valide ou un mot de passe local déjà activé sur cet appareil.';
+ const open=async(user,offline=false)=>{const ok=await enterApp(user,offline);if(ok===false)throw new Error('Aucune sauvegarde locale utilisable. Connectez-vous au serveur pour récupérer vos données.');localStorage.removeItem(PST_LOCK_KEY);passwordEl.value='';};
+ async function doLogin(){
+ if(loginBtn.disabled)return;const email=emailEl.value.trim().toLowerCase(),password=passwordEl.value;
+ if(!email||!password){errorEl.textContent='Saisissez votre adresse e-mail et votre mot de passe.';return;}
+ busy(true);errorEl.textContent='';
+ try{
+  let user=null;let remoteError=null;
+  try{const client=ensureClient();if(!client)throw new Error('Serveur indisponible');const result=await withTimeout(client.auth.signInWithPassword({email,password}),10000);if(result.error)throw result.error;user=result.data?.user;if(!user)throw new Error('Connexion non confirmée');}
+  catch(e){remoteError=e;}
+  if(user){if($('#authRememberLocal')?.checked){try{await pstRememberLocal(user,password);}catch(e){console.warn('Accès local non activé',e);}}await open(user);return;}
+  if(!pstAuthUnavailable(remoteError))throw remoteError;
+  const record=readJson(PST_LOCAL_AUTH_KEY);
+  if(record?.email===email&&record.id&&await pstPasswordHash(password,record.salt)===record.hash){await open({id:record.id,email:record.email},true);return;}
+  throw new Error(explain+' Si cet accès n’a jamais été activé, une connexion serveur réussie est nécessaire.');
+ }catch(e){errorEl.textContent=e?.message||'Connexion impossible';}finally{busy(false);}
+ }
+ $('#authForm').onsubmit=e=>{e.preventDefault();doLogin();};
+ $('#logoutBtn')?.addEventListener('click',async()=>{localStorage.setItem(PST_LOCK_KEY,'1');try{if(supabaseClient)await withTimeout(supabaseClient.auth.signOut({scope:'local'}),2000);}catch(_){}finally{location.reload();}});
+ try{
+  const client=ensureClient();if(!client)throw new Error('Serveur indisponible');
+  if(!localStorage.getItem(PST_LOCK_KEY)){
+   // Reuse only a still-valid session already stored by the Supabase SDK; never invent a user from a data cache.
+   const project=new URL(cfg.url).hostname.split('.')[0];const cached=readJson('sb-'+project+'-auth-token');
+   if(cached?.user?.id&&cached.access_token&&Number(cached.expires_at)*1000>Date.now()+10000){await open(cached.user);return;}
+   const result=await withTimeout(client.auth.getSession(),7000);if(result.error)throw result.error;
+   if(result.data?.session?.user)await open(result.data.session.user);
+  }
+ }catch(e){errorEl.textContent=pstAuthUnavailable(e)?explain:(e?.message||explain);}
+ })();return authInitPromise;
 }
 async function enterApp(user){
  currentUser=user;$('#authScreen').classList.add('hidden');$('#logoutBtn')?.classList.remove('hidden');
