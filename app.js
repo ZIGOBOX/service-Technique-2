@@ -1760,9 +1760,7 @@ async function pollCloudChanges(){
 function startCloudPolling(){clearInterval(cloudPollTimer);cloudPollTimer=setInterval(pollCloudChanges,8000)}
 setInterval(()=>{
  refreshDashboardSyncIndicator();
- if(navigator.onLine&&currentUser&&!hasLocalSyncPending()&&!cloudBusy&&!dashboardSyncBusy&&(!lastConfirmedSupabaseAt||Date.now()-lastConfirmedSupabaseAt>30000)){
-   confirmSupabaseReachable().then(()=>refreshDashboardSyncIndicator());
- }
+ 
 },4000);
 setInterval(ensureSaveStateNotStuck,3000);
 function safeRenderAll(){
@@ -1954,8 +1952,8 @@ async function pstSyncQueueNow({silent=false}={}){
 }
 window.PSTSyncEngine={queue:pstQueueMutation,sync:pstSyncQueueNow,pending:pstPendingMutationCount,mergeRemote:pstMergeRemoteWithoutOverwritingLocal};
 
-window.addEventListener('online',()=>setTimeout(()=>pstSyncQueueNow({silent:true}),600));
-setInterval(()=>{if(navigator.onLine&&currentUser&&pstPendingMutationCount()>0&&!cloudBusy)pstSyncQueueNow({silent:true})},12000);
+
+
 let authInitPromise=null;
 async function initAuth(){
  if(authInitPromise)return authInitPromise;
@@ -2099,7 +2097,7 @@ window.addEventListener('offline',()=>{
 });
 document.addEventListener('visibilitychange',()=>{
  if(!document.hidden&&currentUser){
-   if(navigator.onLine)autoSyncWhenNetworkReturns('retour application au premier plan');
+   if(navigator.onLine)refreshDashboardSyncIndicator();
    else{try{writeMirror()}catch(_){}refreshDashboardSyncIndicator()}
  }
 });
@@ -6196,8 +6194,8 @@ async function reattachImportOriginal(archiveId,file){
   const persisted=window.PSTMainState?.persistNow?await window.PSTMainState.persistNow():{ok:save(false),offline:!navigator.onLine};
   renderImportArchives();renderPeriodic();
   if(persisted?.ok){
-   if(st){st.textContent=`✅ ${file.name} est rattaché, sauvegardé et confirmé dans Supabase.`;st.className='import-archive-status ok'}
-   toast('Original rattaché et confirmé — « Relire l’original » est disponible');
+   if(st){st.textContent=`✅ ${file.name} est rattaché. Synchronisez pour transmettre la fiche.`;st.className='import-archive-status ok'}
+   toast('Original rattaché — synchronisation de la fiche en attente');
   }else if(persisted?.offline){
    if(st){st.textContent='⚠️ Fichier chargé mais état applicatif en attente de synchronisation.';st.className='import-archive-status working'}
    toast('Rattachement en attente de synchronisation');
@@ -7650,11 +7648,11 @@ function bindLiveConnectionsPanel(){
   updateLiveConnectionLocalStates();renderLiveConnections();
 }
 window.PSTLiveConnections={probe:probeLiveConnections,state:pstLiveConnections,render:renderLiveConnections};
-window.addEventListener('online',()=>{updateLiveConnectionLocalStates();probeLiveConnections({forceOpenAI:true})});
+window.addEventListener('online',()=>{updateLiveConnectionLocalStates();refreshDashboardSyncIndicator()});
 window.addEventListener('offline',()=>{updateLiveConnectionLocalStates();renderLiveConnections()});
 document.addEventListener('DOMContentLoaded',bindLiveConnectionsPanel,{once:true});
 setInterval(()=>{updateLiveConnectionLocalStates();renderLiveConnections()},2000);
-setInterval(()=>{if(document.querySelector('#connections.view.active'))probeLiveConnections()},10000);
+
 
 async function runSupabaseConnectionDiagnostic(){
   const result={online:navigator.onLine,authenticated:Boolean(currentUser),databaseRead:false,databaseWrite:false,edgeFunction:false,pending:pstPendingMutationCount(),errors:[]};
@@ -7665,9 +7663,7 @@ async function runSupabaseConnectionDiagnostic(){
     if(read?.error)throw read.error;result.databaseRead=true;
   }catch(e){result.errors.push(`Lecture base : ${e?.message||e}`)}
   try{
-    const payload=pstApplyQueuedMutationsToPayload(db);
-    const wr=await withTimeout(supabaseClient.from('app_state').upsert({user_id:currentUser.id,data:payload,updated_at:new Date().toISOString()},{onConflict:'user_id'}),12000);
-    if(wr?.error)throw wr.error;result.databaseWrite=true;
+    result.databaseWrite=false; // Aucun écrasement de la base par un diagnostic.
   }catch(e){result.errors.push(`Écriture base : ${e?.message||e}`)}
   try{
     const {data,error}=await supabaseClient.functions.invoke('swift-function',{body:{ping:true}});

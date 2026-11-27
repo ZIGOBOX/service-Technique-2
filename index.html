@@ -1181,6 +1181,17 @@
     <div id="academicYearWarning" class="academic-year-warning hidden" role="alert"></div>
 
     <section class="view active daily-dashboard-v149" id="dashboard">
+      <article class="panel sync-panel no-print" id="dashboardSyncPanel" aria-live="polite">
+        <div class="sync-panel-main">
+          <span class="sync-led red" id="dashboardSyncLed" aria-hidden="true"></span>
+          <div class="sync-panel-copy">
+            <strong id="dashboardSyncTitle">Supabase non vérifié</strong>
+            <small id="dashboardSyncDetail">Vérification de la synchronisation…</small>
+          </div>
+        </div>
+        <button type="button" class="primary" id="dashboardSyncNow">↻ Synchroniser maintenant</button>
+      </article>
+
       <div class="pst-dashboard-intro"><div><span class="pst-upper">VUE D’ENSEMBLE</span><h2>Votre centre de pilotage<span class="pst-intro-period"> · en temps réel</span></h2><p>Équipe, interventions et organisation au même endroit.</p></div><div class="pst-intro-indicator"><span class="pst-indicator-sparkle">✦</span> ESPACE TECHNIQUE</div></div>
       <article class="daily-hero-v149">
         <div class="daily-hero-main-v149">
@@ -1827,16 +1838,7 @@
     <section class="view" id="connections">
       <div class="section-actions"><div><h3>Connexions</h3><p>État en temps réel d’Internet, Supabase, synchronisation et services IA.</p></div></div>
       <div class="notice"><strong>Diagnostic centralisé :</strong> tous les voyants techniques sont regroupés ici. Une panne IA n’empêche pas l’enregistrement des données métier.</div>
-      <article class="panel sync-panel no-print" id="dashboardSyncPanel" aria-live="polite">
-        <div class="sync-panel-main">
-          <span class="sync-led red" id="dashboardSyncLed" aria-hidden="true"></span>
-          <div class="sync-panel-copy">
-            <strong id="dashboardSyncTitle">Supabase non vérifié</strong>
-            <small id="dashboardSyncDetail">Vérification de la synchronisation…</small>
-          </div>
-        </div>
-        <button type="button" class="primary" id="dashboardSyncNow">↻ Synchroniser maintenant</button>
-      </article>
+
 
       <article class="panel live-connections-panel no-print" id="liveConnectionsPanel" aria-live="polite">
         <div class="panel-head live-connections-head">
@@ -2005,7 +2007,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="./logo-data.js"></script>
   <script src="./entretien-planning.js?v=147.171-20260907"></script>
-  <script src="./app.js?v=20261123-gpa-files-147191"></script>
+  <script src="./app.js?v=20261127-local-sync-147192"></script>
+  <script src="./local-sync.js?v=20261127-1"></script>
   <script src="./notification-center.js?v=147.83-20260821-audit"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./jszip.min.js?v=3.10.1"></script>
